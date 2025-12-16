@@ -1,4 +1,22 @@
-# Dependency Management with `pip-tools`
+# sesopenko/foundry-mcp
+
+This project provides a Model Context Protocol (MCP) bridge between a Large Language Model (LLM) and a running Foundry VTT game.  
+It consists of a Python MCP proxy server and a Foundry VTT client module that communicate over a WebSocket-based RPC channel.
+
+The Python side exposes a small, well-defined set of MCP tools (over HTTP) that the LLM can call. Those tool calls are forwarded over WebSockets to the Foundry browser runtime, which is the single source of truth for game state and executes all Foundry API calls. Responses flow back over the same channel so that, from the LLM’s perspective, each tool call is synchronous and deterministic.
+
+Key goals of this project:
+
+- Enable safe, synchronous LLM interaction with a live Foundry VTT world
+- Keep all game logic and state inside Foundry’s browser/Electron runtime
+- Use a simple, explicit JSON-RPC style protocol over WebSockets
+- Provide a minimal, maintainable Python server that focuses on validation, orchestration, and error handling rather than mirroring Foundry APIs
+
+In practice, you run the Python MCP server, load the companion module in Foundry, and then connect an MCP-aware LLM client. The LLM can then call tools like “get world information”, “inspect actors”, or other narrowly scoped operations that are implemented in the Foundry module and mediated by the Python server.
+
+Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architecture.md)
+
+## Dependency Management with `pip-tools`
 
 This project uses [`pip-tools`](https://github.com/jazzband/pip-tools) to manage Python dependencies in a reproducible way.
 
@@ -12,7 +30,7 @@ The workflow is:
 
 ---
 
-## 1. Create a virtual environment in `.venv`
+### 1. Create a virtual environment in `.venv`
 
 From the root of the repository:
 
@@ -44,7 +62,7 @@ You should now see `(.venv)` in your shell prompt.
 
 ---
 
-## 2. Upgrade `pip` and install `pip-tools`
+### 2. Upgrade `pip` and install `pip-tools`
 
 With the virtual environment activated:
 
@@ -57,7 +75,7 @@ You now have the `pip-compile` and `pip-sync` commands available in this environ
 
 ---
 
-## 3. Declare top-level dependencies in `requirements.in`
+### 3. Declare top-level dependencies in `requirements.in`
 
 Edit `requirements.in` and list your direct (top-level) dependencies, one per line. For example:
 
@@ -71,7 +89,7 @@ You generally do **not** list transitive dependencies here; `pip-tools` will res
 
 ---
 
-## 4. Build `requirements.txt` from `requirements.in`
+### 4. Build `requirements.txt` from `requirements.in`
 
 To compile a fully pinned `requirements.txt` from `requirements.in`, run:
 
@@ -93,7 +111,7 @@ pip-compile --upgrade requirements.in
 
 ---
 
-## 5. Install dependencies from `requirements.txt` using `pip`
+### 5. Install dependencies from `requirements.txt` using `pip`
 
 Once `requirements.txt` has been generated, install the dependencies into your active `.venv`:
 
@@ -105,7 +123,7 @@ This ensures your environment matches the pinned versions in `requirements.txt`.
 
 ---
 
-## Typical Workflow
+### Typical Workflow
 
 When you add or change dependencies:
 
@@ -126,7 +144,7 @@ Commit both `requirements.in` and `requirements.txt` so others can reproduce the
 
 ---
 
-## Optional: Using `pip-sync`
+### Optional: Using `pip-sync`
 
 If you want your virtual environment to contain **only** the packages listed in `requirements.txt` (and their dependencies), you can use:
 
