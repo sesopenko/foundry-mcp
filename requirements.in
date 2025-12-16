@@ -1,0 +1,7 @@
+# Add your top-level (unpinned) dependencies here, one per line.
+# Example:
+# fastapi
+# websockets
+# mcp
+
+fastapi==0.124.4
