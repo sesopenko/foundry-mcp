@@ -5,3 +5,4 @@
 # mcp
 
 fastapi==0.124.4
+fastmcp==2.14.1
