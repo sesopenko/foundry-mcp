@@ -1,2 +1,4 @@
 read:
   - README.md
+  - requirements.in
+  - docs/mcp_foundry_architecture.md
