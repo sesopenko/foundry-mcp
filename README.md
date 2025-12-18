@@ -16,6 +16,15 @@ In practice, you run the Python MCP server, load the companion module in Foundry
 
 Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architecture.md)
 
+## Foundry (Docker)
+
+`docker-compose.yml` reads Foundry credentials from a local `.env` file (gitignored).
+
+1. Copy `.env.example` to `.env` and fill in values.
+2. Start Foundry: `docker compose up -d foundry`
+
+Foundry data is persisted in `./data`.
+
 ## Dependency Management with `pip-tools`
 
 This project uses [`pip-tools`](https://github.com/jazzband/pip-tools) to manage Python dependencies in a reproducible way.

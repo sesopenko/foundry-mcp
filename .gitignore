@@ -168,6 +168,7 @@ coverage_html_report/
 
 # Local config
 *.local
-*.env
+.env
 .env.*
-```
+!.env.example
+*.env
