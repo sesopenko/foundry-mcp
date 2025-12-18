@@ -5,7 +5,7 @@ services:
   foundry:
     image: felddy/foundryvtt:release
     hostname: ${FOUNDRY_HOSTNAME:-my_foundry_host}
-    restart: unless-stopped
+    restart: "no"
     user: 1001:1001
     volumes:
       - type: bind
