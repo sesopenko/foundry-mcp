@@ -6,11 +6,10 @@ services:
     image: felddy/foundryvtt:release
     hostname: ${FOUNDRY_HOSTNAME:-my_foundry_host}
     restart: "no"
-    user: 1001:1001
+    user: 1000:1000
     volumes:
-      - type: bind
-        source: ./data
-        target: /data
+      - ./foundry-data:/data
+      - ./foundry-module:/data/Data/modules/foundry-mcp/:ro
     environment:
       - FOUNDRY_PASSWORD=${FOUNDRY_PASSWORD:?set in .env}
       - FOUNDRY_USERNAME=${FOUNDRY_USERNAME:?set in .env}

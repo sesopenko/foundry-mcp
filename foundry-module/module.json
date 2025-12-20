@@ -1,0 +1,22 @@
+{
+  "id": "foundry-mcp",
+  "title": "Foundry MCP Proxy",
+  "description": "Establishes a websocket connection to foundry-mcp so an LLM can access tools which call foundry code in the browser.",
+  "authors": [
+    {
+      "name": "Sean Esopenko",
+      "flags": {}
+    }
+  ],
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "flags": {
+    "canUpload": true
+  },
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  }
+}

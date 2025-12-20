@@ -172,3 +172,6 @@ coverage_html_report/
 .env.*
 !.env.example
 *.env
+
+# foundry
+foundry-data
