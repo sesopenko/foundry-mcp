@@ -1,8 +1,5 @@
 import asyncio
-import json
 import logging
-from typing import Any, Dict, Optional
-from uuid import uuid4
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
@@ -14,6 +11,9 @@ from fastmcp.exceptions import ToolError
 
 from foundry_mcp_server.ws.connection import FoundryConnectionManager
 
+from foundry_mcp_server.mcp_server.server import mcp, mcp_app
+from foundry_mcp_server.mcp_server.tools import *
+
 logger = logging.getLogger("foundry_mcp")
 logging.basicConfig(level=logging.INFO)
 
@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 
 # Instantiate global connection manager
 foundry_manager = FoundryConnectionManager()
+register_foundry_manager(foundry_manager)
 
 # Create FastAPI app
 app = FastAPI(
@@ -38,44 +39,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- MCP Server Setup -------------------------------------------------------
-
-# Create FastMCP instance; this exposes an ASGI app we can mount.
-mcp = FastMCP("foundry-mcp")
-
-
-@mcp.tool
-async def get_world_name() -> str:
-    """
-    Example MCP tool that asks the Foundry client for the current world name.
-
-    The Foundry browser module should implement a handler for method "getWorldName"
-    and return a string.
-    """
-    try:
-        result = await foundry_manager.call(
-            client_id="gm",  # For now, assume a single GM client
-            method="getWorldName",
-            params={},
-            timeout=5.0,
-        )
-    except RuntimeError as e:
-        # No client connected or client-side error
-        raise ToolError("no client connected or client side error")
-    except asyncio.TimeoutError:
-        raise ToolError("no client connected or client side error")
-        raise tools.ToolError("Timed out waiting for Foundry client response")
-
-    if not isinstance(result, str):
-        raise ToolError(f"Expected string response from Foundry client, got: {result}")
-
-    return result
-
-# Create ASGI app from MCP server
-mcp_app = mcp.http_app(path='/mcp')
-
-# Mount MCP HTTP routes under /mcp
-# FastMCP exposes an ASGI app via `mcp_server.app`.
 app.mount("/mcp",mcp_app)
 
 
