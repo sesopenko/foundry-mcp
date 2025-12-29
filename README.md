@@ -16,7 +16,9 @@ In practice, you run the Python MCP server, load the companion module in Foundry
 
 Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architecture.md)
 
-## Foundry (Docker)
+This is currently in an experimental state, not a foundry module that is ready to share on foundry's module listing.
+
+## Foundry (Docker) Dev Env Setup
 
 `docker-compose.yml` reads Foundry credentials from a local `.env` file (gitignored).
 
@@ -162,3 +164,22 @@ pip-sync requirements.txt
 ```
 
 This will uninstall any packages not specified in `requirements.txt`. Use with care, as it may remove other tools you installed into the same environment.
+
+## LLM
+
+An LLM Web Interface is not included.  You can use [LibreChat](https://www.librechat.ai/) and then connect it to the mcp server.  Example configuration:
+
+```yaml
+mcpServers:
+  foundry-vtt:
+    type: streamable-http
+    url: http://192.168.10.137:8000/mcp/mcp
+    timeout: 30000
+    serverInstructions: true
+```
+
+## License
+
+This software is licensed under the MIT license, viewable in [LICENSE.txt](LICENSE.txt)
+
+Copyright (c) Sean Esopenko 2025
