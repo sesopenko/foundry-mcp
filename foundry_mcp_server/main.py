@@ -28,6 +28,7 @@ app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
     version="0.1.0",
+    lifespan=mcp_app.lifespan
 )
 
 # Optional CORS configuration (tune as needed)
