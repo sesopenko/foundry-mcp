@@ -8,6 +8,16 @@
 
 const WS_URL = "ws://localhost:8000/ws/foundry";
 
+// Reconnection configuration
+const RECONNECT_BASE_DELAY_MS = 1000; // 1 second
+const RECONNECT_MAX_DELAY_MS = 30000; // 30 seconds
+const RECONNECT_BACKOFF_FACTOR = 2;
+
+let currentSocket = null;
+let reconnectAttempts = 0;
+let reconnectTimeoutId = null;
+let manuallyClosed = false;
+
 /**
  * Map of method names to handler functions.
  * Each handler receives a single `params` object and may return a value
@@ -77,20 +87,64 @@ async function handleRpcMessage(message) {
 }
 
 /**
+ * Schedule a reconnection attempt with exponential backoff.
+ */
+function scheduleReconnect() {
+  if (manuallyClosed) {
+    console.log("[foundryBridge] Not scheduling reconnect; connection was closed manually.");
+    return;
+  }
+
+  reconnectAttempts += 1;
+  const delay = Math.min(
+    RECONNECT_BASE_DELAY_MS * Math.pow(RECONNECT_BACKOFF_FACTOR, reconnectAttempts - 1),
+    RECONNECT_MAX_DELAY_MS
+  );
+
+  console.warn(
+    `[foundryBridge] Scheduling reconnect attempt #${reconnectAttempts} in ${delay}ms`
+  );
+
+  if (reconnectTimeoutId !== null) {
+    clearTimeout(reconnectTimeoutId);
+  }
+
+  reconnectTimeoutId = setTimeout(() => {
+    reconnectTimeoutId = null;
+    console.log("[foundryBridge] Attempting to re-establish WebSocket connection...");
+    openWebSocket();
+  }, delay);
+}
+
+/**
  * Open a WebSocket connection to the Python server and set up handlers
  * for incoming RPC requests.
  *
- * This function should be called once from the Foundry "ready" hook,
- * and only by the GM client.
+ * This function is internal; use connectFoundryBridge() as the public API.
  */
-export function connectFoundryBridge() {
+function openWebSocket() {
+  // If there's an existing socket, ensure it's closed before opening a new one
+  if (currentSocket && currentSocket.readyState === WebSocket.OPEN) {
+    console.log("[foundryBridge] Existing WebSocket is open; not opening a new one.");
+    return currentSocket;
+  }
+
   console.log("[foundryBridge] Connecting to", WS_URL);
 
+  manuallyClosed = false;
   const socket = new WebSocket(WS_URL);
+  currentSocket = socket;
 
   socket.addEventListener("open", () => {
     console.log("[foundryBridge] WebSocket connection established");
     console.log("[foundryBridge] Ready to receive RPC requests from Python server");
+
+    // Reset reconnection state on successful connection
+    reconnectAttempts = 0;
+    if (reconnectTimeoutId !== null) {
+      clearTimeout(reconnectTimeoutId);
+      reconnectTimeoutId = null;
+    }
   });
 
   socket.addEventListener("message", async (event) => {
@@ -124,11 +178,56 @@ export function connectFoundryBridge() {
       event.code,
       event.reason
     );
+
+    currentSocket = null;
+
+    // Attempt to reconnect unless the close was initiated manually
+    if (!manuallyClosed) {
+      scheduleReconnect();
+    }
   });
 
   socket.addEventListener("error", (event) => {
     console.error("[foundryBridge] WebSocket error:", event);
+    // Let the 'close' event handle reconnection; some browsers fire both.
   });
 
   return socket;
+}
+
+/**
+ * Public API: establish (or ensure) a WebSocket connection to the Python server
+ * and set up handlers for incoming RPC requests.
+ *
+ * This function should be called once from the Foundry "ready" hook,
+ * and only by the GM client.
+ */
+export function connectFoundryBridge() {
+  console.log("[foundryBridge] Initializing Foundry MCP WebSocket bridge.");
+  return openWebSocket();
+}
+
+/**
+ * Optional helper to explicitly close the WebSocket and stop automatic
+ * reconnection attempts. Not currently used, but provided for completeness.
+ */
+export function disconnectFoundryBridge() {
+  manuallyClosed = true;
+
+  if (reconnectTimeoutId !== null) {
+    clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+  }
+
+  if (currentSocket) {
+    try {
+      currentSocket.close();
+    } catch (e) {
+      console.error("[foundryBridge] Error while closing WebSocket:", e);
+    } finally {
+      currentSocket = null;
+    }
+  }
+
+  console.log("[foundryBridge] Foundry MCP WebSocket bridge disconnected.");
 }
