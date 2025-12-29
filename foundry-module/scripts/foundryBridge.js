@@ -3,7 +3,7 @@
  * Python FoundryConnectionManager and dispatching RPC-style requests.
  *
  * It currently implements a single RPC method:
- *   - getPlayerNameList: returns an array of strings (hard-coded for now)
+ *   - getPlayerNameList: returns an array of strings with the current player names
  */
 
 const WS_URL = "ws://localhost:8000/ws/foundry";
@@ -25,15 +25,33 @@ let manuallyClosed = false;
  */
 const rpcHandlers = {
   /**
-   * Return a hard-coded list of player names for integration testing.
+   * Return the current list of player names.
+   *
+   * Players are represented by User documents in game.users.
+   * game.users is a Collection keyed by user id; each value is a User
+   * with a `name` property.
    *
    * @param {object} params
    * @returns {string[]}
    */
   async getPlayerNameList(params) {
-    // params are currently unused, but kept for future expansion
     console.log("[foundryBridge] getPlayerNameList called with params:", params);
-    return ["Alice", "Bob", "Charlie"];
+
+    if (!game || !game.users) {
+      console.warn("[foundryBridge] game or game.users is not available");
+      return [];
+    }
+
+    // game.users is a Collection; iterate its values and extract user.name
+    const names = [];
+    for (const user of game.users.values()) {
+      if (user && typeof user.name === "string") {
+        names.push(user.name);
+      }
+    }
+
+    console.log("[foundryBridge] getPlayerNameList returning names:", names);
+    return names;
   },
 };
 
