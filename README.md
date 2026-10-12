@@ -25,7 +25,8 @@ This is currently in an experimental state, not a foundry module that is ready t
 1. Copy `.env.example` to `.env` and fill in values.
 2. Start Foundry: `docker compose up -d foundry`
 
-Foundry data is persisted in `./data`.
+Foundry data is persisted in `./foundry-data`; module source is bind-mounted
+from `./foundry-module`.
 
 ## Python and dependencies with uv
 

@@ -159,7 +159,9 @@ The MCP HTTP endpoint is typically consumed by non-browser clients, so CORS does
    - Transparent failure modes
 
 3. **Small, intentional tools**
-   - Avoid arbitrary code execution
+   - Keep permanent game tools narrowly scoped.
+   - Arbitrary execution is a separately authenticated, opt-in development
+     console; see [JavaScript exploration](js-exploration.md).
    - Prefer well-defined operations
 
 4. **LLM-friendly errors**
@@ -179,6 +181,23 @@ The MCP HTTP endpoint is typically consumed by non-browser clients, so CORS does
 6. Expand tool surface gradually
 
 ---
+
+## Development browser control
+
+Chrome DevTools MCP is an independent development connection to the visible
+Chrome profile. It handles refreshes, console/network inspection, UI checks,
+and page JavaScript evaluation, including diagnosis when the Foundry WebSocket
+bridge is unavailable. The Foundry bridge retains ownership of permanent game
+tools and provides bounded object snapshots through its exploration facility.
+Chrome evaluation and exploration overlap, but Chrome evaluation does not use
+the bridge's serializer or authorization checks. Keep both capabilities
+confined to the development profile and test world.
+
+The current bridge admits one `gm` socket and correlates each pending RPC with
+its originating socket. Duplicate connections are rejected; disconnects fail
+pending requests promptly. Python orchestration and Foundry game-state
+ownership remain unchanged. See [browser development](browser-development.md)
+for the verified refresh workflow and connection recovery.
 
 ## Outcome
 

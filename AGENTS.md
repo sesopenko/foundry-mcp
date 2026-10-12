@@ -59,3 +59,14 @@ this development browser and test world; do not attach to the user's ordinary
 browser or use it during game sessions. After meaningful module changes, run
 focused local tests, refresh the development tab, wait for bridge connectivity,
 and check console errors and live behavior. See `docs/browser-development.md`.
+
+Repository-local skills capture recurring workflows:
+
+- `.agents/skills/foundry-dev-connect/SKILL.md`: development browser setup,
+  authentication, and connection diagnosis.
+- `.agents/skills/foundry-dev-loop/SKILL.md`: baseline, focused tests, refresh,
+  console inspection, and live verification after code changes.
+
+Use the relevant skill for these tasks. If a new skill is absent from the
+current session's catalog, read its local file directly; a new session can
+discover it normally. Keep the linked developer docs as the source of truth.

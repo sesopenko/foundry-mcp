@@ -53,7 +53,56 @@ running session. Normal `./scripts/codex.sh` sessions keep Chrome MCP disabled.
 For game sessions, turn off exploration execution as described in its setup
 guide and use the ordinary browser.
 
-## Checks
+## Verified module refresh behavior
+
+In the local Compose setup, `./foundry-module` is bind-mounted into Foundry.
+During the October 12, 2026 test on Foundry 14.369 and world `test`, an unchanged
+module successfully returned the version and world through exploration RPC.
+Adding a temporary response marker left the running tab unchanged. A normal
+browser refresh then returned the marker without restarting Foundry or MCP.
+The marker was removed after the test; browser credentials and execution
+settings also survived refresh. This establishes the behavior for this setup,
+not for every proxy/cache or Foundry deployment.
+
+| Changed component | Next action |
+| --- | --- |
+| Browser module JavaScript | Run focused tests, refresh the development tab, wait for `game.ready` and the GM bridge, then probe the changed behavior. |
+| Python bridge code or `.env.mcp` | Run focused tests and restart the user service; reconnect the MCP client if its session is stale. |
+| User service template | Run `./scripts/server.sh install`, then restart. |
+| Codex MCP configuration | Start or resume through `./scripts/codex-dev.sh` so the tool catalog and credentials are reloaded. |
+| Compose environment or mounts | Recreate the relevant service with `docker compose up -d`; a browser refresh does not apply these changes. |
+
+Chrome's reload operation can finish before Foundry initialization. Wait for
+`game.ready === true` and `game.user.isGM === true` before calling game APIs.
+If a normal refresh fails to load a known marker, inspect the requested script
+and network/cache behavior before trying a cache-bypassing reload or server
+restart. Keep temporary markers local and remove them after verification.
+
+## Connection diagnosis
+
+Check the health endpoint first, then authenticated MCP discovery, then a
+read-only runtime probe. Each confirms a different layer:
+
+- `foundry_clients: []`: the server is healthy, but no authenticated GM socket
+  is registered. Check the development tab, GM login, saved credential, and
+  whether another GM tab owns the single allowed connection.
+- HTTP 401: the MCP caller credential is absent or wrong; check the launcher
+  and `.env.mcp` without printing secrets.
+- `UnauthorizedExecution`: the browser is reachable, but its GM status,
+  execution setting, or browser credential check failed.
+- HTTP 400 with `No valid session ID provided` after restarting MCP: reconnect
+  the MCP client. The browser can be healthy while the old HTTP session is stale.
+- Chrome tools absent from the current session: relaunch via the development
+  launcher. `codex mcp list` checks registration, not usable live tools.
+
+Client settings are a one-time setup per browser profile and Foundry site
+origin. A different profile/address, cleared browser storage, or rotated
+browser credential requires setup again. Avoid repeatedly pasting credentials
+on ordinary refreshes. Local `.env.mcp` and browser state are deliberately
+gitignored; preserve them when clearing chat context, and never copy their
+secrets into developer docs.
+
+## Validation
 
 `./scripts/test.sh` runs all offline tests, including development opt-in,
 profile endpoint validation, and credential-loading tests. Live verification
