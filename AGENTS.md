@@ -49,3 +49,13 @@ for focused JavaScript checks use `node --test tests/js/<area>.test.js`.
 Provision dependencies separately with `uv sync --locked` when needed.
 Browser mocks verify bridge behavior; use a live Foundry session separately
 when a change depends on Foundry runtime APIs.
+
+## Development browser
+
+For active Foundry development, use `./scripts/codex-dev.sh` to enable the
+Chrome DevTools MCP tools and share a dedicated visible Chrome profile with
+the user. The normal launcher leaves Chrome MCP disabled. Keep automation in
+this development browser and test world; do not attach to the user's ordinary
+browser or use it during game sessions. After meaningful module changes, run
+focused local tests, refresh the development tab, wait for bridge connectivity,
+and check console errors and live behavior. See `docs/browser-development.md`.

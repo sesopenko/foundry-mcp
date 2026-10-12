@@ -36,7 +36,11 @@ do not load this file automatically; export the variables before launching.
 Configure your MCP client to send
 `Authorization: Bearer <FOUNDRY_MCP_CALLER_TOKEN>` on every request to
 `http://127.0.0.1:8000/mcp/mcp`, including discovery. Reconnect your MCP client
-when changing tool registration.
+when changing tool registration. For this repository's Codex setup,
+`./scripts/codex.sh` loads the caller token from `.env.mcp`, and the project
+configuration uses `bearer_token_env_var = "FOUNDRY_MCP_CALLER_TOKEN"`.
+Launch a new session through that script after enabling exploration. Other
+launch methods must provide this environment variable themselves.
 
 Development mode rejects non-loopback HTTP and WebSocket peers even if the
 server was launched on another interface. This first implementation supports

@@ -1,4 +1,16 @@
 # Loaded only for Codex sessions in this trusted repository.
 [mcp_servers.foundry-vtt]
 url = "http://127.0.0.1:8000/mcp/mcp"
+bearer_token_env_var = "FOUNDRY_MCP_CALLER_TOKEN"
 enabled = true
+
+[mcp_servers.foundry-vtt.tools.get_player_names]
+approval_mode = "approve"
+
+# Enabled only by scripts/codex-dev.sh for active Foundry development.
+[mcp_servers.chrome-devtools]
+command = "bash"
+args = ["./scripts/chrome-devtools.sh"]
+enabled = false
+startup_timeout_sec = 30
+tool_timeout_sec = 60

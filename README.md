@@ -156,3 +156,8 @@ Copyright (c) Sean Esopenko 2025
 An optional `execute_javascript` MCP tool supports live API exploration in a
 local GM browser. It is disabled by default and requires separate caller and
 browser credentials plus browser opt-in. See [setup, usage, and limitations](docs/js-exploration.md).
+
+For a visible development browser that both you and Codex can use, install
+browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
+supports automatic refreshes, console and network inspection, and UI checks.
+It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
