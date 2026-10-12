@@ -32,3 +32,13 @@ Before doing work in this repository, read these files in full:
 - [foundry-module/scripts/README.md](foundry-module/scripts/README.md): Foundry client script conventions.
 
 This list carries forward the required reading from `.aider.conf.yml`. Keep the guidance in the referenced files as the source of truth rather than duplicating it here.
+
+## Continuous testing
+
+Establish tests for existing behavior before extending or refactoring it.
+Run focused tests after each meaningful change and add tests alongside new
+behavior, rather than leaving testing until the end. Resolve relevant failures
+before building further work on top of a change. Before committing, run the
+Python suite (`uv run --locked python -m unittest discover -s tests -v`) and
+JavaScript suite (`npm test`). Browser mocks verify bridge behavior; use a live
+Foundry session separately when a change depends on Foundry runtime APIs.

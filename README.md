@@ -92,12 +92,19 @@ Run the suite with:
 uv run --locked python -m unittest discover -s tests -v
 ```
 
-The initial suite contains only a placeholder asserting `1 == 1`.
-Add future tests as `tests/test_*.py` using `unittest.TestCase`.
+The Python suite covers RPC correlation, errors and cleanup, the player-name
+MCP tool, and application health and WebSocket lifecycle. Add tests as
+`tests/test_*.py` using `unittest.TestCase`.
+
+Run the JavaScript suite with `npm test` (Node.js 18 or newer; no npm install
+needed). It uses Node's built-in test runner with Foundry globals, WebSockets,
+and controlled timers to exercise player filtering, RPC errors, lifecycle
+hooks, reconnect backoff, and manual disconnect. These mocks verify bridge
+behavior; Foundry API compatibility requires a separate live check.
 
 The setup command above installs the tracked `.githooks/pre-commit` hook for this
-clone. Each new clone must run that command once. The hook runs the same test
-command and blocks commits if tests fail or uv cannot run them. It tests the
+clone. Each new clone must run that command once. The hook runs both suites
+and blocks commits if tests fail or uv or Node.js cannot run them. It tests the
 current working tree, so stage the intended changes before committing.
 
 ## LLM

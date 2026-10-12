@@ -1,4 +1,7 @@
 {
   "name": "foundry-mcp",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/js/*.test.js"
+  }
 }
