@@ -27,145 +27,102 @@ This is currently in an experimental state, not a foundry module that is ready t
 
 Foundry data is persisted in `./data`.
 
-## Dependency Management with `pip-tools`
+## Python and dependencies with uv
 
-This project uses [`pip-tools`](https://github.com/jazzband/pip-tools) to manage Python dependencies in a reproducible way.
-
-The workflow is:
-
-1. Create and activate a virtual environment in `.venv`
-2. Install `pip-tools` into that environment
-3. Declare top-level dependencies in `requirements.in`
-4. Compile a fully pinned `requirements.txt` using `pip-compile`
-5. Install dependencies from `requirements.txt` using `pip`
-
----
-
-### 1. Create a virtual environment in `.venv`
-
-From the root of the repository:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run
+these commands from the repository root:
 
 ```bash
-python -m venv .venv
+uv python install
+uv sync --locked
+git config --local core.hooksPath .githooks
 ```
 
-Activate it:
+`.python-version` selects Python 3.12. `pyproject.toml` restricts the project to
+Python 3.12 and declares the direct dependencies, retaining the previous exact
+pins. Python 3.12 satisfies FastAPI 0.128.0's Python >=3.9 requirement and
+FastMCP 2.14.1 and Uvicorn 0.40.0's Python >=3.10 requirements.
+`uv.lock` records the resolved dependency versions. The uv constraint on
+Fakeredis preserves compatibility with the locked Pydocket release. Commit all three files.
+`uv sync` creates and manages `.venv`; manual activation is unnecessary.
 
-- On **Linux / macOS**:
-
-  ```bash
-  source .venv/bin/activate
-  ```
-
-- On **Windows (PowerShell)**:
-
-  ```powershell
-  .venv\Scripts\Activate.ps1
-  ```
-
-- On **Windows (cmd.exe)**:
-
-  ```cmd
-  .venv\Scripts\activate.bat
-  ```
-
-You should now see `(.venv)` in your shell prompt.
-
----
-
-### 2. Upgrade `pip` and install `pip-tools`
-
-With the virtual environment activated:
+### Run the server
 
 ```bash
-python -m pip install --upgrade pip
-pip install pip-tools
+./scripts/start-server.sh
 ```
 
-You now have the `pip-compile` and `pip-sync` commands available in this environment.
+The launcher works from any working directory and runs the server in the
+foreground. Press Ctrl+C to stop it.
 
----
+The server listens on port 8000. Foundry connects to `/ws/foundry`, and MCP
+clients connect to `/mcp/mcp`.
 
-### 3. Declare top-level dependencies in `requirements.in`
+### Manage the server in the background (Linux)
 
-Edit `requirements.in` and list your direct (top-level) dependencies, one per line. For example:
-
-```text
-fastapi
-websockets
-mcp
-```
-
-You generally do **not** list transitive dependencies here; `pip-tools` will resolve and pin them for you.
-
----
-
-### 4. Build `requirements.txt` from `requirements.in`
-
-To compile a fully pinned `requirements.txt` from `requirements.in`, run:
+Install the systemd user service once per clone, then start it:
 
 ```bash
-pip-compile requirements.in
+./scripts/server.sh install
+./scripts/server.sh start
 ```
 
-This will:
+Use `./scripts/server.sh restart`, `stop`, `status`, or `logs` to manage it.
+Start and restart wait up to about 60 seconds for the health endpoint.
+The service runs without the development reloader and restarts on failure.
+It is started on demand, not enabled at login, and runs independently of the
+launching terminal. Logs are captured by the user journal. If you move the
+clone or change the uv installation, stop the service and run `install` again.
+Stop any foreground server before starting the service to free port 8000.
 
-- Resolve all dependencies of the packages listed in `requirements.in`
-- Generate (or update) a `requirements.txt` file with exact, pinned versions
-- Include comments showing which top-level package required each dependency
+### Change dependencies
 
-If you want to upgrade all packages to their latest compatible versions, run:
+Use `uv add 'package==version'` or `uv remove package` to update the project
+and lockfile together. After editing `pyproject.toml` manually, run `uv lock`
+and `uv sync --locked`. Use `uv lock --upgrade` to refresh transitive dependencies
+within the declared constraints, then sync and test. Commit `pyproject.toml`
+and `uv.lock` together. The former requirements files are replaced by these files.
+
+### Unit tests and commit hook
+
+PyUnit is Python's built-in `unittest` framework; no additional package is needed.
+Run the suite with:
 
 ```bash
-pip-compile --upgrade requirements.in
+uv run --locked python -m unittest discover -s tests -v
 ```
 
----
+The initial suite contains only a placeholder asserting `1 == 1`.
+Add future tests as `tests/test_*.py` using `unittest.TestCase`.
 
-### 5. Install dependencies from `requirements.txt` using `pip`
-
-Once `requirements.txt` has been generated, install the dependencies into your active `.venv`:
-
-```bash
-pip install -r requirements.txt
-```
-
-This ensures your environment matches the pinned versions in `requirements.txt`.
-
----
-
-### Typical Workflow
-
-When you add or change dependencies:
-
-1. **Edit** `requirements.in` to add/remove top-level packages.
-2. **Recompile**:
-
-   ```bash
-   pip-compile requirements.in
-   ```
-
-3. **Install** the updated dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-Commit both `requirements.in` and `requirements.txt` so others can reproduce the environment exactly.
-
----
-
-### Optional: Using `pip-sync`
-
-If you want your virtual environment to contain **only** the packages listed in `requirements.txt` (and their dependencies), you can use:
-
-```bash
-pip-sync requirements.txt
-```
-
-This will uninstall any packages not specified in `requirements.txt`. Use with care, as it may remove other tools you installed into the same environment.
+The setup command above installs the tracked `.githooks/pre-commit` hook for this
+clone. Each new clone must run that command once. The hook runs the same test
+command and blocks commits if tests fail or uv cannot run them. It tests the
+current working tree, so stage the intended changes before committing.
 
 ## LLM
+
+### Codex
+
+The repository's `.codex/config.toml` enables the `foundry-vtt` MCP server
+at `http://127.0.0.1:8000/mcp/mcp` for Codex sessions in this project.
+Codex loads project configuration only for trusted projects; accept the
+project trust prompt if shown. This setup does not add a global MCP server.
+
+After installing the user service above, launch Codex with:
+
+```bash
+./scripts/codex.sh
+```
+
+The launcher starts the service and waits for health before launching Codex
+from this repository. `AGENTS.md` tells Codex how to start and restart the
+server through the shell when needed. Restart existing Codex sessions to
+load the configuration. Run `codex mcp list` here to check the registration;
+this lists configured servers and does not verify a live MCP connection.
+The Foundry browser must also be connected for tools that access game state.
+
+### Other MCP clients
 
 An LLM Web Interface is not included.  You can use [LibreChat](https://www.librechat.ai/) and then connect it to the mcp server.  Example configuration:
 

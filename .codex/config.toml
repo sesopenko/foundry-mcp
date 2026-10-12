@@ -1,0 +1,4 @@
+# Loaded only for Codex sessions in this trusted repository.
+[mcp_servers.foundry-vtt]
+url = "http://127.0.0.1:8000/mcp/mcp"
+enabled = true

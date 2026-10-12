@@ -1,5 +1,5 @@
 read:
   - README.md
-  - requirements.in
+  - pyproject.toml
   - docs/mcp_foundry_architecture.md
   - foundry-module/scripts/README.md

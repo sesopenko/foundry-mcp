@@ -1,0 +1,13 @@
+[Unit]
+Description=Foundry MCP bridge
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO@
+ExecStart=@UV@ run --locked python -m uvicorn foundry_mcp_server.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=2
+SuccessExitStatus=143
+TimeoutStopSec=15
