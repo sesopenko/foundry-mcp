@@ -43,3 +43,57 @@ async def get_player_names() -> List[str]:
 def register_foundry_manager(foundry_manager: FoundryConnectionManager) -> None:
     global _foundry_manager
     _foundry_manager = foundry_manager
+
+
+async def execute_javascript(code: str) -> Dict[str, Any]:
+    """Execute an async JavaScript function body in the authorized local GM browser.
+
+    Development only. Use explicit return statements. Timeouts do not stop code
+    or undo changes; use a disposable world.
+    """
+    import hashlib
+    import json
+    import logging
+    from foundry_mcp_server.config import settings
+    from foundry_mcp_server.ws.connection import RpcError
+
+    if not settings.development:
+        raise ToolError("UnauthorizedExecution: development execution disabled")
+    if not isinstance(code, str) or not code.strip():
+        raise ToolError("InvalidParameters: provide nonempty JavaScript source")
+    try:
+        source = code.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ToolError("InvalidParameters: source must be valid UTF-8") from exc
+    if len(source) > settings.max_code_bytes:
+        raise ToolError("InvalidParameters: source exceeds 32768 UTF-8 bytes")
+    # Hash rather than raw source: code can contain arbitrary secrets.
+    audit = logging.getLogger("foundry_mcp.execution")
+    digest = hashlib.sha256(source).hexdigest()
+    audit.info("execution source_sha256=%s bytes=%d", digest, len(source))
+    try:
+        result = await _foundry_manager.call("gm", "executeJavaScript", {"code": code}, timeout=settings.timeout)
+        if not isinstance(result, dict) or len(json.dumps(result).encode()) > settings.max_response_bytes:
+            raise ToolError("SerializationError: invalid or oversized browser result")
+        audit.info("execution source_sha256=%s outcome=success", digest)
+        return result
+    except RpcError as exc:
+        audit.info("execution source_sha256=%s outcome=browser_error", digest)
+        raise ToolError(json.dumps({"error": exc.error})) from exc
+    except asyncio.TimeoutError as exc:
+        audit.info("execution source_sha256=%s outcome=timeout", digest)
+        raise ToolError("ExecutionTimeout: browser code may still be running") from exc
+    except ToolError:
+        audit.info("execution source_sha256=%s outcome=serialization_error", digest)
+        raise
+    except ConnectionError as exc:
+        audit.info("execution source_sha256=%s outcome=transport_error", digest)
+        raise ToolError("RpcTransportError: Foundry disconnected or send failed") from exc
+    except RuntimeError as exc:
+        audit.info("execution source_sha256=%s outcome=no_client", digest)
+        raise ToolError(f"NoConnectedClient: {exc}") from exc
+
+
+from foundry_mcp_server.config import settings
+if settings.development:
+    mcp.tool(execute_javascript)

@@ -1,18 +1,16 @@
 import { connectFoundryBridge } from "./foundryBridge.js";
 
-console.log("Hello World! This code runs immediately when the file is loaded.");
-
-Hooks.on("init", function () {
-  console.log(
-    "This code runs once the Foundry VTT software begins its initialization workflow."
-  );
+Hooks.once("init", () => {
+  const settings = {
+    bridgeUrl: { name: "MCP WebSocket URL", type: String, default: "ws://localhost:8000/ws/foundry" },
+    developmentExecution: { name: "Enable development JavaScript execution (GM only)", type: Boolean, default: false },
+    browserToken: { name: "Local development browser credential", type: String, default: "", config: false },
+  };
+  for (const [key, options] of Object.entries(settings)) {
+    game.settings.register("foundry-mcp", key, { scope: "client", config: true, ...options, onChange: () => window.location.reload() });
+  }
 });
 
-Hooks.on("ready", function () {
-  if (game.user.isGM) {
-    // Establish a websocket connection to http://localhost:8000/ws/foundry
-    // and listen for websocket commands via the foundryBridge module.
-    console.log("GM client ready; initializing Foundry MCP WebSocket bridge.");
-    connectFoundryBridge();
-  }
+Hooks.once("ready", () => {
+  if (game.user.isGM) connectFoundryBridge();
 });

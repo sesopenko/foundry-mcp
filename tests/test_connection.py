@@ -20,11 +20,11 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
         await self.manager.register("gm", self.socket)
 
     async def respond(self, response):
-        await self.manager.handle_incoming(json.dumps(response))
+        await self.manager.handle_incoming(json.dumps(response), self.socket)
 
     async def test_register_unregister_and_missing_client(self):
         self.assertIs(self.manager.websockets["gm"], self.socket)
-        await self.manager.unregister("gm")
+        await self.manager.unregister("gm", self.socket)
         with self.assertRaisesRegex(RuntimeError, "No active Foundry client"):
             await self.manager.call("gm", "getPlayerNameList")
 
@@ -54,7 +54,7 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
         task = asyncio.create_task(self.manager.call("gm", "test"))
         request = await self.socket.sent.get()
         for message in ["invalid JSON", '{}', '{"id":"unknown","result":1}']:
-            await self.manager.handle_incoming(message)
+            await self.manager.handle_incoming(message, self.socket)
         self.assertFalse(task.done())
         await self.respond({"id": request["id"], "result": "accepted"})
         await self.respond({"id": request["id"], "result": "duplicate"})
@@ -77,3 +77,4 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
         self.socket.send_text = fail
         with self.assertRaisesRegex(ConnectionError, "send failed"):
             await self.manager.call("gm", "test")
+        self.assertFalse(self.manager.pending)

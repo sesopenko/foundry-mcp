@@ -1,120 +1,71 @@
 import asyncio
 import json
 import logging
-from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
-
-
 logger = logging.getLogger("foundry_mcp")
-logging.basicConfig(level=logging.INFO)
+
+
+class RpcError(RuntimeError):
+    def __init__(self, error):
+        self.error = error
+        super().__init__(error.get("message", "Foundry RPC error"))
+
 
 class FoundryConnectionManager:
-    """
-    Manages WebSocket connections to Foundry VTT browser clients and
-    provides a simple JSON-RPC style call() API for MCP tools.
-    """
+    """Correlate responses with the exact socket that received each request."""
 
-    def __init__(self) -> None:
-        # Active WebSocket connections keyed by client_id (e.g. "gm")
-        self.websockets: Dict[str, WebSocket] = {}
-        # Pending RPC calls keyed by rpc_id
-        self.pending: Dict[str, asyncio.Future] = {}
+    def __init__(self):
+        self.websockets = {}
+        self.pending = {}
 
-    async def register(self, client_id: str, websocket: WebSocket) -> None:
-        """
-        Register a new WebSocket connection for a given client_id.
-        """
-        logger.info("Registering Foundry client %s", client_id)
+    async def register(self, client_id, websocket):
+        if client_id in self.websockets:
+            raise RuntimeError("Authorized client already connected; close it first")
         self.websockets[client_id] = websocket
 
-    async def unregister(self, client_id: str) -> None:
-        """
-        Remove a WebSocket connection for a given client_id.
-        """
-        logger.info("Unregistering Foundry client %s", client_id)
-        self.websockets.pop(client_id, None)
+    async def unregister(self, client_id, websocket):
+        if self.websockets.get(client_id) is websocket:
+            self.websockets.pop(client_id)
+        for future, owner in list(self.pending.values()):
+            if owner is websocket and not future.done():
+                future.set_exception(ConnectionError("Foundry client disconnected"))
 
-    def _get_websocket(self, client_id: str) -> WebSocket:
-        if client_id not in self.websockets:
+    async def call(self, client_id, method, params=None, timeout=10.0):
+        ws = self.websockets.get(client_id)
+        if ws is None:
             raise RuntimeError(f"No active Foundry client with id '{client_id}'")
-        return self.websockets[client_id]
-
-    async def call(
-        self,
-        client_id: str,
-        method: str,
-        params: Optional[Dict[str, Any]] = None,
-        timeout: float = 10.0,
-    ) -> Any:
-        """
-        Send a JSON-RPC style request over the WebSocket to the given client_id
-        and wait for the response.
-
-        Raises:
-            RuntimeError if no client is connected.
-            asyncio.TimeoutError if the call times out.
-        """
-        ws = self._get_websocket(client_id)
         rpc_id = str(uuid4())
-        loop = asyncio.get_running_loop()
-        fut: asyncio.Future = loop.create_future()
-        self.pending[rpc_id] = fut
-
-        message = {
-            "id": rpc_id,
-            "method": method,
-            "params": params or {},
-        }
-
-        logger.debug("Sending RPC to %s: %s", client_id, message)
-        await ws.send_text(json.dumps(message))
-
+        future = asyncio.get_running_loop().create_future()
+        self.pending[rpc_id] = (future, ws)
         try:
-            result = await asyncio.wait_for(fut, timeout=timeout)
-            logger.debug("Received RPC result for %s: %s", rpc_id, result)
-            return result
+            async with asyncio.timeout(timeout):
+                await ws.send_text(json.dumps({"id": rpc_id, "method": method, "params": params or {}}))
+                return await future
         finally:
-            # Ensure we always clean up the pending future
             self.pending.pop(rpc_id, None)
+            if not future.done():
+                future.cancel()
+            elif not future.cancelled():
+                future.exception()  # Consume disconnect errors even if sending failed.
 
-    async def handle_incoming(self, raw_message: str) -> None:
-        """
-        Handle an incoming JSON message from a Foundry WebSocket client.
-
-        Expected format:
-        {
-            "id": "uuid",
-            "result": ...,
-            "error": { ... }  # optional
-        }
-        """
+    async def handle_incoming(self, raw_message, websocket):
         try:
             data = json.loads(raw_message)
-        except json.JSONDecodeError:
-            logger.warning("Received invalid JSON from Foundry client: %s", raw_message)
+        except (ValueError, TypeError):
             return
-
-        rpc_id = data.get("id")
-        if not rpc_id:
-            logger.warning("Received message without 'id': %s", data)
+        if not isinstance(data, dict) or not isinstance(data.get("id"), str):
             return
-
-        fut = self.pending.get(rpc_id)
-        if not fut:
-            logger.warning("No pending RPC for id %s", rpc_id)
+        entry = self.pending.get(data["id"])
+        if not entry:
             return
-
-        if fut.done():
-            # Should not happen, but guard against double-resolution
-            logger.warning("Future for id %s is already done", rpc_id)
+        future, owner = entry
+        if owner is not websocket or future.done():
             return
-
-        if "error" in data and data["error"] is not None:
-            # Represent errors as exceptions
-            error = data["error"]
-            message = error.get("message", "Unknown error from Foundry client")
-            fut.set_exception(RuntimeError(message))
+        error = data.get("error")
+        if error is not None:
+            if not isinstance(error, dict):
+                error = {"type": "RpcTransportError", "message": "Malformed browser error"}
+            future.set_exception(RpcError(error))
         else:
-            fut.set_result(data.get("result"))
+            future.set_result(data.get("result"))

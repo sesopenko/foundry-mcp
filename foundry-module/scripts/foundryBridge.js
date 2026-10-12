@@ -1,12 +1,12 @@
+import { executeJavaScript } from "./exploration.js";
 /**
  * ES module responsible for handling WebSocket communication with the
  * Python FoundryConnectionManager and dispatching RPC-style requests.
  *
- * It currently implements a single RPC method:
- *   - getPlayerNameList: returns an array of strings with the current player names
+ * Supports the player-name tool and the separately authorized development console.
  */
 
-const WS_URL = "ws://localhost:8000/ws/foundry";
+
 
 // Reconnection configuration
 const RECONNECT_BASE_DELAY_MS = 1000; // 1 second
@@ -24,6 +24,7 @@ let manuallyClosed = false;
  * or a Promise resolving to a value.
  */
 const rpcHandlers = {
+  executeJavaScript,
   /**
    * Return the current list of active player names.
    *
@@ -68,16 +69,17 @@ const rpcHandlers = {
  * @param {object} message - Parsed JSON message from the WebSocket.
  * @returns {Promise<object>} - Response object to send back over WebSocket.
  */
-async function handleRpcMessage(message) {
+export async function handleRpcMessage(message) {
+  if (!message || typeof message !== "object") return null;
   const { id, method, params } = message;
 
   if (!id) {
-    console.warn("[foundryBridge] Received message without id:", message);
+    console.warn("[foundryBridge] Received message without id");
     return null;
   }
 
   if (!method || typeof method !== "string") {
-    console.warn("[foundryBridge] Received message without valid method:", message);
+    console.warn("[foundryBridge] Received message without valid method");
     return {
       id,
       error: {
@@ -86,7 +88,7 @@ async function handleRpcMessage(message) {
     };
   }
 
-  const handler = rpcHandlers[method];
+  const handler = Object.hasOwn(rpcHandlers, method) ? rpcHandlers[method] : null;
   if (!handler) {
     console.warn("[foundryBridge] No handler for method:", method);
     return {
@@ -101,12 +103,10 @@ async function handleRpcMessage(message) {
     const result = await handler(params ?? {});
     return { id, result };
   } catch (err) {
-    console.error("[foundryBridge] Error while handling method", method, err);
+    console.debug("[foundryBridge] RPC failed", method, err?.rpcError?.type || "RpcError");
     return {
       id,
-      error: {
-        message: err?.message || `Error while handling method '${method}'`,
-      },
+      error: err?.rpcError || { type: "RpcError", message: err?.message || "RPC handler failed" },
     };
   }
 }
@@ -149,18 +149,27 @@ function scheduleReconnect() {
  */
 function openWebSocket() {
   // If there's an existing socket, ensure it's closed before opening a new one
-  if (currentSocket && currentSocket.readyState === WebSocket.OPEN) {
+  if (currentSocket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(currentSocket.readyState)) {
     console.log("[foundryBridge] Existing WebSocket is open; not opening a new one.");
     return currentSocket;
   }
 
-  console.log("[foundryBridge] Connecting to", WS_URL);
+  const WS_URL = game.settings.get("foundry-mcp", "bridgeUrl");
+  const url = new URL(WS_URL);
+  const token = game.settings.get("foundry-mcp", "browserToken");
+  if (game.settings.get("foundry-mcp", "developmentExecution") &&
+      (!token || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) || !["ws:", "wss:"].includes(url.protocol))) {
+    console.error("[foundryBridge] Development execution requires a local URL and browser credential");
+    return null;
+  }
 
   manuallyClosed = false;
   const socket = new WebSocket(WS_URL);
   currentSocket = socket;
 
   socket.addEventListener("open", () => {
+    if (currentSocket !== socket) return;
+    if (token) socket.send(JSON.stringify({ token }));
     console.log("[foundryBridge] WebSocket connection established");
     console.log("[foundryBridge] Ready to receive RPC requests from Python server");
 
@@ -177,11 +186,12 @@ function openWebSocket() {
     try {
       message = JSON.parse(event.data);
     } catch (e) {
-      console.warn("[foundryBridge] Received non-JSON message:", event.data);
+      console.warn("[foundryBridge] Received non-JSON message");
       return;
     }
 
-    console.log("[foundryBridge] Received RPC message:", message);
+    if (currentSocket !== socket) return;
+    console.debug("[foundryBridge] RPC", message?.id, message?.method);
 
     const response = await handleRpcMessage(message);
     if (!response) {
@@ -190,10 +200,9 @@ function openWebSocket() {
 
     try {
       const payload = JSON.stringify(response);
-      console.log("[foundryBridge] Sending RPC response:", response);
-      socket.send(payload);
+      if (currentSocket === socket && socket.readyState === WebSocket.OPEN) socket.send(payload);
     } catch (e) {
-      console.error("[foundryBridge] Failed to send response:", e, response);
+      console.error("[foundryBridge] Failed to send RPC response");
     }
   });
 
@@ -204,6 +213,7 @@ function openWebSocket() {
       event.reason
     );
 
+    if (currentSocket !== socket) return;
     currentSocket = null;
 
     // Attempt to reconnect unless the close was initiated manually

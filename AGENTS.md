@@ -38,7 +38,14 @@ This list carries forward the required reading from `.aider.conf.yml`. Keep the 
 Establish tests for existing behavior before extending or refactoring it.
 Run focused tests after each meaningful change and add tests alongside new
 behavior, rather than leaving testing until the end. Resolve relevant failures
-before building further work on top of a change. Before committing, run the
-Python suite (`uv run --locked python -m unittest discover -s tests -v`) and
-JavaScript suite (`npm test`). Browser mocks verify bridge behavior; use a live
-Foundry session separately when a change depends on Foundry runtime APIs.
+before building further work on top of a change.
+
+Run tests autonomously without asking the user to prompt or approve routine
+local test execution. Before committing, run `./scripts/test.sh` for both suites.
+This offline runner uses the existing `.venv` and Node directly, avoiding uv
+cache writes outside the sandbox. For focused Python checks use
+`.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`;
+for focused JavaScript checks use `node --test tests/js/<area>.test.js`.
+Provision dependencies separately with `uv sync --locked` when needed.
+Browser mocks verify bridge behavior; use a live Foundry session separately
+when a change depends on Foundry runtime APIs.

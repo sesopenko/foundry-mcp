@@ -86,11 +86,14 @@ and `uv.lock` together. The former requirements files are replaced by these file
 ### Unit tests and commit hook
 
 PyUnit is Python's built-in `unittest` framework; no additional package is needed.
-Run the suite with:
+Run both suites offline, without dependency installation or uv cache access:
 
 ```bash
-uv run --locked python -m unittest discover -s tests -v
+./scripts/test.sh
 ```
+
+For focused Python checks, use
+`.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`. Provision `.venv` once with `uv sync --locked`.
 
 The Python suite covers RPC correlation, errors and cleanup, the player-name
 MCP tool, and application health and WebSocket lifecycle. Add tests as
@@ -104,7 +107,7 @@ behavior; Foundry API compatibility requires a separate live check.
 
 The setup command above installs the tracked `.githooks/pre-commit` hook for this
 clone. Each new clone must run that command once. The hook runs both suites
-and blocks commits if tests fail or uv or Node.js cannot run them. It tests the
+and blocks commits if tests fail or the local Python environment or Node.js cannot run them. It tests the
 current working tree, so stage the intended changes before committing.
 
 ## LLM
@@ -147,3 +150,9 @@ mcpServers:
 This software is licensed under the MIT license, viewable in [LICENSE.txt](LICENSE.txt)
 
 Copyright (c) Sean Esopenko 2025
+
+## Development JavaScript exploration
+
+An optional `execute_javascript` MCP tool supports live API exploration in a
+local GM browser. It is disabled by default and requires separate caller and
+browser credentials plus browser opt-in. See [setup, usage, and limitations](docs/js-exploration.md).

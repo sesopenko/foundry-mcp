@@ -4,6 +4,7 @@ import { connectFoundryBridge, disconnectFoundryBridge } from "../../foundry-mod
 
 class FakeWebSocket {
   static OPEN = 1;
+  static CONNECTING = 0;
   static sockets = [];
   constructor(url) {
     this.url = url;
@@ -21,6 +22,9 @@ class FakeWebSocket {
 }
 
 globalThis.WebSocket = FakeWebSocket;
+const options = { bridgeUrl: "ws://localhost:8000/ws/foundry", developmentExecution: false, browserToken: "" };
+const settings = { get(module, key) { return options[key]; } };
+globalThis.game = { settings };
 
 test("bridge behavior", async t => {
   const originalSetTimeout = globalThis.setTimeout;
@@ -38,17 +42,18 @@ test("bridge behavior", async t => {
   await t.test("connects and reuses an open socket", async () => {
     const socket = connectFoundryBridge();
     assert.equal(socket.url, "ws://localhost:8000/ws/foundry");
+    assert.equal(connectFoundryBridge(), socket);
     await socket.open();
     assert.equal(connectFoundryBridge(), socket);
   });
   await t.test("player names include only active users with string names", async () => {
-    globalThis.game = { users: new Map([
+    globalThis.game = { settings, users: new Map([
       ["1", { active: true, name: "Alice" }], ["2", { active: false, name: "Bob" }],
       ["3", { active: true, name: 10 }], ["4", { active: true, name: "GM" }],
     ]) };
     const socket = connectFoundryBridge();
     assert.deepEqual(await socket.request({ id: "names", method: "getPlayerNameList", params: {} }), { id: "names", result: ["Alice", "GM"] });
-    globalThis.game = {};
+    globalThis.game = { settings };
     assert.deepEqual((await socket.request({ id: "empty", method: "getPlayerNameList" })).result, []);
   });
   await t.test("invalid requests and browser errors produce RPC errors", async () => {
@@ -62,7 +67,7 @@ test("bridge behavior", async t => {
       assert.equal(response.id, message.id);
       assert.equal(typeof response.error.message, "string");
     }
-    globalThis.game = { users: { values() { throw new Error("users unavailable"); } } };
+    globalThis.game = { settings, users: { values() { throw new Error("users unavailable"); } } };
     assert.equal((await socket.request({ id: "failure", method: "getPlayerNameList" })).error.message, "users unavailable");
   });
   await t.test("reconnect backs off and resets after success", async () => {
@@ -81,4 +86,31 @@ test("bridge behavior", async t => {
     disconnectFoundryBridge();
     assert.equal(timers.size, 0);
   });
+  await t.test("development connection rejects remote URLs and sends credential only on open", async () => {
+    options.developmentExecution = true;
+    options.browserToken = "local-test-credential";
+    options.bridgeUrl = "ws://example.com/ws/foundry";
+    assert.equal(connectFoundryBridge(), null);
+    options.bridgeUrl = "ws://localhost:8000/ws/foundry";
+    const socket = connectFoundryBridge();
+    assert.equal(socket.sent.length, 0);
+    await socket.open();
+    assert.deepEqual(socket.sent, [{ token: options.browserToken }]);
+    assert.ok(!socket.url.includes(options.browserToken));
+    disconnectFoundryBridge();
+  });
+  await t.test("stale sockets cannot close or dispatch through the new connection", async () => {
+    const old = connectFoundryBridge();
+    await old.open();
+    disconnectFoundryBridge();
+    const active = connectFoundryBridge();
+    await active.open();
+    await old.emit("close", { code: 1000 });
+    await old.request({ id: "stale", method: "getPlayerNameList" });
+    assert.equal(old.sent.length, 1); // Authentication only.
+    assert.equal(connectFoundryBridge(), active);
+    assert.equal(timers.size, 0);
+    disconnectFoundryBridge();
+  });
+
 });
