@@ -20,6 +20,10 @@ Journal preparation tools provide hierarchical navigation, page outlines,
 literal text search, and exact HTML/Markdown reading through the GM browser.
 See [journal tool contracts and compatibility](docs/journal-tools.md).
 
+Use [budgeted MCP evaluations and call tracing](docs/mcp-tool-evaluation.md)
+to test fresh-agent usability and compare tool changes without broad benchmark
+runs. Recording is opt-in; the statistics command consumes no GPT usage.
+
 This is currently in an experimental state, not a foundry module that is ready to share on foundry's module listing.
 
 ## Foundry (Docker) Dev Env Setup

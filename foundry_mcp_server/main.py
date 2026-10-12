@@ -10,7 +10,7 @@ import uvicorn
 
 from foundry_mcp_server.ws.connection import FoundryConnectionManager
 
-from foundry_mcp_server.mcp_server.server import mcp_app
+from foundry_mcp_server.mcp_server.server import mcp_app, trace_recorder
 from foundry_mcp_server.mcp_server.tools import register_foundry_manager
 
 logger = logging.getLogger("foundry_mcp")
@@ -110,9 +110,12 @@ async def health() -> JSONResponse:
     """
     Basic health check endpoint.
     """
+    data = {"status": "ok", "foundry_clients": list(foundry_manager.websockets)}
+    if trace_recorder is not None:
+        data["evaluation_logging"] = {"enabled": True, "write_failures": trace_recorder.write_failures}
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"status": "ok", "foundry_clients": list(foundry_manager.websockets)},
+        content=data,
     )
 
 

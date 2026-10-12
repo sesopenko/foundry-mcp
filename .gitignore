@@ -177,3 +177,4 @@ foundry-data
 # Local development browser profile and npm dependencies
 .browser-dev/
 node_modules/
+.eval-runs/

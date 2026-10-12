@@ -12,6 +12,7 @@ class Settings:
     timeout: float = 15.0
     max_code_bytes: int = 32768
     max_response_bytes: int = 65536
+    trace_path: str | None = None
 
     @classmethod
     def from_env(cls):
@@ -23,6 +24,7 @@ class Settings:
             mcp_token=os.getenv("FOUNDRY_MCP_CALLER_TOKEN", ""),
             browser_token=os.getenv("FOUNDRY_MCP_BROWSER_TOKEN", ""),
             timeout=float(os.getenv("FOUNDRY_MCP_EXECUTION_TIMEOUT", "15")),
+            trace_path=os.getenv("FOUNDRY_MCP_TRACE_PATH") or None,
         )
         if not math.isfinite(settings.timeout) or not 0 < settings.timeout <= 120:
             raise ValueError("Execution timeout must be between 0 and 120 seconds")

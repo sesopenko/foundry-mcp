@@ -123,6 +123,15 @@ This list carries forward the required reading from `.aider.conf.yml`. Keep the 
 
 ## Continuous testing
 
+For behavioral MCP evaluation, follow
+[the budgeted evaluation process](docs/mcp-tool-evaluation.md). Prefer focused
+deterministic checks. When fresh-agent testing is warranted, select one relevant
+task and use two independent runs; a third needs a concrete unresolved issue.
+Declare run limits, record actual calls/statistics, and stop once the criteria
+are met. Do not automatically expand into broad benchmarks or spend usage
+collecting more passing examples. One question per tester makes costs
+attributable. Agent self-reported counts are not measurement evidence.
+
 Establish tests for existing behavior before extending or refactoring it.
 Run focused tests after each meaningful change and add tests alongside new
 behavior, rather than leaving testing until the end. Resolve relevant failures
