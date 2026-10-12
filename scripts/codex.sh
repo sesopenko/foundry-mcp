@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$repo_root"
+"$repo_root/scripts/docs-setup.sh"
 "$repo_root/scripts/server.sh" start
 
 # Read only the caller credential; never execute dotenv contents as shell code.

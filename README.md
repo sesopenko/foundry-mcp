@@ -16,6 +16,10 @@ In practice, you run the Python MCP server, load the companion module in Foundry
 
 Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architecture.md)
 
+Journal preparation tools provide hierarchical navigation, page outlines,
+literal text search, and exact HTML/Markdown reading through the GM browser.
+See [journal tool contracts and compatibility](docs/journal-tools.md).
+
 This is currently in an experimental state, not a foundry module that is ready to share on foundry's module listing.
 
 ## Foundry (Docker) Dev Env Setup
@@ -132,6 +136,13 @@ server through the shell when needed. Restart existing Codex sessions to
 load the configuration. Run `codex mcp list` here to check the registration;
 this lists configured servers and does not verify a live MCP connection.
 The Foundry browser must also be connected for tools that access game state.
+
+Grounded Docs also starts automatically as a project-scoped stdio MCP server
+in trusted Codex sessions. Its pinned Docker image is provisioned by the
+launcher, and its documentation index persists across reboots. Agents can
+populate the official Foundry API index on a fresh machine. Docker with
+Compose must be running; no documentation API key is required. See
+[setup, indexing, and recovery](docs/foundry-api-docs.md).
 
 ### Other MCP clients
 

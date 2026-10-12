@@ -1,0 +1,13 @@
+# Separate from the Foundry stack: Codex owns each stdio container's lifetime.
+services:
+  grounded-docs:
+    image: ghcr.io/arabold/docs-mcp-server:3.2.1@sha256:f7423b05d1ce2cced618b1cd3d8734aff88f675d6a05ba198d4667970afd5757
+    environment:
+      DOCS_MCP_APP_TELEMETRY_ENABLED: "false"
+    volumes:
+      - grounded-docs-data:/data
+      - grounded-docs-config:/config
+    stdin_open: true
+volumes:
+  grounded-docs-data:
+  grounded-docs-config:

@@ -1,4 +1,5 @@
 import { executeJavaScript } from "./exploration.js";
+import { getJournalTree, getJournalContents, searchJournals, readJournalPage } from "./journals.js";
 /**
  * ES module responsible for handling WebSocket communication with the
  * Python FoundryConnectionManager and dispatching RPC-style requests.
@@ -25,6 +26,10 @@ let manuallyClosed = false;
  */
 const rpcHandlers = {
   executeJavaScript,
+  getJournalTree,
+  getJournalContents,
+  searchJournals,
+  readJournalPage,
   /**
    * Return the current list of active player names.
    *

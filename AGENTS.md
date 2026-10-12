@@ -22,6 +22,94 @@ confirms registration, not tool availability in the current session.
 Prefer `./scripts/codex.sh` when launching Codex: it starts the service and
 waits for health before Codex discovers MCP tools.
 
+## Foundry public API requirement
+
+Implement module features using documented, externally callable Foundry public
+APIs and document schema fields for the supported Foundry versions. Standard
+JavaScript and browser APIs may be used for processing returned data. Follow
+Foundry's [public/private API guidance](https://foundryvtt.com/api/v14/).
+Appearing in generated API documentation alone does not make a member public:
+check its visibility and annotations.
+
+Do not depend on undocumented runtime properties, private/internal members,
+protected methods intended for subclass use, underscore-prefixed internals,
+private fields, sheet preparation state, UI DOM structure, or publisher/module
+implementation details. Do not monkey-patch Foundry internals to expose data.
+Build hierarchical views from supported document relationships when a public
+UI/tree API is unavailable.
+
+Runtime object exploration and installed-source inspection may explain behavior
+or verify a documented API, but neither establishes that an observed member is
+supported for external use. Before adopting a Foundry dependency, identify its
+official documentation, supported version, and public status. If public status
+is unclear, leave it out of production code and use a documented alternative
+or state the capability limitation. Feature detection and passing live tests
+do not make an undocumented dependency acceptable.
+
+Respect deprecations and declared module compatibility. Public APIs can still
+change across Foundry versions; use focused tests and live verification for
+supported versions rather than promising compatibility with future releases.
+
+## Foundry API documentation MCP
+
+Use the `grounded-docs` MCP tools for Foundry API documentation before writing
+code that calls Foundry APIs. Follow [the documentation workflow](docs/foundry-api-docs.md)
+to check the `foundry-vtt` index, populate a missing runtime major version,
+and verify search results. Indexing official Foundry docs is authorized.
+
+Read documentation and type declarations critically: they can lag Foundry
+releases. Community declarations (including `anandamideio/foundry-types`) are
+not authoritative proof that an API exists or behaves that way in the installed
+runtime. Check the runtime version, indexed documentation version, source URL,
+and index freshness. Even matching major versions can differ between builds.
+Verify relevant signatures and behavior against installed source or a live
+development runtime when compatibility matters. State unresolved differences;
+do not silently assume older declarations or cached docs describe current APIs.
+
+Codex starts this stdio server automatically. If tools are missing, run
+`./scripts/docs-setup.sh`; Docker image downloads and routine startup are
+authorized. Use `./scripts/docs-cli.sh` for inspection or searches while
+recovering. Reconnect or restart Codex if discovery failed; shell startup
+alone does not add tools to the current session. Do not run a second detached
+documentation server or delete persistent volumes. Prefer `./scripts/codex.sh`
+on fresh clones to provision the image before MCP discovery.
+
+## Self-documenting MCP tools
+
+Design tools for a fresh LLM session with no prior repository or game-world
+exploration. Tool descriptions/docstrings are part of the interface contract:
+each must stand on its own in MCP discovery. For every tool, document the
+following where applicable:
+
+- Purpose, when to use it, and the next useful tool by name.
+- Scope, required runtime/user permissions, supported content, and exclusions.
+- Required inputs, defaults, bounds, and allowed or conflicting combinations.
+- Identifier types and provenance: which tool supplies each selector, whether
+  names/paths are accepted, and how document IDs differ from UUIDs.
+- Exact response field names and meanings, node kinds, and hierarchy.
+- Exact continuation fields and how to pass them back, including revision or
+  stale-result handling. Distinguish count, depth, and byte limits; callers
+  should use returned continuation data rather than construct cursors.
+- Search/matching semantics and what empty results do and do not establish.
+- Actionable errors for invalid inputs, unsupported content, missing documents,
+  and stale continuations, with recovery steps.
+- A short usage example when it resolves ambiguity.
+
+Descriptions must match implemented schemas and behavior. Finalize concrete
+defaults, bounds, response fields, and continuation contracts before release;
+placeholder descriptions are insufficient. Do not rely on earlier conversation
+context or require failed calls to discover normal usage.
+
+Expose names and hierarchical context alongside stable IDs. Clearly distinguish
+empty results, unsupported content, incomplete results, and missing documents.
+Describe retrieval limits and search semantics so an LLM can plan a complete
+investigation and avoid treating a partial response as exhaustive evidence.
+
+When adding or changing tools, validate their actual MCP discovery descriptions
+and input schemas as well as their runtime behavior. A fresh client should be
+able to discover, navigate, search, read, and continue results using only the
+published tool contracts and returned data.
+
 ## Required reading
 
 Before doing work in this repository, read these files in full:

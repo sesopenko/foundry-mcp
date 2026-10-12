@@ -97,3 +97,6 @@ async def execute_javascript(code: str) -> Dict[str, Any]:
 from foundry_mcp_server.config import settings
 if settings.development:
     mcp.tool(execute_javascript)
+
+# Registration is independent of the development-only JavaScript console.
+from . import journals  # noqa: E402,F401

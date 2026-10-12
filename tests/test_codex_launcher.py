@@ -15,8 +15,11 @@ class LauncherTests(unittest.TestCase):
             launcher = root / "scripts/codex.sh"
             launcher.write_text(Path("scripts/codex.sh").read_text())
             launcher.chmod(0o755)
+            setup = root / "scripts/docs-setup.sh"
+            setup.write_text('#!/bin/sh\ntouch "' + str(root / 'docs-ready') + '"\n')
+            setup.chmod(0o755)
             server = root / "scripts/server.sh"
-            server.write_text("#!/bin/sh\nexit 0\n")
+            server.write_text('#!/bin/sh\ntest -f "' + str(root / 'docs-ready') + '"\n')
             server.chmod(0o755)
             (root / ".venv/bin").mkdir(parents=True)
             (root / ".venv/bin/python").symlink_to(sys.executable)
@@ -30,3 +33,17 @@ class LauncherTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertNotIn("test-caller", result.stdout + result.stderr)
             self.assertNotIn("test-browser", result.stdout + result.stderr)
+
+    def test_failed_documentation_setup_stops_before_codex_discovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            launcher = scripts / "codex.sh"
+            launcher.write_text(Path("scripts/codex.sh").read_text())
+            setup = scripts / "docs-setup.sh"
+            setup.write_text("#!/bin/sh\nexit 42\n")
+            setup.chmod(0o755)
+            result = subprocess.run(["bash", str(launcher)], capture_output=True,
+                                    text=True, timeout=5)
+            self.assertEqual(result.returncode, 42)
