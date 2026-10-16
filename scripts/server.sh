@@ -38,7 +38,15 @@ PY
         echo "Installed $service. Run $repo_root/scripts/server.sh start."
         ;;
     start|restart)
-        systemctl --user reset-failed "$service"
+        load_state="$(systemctl --user show "$service" --property=LoadState --value)"
+        if [[ "$load_state" == not-found ]]; then
+            "$repo_root/scripts/server.sh" install
+        fi
+        # Inactive units can be garbage-collected by systemd. Resetting one
+        # unconditionally can fail with "Unit ... not loaded" before start.
+        if systemctl --user is-failed --quiet "$service"; then
+            systemctl --user reset-failed "$service"
+        fi
         systemctl --user "${1}" "$service"
         wait_ready
         ;;

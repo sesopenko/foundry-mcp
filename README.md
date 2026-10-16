@@ -134,7 +134,7 @@ After installing the user service above, launch Codex with:
 ./scripts/codex.sh
 ```
 
-The launcher starts the service and waits for health before launching Codex
+The launcher installs the user service if missing, starts it, and waits for health before launching Codex
 from this repository. `AGENTS.md` tells Codex how to start and restart the
 server through the shell when needed. Restart existing Codex sessions to
 load the configuration. Run `codex mcp list` here to check the registration;
@@ -156,7 +156,7 @@ An LLM Web Interface is not included.  You can use [LibreChat](https://www.libre
 mcpServers:
   foundry-vtt:
     type: streamable-http
-    url: http://192.168.10.137:8000/mcp/mcp
+    url: http://mcp-host.example:8000/mcp/mcp
     timeout: 30000
     serverInstructions: true
 ```

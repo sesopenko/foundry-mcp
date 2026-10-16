@@ -178,3 +178,6 @@ foundry-data
 .browser-dev/
 node_modules/
 .eval-runs/
+
+# Private operator context
+.local/

@@ -3,7 +3,7 @@ name: foundry-compose-upgrade
 description: Upgrade Foundry VTT in the sesopenko/foundry-mcp Docker Compose stack, verify server health, and open its browser endpoint. Use for this repository's Foundry server upgrades.
 ---
 
-Work in `/home/sean/src/github.com/sesopenko/foundry-mcp`, reading its AGENTS.md and required repository guidance first. Preserve unrelated working-tree edits.
+Work in the repository root, reading its AGENTS.md and required repository guidance first. Preserve unrelated working-tree edits.
 
 ## Upgrade
 
