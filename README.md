@@ -26,6 +26,14 @@ runs. Recording is opt-in; the statistics command consumes no GPT usage.
 
 This is currently in an experimental state, not a foundry module that is ready to share on foundry's module listing.
 
+## Standalone LAN deployment and module releases
+
+For container setup, GitHub Actions secrets, module install/update, LibreChat
+cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
+The gaming Foundry installation is independently managed. Production bridge
+access is unauthenticated on the trusted LAN; development execution stays disabled.
+See [verification evidence and pending operator checks](docs/operationalization-verification.md).
+
 ## Foundry (Docker) Dev Env Setup
 
 `docker-compose.yml` reads Foundry credentials from a local `.env` file (gitignored).
