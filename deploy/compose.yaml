@@ -1,0 +1,12 @@
+services:
+  foundry-mcp:
+    image: ${FOUNDRY_MCP_IMAGE:?set a pinned image tag or digest}
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      FOUNDRY_MCP_HOST: 0.0.0.0
+      FOUNDRY_MCP_PORT: "8000"
+      FOUNDRY_MCP_DEV_EXECUTION: "false"
+    ports:
+      - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
+    stop_grace_period: 15s

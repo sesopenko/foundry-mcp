@@ -1,0 +1,20 @@
+# Local container build/smoke checks; independent of the managed dev server.
+services:
+  foundry-mcp:
+    image: foundry-mcp:local
+    build:
+      context: ..
+      args:
+        VERSION: 1.1.0
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18000:8000"
+    stop_grace_period: 15s
+
+  smoke:
+    image: foundry-mcp:local
+    profiles: [checks]
+    entrypoint: [python, /checks/container-smoke.py, --url, 'http://foundry-mcp:8000']
+    volumes:
+      - ../scripts/container-smoke.py:/checks/container-smoke.py:ro

@@ -1,0 +1,11 @@
+# Allowlist: no Git history, reference clones, credentials, data, or host venv.
+**
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!uv.lock
+!LICENSE.txt
+!foundry_mcp_server/
+!foundry_mcp_server/**
+**/__pycache__/
+**/*.pyc
