@@ -1,4 +1,5 @@
 import { executeJavaScript } from "./exploration.js";
+import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage } from "./journals.js";
 /**
  * ES module responsible for handling WebSocket communication with the
@@ -18,6 +19,24 @@ let currentSocket = null;
 let reconnectAttempts = 0;
 let reconnectTimeoutId = null;
 let manuallyClosed = false;
+let connectionStatus = { state: "Disconnected", message: "Bridge has not connected." };
+const reported = new Set();
+
+/** Local module status; no Foundry internals or UI DOM are inspected. */
+export function getConnectionStatus() { return { ...connectionStatus }; }
+
+function reportStatus(state, message) {
+  connectionStatus = { state, message };
+  const key = `${state}:${message}`;
+  if (reported.has(key)) return;
+  reported.add(key);
+  const text = `Foundry MCP — ${state}: ${message}`;
+  console.info(text);
+  const notifications = globalThis.ui?.notifications;
+  if (state === "Misconfigured") notifications?.error(text);
+  else if (state === "Disconnected") notifications?.warn(text);
+  else notifications?.info(text);
+}
 
 /**
  * Map of method names to handler functions.
@@ -159,22 +178,36 @@ function openWebSocket() {
     return currentSocket;
   }
 
-  const WS_URL = game.settings.get("foundry-mcp", "bridgeUrl");
-  const url = new URL(WS_URL);
-  const token = game.settings.get("foundry-mcp", "browserToken");
-  if (game.settings.get("foundry-mcp", "developmentExecution") &&
+  let url;
+  try {
+    url = bridgeUrl(game.settings.get("foundry-mcp", "bridgeUrl"));
+  } catch (error) {
+    reportStatus("Misconfigured", error.message);
+    return null;
+  }
+  const development = game.settings.get("foundry-mcp", "developmentExecution");
+  const token = development ? game.settings.get("foundry-mcp", "browserToken") : "";
+  if (development &&
       (!token || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) || !["ws:", "wss:"].includes(url.protocol))) {
-    console.error("[foundryBridge] Development execution requires a local URL and browser credential");
+    reportStatus("Misconfigured", "Development execution requires a loopback URL and browser credential.");
     return null;
   }
 
   manuallyClosed = false;
-  const socket = new WebSocket(WS_URL);
+  let socket;
+  try {
+    socket = new WebSocket(url.href);
+  } catch {
+    reportStatus("Misconfigured", "The browser rejected the WebSocket. Check the URL, TLS certificate, and page transport.");
+    return null;
+  }
   currentSocket = socket;
+  reportStatus("Connecting", "Opening the browser bridge.");
 
   socket.addEventListener("open", () => {
     if (currentSocket !== socket) return;
     if (token) socket.send(JSON.stringify({ token }));
+    reportStatus("Connected", "WebSocket open; MCP calls can now reach this browser unless the server rejects it.");
     console.log("[foundryBridge] WebSocket connection established");
     console.log("[foundryBridge] Ready to receive RPC requests from Python server");
 
@@ -220,6 +253,9 @@ function openWebSocket() {
 
     if (currentSocket !== socket) return;
     currentSocket = null;
+    reportStatus("Disconnected", event.code === 1008
+      ? "Server rejected the bridge. Close competing GM tabs or check development credentials."
+      : "Connection lost; retrying with backoff. Check the server and configured URL.");
 
     // Attempt to reconnect unless the close was initiated manually
     if (!manuallyClosed) {
@@ -228,7 +264,7 @@ function openWebSocket() {
   });
 
   socket.addEventListener("error", (event) => {
-    console.error("[foundryBridge] WebSocket error:", event);
+    console.error("[foundryBridge] WebSocket transport error; check server reachability and TLS.");
     // Let the 'close' event handle reconnection; some browsers fire both.
   });
 
@@ -260,8 +296,10 @@ export function disconnectFoundryBridge() {
   }
 
   if (currentSocket) {
+    const socket = currentSocket;
+    currentSocket = null;
     try {
-      currentSocket.close();
+      socket.close();
     } catch (e) {
       console.error("[foundryBridge] Error while closing WebSocket:", e);
     } finally {
@@ -269,5 +307,14 @@ export function disconnectFoundryBridge() {
     }
   }
 
+  reportStatus("Disconnected", "Bridge stopped in this browser.");
+
   console.log("[foundryBridge] Foundry MCP WebSocket bridge disconnected.");
+}
+
+/** Apply settings changes without reloading the game or reviving an old socket. */
+export function reconnectFoundryBridge() {
+  disconnectFoundryBridge();
+  reconnectAttempts = 0;
+  return connectFoundryBridge();
 }

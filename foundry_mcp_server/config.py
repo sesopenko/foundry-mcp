@@ -1,11 +1,15 @@
-"""Fail-closed settings for the local development console."""
+"""Runtime binding and fail-closed settings for the development console."""
 import math
 import os
+import ipaddress
+import re
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class Settings:
+    host: str = "127.0.0.1"
+    port: int = 8000
     development: bool = False
     mcp_token: str = ""
     browser_token: str = ""
@@ -16,10 +20,24 @@ class Settings:
 
     @classmethod
     def from_env(cls):
+        host = os.getenv("FOUNDRY_MCP_HOST", "127.0.0.1").strip()
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            if not re.fullmatch(r"(?=.{1,253}\Z)[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.?", host):
+                raise ValueError("FOUNDRY_MCP_HOST must be a bind hostname or IP address, without scheme or port") from None
+        try:
+            port = int(os.getenv("FOUNDRY_MCP_PORT", "8000"))
+        except ValueError as exc:
+            raise ValueError("FOUNDRY_MCP_PORT must be an integer between 1 and 65535") from exc
+        if not 1 <= port <= 65535:
+            raise ValueError("FOUNDRY_MCP_PORT must be between 1 and 65535")
         enabled = os.getenv("FOUNDRY_MCP_DEV_EXECUTION", "false")
         if enabled not in {"true", "false"}:
             raise ValueError("FOUNDRY_MCP_DEV_EXECUTION must be true or false")
         settings = cls(
+            host=host,
+            port=port,
             development=enabled == "true",
             mcp_token=os.getenv("FOUNDRY_MCP_CALLER_TOKEN", ""),
             browser_token=os.getenv("FOUNDRY_MCP_BROWSER_TOKEN", ""),

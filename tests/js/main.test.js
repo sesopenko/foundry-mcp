@@ -21,9 +21,17 @@ test("Foundry initializes bridge only when a GM is ready", async () => {
   hooks.get("init")();
   assert.equal(registered.get("developmentExecution").default, false);
   assert.equal(registered.get("browserToken").config, false);
+  assert.equal(registered.get("bridgeUrl").scope, "client");
+  registered.get("bridgeUrl").onChange();
+  assert.equal(sockets.length, 0); // Saving before ready must not start the bridge.
   hooks.get("ready")();
   assert.equal(sockets.length, 0);
   globalThis.game.user.isGM = true;
   hooks.get("ready")();
   assert.equal(sockets.length, 1);
+  sockets[0].close = () => {};
+  registered.get("bridgeUrl").onChange();
+  registered.get("developmentExecution").onChange();
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(sockets.length, 2); // Coalesce simultaneous saves; no page reload.
 });

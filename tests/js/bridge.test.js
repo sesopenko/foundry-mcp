@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { connectFoundryBridge, disconnectFoundryBridge } from "../../foundry-module/scripts/foundryBridge.js";
+import { connectFoundryBridge, disconnectFoundryBridge, reconnectFoundryBridge, getConnectionStatus } from "../../foundry-module/scripts/foundryBridge.js";
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -40,10 +40,13 @@ test("bridge behavior", async t => {
   });
 
   await t.test("connects and reuses an open socket", async () => {
+    options.browserToken = "leftover-local-credential";
     const socket = connectFoundryBridge();
     assert.equal(socket.url, "ws://localhost:8000/ws/foundry");
     assert.equal(connectFoundryBridge(), socket);
     await socket.open();
+    assert.deepEqual(socket.sent, []); // Never send a development secret in normal LAN mode.
+    options.browserToken = "";
     assert.equal(connectFoundryBridge(), socket);
   });
   await t.test("player names include only active users with string names", async () => {
@@ -85,6 +88,33 @@ test("bridge behavior", async t => {
   await t.test("manual disconnect clears reconnect timer", () => {
     disconnectFoundryBridge();
     assert.equal(timers.size, 0);
+  });
+  await t.test("invalid configuration and constructor failures do not throw or schedule retries", () => {
+    options.bridgeUrl = "invalid";
+    assert.equal(connectFoundryBridge(), null);
+    assert.equal(getConnectionStatus().state, "Misconfigured");
+    options.bridgeUrl = "ws://localhost:8000/ws/foundry";
+    globalThis.WebSocket = class { constructor() { throw new Error("blocked"); } };
+    assert.equal(connectFoundryBridge(), null);
+    globalThis.WebSocket = FakeWebSocket;
+    assert.equal(timers.size, 0);
+  });
+  await t.test("settings reconnect cancels timers and stale close events", async () => {
+    const old = connectFoundryBridge();
+    await old.open();
+    options.bridgeUrl = "ws://localhost:8123/ws/foundry";
+    const replacement = reconnectFoundryBridge();
+    assert.equal(replacement.url, options.bridgeUrl);
+    await old.emit("close", { code: 1000 });
+    assert.equal(timers.size, 0);
+    await replacement.open();
+    assert.equal(getConnectionStatus().state, "Connected");
+    await replacement.close();
+    assert.equal(timers.size, 1);
+    options.bridgeUrl = "broken";
+    assert.equal(reconnectFoundryBridge(), null);
+    assert.equal(timers.size, 0);
+    options.bridgeUrl = "ws://localhost:8000/ws/foundry";
   });
   await t.test("development connection rejects remote URLs and sends credential only on open", async () => {
     options.developmentExecution = true;

@@ -61,10 +61,10 @@ console to store the browser credential in this browser's client settings:
 await game.settings.set("foundry-mcp", "browserToken", "your-browser-credential");
 ```
 
-This reloads the page. The credential is deliberately hidden from the ordinary
+This reconnects the bridge without reloading the page. The credential is deliberately hidden from the ordinary
 settings UI and is not sent in the URL. It is stored by Foundry client settings;
 other code running in this browser can read it. Then enable **Enable development
-JavaScript execution (GM only)** in Module Settings; this reloads again. The
+JavaScript execution (GM only)** in Module Settings; this reconnects again. The
 credential is sent as the first WebSocket message. The server rejects missing
 or incorrect credentials and a second authenticated GM socket. Close an old
 GM tab before connecting another. Reconnects use the existing backoff policy.

@@ -4,19 +4,17 @@
   "description": "Establishes a websocket connection to foundry-mcp so an LLM can access tools which call foundry code in the browser.",
   "authors": [
     {
-      "name": "Sean Esopenko",
-      "flags": {}
+      "name": "Sean Esopenko"
     }
   ],
   "esmodules": [
     "scripts/main.js"
   ],
-  "flags": {
-    "canUpload": true
-  },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "compatibility": {
-    "minimum": "13",
-    "verified": "14"
-  }
+    "minimum": "13"
+  },
+  "url": "https://github.com/sesopenko/foundry-mcp",
+  "manifest": "https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json",
+  "download": "https://github.com/sesopenko/foundry-mcp/releases/download/v1.1.0/foundry-mcp.zip"
 }

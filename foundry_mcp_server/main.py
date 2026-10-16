@@ -24,7 +24,7 @@ register_foundry_manager(foundry_manager)
 app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
-    version="0.1.0",
+    version="1.1.0",
     lifespan=mcp_app.lifespan
 )
 
@@ -128,9 +128,10 @@ def main() -> None:
     """
     uvicorn.run(
         "foundry_mcp_server.main:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True,
+        host=settings.host,
+        port=settings.port,
+        reload=False,
+        proxy_headers=False,
     )
 
 
