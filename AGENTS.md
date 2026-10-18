@@ -147,6 +147,36 @@ Provision dependencies separately with `uv sync --locked` when needed.
 Browser mocks verify bridge behavior; use a live Foundry session separately
 when a change depends on Foundry runtime APIs.
 
+## Reuse existing Foundry instances
+
+Foundry setup requires significant manual work from the user. Reuse existing
+instances, worlds, credentials, and browser profiles rather than creating new
+ones for convenience or routine verification.
+
+- The root `docker-compose.yml` instance is the default for active development,
+  module changes, browser checks, and Foundry runtime API verification.
+- The existing fixture in `.local/compose-v13.yaml` (localhost port 30013) is
+  reserved for testing Docker packaging. Preserve its data and completed setup;
+  do not repurpose it as another development or routine compatibility instance.
+- Exploratory local Foundry testing for Docker packaging is needed only after
+  significant Docker Compose changes. Routine code changes, image rebuilds,
+  version bumps, and documentation changes do not justify repeating manual
+  Foundry setup or package installation. Prefer automated tests and isolated
+  MCP container smoke checks that do not provision another Foundry instance.
+- Create a new Foundry instance only when absolutely necessary and neither
+  existing instance can perform the required check. Explain the concrete need
+  and expected manual setup burden to the user before provisioning it. A clean
+  installation, extra version matrix, or desire for isolation alone is not a
+  reason to create one automatically.
+- Do not reset or delete existing instance data, repeat license activation,
+  replace configured worlds, or demand fresh setup to simplify agent testing.
+  If a required check cannot use the existing instances safely, report the
+  verification gap rather than shifting unplanned setup work onto the user.
+
+These rules take precedence over older plans, verification checklists, or
+skills suggesting fresh disposable Foundry instances. Keep the gaming Foundry
+installation outside development automation.
+
 ## Development browser
 
 For active Foundry development, use `./scripts/codex-dev.sh` to enable the

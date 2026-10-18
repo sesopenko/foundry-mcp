@@ -16,14 +16,14 @@ No production Foundry instance, deployment host, or LibreChat service was access
 | Clean committed-source build | Exported committed files with `git archive`, rebuilt the container, and reproduced the module ZIP byte-for-byte without ignored/local files. |
 | Runtime filesystem | UID 10001; allowlisted application files and venv only, plus license attribution; no environment files or development/source mounts. |
 | Health and MCP | Isolated image healthy; protocol initialization, production tool catalog/schema presence, no-GM error, synthetic RPC, duplicate rejection, disconnect, and reconnect passed. |
-| Real browser RPC | Existing local v14.369 `test` GM browser connected to the production container with browser development execution disabled; player and journal reads succeeded. |
+| Real browser RPC | Local v14.369 development world and, on 2026-10-18, the existing v13.351 packaging world both answered player and journal reads through the production container with development execution disabled. |
 | Development credential containment | Normal LAN mode never transmits a leftover browser development credential; regression covered. |
 | Production execution tool | Absent from production container discovery. Existing authenticated development discovery still exposes it only when opted in. |
 | Browser configuration | Client scope and saved credential preserved; invalid URL produces Misconfigured; correcting it reconnects without reload. |
 | Restart behavior | Container restart followed by successful real-browser RPC; `unless-stopped` also recovered health after an in-container SIGTERM. |
 | Graceful stop | Container stopped with exit code 0, without forced termination. |
 | Browser console | Normal refresh on v14.369: zero uncaught exceptions, zero bridge errors, zero network errors during the 10-second observation. |
-| Release assets | Version/tag/metadata/import validation, ZIP root paths, deterministic ZIP bytes, exclusion of private/dev files and symlinks tested. |
+| Release assets | Automated artifact validation passes. On 2026-10-18 the existing v13 fixture installed a local-manifest package, then updated it from test version 1.0.0 to 1.1.0 through Foundry Setup. Installed runtime assets match the canonical release ZIP. |
 | Privacy cleanup | Current tracked and intended new public files have no matches for the audited private domain, LAN addresses, host nickname, personal home paths, private-key/access-token patterns. |
 
 During intentional settings switching, closing an in-progress old socket can
@@ -62,30 +62,57 @@ restart count/health recovery, and privacy results. They are retained under
 ignored `.local/`, not shipped. The actionlint invocation used an ignored
 Compose helper mounting only workflow files read-only.
 
-## Compatibility and package-install limitations
+## Compatibility and package-install evidence
 
 | Core | Status |
 | --- | --- |
-| v14.369 | Live settings, notifications, invalid URL/recovery, refresh, bridge reconnect, and real container RPC verified in the existing local test world. |
-| v13.351 | Separate disposable service provisioned; installed application metadata reports 13.351.0. Browser entry redirects to `/license`; setup/activation is incomplete. No GM runtime compatibility claim is made. |
+| v14.369 | Live settings, notifications, invalid URL/recovery, refresh, bridge reconnect, and real container RPC verified in the existing root development world. |
+| v13.351 | On 2026-10-18, reused the user-configured packaging fixture and existing `test` world. Fresh local-manifest install, higher-version update, module enablement, native settings save without reload, player/journal RPC, refresh, and reconnect after MCP-container restart passed. |
 
-The v13 fixture has its own ignored data directory, with no v14 data downgrade.
-The build agent did not complete license setup or launch a world there. It is
-stopped after inspection. To resume locally, use the ignored fixture Compose,
-complete its setup in the dedicated development browser, install a compatible
-system/test world, and run the browser and release-install/update checks.
+The user completed license/setup and configured the existing v13 world. No
+additional Foundry instance was created for these checks; worlds, systems,
+other module selections, credentials, and data were preserved. The root
+instance remains the default for development. The v13 fixture is reserved for
+packaging checks after significant Compose changes, not a routine version
+matrix. Preserve its completed setup and follow AGENTS.md before further testing.
 
-New API dependencies were checked against official indexed v13 and v14 docs:
-public `ClientSettings.register/get/set`, client `scope`, `hint`, and `onChange`;
-public `Notifications.info/warn/error`. v13 runtime behavior remains unverified.
-The manifest retains minimum 13 but omits a `verified` claim pending completion
-of the target-version acceptance. See [operations](operations.md) for official links.
+### Local installer/update procedure (2026-10-18)
 
-**Fresh manifest installation and higher-version package update have not been
-executed.** The existing local v14 module is source-mounted, so refreshing it
-does not establish package-manager installation/update. Generated ZIP checks
-are packaging evidence only. Run those remaining checks on disposable data
-before declaring module distribution ready.
+- Built ignored local-only test variants from the generated module ZIP. Their
+  manifest pointed at `http://assets:8000/module.json`, with version-specific
+  ZIP paths on the existing fixture's static-artifact service.
+- Used Foundry Setup's **Install Module → Manifest URL** to install test version
+  1.0.0. Advanced the local manifest to 1.1.0 and used its normal package update
+  control. The on-disk package and Setup UI both confirmed 1.1.0.
+- Test versions used the current runtime assets: this tests the installer and
+  update contract, not historical 1.0.0 runtime compatibility. Canonical release
+  metadata and ZIP were not rewritten or published.
+- Compared every installed runtime asset and license against the canonical ZIP;
+  only the fixture manifest contains local test URLs. Canonical ZIP SHA-256:
+  `d117f62f2ad567148de6936864a5a8a2485204e7ddd7b95dd17d9e13bfef147b`.
+- Relaunched the existing world, enabled only Foundry MCP while preserving the
+  other module selections, and saved `ws://localhost:18000/ws/foundry` in native
+  module settings. Development execution remained false. A browser marker
+  proved saving the URL did not reload the page.
+- Read player names and the journal tree through the production container with
+  a fresh protocol-aware MCP client; the execution tool was absent. No world
+  content was printed, imported, or edited.
+- Normal refresh restored Connected status. A 10-second observation found zero
+  uncaught exceptions, bridge errors, or network errors. RPC succeeded again
+  after restarting only the MCP container.
+
+The fixture remains configured for reuse: Foundry at localhost:30013, MCP at
+localhost:18000, and local package assets at localhost:18013. Its world/module
+state is retained. The root development instance was not started or modified.
+Local helpers remain ignored and attached only to the dedicated browser profile.
+
+New API dependencies were checked against official indexed v13/v14 docs:
+public `ClientSettings.register/get/set`, client `scope`, `hint`, `onChange`,
+and public notifications. The v13 checks establish the packaging/connection
+paths above, not exhaustive coverage of every content tool and optional-module
+interaction. The manifest's broader `verified` declaration remains omitted;
+minimum 13 is unchanged. Public GitHub downloads and real CI publication remain
+separate acceptance gates. See [operations](operations.md) for official links.
 
 ## Privacy and local Git history
 
@@ -101,8 +128,8 @@ before declaring module distribution ready.
   for the audited patterns were empty.
 - **Older already-published history still contains a former README LAN example
   and a workstation path in an older skill revision.** Current versions are
-  sanitized. Those older disclosures were not rewritten; review before making
-  the entire repository public if historical removal is required.
+  sanitized. On 2026-10-18 the user explicitly approved retaining those historical
+  values. No further history rewrite is required for them.
 - Git name/email and license/module attribution are retained. Pattern scanning
   is not a guarantee that all personal information or secrets are absent.
 - Reference clones, browser data, credentials, and traces remain ignored and
@@ -113,11 +140,10 @@ before declaring module distribution ready.
 
 The following are intentionally pending and must not be inferred from local passes:
 
-- [ ] Complete the disposable v13 runtime, fresh manifest install, and higher-version update checks.
 - [ ] Configure Actions secrets and publication switch; inspect the first real CI run.
 - [ ] Verify registry TLS/access from the hosted runner, private image push, and pull from a separate deployment environment.
 - [ ] Verify secret hostname masking in normal/error logs and absence from public artifacts; local actionlint cannot establish this.
-- [ ] Decide repository visibility after reviewing remaining historical disclosures.
+- [ ] Make the repository/releases publicly accessible when ready; the user approved retaining the historical LAN/path examples.
 - [ ] Publish a new immutable release; verify anonymous stable manifest and version-pinned ZIP URLs.
 - [ ] Human: back up gaming Foundry data/settings and confirm actual running core build.
 - [ ] Human: deploy only the bridge, install/enable/configure the module, and replace LibreChat's old endpoint/allowlist as required.
@@ -137,6 +163,7 @@ service startup fix and its regression test:
 .dockerignore
 .github/workflows/ci.yml
 .gitignore
+AGENTS.md
 Dockerfile
 README.md
 deploy/.env.example

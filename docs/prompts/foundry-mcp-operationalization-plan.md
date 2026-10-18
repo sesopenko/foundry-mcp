@@ -18,6 +18,12 @@ production hosts, reference repositories, repository visibility, or GitHub
 settings automatically. Only this working copy is an implementation target.
 Production deployment and gaming-world acceptance are human-executed.
 
+Reuse the root Compose instance for active development and preserve the existing
+v13 packaging fixture. Exploratory Foundry packaging checks are needed only
+after significant Compose changes. Do not create new instances, reset data, or
+repeat user setup for routine changes; AGENTS.md takes precedence over older
+checklists.
+
 Do not add game features, PDF RAG, LangChain, multi-world routing, automatic
 updates, proxy infrastructure, or package-directory registration. Preserve
 existing tools, response/continuation contracts, and protocol paths.
@@ -137,8 +143,10 @@ Gate: environments are configured without JavaScript edits and regressions pass.
 - Follow the development browser skill: focused tests, normal refresh, wait
   for Foundry readiness/bridge ownership, inspect console/network errors, and
   verify live behavior. Use only the dedicated test profile/world.
-- Verify v13 on disposable data first; never downgrade v14 data in place.
-  Verify v14 separately. Do not claim compatibility based on manifest text or mocks.
+- Use the existing packaging fixture for required packaging checks and the root
+  instance for development. Preserve configured data; do not provision another
+  instance or expand into routine version-matrix testing. Record tested versions
+  and capability limits rather than claiming compatibility from mocks.
 
 Gate: independently runnable image, recorded local evidence, and honest runtime gaps.
 
@@ -172,9 +180,11 @@ Gate: workflows validated locally; actual publication/pull recorded separately.
   Version changes require lockfile/URL updates; never replace existing release assets.
 - Keep module asset publication separate from private registry credentials.
   Skip public module publication while repository is private; never change visibility.
-- Test fresh install and a higher-version update on disposable local Foundry
-  using locally served test artifacts. Public GitHub URL/download checks require
-  actual operator publication; verify anonymously with redirects and compare bytes.
+- Initial local install/update acceptance passed on the existing v13 packaging
+  fixture on 2026-10-18 using locally served artifacts. Reuse that configured
+  fixture only when significant Compose changes warrant exploratory testing;
+  use automated artifact checks for routine changes. Public GitHub download
+  checks require actual publication; verify anonymously and compare bytes.
 
 Gate: validated assets; installation/update and public availability supported by
 actual evidence or explicitly marked pending.

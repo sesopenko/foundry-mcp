@@ -60,6 +60,13 @@ server liveness, not end-to-end world readiness.
 
 ## Local source and container checks
 
+Reuse the root Compose instance for active Foundry development. Preserve the
+existing v13 packaging fixture and its configured world; exploratory Foundry
+packaging testing is needed only after significant Compose changes. Routine
+code changes, rebuilds, and version bumps use automated checks without another
+Foundry setup. Follow AGENTS.md before provisioning or resetting any instance.
+
+
 Provision dependencies once, then run the offline suites:
 
 ```bash
