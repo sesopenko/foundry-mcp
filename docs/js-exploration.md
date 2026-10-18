@@ -81,7 +81,7 @@ The result has `foundryVersion` plus a `value` snapshot. Objects use
 `{$type, properties, truncated}`, arrays use `{$type: "Array", values, truncated}`,
 and Maps/Sets retain their type and bounded entries. Functions, undefined,
 BigInts, accessors, circular references, and non-finite numbers have tagged
-representations. Errors include bounded messages and stacks.
+representations. Errors include bounded messages and an optional stack.
 
 Snapshots traverse at most five levels, 50 entries per container, and roughly
 1,000 nodes. Strings are clipped to 1,000 UTF-16 units, with a cumulative
@@ -95,7 +95,14 @@ arbitrary execution itself can still run code; this is not a sandbox.
 
 Failures distinguish invalid parameters, authorization, missing clients,
 compilation, runtime, serialization, transport, and timeout errors. Browser
-errors preserve `{error: {type, message, stack}}` in MCP tool error text.
+errors preserve `{error: {type, message}}` in MCP tool error text, plus `stack`
+when it is available as an own string-valued data property. Messages and stacks
+are each clipped to 2,000 UTF-16 units. Accessor-backed, missing, or non-string
+stacks are omitted; getters on thrown objects are never invoked to obtain them.
+Native errors may therefore lack a returned stack on engines such as Node 22
+whose stack property is an accessor. Stack traces are an
+[engine-specific facility](https://v8.dev/docs/stack-trace-api/), not a required
+field. Error type and message remain available for recovery.
 The server logs a SHA-256 source fingerprint, byte count, and execution outcome;
 raw source and results are omitted to avoid leaking arbitrary embedded secrets.
 Returned values and error stacks may contain secrets: choose exploration code

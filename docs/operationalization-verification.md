@@ -9,7 +9,7 @@ No production Foundry instance, deployment host, or LibreChat service was access
 | Check | Evidence/result |
 | --- | --- |
 | Baseline offline suites | 48 Python tests; four JavaScript file suites passed before behavioral edits. |
-| Final offline suites | 54 Python tests; 29 JavaScript tests across five files pass. Focused runtime, URL/reconnect, packaging, and publication checks also pass. |
+| Final offline suites | 54 Python tests; 31 JavaScript tests across five files pass. Focused runtime, URL/reconnect, packaging, and publication checks also pass. |
 | Workflow syntax | `rhysd/actionlint:1.7.7` checked `.github/workflows/ci.yml` with no diagnostics. |
 | Production Compose | Validated with documentation-only image/address placeholders using `config --quiet`. |
 | Linux/amd64 image | Built locally from digest-pinned Python 3.12.12 slim-bookworm and uv 0.9.16, with locked dependencies. |
@@ -113,6 +113,27 @@ paths above, not exhaustive coverage of every content tool and optional-module
 interaction. The manifest's broader `verified` declaration remains omitted;
 minimum 13 is unchanged. Public GitHub downloads and real CI publication remain
 separate acceptance gates. See [operations](operations.md) for official links.
+
+## CI Node 22 follow-up (2026-10-18)
+
+The first hosted `verify` run at commit `f3250b8` passed all 54 Python tests but
+failed the exploration test's unconditional `assert.ok(response.error.stack)`.
+Local Node 20.19.2 exposes native error stacks as data properties; the runner's
+Node 22.23.3 exposes them as accessors. Descriptor-only error handling deliberately
+omits accessor-backed stacks instead of invoking getters.
+
+Reproduced the identical failure before editing using a transient
+`node:22.23.3-bookworm-slim` container. Corrected the test to require error type
+and message while allowing an unavailable native stack. Added engine-independent
+wire-round-trip checks for bounded explicit stack/message data, uninvoked hostile
+getters, and missing stacks. Updated the documented optional-stack contract.
+Production JavaScript, images, manifests, and workflows are unchanged.
+
+Validation: focused tests pass on Node 20.19.2 and 22.23.3; the full JavaScript
+suite passes all 31 tests on Node 22.23.3, and `./scripts/test.sh` passes locally
+with 54 Python tests. No Foundry instance was started, recreated, or changed.
+Hosted CI still needs rerunning after the fix is pushed. Its action-runtime
+Node 20 deprecation warning is separate from the failed assertion.
 
 ## Privacy and local Git history
 
