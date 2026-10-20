@@ -6,6 +6,7 @@ import secrets
 import logging
 
 from foundry_mcp_server.config import settings
+from foundry_mcp_server.build_info import SERVER_BUILD
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
@@ -27,7 +28,7 @@ register_foundry_manager(foundry_manager)
 app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
-    version="1.2.3",
+    version=SERVER_BUILD["version"] or "unknown",
     lifespan=mcp_app.lifespan
 )
 
@@ -118,9 +119,9 @@ async def foundry_ws(websocket: WebSocket) -> None:
             return
     try:
         if production_auth:
-            await foundry_manager.register(client_id, websocket, welcome={"type": "auth", "status": "ok"})
+            await foundry_manager.register(client_id, websocket, welcome={"type": "auth", "status": "ok", "server_build": SERVER_BUILD})
         else:
-            await foundry_manager.register(client_id, websocket)
+            await foundry_manager.register(client_id, websocket, welcome={"type": "serverInfo", "server_build": SERVER_BUILD})
     except RuntimeError:
         await websocket.close(code=1008, reason="GM bridge already connected")
         return

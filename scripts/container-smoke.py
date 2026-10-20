@@ -15,7 +15,7 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 import websockets
 
-TOOLS = {'get_player_names', 'get_journal_tree', 'get_journal_contents', 'search_journals', 'read_journal_page'}
+TOOLS = {'get_bridge_versions', 'get_player_names', 'get_journal_tree', 'get_journal_contents', 'search_journals', 'read_journal_page'}
 
 
 def health(base):
@@ -40,16 +40,24 @@ async def smoke(base):
         assert rejected.close_code == 1008
     async def authenticate(browser):
         await browser.send(json.dumps({'type': 'auth', 'token': token}))
-        assert json.loads(await browser.recv()) == {'type': 'auth', 'status': 'ok'}
+        welcome = json.loads(await browser.recv())
+        assert welcome['type'] == 'auth' and welcome['status'] == 'ok'
+        assert set(welcome['server_build']) == {'version', 'release_tag', 'revision', 'build_kind'}
+        return welcome['server_build']
     async with Client(StreamableHttpTransport(base + '/mcp/mcp', auth=httpx.BasicAuth(username, password))) as client:
         tools = await client.list_tools()
         assert {t.name for t in tools} == TOOLS, 'Unexpected production discovery catalog'
         for tool in tools:
             assert tool.description and tool.inputSchema.get('type') == 'object'
+        diagnostic = (await client.call_tool('get_bridge_versions', {})).structured_content
+        assert diagnostic['module'] is None and diagnostic['module_status'] == 'not_connected'
+        assert diagnostic['comparison'] == 'unavailable'
+        assert diagnostic['server']['build_kind'] in {'release', 'unreleased'}
         missing = await client.call_tool('get_player_names', {}, raise_on_error=False)
         assert missing.is_error
         async with websockets.connect(ws_url) as browser:
-            await authenticate(browser)
+            server_build = await authenticate(browser)
+            assert server_build == diagnostic['server']
             # Registration may finish just after the WebSocket handshake.
             for _ in range(50):
                 if health(base)['foundry_clients'] == ['gm']:
@@ -67,6 +75,15 @@ async def smoke(base):
             await browser.send(json.dumps({'id': request['id'], 'result': ['Synthetic GM']}))
             result = await call
             assert not result.is_error and 'Synthetic GM' in str(result)
+            for module in [server_build, {'version': '999.0.0', 'release_tag': 'v999.0.0', 'revision': 'a'*40, 'build_kind': 'release'}]:
+                call = asyncio.create_task(client.call_tool('get_bridge_versions', {}))
+                request = json.loads(await browser.recv())
+                assert request['method'] == 'getModuleBuildInfo'
+                await browser.send(json.dumps({'id': request['id'], 'result': module}))
+                diagnosis = (await call).structured_content
+                assert diagnosis['module'] == module
+                expected = 'unverified' if server_build['build_kind'] != 'release' else 'match' if module == server_build else 'mismatch'
+                assert diagnosis['comparison'] == expected
             # Disconnect while a call is pending: fail promptly, do not wait for timeout.
             call = asyncio.create_task(client.call_tool('get_player_names', {}, raise_on_error=False))
             await browser.recv()
@@ -75,7 +92,7 @@ async def smoke(base):
         async with websockets.connect(ws_url) as reconnected:
             await authenticate(reconnected)
             await reconnected.close()
-    print('PASS: authentication, health, discovery/schema, no-GM, RPC, duplicate rejection, disconnect, reconnect')
+    print('PASS: build versions, authentication, health, discovery/schema, no-GM, RPC, duplicate rejection, disconnect, reconnect')
 
 
 if __name__ == '__main__':

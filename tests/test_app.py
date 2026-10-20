@@ -21,7 +21,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(main, "foundry_manager", manager):
             await main.foundry_ws(socket)
         socket.accept.assert_awaited_once()
-        manager.register.assert_awaited_once_with("gm", socket)
+        manager.register.assert_awaited_once_with("gm", socket, welcome={"type": "serverInfo", "server_build": main.SERVER_BUILD})
         manager.handle_incoming.assert_awaited_once_with('{"id":"request","result":[]}', socket)
         manager.unregister.assert_awaited_once_with("gm", socket)
 
@@ -48,7 +48,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
                 with patch.object(main, "settings", settings), patch.object(main, "foundry_manager", manager):
                     await main.foundry_ws(socket)
                 if accepted:
-                    manager.register.assert_awaited_once_with("gm", socket)
+                    manager.register.assert_awaited_once_with("gm", socket, welcome={"type": "serverInfo", "server_build": main.SERVER_BUILD})
                     manager.unregister.assert_awaited_once_with("gm", socket)
                 else:
                     manager.register.assert_not_awaited()

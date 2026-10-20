@@ -26,7 +26,8 @@ def plan_bump(root, version):
     exact('pyproject.toml', f'version = "{current}"', f'version = "{version}"')
     exact('uv.lock', f'name = "foundry-mcp"\nversion = "{current}"',
           f'name = "foundry-mcp"\nversion = "{version}"')
-    exact('foundry_mcp_server/main.py', f'version="{current}"', f'version="{version}"')
+    exact('foundry_mcp_server/build-info.json', f'"version":"{current}"', f'"version":"{version}"')
+    exact('foundry-module/scripts/buildInfo.js', f'"version":"{current}"', f'"version":"{version}"')
     exact('Dockerfile', f'ARG VERSION={current}\n', f'ARG VERSION={version}\n')
     exact('deploy/compose.local.yaml', f'VERSION: {current}\n', f'VERSION: {version}\n')
 

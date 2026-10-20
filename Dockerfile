@@ -7,8 +7,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 
 FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c AS runtime
-ARG VERSION=1.2.3
+ARG VERSION=1.3.0
 ARG REVISION=unknown
+ARG RELEASE_TAG=
 LABEL org.opencontainers.image.title="Foundry MCP" \
       org.opencontainers.image.source="https://github.com/sesopenko/foundry-mcp" \
       org.opencontainers.image.version=$VERSION \
@@ -18,6 +19,7 @@ WORKDIR /app
 COPY --from=dependencies /app/.venv /app/.venv
 COPY foundry_mcp_server/ ./foundry_mcp_server/
 COPY LICENSE.txt ./LICENSE.txt
+RUN .venv/bin/python -m foundry_mcp_server.build_info --version "$VERSION" --release-tag "$RELEASE_TAG" --revision "$REVISION"
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     FOUNDRY_MCP_HOST=0.0.0.0 FOUNDRY_MCP_PORT=8000 FOUNDRY_MCP_DEV_EXECUTION=false
 USER 10001:10001

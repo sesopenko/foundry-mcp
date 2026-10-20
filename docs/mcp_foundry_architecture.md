@@ -219,3 +219,14 @@ authentication acknowledgment before making a GM socket available for RPC.
 Failed authentication never replaces an existing owner. World-scoped module
 settings persist with the world but are not a confidential GM-only secret store.
 See operations for protocol, migration, TLS requirements and credential rotation.
+
+## Packaged version identity
+
+The image and released module embed tag/commit metadata. Source identities are
+explicitly marked source; untagged images/packages are unreleased. The manager
+sends server metadata during admission before exposing the GM to game RPCs.
+The module compares it with its imported JavaScript identity, and exposes
+`getModuleBuildInfo` for the server's read-only `get_bridge_versions` MCP tool.
+Version mismatch warnings do not gate game tools. Missing/legacy identities
+remain diagnosable without assuming compatibility. See
+[the version diagnostic contract](bridge-version-diagnostics.md).

@@ -27,3 +27,9 @@ Production authentication uses a separate world-scoped bridge credential and
 an explicit server acknowledgment before RPC dispatch. World settings restrict
 editing but are not a confidential GM-only store. Client-scoped 1.1 settings
 are not automatically copied into the world; enter intended world values once.
+
+`buildInfo.js` contains the loaded source identity; release packaging replaces
+its constant inside the ZIP with tag/commit metadata. `versionStatus.js` validates
+server metadata and issues deduplicated, nonblocking operator notifications.
+The read-only `getModuleBuildInfo` RPC returns the imported identity, never a
+manifest fetched after installation. See [version diagnostics](../../docs/bridge-version-diagnostics.md).

@@ -1,3 +1,4 @@
+import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage } from "./journals.js";
@@ -45,6 +46,7 @@ function reportStatus(state, message) {
  * or a Promise resolving to a value.
  */
 const rpcHandlers = {
+  getModuleBuildInfo,
   executeJavaScript,
   getJournalTree,
   getJournalContents,
@@ -256,9 +258,14 @@ function openWebSocket() {
     if (!authenticated) {
       if (message?.type === "auth" && message.status === "ok") {
         authenticated = true;
+        if (message.server_build !== undefined) reportServerBuild(message.server_build);
         clearAuthTimer();
         connected();
       }
+      return;
+    }
+    if (message?.type === "serverInfo") {
+      reportServerBuild(message.server_build);
       return;
     }
     console.debug("[foundryBridge] RPC", message?.id, message?.method);

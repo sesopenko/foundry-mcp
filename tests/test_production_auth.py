@@ -45,7 +45,7 @@ class ProductionAuthTests(unittest.IsolatedAsyncioTestCase):
                     response = await client.get('/mcp/mcp', headers={'Authorization': header})
                     self.assertEqual(response.status_code, 200)
                 await main.foundry_ws(socket)
-                self.assertEqual(json.loads(socket.send_text.call_args.args[0]), {'type': 'auth', 'status': 'ok'})
+                self.assertEqual(json.loads(socket.send_text.call_args.args[0]), {'type': 'auth', 'status': 'ok', 'server_build': main.SERVER_BUILD})
 
     async def test_socket_rejections_never_register(self):
         for raw, code in [(json.dumps({'type':'auth','token':'\ud800'}),1008), ('not json',1008), ('[]',1008), ('{}',1008), (json.dumps({'type':'auth','token':'wrong'}),1008), ('x'*4097,1009), (json.dumps({'token':AUTH.bridge_token}),1008)]:
@@ -72,7 +72,7 @@ class ProductionAuthTests(unittest.IsolatedAsyncioTestCase):
         manager=FoundryConnectionManager()
         with patch.object(main,'settings',AUTH),patch.object(main,'foundry_manager',manager):
             await main.foundry_ws(socket)
-        self.assertEqual(json.loads(socket.send_text.call_args.args[0]),{'type':'auth','status':'ok'})
+        self.assertEqual(json.loads(socket.send_text.call_args.args[0]),{'type':'auth','status':'ok','server_build':main.SERVER_BUILD})
         self.assertEqual(manager.websockets,{})
 
     async def test_ack_precedes_visibility_and_duplicate_cannot_displace_owner(self):
@@ -81,10 +81,10 @@ class ProductionAuthTests(unittest.IsolatedAsyncioTestCase):
         async def ack(value):
             self.assertNotIn('gm',manager.websockets)
         socket.send_text.side_effect=ack
-        await manager.register('gm',socket,welcome={'type':'auth','status':'ok'})
+        await manager.register('gm',socket,welcome={'type':'auth','status':'ok','server_build':main.SERVER_BUILD})
         other=AsyncMock()
         with self.assertRaises(RuntimeError):
-            await manager.register('gm',other,welcome={'type':'auth','status':'ok'})
+            await manager.register('gm',other,welcome={'type':'auth','status':'ok','server_build':main.SERVER_BUILD})
         other.send_text.assert_not_awaited()
         self.assertIs(manager.websockets['gm'],socket)
 
@@ -92,7 +92,7 @@ class ProductionAuthTests(unittest.IsolatedAsyncioTestCase):
         manager=FoundryConnectionManager(); socket=AsyncMock()
         socket.send_text.side_effect=ConnectionError()
         with self.assertRaises(ConnectionError):
-            await manager.register('gm',socket,welcome={'type':'auth','status':'ok'})
+            await manager.register('gm',socket,welcome={'type':'auth','status':'ok','server_build':main.SERVER_BUILD})
         self.assertEqual(manager.websockets,{})
 
     async def test_concurrent_admission_has_one_winner_and_no_rpc_before_ack(self):

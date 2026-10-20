@@ -234,7 +234,10 @@ and update all of the following in the same change:
 
 - The project version in `pyproject.toml` and the matching project entry in
   `uv.lock`; do not change unrelated dependency versions or hashes.
-- Runtime application version, Dockerfile version argument, local Compose
+- Source build identities in `foundry_mcp_server/build-info.json` and
+  `foundry-module/scripts/buildInfo.js`, keeping their build kind `source` and
+  release tag/revision unset. Runtime application version is loaded from metadata.
+- Dockerfile version argument, local Compose
   build-version argument, and version-dependent packaging test expectations.
 - `foundry-module/module.json`: set `version` to the new `X.Y.Z` and `download`
   to `https://github.com/sesopenko/foundry-mcp/releases/download/vX.Y.Z/foundry-mcp.zip`.

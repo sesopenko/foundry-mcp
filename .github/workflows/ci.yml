@@ -14,9 +14,17 @@ env:
 
 jobs:
   verify:
+    outputs:
+      version: ${{ steps.build-info.outputs.version }}
+      release_tag: ${{ steps.build-info.outputs.release_tag }}
+      revision: ${{ steps.build-info.outputs.revision }}
+      build_kind: ${{ steps.build-info.outputs.build_kind }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve and validate packaged build identity
+        id: build-info
+        run: python scripts/build-metadata.py --github-output "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@v5
         with:
           version: '0.9.16'
@@ -32,12 +40,18 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           if [ "$REF_TYPE" = tag ]; then
-            .venv/bin/python scripts/package-module.py --tag "$REF_NAME"
+            .venv/bin/python scripts/package-module.py --tag "$REF_NAME" --revision "$GITHUB_SHA"
           else
-            .venv/bin/python scripts/package-module.py
+            .venv/bin/python scripts/package-module.py --revision "$GITHUB_SHA"
           fi
       - name: Build and start isolated production image
-        run: docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml up -d --build --wait --wait-timeout 90
+        env:
+          BUILD_VERSION: ${{ steps.build-info.outputs.version }}
+          BUILD_RELEASE_TAG: ${{ steps.build-info.outputs.release_tag }}
+          BUILD_REVISION: ${{ steps.build-info.outputs.revision }}
+        run: |
+          docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml build --build-arg VERSION="$BUILD_VERSION" --build-arg RELEASE_TAG="$BUILD_RELEASE_TAG" --build-arg REVISION="$BUILD_REVISION"
+          docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml up -d --no-build --wait --wait-timeout 90
       - name: Protocol-aware container smoke test
         run: .venv/bin/python scripts/container-smoke.py
       - name: Verify graceful shutdown
@@ -81,17 +95,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
-      - name: Compute version tags
-        id: version
-        env:
-          REF_TYPE: ${{ github.ref_type }}
-        run: |
-          python - <<'PY'
-          import os, tomllib
-          version = tomllib.load(open('pyproject.toml', 'rb'))['project']['version']
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              print('number=' + version, file=output)
-          PY
       - name: Refuse replacement of a release image
         if: github.ref_type == 'tag'
         env:
@@ -112,8 +115,9 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            VERSION=${{ steps.version.outputs.number }}
-            REVISION=${{ github.sha }}
+            VERSION=${{ needs.verify.outputs.version }}
+            RELEASE_TAG=${{ needs.verify.outputs.release_tag }}
+            REVISION=${{ needs.verify.outputs.revision }}
           tags: docker.io/sesopenko/foundry-mcp:sha-${{ github.sha }}
       - name: Push release image
         if: github.ref_type == 'tag'
@@ -125,8 +129,9 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            VERSION=${{ steps.version.outputs.number }}
-            REVISION=${{ github.sha }}
+            VERSION=${{ needs.verify.outputs.version }}
+            RELEASE_TAG=${{ needs.verify.outputs.release_tag }}
+            REVISION=${{ needs.verify.outputs.revision }}
           tags: |
             docker.io/sesopenko/foundry-mcp:${{ github.ref_name }}
             docker.io/sesopenko/foundry-mcp:latest
@@ -146,6 +151,8 @@ jobs:
         with:
           name: foundry-module
           path: dist/module
+      - name: Verify module artifact belongs to this release tag and commit
+        run: python scripts/build-metadata.py --archive dist/module/foundry-mcp.zip
       - name: Create versioned release without replacing existing assets
         env:
           GH_TOKEN: ${{ github.token }}

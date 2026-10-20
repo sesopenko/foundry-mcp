@@ -20,6 +20,10 @@ Journal preparation tools provide hierarchical navigation, page outlines,
 literal text search, and exact HTML/Markdown reading through the GM browser.
 See [journal tool contracts and compatibility](docs/journal-tools.md).
 
+Use `get_bridge_versions` to compare the packaged server and loaded browser
+module releases, including when the GM is disconnected. Foundry warns about
+tagged mismatches without blocking tools. See [version diagnostics](docs/bridge-version-diagnostics.md).
+
 Use [budgeted MCP evaluations and call tracing](docs/mcp-tool-evaluation.md)
 to test fresh-agent usability and compare tool changes without broad benchmark
 runs. Recording is opt-in; the statistics command consumes no GPT usage.
@@ -32,7 +36,7 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-1.2.3 migration instructions in the operations guide.
+1.3.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -61,7 +65,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v1.2.3
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v1.3.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=

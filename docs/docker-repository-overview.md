@@ -4,7 +4,7 @@ Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance thr
 
 **[Source code and issues](https://github.com/sesopenko/foundry-mcp)** · **[Releases](https://github.com/sesopenko/foundry-mcp/releases)** · **[Operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/operations.md)** · **[License](https://github.com/sesopenko/foundry-mcp/blob/main/LICENSE.txt)**
 
-This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide active player names and journal navigation, search, and reading, with room for additional GM assistance features.
+This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide server/module version diagnostics, active player names, and journal navigation, search, and reading, with room for additional GM assistance features.
 
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The module declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts or persistent data volumes.
 
@@ -184,6 +184,22 @@ codex
 Codex's `env_http_headers` reads the complete header from the named environment variable. It does not add `Basic ` automatically. Do not use `bearer_token_env_var` for this Basic Auth setup. A Compose `.env` is not automatically loaded into your Codex process; provide the variable in its launch environment. Restart Codex after changing configuration or credentials, then check `/mcp` for the available server and tools.
 
 See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/).
+
+## Check server and module versions
+
+Ask your MCP client to call `get_bridge_versions` with no arguments. It returns
+`server` and `module` build identities, `comparison`, `module_status`, and an
+actionable `message`. Identities include `version`, `release_tag`, `revision`,
+and `build_kind`. With no GM connected, server information is still available
+and `module` is null. Older modules lacking diagnostics report unsupported.
+
+Tagged versions compare exactly as match/mismatch. Source, untagged and unknown
+builds are explicitly unverified, even if their declared versions agree. Foundry
+also shows both versions automatically when tagged releases differ, advising
+which component needs updating; normal tools continue working. The module
+reports the JavaScript actually loaded in the GM browser, so reload it after
+updates. This checks running versions, not newer releases available online.
+See the [full diagnostic contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/bridge-version-diagnostics.md).
 
 ## Update and troubleshoot
 

@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / '.agents/skills/foundry-release/scripts/bump-version.py'
-FILES = ('pyproject.toml', 'uv.lock', 'foundry_mcp_server/main.py', 'Dockerfile',
+FILES = ('pyproject.toml', 'uv.lock', 'foundry_mcp_server/main.py', 'foundry_mcp_server/build-info.json', 'Dockerfile',
          'deploy/compose.local.yaml', 'tests/test_packaging.py', 'README.md',
          'deploy/.env.example', 'docs/operations.md', 'docs/docker-repository-overview.md')
 
@@ -63,7 +63,8 @@ class ReleaseSkillTests(unittest.TestCase):
         self.assertEqual(packager.package(self.root / 'dist', root=self.root, tag='v' + self.target), self.target)
         self.assertIn('ARG VERSION=' + self.target, (self.root / 'Dockerfile').read_text())
         self.assertIn('VERSION: ' + self.target, (self.root / 'deploy/compose.local.yaml').read_text())
-        self.assertIn('version="' + self.target + '"', (self.root / 'foundry_mcp_server/main.py').read_text())
+        self.assertEqual(json.loads((self.root / 'foundry_mcp_server/build-info.json').read_text())['version'], self.target)
+        self.assertIn('\"version\":\"' + self.target + '\"', (self.root / 'foundry-module/scripts/buildInfo.js').read_text())
 
     def test_invalid_or_nonincreasing_version_does_not_edit(self):
         before = self.snapshot()

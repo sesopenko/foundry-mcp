@@ -4,12 +4,16 @@ import argparse
 import json
 from pathlib import Path, PurePosixPath
 import re
+import sys
 import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from foundry_mcp_server.build_info import make_build_info
+
 PUBLIC = 'https://github.com/sesopenko/foundry-mcp'
-RUNTIME_SCRIPTS = ('main.js', 'foundryBridge.js', 'connectionConfig.js', 'exploration.js', 'journals.js')
+RUNTIME_SCRIPTS = ('main.js', 'foundryBridge.js', 'connectionConfig.js', 'exploration.js', 'journals.js', 'buildInfo.js', 'versionStatus.js')
 
 
 def manifest(root=ROOT, tag=None):
@@ -52,9 +56,11 @@ def manifest(root=ROOT, tag=None):
     return data, allowed
 
 
-def package(output, root=ROOT, tag=None):
+def package(output, root=ROOT, tag=None, revision=None):
     data, allowed = manifest(root, tag)
     output.mkdir(parents=True, exist_ok=True)
+    info = make_build_info(data['version'], tag, revision)
+    build_script = ('export const BUILD_INFO = Object.freeze(' + json.dumps(info, sort_keys=True) + ');\n').encode()
     encoded = (json.dumps(data, indent=2) + '\n').encode()
     (output / 'module.json').write_bytes(encoded)
     with zipfile.ZipFile(output / 'foundry-mcp.zip', 'w', compression=zipfile.ZIP_DEFLATED) as archive:
@@ -65,13 +71,15 @@ def package(output, root=ROOT, tag=None):
             info = zipfile.ZipInfo(name, date_time=(2025, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, encoded if name == 'module.json' else (root / 'foundry-module' / name).read_bytes())
+            content = encoded if name == 'module.json' else build_script if name == 'scripts/buildInfo.js' else (root / 'foundry-module' / name).read_bytes()
+            archive.writestr(info, content)
     return data['version']
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tag', help='Release tag; must equal v<version>')
+    parser.add_argument('--revision', help='Build commit SHA')
     parser.add_argument('--output', type=Path, default=ROOT / 'dist/module')
     args = parser.parse_args()
-    print('Packaged module ' + package(args.output, tag=args.tag))
+    print('Packaged module ' + package(args.output, tag=args.tag, revision=args.revision))
