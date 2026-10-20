@@ -1,3 +1,35 @@
+# Authentication release 1.2.0 verification — October 19, 2026
+
+- Baseline suites passed before changes. Authenticated release: 65 Python tests
+  passed; all 36 JavaScript tests passed on Node 22.23.3 (CI version) and the
+  local Node 20 runner passed its suite.
+- Container built with locked dependencies. An isolated MCP-only service on
+  loopback port 18021 verified HTTP 401 for absent/wrong Basic Auth, rejected
+  browser credentials, authenticated MCP discovery of the unchanged five-tool
+  catalog, no-GM errors, synthetic RPC, duplicate GM rejection, disconnect and
+  authenticated reconnect. No new Foundry instance was created.
+- Added deterministic regressions for concurrent/cancelled GM admission, RPC
+  exclusion before acknowledgment, credential role isolation, log/notification
+  redaction, stale acknowledgments/timeouts/close events, retry classification,
+  credential rotation, and immediate timer cleanup. These caught and fixed a
+  stale authentication deadline and a late acknowledgment reviving timed-out
+  connection status. Focused authentication checks run without Foundry or Docker.
+- Module 1.2.0 packaging passed. Official indexed v13 and v14 ClientSettings
+  documentation verified world scope and onChange support.
+- Existing root development Foundry 14.369 is running. The dedicated browser
+  reached its join screen, but both configured users were already active in
+  other sessions. No users were disconnected or ordinary browsers automated.
+  Live world-setting persistence, native browser authentication and console
+  verification remain pending until a development GM session is available.
+- Publication remains an operator action. Threadripper stays on the working
+  1.1.0 deployment until the reviewed 1.2.0 image and module are published.
+  Remote authenticated LibreChat discovery and operator WSS/game-world checks
+  remain pending after cutover. Reverse proxy configuration is outside scope.
+- World-scoped credentials are an explicitly accepted shared-world storage
+  limitation, not a claim of GM-only secret confidentiality.
+
+---
+
 # Operationalization verification record
 
 Implementation: synchronized server/module version **1.1.0**. This record

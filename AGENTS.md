@@ -147,6 +147,25 @@ Provision dependencies separately with `uv sync --locked` when needed.
 Browser mocks verify bridge behavior; use a live Foundry session separately
 when a change depends on Foundry runtime APIs.
 
+For authentication and bridge lifecycle changes, use deterministic Python and
+JavaScript tests as the default feedback loop. Cover credential validation and
+role isolation, concurrent admission, acknowledgment ordering, stale socket
+callbacks, timeout/retry behavior, and secret-free diagnostics without asking
+for repeated Foundry logins or exploratory browser sessions. Run focused checks:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -p 'test_production_auth.py' -v
+node --test tests/js/authentication.test.js tests/js/bridge.test.js tests/js/main.test.js
+```
+
+Reserve live checks for behavior mocks cannot establish, such as actual Foundry
+world-setting persistence, browser TLS/WSS acceptance, or LibreChat's configured
+header delivery. Reuse existing evidence when those dependencies are unchanged.
+If a required live session is unavailable, record the precise verification gap
+and continue independent implementation/testing; do not request repeated manual
+setup or present unit coverage as proof of deployment behavior.
+
+
 ## Reuse existing Foundry instances
 
 Foundry setup requires significant manual work from the user. Reuse existing

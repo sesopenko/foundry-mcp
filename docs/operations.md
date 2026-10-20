@@ -1,8 +1,8 @@
 # Foundry MCP operations
 
 This guide deploys the bridge independently of your Foundry installation.
-The production service accepts unauthenticated MCP HTTP and browser WebSocket
-connections on a trusted LAN. It does not configure Foundry hosting, TLS, a
+The production deployment example requires MCP HTTP Basic Auth and separate
+browser WebSocket authentication. It does not configure Foundry hosting, TLS, a
 reverse proxy, or public exposure. Development execution remains a separate,
 loopback-only authenticated capability and is disabled in the production example.
 
@@ -23,12 +23,71 @@ prerequisite when needed. Do not disable browser security to work around this.
 
 The service holds no persistent world state. The connected browser is
 authoritative. Exactly one GM bridge is admitted; a second socket is rejected
-with close code 1008. This is a connection limit, not browser authentication in
-normal LAN mode. Use one world and one owning GM tab per bridge deployment.
+with close code 1008. The connection limit applies after browser authentication. Use one world and one owning GM tab per bridge deployment.
 
 Required: Docker Engine with Compose v2, a `linux/amd64` deployment host,
 registry pull access, a separately managed compatible Foundry installation,
 and a GM browser. The operator decides host addressing and LAN access policy.
+
+## Production authentication and migration from 1.1
+
+Deploy server and module 1.2.0 together. Source execution defaults to
+`FOUNDRY_MCP_AUTH_MODE=none` for backward compatibility; production Compose
+explicitly selects `basic`. Supplying production credentials with mode `none`
+fails startup rather than silently exposing the service. Production Basic Auth
+and development execution cannot be enabled together.
+
+Set `FOUNDRY_MCP_BASIC_USERNAME`, `FOUNDRY_MCP_BASIC_PASSWORD`, and
+`FOUNDRY_MCP_BRIDGE_TOKEN` in the private deployment environment. The username
+must be nonempty printable ASCII without a colon. Password and bridge token
+must be distinct printable ASCII values of at least 32 characters. Generate
+them separately with `python -c 'import secrets; print(secrets.token_urlsafe(32))'`.
+Use a private `.env` with mode 0600; never put real credentials in tracked files.
+All `/mcp` HTTP methods, including initialization, discovery and session cleanup,
+require Basic Auth. Rejected requests return 401 with a Basic challenge.
+`/health` stays public for liveness and reports connected clients; it is not
+proof of an authenticated end-to-end connection.
+
+LibreChat supports static Authorization headers for streamable HTTP. Store
+`FOUNDRY_MCP_BASIC_AUTH` in its private environment as Base64 of the literal
+`username:password` bytes (not a shell expression or an already prefixed header).
+Base64 is not encryption. Ensure the value is available to the API container;
+recreate only `api` when changing its Compose-provided environment. Set
+`requiresOAuth: false` and the header shown below. Check startup logs privately:
+LibreChat versions may print expanded configuration, including custom headers;
+never publish those logs. Use HTTPS for any connection crossing an untrusted
+network. The current same-host LAN HTTP route remains operator-managed.
+
+Before upgrading the module, record the intended old client-scoped URL and
+settings privately. All module settings now use **world scope**, including
+`bridgeUrl`, `developmentExecution`, the hidden development `browserToken`,
+`productionAuthentication`, and `bridgeCredential`. There is no automatic
+promotion of an arbitrary browser's settings to shared world configuration.
+After updating, enter the URL, enable production authentication, enter the
+server bridge token, and leave development execution off. Save once for the
+world. World settings restrict editing but are not treated as a confidential
+GM-only secret store; connected players may be able to obtain the browser
+credential. The MCP password is never entered into Foundry.
+
+A remote credential-bearing browser connection requires browser-trusted WSS.
+The reverse proxy terminates TLS and forwards WebSockets to the service;
+proxy/DNS/certificate configuration is outside this repository change.
+Do not add proxy Basic Auth to the WebSocket route: browser JavaScript cannot
+supply an Authorization header there. Python validates the first message
+`{"type":"auth","token":"<bridge token>"}` within five seconds (4 KiB maximum).
+Only an admitted GM receives `{"type":"auth","status":"ok"}` before game RPCs.
+Authentication failures/duplicates close with 1008; oversized authentication
+messages close with 1009. The module waits for acknowledgment before reporting
+Connected. Rejection or acknowledgment timeout requires correcting settings
+and saving to reconnect; ordinary network failures retain backoff retries.
+
+For rotation, generate both new credentials, update the server environment,
+recreate the bridge, update LibreChat's private header and recreate only its
+API as needed, then update the Foundry world's bridge credential. Existing
+MCP sessions must reconnect. Keep the same host port and preserve Foundry data.
+Rollback requires restoring the previous image, module and private deployment
+configuration together; 1.1 has no production authentication and must not be
+left exposed through an internet-facing proxy.
 
 ## Runtime configuration
 
@@ -36,6 +95,10 @@ and a GM browser. The operator decides host addressing and LAN access policy.
 | --- | --- | --- |
 | `FOUNDRY_MCP_HOST` | `127.0.0.1` in source; `0.0.0.0` in image | Uvicorn bind hostname/IP. |
 | `FOUNDRY_MCP_PORT` | `8000` | Integer port, 1–65535. Protocol paths stay fixed. |
+| `FOUNDRY_MCP_AUTH_MODE` | `none` in source; `basic` in production Compose | Protect MCP and browser bridge in production. |
+| `FOUNDRY_MCP_BASIC_USERNAME` | empty | Production MCP username, ASCII without colons. |
+| `FOUNDRY_MCP_BASIC_PASSWORD` | empty | Production MCP password, at least 32 printable ASCII characters. |
+| `FOUNDRY_MCP_BRIDGE_TOKEN` | empty | Distinct production browser credential, at least 32 printable ASCII characters. |
 | `FOUNDRY_MCP_DEV_EXECUTION` | `false` | Exposes the development tool only when explicitly enabled with credentials. |
 | `FOUNDRY_MCP_CALLER_TOKEN` | empty | Development MCP bearer credential; distinct from browser token, at least 32 characters. |
 | `FOUNDRY_MCP_BROWSER_TOKEN` | empty | Development browser credential, at least 32 characters. |
@@ -124,7 +187,7 @@ CI runs tests, packages module assets, builds the image, exercises an isolated
 container, and checks graceful shutdown. Trusted main/tag pushes may then publish:
 
 - `<registry>/sesopenko/foundry-mcp:sha-<full-commit>`.
-- `<registry>/sesopenko/foundry-mcp:v1.1.0` for matching release tags.
+- `<registry>/sesopenko/foundry-mcp:v1.2.0` for matching release tags.
 
 Pull requests do not publish. Registry TLS connectivity is checked before login;
 an unauthenticated 401 is normal, TLS/network failures are not. Existing commit images are preserved on reruns. Release image
@@ -145,12 +208,12 @@ publication workflow by pushing the reviewed commit/tag.
 ## Module versioning and releases
 
 The Python package, runtime application metadata, and module share version
-`1.1.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
+`1.2.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
 `uv.lock`, module `download`, and the local Compose build-version argument
 consistently. Run tests and package:
 
 ```bash
-.venv/bin/python scripts/package-module.py --tag v1.1.0
+.venv/bin/python scripts/package-module.py --tag v1.2.0
 ```
 
 Outputs under ignored `dist/module/` are `module.json` and `foundry-mcp.zip`.
@@ -168,7 +231,7 @@ https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
 The manifest's `download` points to the matching version-specific ZIP:
 
 ```text
-https://github.com/sesopenko/foundry-mcp/releases/download/v1.1.0/foundry-mcp.zip
+https://github.com/sesopenko/foundry-mcp/releases/download/v1.2.0/foundry-mcp.zip
 ```
 
 The operator must make the repository/releases publicly accessible before
@@ -190,8 +253,8 @@ server restart.
 
 1. Copy `deploy/compose.yaml` and `deploy/.env.example` to a new bridge deployment
    directory. Rename the latter to `.env`, set private permissions, and replace
-   both examples: `FOUNDRY_MCP_IMAGE` with the pinned private image reference,
-   and `FOUNDRY_MCP_LAN_ADDRESS` with the host's intended LAN interface address.
+   the examples: `FOUNDRY_MCP_IMAGE` with the pinned private image reference,
+   and `FOUNDRY_MCP_LAN_ADDRESS` with the host's intended LAN interface address. Generate and fill both production credentials and set the MCP username.
 2. Log in privately with `docker login <registry-host>`; use password input or
    `--password-stdin`, not a tracked file or password command argument.
 3. Validate privately with `docker compose --env-file .env -f compose.yaml config --quiet`.
@@ -217,9 +280,9 @@ Foundry core as part of this bridge deployment.
 1. Foundry **Setup → Add-on Modules → Install Module → Manifest URL**: paste
    the stable public URL above and install.
 2. Launch the desired world and enable **Foundry MCP Proxy** in **Manage Modules**.
-3. In **Game Settings → Configure Settings → Foundry MCP Proxy**, set the full
+3. In **Game Settings → Configure Settings → Foundry MCP Proxy**, enable production authentication, enter the separate browser bridge credential, and set the full
    browser-reachable URL, for example `ws://mcp-host.example:8000/ws/foundry`.
-   This setting remains client-scoped: configure each intended browser/profile.
+   This setting is world-scoped: configure it once for the intended world.
 4. Leave local development execution disabled. Saving connection settings
    reconnects without reloading the page. On first installing new module code,
    reload the browser normally so it loads the new scripts.
@@ -248,6 +311,9 @@ mcpServers:
     url: http://mcp-host.example:8000/mcp/mcp
     timeout: 30000
     serverInstructions: true
+    requiresOAuth: false
+    headers:
+      Authorization: "Basic ${FOUNDRY_MCP_BASIC_AUTH}"
 ```
 
 Use a LAN hostname/IP reachable **inside LibreChat's container**. Add the new
@@ -272,7 +338,7 @@ optional operator-managed alternative only if network membership is deliberately
 | Close code 1008 | Another GM owns the bridge, or development credentials/peer restrictions rejected it. |
 | Disconnected/retrying | Check server availability and certificate/routing conditions. Backoff is capped at 30 seconds. |
 | MCP HTTP 400 after restart | Client session is stale; reconnect the MCP client. |
-| HTTP 401 / `UnauthorizedExecution` | Development mode is enabled or its credentials/opt-in differ; it is not the normal LAN mode. |
+| HTTP 401 / `UnauthorizedExecution` | In production check the Basic Auth header and server credentials; in development check Bearer credentials, loopback access and execution opt-in. |
 | RPC timeout/disconnect | Browser was unavailable or failed during the request. Check console and retry read-only work after recovery. |
 | Tool-specific error | Read the tool's contract; distinguish missing content, unsupported content, and partial results from transport failure. |
 
@@ -292,7 +358,7 @@ reload the GM browser and verify tools. Never assume future core compatibility.
 Rollback: restore the prior image tag/digest in private configuration, pull and
 recreate the bridge; install the prior module ZIP/manifest using Foundry's
 supported package workflow or the manual fallback. The UI may not directly
-offer downgrade. Restore saved client settings if necessary. Restore world data
+offer downgrade. Restore the intended world settings if necessary. Restore world data
 only if an independently required data change warrants it; this bridge stores
 no world database. Keep backups and verify the intended world before resuming play.
 

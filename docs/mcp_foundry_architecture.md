@@ -209,3 +209,13 @@ This architecture provides:
 - Long-term maintainability
 
 It is suitable for solo development and can be extended incrementally as needed.
+
+## Production authentication
+
+Production mode protects every MCP HTTP method with Basic Auth. Browser-native
+WebSockets send a separate credential in a bounded first message, with a
+five-second deadline. The manager serializes admission and sends the successful
+authentication acknowledgment before making a GM socket available for RPC.
+Failed authentication never replaces an existing owner. World-scoped module
+settings persist with the world but are not a confidential GM-only secret store.
+See operations for protocol, migration, TLS requirements and credential rotation.

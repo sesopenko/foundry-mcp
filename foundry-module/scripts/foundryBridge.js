@@ -16,6 +16,7 @@ const RECONNECT_MAX_DELAY_MS = 30000; // 30 seconds
 const RECONNECT_BACKOFF_FACTOR = 2;
 
 let currentSocket = null;
+let clearCurrentAuthTimer = null;
 let reconnectAttempts = 0;
 let reconnectTimeoutId = null;
 let manuallyClosed = false;
@@ -193,6 +194,18 @@ function openWebSocket() {
     return null;
   }
 
+  const production = Boolean(game.settings.get("foundry-mcp", "productionAuthentication"));
+  const credential = production ? game.settings.get("foundry-mcp", "bridgeCredential") : "";
+  if (production && (development || typeof credential !== "string" || credential.length < 32 ||
+      !/^[\x20-\x7E]+$/.test(credential) ||
+      (url.protocol !== "wss:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
+    reportStatus("Misconfigured", "Production authentication requires a bridge credential of at least 32 ASCII characters, WSS for remote hosts, and development execution disabled.");
+    return null;
+  }
+  let authenticated = !production;
+  let authTimer = null;
+  let authenticationTimedOut = false;
+  const clearAuthTimer = () => { if (authTimer !== null) clearTimeout(authTimer); authTimer = null; };
   manuallyClosed = false;
   let socket;
   try {
@@ -202,22 +215,34 @@ function openWebSocket() {
     return null;
   }
   currentSocket = socket;
+  clearCurrentAuthTimer = clearAuthTimer;
   reportStatus("Connecting", "Opening the browser bridge.");
 
   socket.addEventListener("open", () => {
     if (currentSocket !== socket) return;
     if (token) socket.send(JSON.stringify({ token }));
-    reportStatus("Connected", "WebSocket open; MCP calls can now reach this browser unless the server rejects it.");
-    console.log("[foundryBridge] WebSocket connection established");
-    console.log("[foundryBridge] Ready to receive RPC requests from Python server");
-
-    // Reset reconnection state on successful connection
-    reconnectAttempts = 0;
-    if (reconnectTimeoutId !== null) {
-      clearTimeout(reconnectTimeoutId);
-      reconnectTimeoutId = null;
+    if (production) {
+      socket.send(JSON.stringify({ type: "auth", token: credential }));
+      reportStatus("Authenticating", "Waiting for server authentication acknowledgment.");
+      authTimer = setTimeout(() => {
+        authTimer = null;
+        if (currentSocket !== socket) return;
+        manuallyClosed = true;
+        authenticationTimedOut = true;
+        reportStatus("Misconfigured", "Authentication acknowledgment timed out. Check the server version and bridge credential, then save settings to reconnect.");
+        socket.close(1008);
+      }, 5000);
+    } else {
+      connected();
     }
   });
+
+  function connected() {
+    reportStatus("Connected", production ? "Browser bridge authenticated." : "WebSocket open; MCP calls can now reach this browser unless the server rejects it.");
+    reconnectAttempts = 0;
+    if (reconnectTimeoutId !== null) clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+  }
 
   socket.addEventListener("message", async (event) => {
     let message;
@@ -228,7 +253,15 @@ function openWebSocket() {
       return;
     }
 
-    if (currentSocket !== socket) return;
+    if (currentSocket !== socket || authenticationTimedOut) return;
+    if (!authenticated) {
+      if (message?.type === "auth" && message.status === "ok") {
+        authenticated = true;
+        clearAuthTimer();
+        connected();
+      }
+      return;
+    }
     console.debug("[foundryBridge] RPC", message?.id, message?.method);
 
     const response = await handleRpcMessage(message);
@@ -247,12 +280,19 @@ function openWebSocket() {
   socket.addEventListener("close", (event) => {
     console.warn(
       "[foundryBridge] WebSocket connection closed:",
-      event.code,
-      event.reason
+      event.code
     );
 
+    clearAuthTimer();
     if (currentSocket !== socket) return;
     currentSocket = null;
+    clearCurrentAuthTimer = null;
+    if (authenticationTimedOut) return;
+    if (production && event.code === 1008) {
+      manuallyClosed = true;
+      reportStatus("Misconfigured", "Server rejected authentication or another GM owns the bridge. Check credentials and competing tabs, then save settings to reconnect.");
+      return;
+    }
     reportStatus("Disconnected", event.code === 1008
       ? "Server rejected the bridge. Close competing GM tabs or check development credentials."
       : "Connection lost; retrying with backoff. Check the server and configured URL.");
@@ -289,6 +329,8 @@ export function connectFoundryBridge() {
  */
 export function disconnectFoundryBridge() {
   manuallyClosed = true;
+  clearCurrentAuthTimer?.();
+  clearCurrentAuthTimer = null;
 
   if (reconnectTimeoutId !== null) {
     clearTimeout(reconnectTimeoutId);

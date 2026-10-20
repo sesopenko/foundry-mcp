@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import binascii
+import json
 import secrets
 import logging
 
@@ -24,17 +27,34 @@ register_foundry_manager(foundry_manager)
 app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
-    version="1.1.0",
+    version="1.2.0",
     lifespan=mcp_app.lifespan
 )
 
-class DevelopmentAccessControl:
-    """Protect every MCP route before FastMCP handles it (including discovery)."""
+class MCPAccessControl:
+    """Authenticate MCP before FastMCP handles discovery, calls or sessions."""
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if settings.development and scope["type"] == "http" and scope["path"].startswith("/mcp"):
+        mcp_request = scope["type"] == "http" and (scope["path"] == "/mcp" or scope["path"].startswith("/mcp/"))
+        if settings.auth_mode == "basic" and mcp_request:
+            headers = [value for key, value in scope.get("headers", []) if key == b"authorization"]
+            valid = False
+            if len(headers) == 1 and len(headers[0]) <= 8192:
+                try:
+                    scheme, encoded = headers[0].split(b" ", 1)
+                    if scheme.lower() == b"basic":
+                        decoded = base64.b64decode(encoded, validate=True)
+                        expected = (settings.basic_username + ":" + settings.basic_password).encode("ascii")
+                        valid = secrets.compare_digest(decoded, expected)
+                except (ValueError, binascii.Error):
+                    pass
+            if not valid:
+                await JSONResponse({"error": "Unauthorized"}, status_code=401,
+                    headers={"WWW-Authenticate": 'Basic realm="Foundry MCP"'})(scope, receive, send)
+                return
+        if settings.development and mcp_request:
             headers = dict(scope.get("headers", []))
             expected = ("Bearer " + settings.mcp_token).encode()
             peer = (scope.get("client") or ("",))[0]
@@ -44,7 +64,7 @@ class DevelopmentAccessControl:
         await self.app(scope, receive, send)
 
 
-app.add_middleware(DevelopmentAccessControl)
+app.add_middleware(MCPAccessControl)
 
 app.mount("/mcp", mcp_app)
 
@@ -79,8 +99,28 @@ async def foundry_ws(websocket: WebSocket) -> None:
         except (ValueError, asyncio.TimeoutError, WebSocketDisconnect):
             await websocket.close(code=1008)
             return
+    production_auth = settings.auth_mode == "basic"
+    if production_auth:
+        try:
+            raw = await asyncio.wait_for(websocket.receive_text(), timeout=5)
+            if len(raw.encode("utf-8")) > 4096:
+                await websocket.close(code=1009)
+                return
+            hello = json.loads(raw)
+            token = hello.get("token") if isinstance(hello, dict) else None
+            if (not isinstance(hello, dict) or hello.get("type") != "auth"
+                or not isinstance(token, str)
+                or not secrets.compare_digest(token.encode(), settings.bridge_token.encode())):
+                await websocket.close(code=1008)
+                return
+        except (ValueError, UnicodeError, asyncio.TimeoutError, WebSocketDisconnect, RuntimeError, KeyError):
+            await websocket.close(code=1008)
+            return
     try:
-        await foundry_manager.register(client_id, websocket)
+        if production_auth:
+            await foundry_manager.register(client_id, websocket, welcome={"type": "auth", "status": "ok"})
+        else:
+            await foundry_manager.register(client_id, websocket)
     except RuntimeError:
         await websocket.close(code=1008, reason="GM bridge already connected")
         return

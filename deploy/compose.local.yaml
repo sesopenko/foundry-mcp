@@ -5,7 +5,13 @@ services:
     build:
       context: ..
       args:
-        VERSION: 1.1.0
+        VERSION: 1.2.0
+    # Public synthetic credentials for isolated tests ONLY; never deploy these.
+    environment:
+      FOUNDRY_MCP_AUTH_MODE: basic
+      FOUNDRY_MCP_BASIC_USERNAME: smoke
+      FOUNDRY_MCP_BASIC_PASSWORD: smoke-password-for-isolated-tests-only
+      FOUNDRY_MCP_BRIDGE_TOKEN: smoke-browser-token-for-isolated-tests-only
     platform: linux/amd64
     restart: unless-stopped
     ports:

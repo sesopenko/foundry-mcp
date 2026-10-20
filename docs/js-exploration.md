@@ -47,22 +47,22 @@ server was launched on another interface. This first implementation supports
 only a browser and bridge on the same machine. Do not expose it through a
 reverse proxy, SSH forward, or shared host: such arrangements can make remote
 traffic appear local. Remote development requires additional authenticated
-transport and deployment access controls. Existing non-development tools
-retain their prior unauthenticated behavior.
+transport and deployment access controls. In development mode the same local Bearer authentication protects all MCP
+tools. Production Basic Auth is a separate mode; see the operations guide.
 
 ## Configure the GM browser
 
 Reload Foundry to load the updated module. In Module Settings set the MCP
 WebSocket URL to `ws://localhost:8000/ws/foundry` (or a loopback `wss://` endpoint
 appropriate for an HTTPS page). Before enabling execution, use the browser
-console to store the browser credential in this browser's client settings:
+console to store the browser credential in the test world's settings:
 
 ```javascript
 await game.settings.set("foundry-mcp", "browserToken", "your-browser-credential");
 ```
 
 This reconnects the bridge without reloading the page. The credential is deliberately hidden from the ordinary
-settings UI and is not sent in the URL. It is stored by Foundry client settings;
+settings UI and is not sent in the URL. It is stored by Foundry world settings;
 other code running in this browser can read it. Then enable **Enable development
 JavaScript execution (GM only)** in Module Settings; this reconnects again. The
 credential is sent as the first WebSocket message. The server rejects missing

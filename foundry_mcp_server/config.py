@@ -10,6 +10,10 @@ from dataclasses import dataclass
 class Settings:
     host: str = "127.0.0.1"
     port: int = 8000
+    auth_mode: str = "none"
+    basic_username: str = ""
+    basic_password: str = ""
+    bridge_token: str = ""
     development: bool = False
     mcp_token: str = ""
     browser_token: str = ""
@@ -38,6 +42,10 @@ class Settings:
         settings = cls(
             host=host,
             port=port,
+            auth_mode=os.getenv("FOUNDRY_MCP_AUTH_MODE", "none"),
+            basic_username=os.getenv("FOUNDRY_MCP_BASIC_USERNAME", ""),
+            basic_password=os.getenv("FOUNDRY_MCP_BASIC_PASSWORD", ""),
+            bridge_token=os.getenv("FOUNDRY_MCP_BRIDGE_TOKEN", ""),
             development=enabled == "true",
             mcp_token=os.getenv("FOUNDRY_MCP_CALLER_TOKEN", ""),
             browser_token=os.getenv("FOUNDRY_MCP_BROWSER_TOKEN", ""),
@@ -51,6 +59,17 @@ class Settings:
             or settings.mcp_token == settings.browser_token
         ):
             raise ValueError("Development execution requires distinct caller/browser tokens of at least 32 characters")
+        if settings.auth_mode not in {"none", "basic"}:
+            raise ValueError("FOUNDRY_MCP_AUTH_MODE must be none or basic")
+        if settings.auth_mode == "basic":
+            credentials = (settings.basic_username, settings.basic_password, settings.bridge_token)
+            if (settings.development or not settings.basic_username or ":" in settings.basic_username
+                or any(not value.isascii() or not value.isprintable() for value in credentials)
+                or len(settings.basic_password) < 32 or len(settings.bridge_token) < 32
+                or settings.basic_password == settings.bridge_token):
+                raise ValueError("Production authentication requires an ASCII username without colons, distinct password/bridge credentials of at least 32 characters, and development execution disabled")
+        elif any((settings.basic_username, settings.basic_password, settings.bridge_token)):
+            raise ValueError("Production credentials require FOUNDRY_MCP_AUTH_MODE=basic")
         return settings
 
 

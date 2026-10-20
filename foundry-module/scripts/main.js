@@ -10,12 +10,14 @@ function connectionChanged() {
 
 Hooks.once("init", () => {
   const settings = {
-    bridgeUrl: { name: "MCP browser WebSocket URL", hint: "Full ws:// or wss:// URL ending in /ws/foundry, reachable from this GM browser. Saved per browser; changes reconnect automatically.", type: String, default: "ws://localhost:8000/ws/foundry" },
-    developmentExecution: { name: "Enable local development JavaScript execution (GM only)", hint: "Leave disabled for gaming. Requires a loopback endpoint, separate server credentials, and a disposable development world.", type: Boolean, default: false },
+    bridgeUrl: { name: "MCP browser WebSocket URL", hint: "Full ws:// or wss:// URL ending in /ws/foundry, reachable from this GM browser. Saved with this world; changes reconnect automatically.", type: String, default: "ws://localhost:8000/ws/foundry" },
+    productionAuthentication: { name: "Authenticate production bridge", hint: "Enable when the MCP server requires production authentication. Remote connections require WSS.", type: Boolean, default: false },
+    bridgeCredential: { name: "Production browser bridge credential", hint: "Shared world setting, not a GM-only secret store. Must match the server bridge token; never enter the MCP password here.", type: String, default: "" },
+    developmentExecution: { name: "Enable local development JavaScript execution (GM only)", hint: "Leave disabled for gaming. Requires a loopback endpoint, separate server credentials, and a existing development test world.", type: Boolean, default: false },
     browserToken: { name: "Local development browser credential", type: String, default: "", config: false },
   };
   for (const [key, options] of Object.entries(settings)) {
-    game.settings.register("foundry-mcp", key, { scope: "client", config: true, ...options, onChange: connectionChanged });
+    game.settings.register("foundry-mcp", key, { scope: "world", config: true, ...options, onChange: connectionChanged });
   }
 });
 

@@ -7,6 +7,10 @@ services:
       FOUNDRY_MCP_HOST: 0.0.0.0
       FOUNDRY_MCP_PORT: "8000"
       FOUNDRY_MCP_DEV_EXECUTION: "false"
+      FOUNDRY_MCP_AUTH_MODE: basic
+      FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
+      FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
+      FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
     ports:
       - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
     stop_grace_period: 15s

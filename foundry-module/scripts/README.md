@@ -16,9 +16,14 @@ wait for Foundry readiness and bridge connectivity before checking behavior.
 See [browser development](../../docs/browser-development.md) for the refresh
 experiment, restart rules, and connection diagnosis.
 
-`connectionConfig.js` validates browser-reachable WS/WSS endpoints. Client-scoped
+`connectionConfig.js` validates browser-reachable WS/WSS endpoints. World-scoped
 settings preserve existing keys and reconnect on change rather than reloading.
 The bridge emits deduplicated status notifications using documented public
 `ui.notifications.info`, `warn`, and `error` methods. Settings registration,
 retrieval, and `onChange` use public `ClientSettings` APIs in v13/v14; see
 [operations and API references](../../docs/operations.md).
+
+Production authentication uses a separate world-scoped bridge credential and
+an explicit server acknowledgment before RPC dispatch. World settings restrict
+editing but are not a confidential GM-only store. Client-scoped 1.1 settings
+are not automatically copied into the world; enter intended world values once.

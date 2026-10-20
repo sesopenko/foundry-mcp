@@ -30,8 +30,9 @@ This is currently in an experimental state, not a foundry module that is ready t
 
 For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
-The gaming Foundry installation is independently managed. Production bridge
-access is unauthenticated on the trusted LAN; development execution stays disabled.
+The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
+credentials; development execution stays disabled. See the authentication and
+1.2.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 ## Foundry (Docker) Dev Env Setup

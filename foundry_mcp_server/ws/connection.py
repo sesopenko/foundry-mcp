@@ -17,12 +17,18 @@ class FoundryConnectionManager:
 
     def __init__(self):
         self.websockets = {}
+        self.admission_lock = asyncio.Lock()
         self.pending = {}
 
-    async def register(self, client_id, websocket):
-        if client_id in self.websockets:
-            raise RuntimeError("Authorized client already connected; close it first")
-        self.websockets[client_id] = websocket
+    async def register(self, client_id, websocket, *, welcome=None):
+        # Reserve admission while acknowledging; never expose a socket to RPC
+        # dispatch before its successful authentication acknowledgment is sent.
+        async with self.admission_lock:
+            if client_id in self.websockets:
+                raise RuntimeError("Authorized client already connected; close it first")
+            if welcome is not None:
+                await websocket.send_text(json.dumps(welcome))
+            self.websockets[client_id] = websocket
 
     async def unregister(self, client_id, websocket):
         if self.websockets.get(client_id) is websocket:

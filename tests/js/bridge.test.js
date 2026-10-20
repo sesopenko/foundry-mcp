@@ -39,14 +39,50 @@ test("bridge behavior", async t => {
     globalThis.clearTimeout = originalClearTimeout;
   });
 
+  await t.test("production authentication gates RPC until acknowledgment and stops on rejection", async () => {
+    options.productionAuthentication = true;
+    options.bridgeCredential = "t".repeat(32);
+    options.bridgeUrl = "wss://bridge.example/ws/foundry";
+    let socket = connectFoundryBridge();
+    await socket.open();
+    assert.equal(getConnectionStatus().state, "Authenticating");
+    assert.deepEqual(socket.sent, [{ type: "auth", token: options.bridgeCredential }]);
+    await socket.request({ id: "early", method: "getPlayerNameList" });
+    assert.equal(socket.sent.length, 1);
+    await socket.request({ type: "auth", status: "ok" });
+    assert.equal(getConnectionStatus().state, "Connected");
+    assert.equal(timers.size, 0);
+    await socket.request({ id: "ready", method: "getPlayerNameList" });
+    assert.equal(socket.sent.at(-1).id, "ready");
+    await socket.emit("close", { code: 1008 });
+    assert.equal(getConnectionStatus().state, "Misconfigured");
+    assert.equal(timers.size, 0);
+    socket = reconnectFoundryBridge();
+    await socket.open();
+    const timeout = [...timers.values()].find(t => t.delay === 5000);
+    timers.clear(); timeout.fn();
+    assert.equal(timers.size, 0);
+    disconnectFoundryBridge();
+    options.bridgeUrl = "ws://remote.example/ws/foundry";
+    assert.equal(connectFoundryBridge(), null);
+    options.bridgeCredential = "short";
+    options.bridgeUrl = "wss://bridge.example/ws/foundry";
+    assert.equal(connectFoundryBridge(), null);
+    options.productionAuthentication = false;
+    options.bridgeCredential = "";
+    options.bridgeUrl = "ws://localhost:8000/ws/foundry";
+    timers.clear();
+  });
   await t.test("connects and reuses an open socket", async () => {
     options.browserToken = "leftover-local-credential";
+    options.bridgeCredential = "stored-production-secret";
     const socket = connectFoundryBridge();
     assert.equal(socket.url, "ws://localhost:8000/ws/foundry");
     assert.equal(connectFoundryBridge(), socket);
     await socket.open();
     assert.deepEqual(socket.sent, []); // Never send a development secret in normal LAN mode.
     options.browserToken = "";
+    options.bridgeCredential = "";
     assert.equal(connectFoundryBridge(), socket);
   });
   await t.test("player names include only active users with string names", async () => {

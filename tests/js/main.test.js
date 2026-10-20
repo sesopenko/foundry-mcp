@@ -21,7 +21,9 @@ test("Foundry initializes bridge only when a GM is ready", async () => {
   hooks.get("init")();
   assert.equal(registered.get("developmentExecution").default, false);
   assert.equal(registered.get("browserToken").config, false);
-  assert.equal(registered.get("bridgeUrl").scope, "client");
+  for (const setting of registered.values()) assert.equal(setting.scope, "world");
+  assert.equal(registered.get("productionAuthentication").default, false);
+  assert.equal(registered.get("bridgeCredential").default, "");
   registered.get("bridgeUrl").onChange();
   assert.equal(sockets.length, 0); // Saving before ready must not start the bridge.
   hooks.get("ready")();

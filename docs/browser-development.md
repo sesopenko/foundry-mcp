@@ -19,10 +19,10 @@ explained in [JavaScript exploration](js-exploration.md).
 The launcher opens `http://localhost:30000/` in a separate persistent profile
 under the gitignored `.browser-dev/chrome-profile/`. You can use this browser
 normally while the agent controls the same tabs. Log into the test world's GM
-account in this profile. Because this is a new profile, its Foundry client
-settings initially need browser credential and execution opt-in setup once;
-those settings and login state persist across refreshes and browser restarts.
-The agent can perform the client-setting setup through browser evaluation once
+account in this profile. Configure the test world's browser credential and
+execution opt-in once; world settings persist across profiles and refreshes.
+Browser login state persists in the dedicated profile.
+The agent can perform the world-setting setup through browser evaluation once
 Foundry is ready. Close the old GM tab's bridge connection before enabling the
 new one: the bridge deliberately authorizes only one connected GM socket.
 
@@ -95,9 +95,9 @@ read-only runtime probe. Each confirms a different layer:
 - Chrome tools absent from the current session: relaunch via the development
   launcher. `codex mcp list` checks registration, not usable live tools.
 
-Client settings are a one-time setup per browser profile and Foundry site
-origin. A different profile/address, cleared browser storage, or rotated
-browser credential requires setup again. Avoid repeatedly pasting credentials
+Module settings are world-scoped as of 1.2. Configure them once per test world.
+A rotated browser credential requires updating the world setting; browser login
+state remains profile-specific. Avoid repeatedly pasting credentials
 on ordinary refreshes. Local `.env.mcp` and browser state are deliberately
 gitignored; preserve them when clearing chat context, and never copy their
 secrets into developer docs.
