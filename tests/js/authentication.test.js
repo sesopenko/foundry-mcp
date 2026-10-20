@@ -133,3 +133,16 @@ test("credentials stay out of URLs, logs and notifications on success, rejection
     assert.ok(!socket.url.includes(value));
   }
 });
+
+test("short, Unicode and matching production/development credentials are accepted", async t => {
+  const h = harness(t);
+  for (const credential of ["x", "é", "pass word$"]) {
+    h.settings.bridgeCredential = credential;
+    h.settings.browserToken = credential;
+    const socket = reconnectFoundryBridge();
+    await socket.open();
+    assert.deepEqual(socket.sent, [{ type: "auth", token: credential }]);
+    await socket.message({ type: "auth", status: "ok" });
+    assert.equal(getConnectionStatus().state, "Connected");
+  }
+});

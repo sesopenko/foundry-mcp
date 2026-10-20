@@ -32,7 +32,7 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-1.2.1 migration instructions in the operations guide.
+1.2.2 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -58,11 +58,11 @@ services:
 ```
 
 Create a private `.env` alongside it, replacing the example registry and LAN
-address. Fill in two distinct random credentials of at least 32 printable ASCII
-characters; empty values deliberately prevent startup:
+address. Fill in nonempty credentials of your choosing; empty values deliberately
+prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=registry.example/sesopenko/foundry-mcp:v1.2.1
+FOUNDRY_MCP_IMAGE=registry.example/sesopenko/foundry-mcp:v1.2.2
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=

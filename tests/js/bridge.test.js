@@ -65,7 +65,7 @@ test("bridge behavior", async t => {
     disconnectFoundryBridge();
     options.bridgeUrl = "ws://remote.example/ws/foundry";
     assert.equal(connectFoundryBridge(), null);
-    options.bridgeCredential = "short";
+    options.bridgeCredential = "";
     options.bridgeUrl = "wss://bridge.example/ws/foundry";
     assert.equal(connectFoundryBridge(), null);
     options.productionAuthentication = false;

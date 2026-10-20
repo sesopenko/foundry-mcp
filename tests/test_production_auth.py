@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 import httpx
-from fastapi import WebSocketDisconnect
+from fastapi import FastAPI, WebSocketDisconnect
 from foundry_mcp_server import main
 from foundry_mcp_server.config import Settings
 from foundry_mcp_server.ws.connection import FoundryConnectionManager
@@ -28,6 +28,24 @@ class ProductionAuthTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual((await client.get('/health')).status_code, 200)
                 response = await client.get('/mcp/mcp', headers=[('Authorization',good),('Authorization',good)])
                 self.assertEqual(response.status_code,401)
+
+    async def test_short_and_unicode_credentials_authenticate_without_policy_checks(self):
+        app = FastAPI()
+        async def endpoint():
+            return {'status': 'ok'}
+        app.add_api_route('/mcp/mcp', endpoint)
+        app.add_middleware(main.MCPAccessControl)
+        for credential in ['x', 'é', 'pass word$']:
+            settings = Settings(auth_mode='basic', basic_username='user', basic_password=credential, bridge_token=credential)
+            header = 'Basic ' + base64.b64encode(('user:' + credential).encode('utf-8')).decode()
+            socket = AsyncMock()
+            socket.receive_text.side_effect = [json.dumps({'type': 'auth', 'token': credential}), WebSocketDisconnect()]
+            with patch.object(main, 'settings', settings), patch.object(main, 'foundry_manager', FoundryConnectionManager()):
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+                    response = await client.get('/mcp/mcp', headers={'Authorization': header})
+                    self.assertEqual(response.status_code, 200)
+                await main.foundry_ws(socket)
+                self.assertEqual(json.loads(socket.send_text.call_args.args[0]), {'type': 'auth', 'status': 'ok'})
 
     async def test_socket_rejections_never_register(self):
         for raw, code in [(json.dumps({'type':'auth','token':'\ud800'}),1008), ('not json',1008), ('[]',1008), ('{}',1008), (json.dumps({'type':'auth','token':'wrong'}),1008), ('x'*4097,1009), (json.dumps({'token':AUTH.bridge_token}),1008)]:
@@ -165,6 +183,17 @@ class ProductionConfigurationTests(unittest.TestCase):
         env={'FOUNDRY_MCP_AUTH_MODE':'basic','FOUNDRY_MCP_BASIC_USERNAME':'librechat','FOUNDRY_MCP_BASIC_PASSWORD':'p'*32,'FOUNDRY_MCP_BRIDGE_TOKEN':'t'*32}
         with patch.dict(os.environ,env,clear=True):
             self.assertEqual(Settings.from_env().auth_mode,'basic')
-        for key,value in [('FOUNDRY_MCP_AUTH_MODE','bad'),('FOUNDRY_MCP_AUTH_MODE','none'),('FOUNDRY_MCP_BASIC_USERNAME',''),('FOUNDRY_MCP_BASIC_USERNAME','bad:name'),('FOUNDRY_MCP_BASIC_PASSWORD','short'),('FOUNDRY_MCP_BRIDGE_TOKEN','p'*32),('FOUNDRY_MCP_BRIDGE_TOKEN','é'*32),('FOUNDRY_MCP_DEV_EXECUTION','true')]:
+        for key,value in [('FOUNDRY_MCP_AUTH_MODE','bad'),('FOUNDRY_MCP_AUTH_MODE','none'),('FOUNDRY_MCP_BASIC_USERNAME',''),('FOUNDRY_MCP_BASIC_USERNAME','bad:name'),('FOUNDRY_MCP_BASIC_PASSWORD',''),('FOUNDRY_MCP_BRIDGE_TOKEN',''),('FOUNDRY_MCP_DEV_EXECUTION','true')]:
             with self.subTest(key=key,value=value),patch.dict(os.environ,{**env,key:value},clear=True):
                 with self.assertRaises(ValueError): Settings.from_env()
+
+    def test_no_credential_strength_or_distinctness_policy(self):
+        for credential in ['x', 'é', 'pass word$']:
+            with self.subTest(credential=credential), patch.dict(os.environ, {
+                'FOUNDRY_MCP_AUTH_MODE': 'basic', 'FOUNDRY_MCP_BASIC_USERNAME': 'user',
+                'FOUNDRY_MCP_BASIC_PASSWORD': credential, 'FOUNDRY_MCP_BRIDGE_TOKEN': credential,
+            }, clear=True):
+                self.assertEqual(Settings.from_env().basic_password, credential)
+            with patch.dict(os.environ, {'FOUNDRY_MCP_DEV_EXECUTION': 'true',
+                'FOUNDRY_MCP_CALLER_TOKEN': credential, 'FOUNDRY_MCP_BROWSER_TOKEN': credential}, clear=True):
+                self.assertTrue(Settings.from_env().development)

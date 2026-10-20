@@ -27,7 +27,7 @@ register_foundry_manager(foundry_manager)
 app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
-    version="1.2.1",
+    version="1.2.2",
     lifespan=mcp_app.lifespan
 )
 
@@ -46,13 +46,13 @@ class MCPAccessControl:
                     scheme, encoded = headers[0].split(b" ", 1)
                     if scheme.lower() == b"basic":
                         decoded = base64.b64decode(encoded, validate=True)
-                        expected = (settings.basic_username + ":" + settings.basic_password).encode("ascii")
+                        expected = (settings.basic_username + ":" + settings.basic_password).encode("utf-8")
                         valid = secrets.compare_digest(decoded, expected)
                 except (ValueError, binascii.Error):
                     pass
             if not valid:
                 await JSONResponse({"error": "Unauthorized"}, status_code=401,
-                    headers={"WWW-Authenticate": 'Basic realm="Foundry MCP"'})(scope, receive, send)
+                    headers={"WWW-Authenticate": 'Basic realm="Foundry MCP", charset="UTF-8"'})(scope, receive, send)
                 return
         if settings.development and mcp_request:
             headers = dict(scope.get("headers", []))

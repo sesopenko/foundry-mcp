@@ -54,20 +54,14 @@ class Settings:
         )
         if not math.isfinite(settings.timeout) or not 0 < settings.timeout <= 120:
             raise ValueError("Execution timeout must be between 0 and 120 seconds")
-        if settings.development and (
-            len(settings.mcp_token) < 32 or len(settings.browser_token) < 32
-            or settings.mcp_token == settings.browser_token
-        ):
-            raise ValueError("Development execution requires distinct caller/browser tokens of at least 32 characters")
+        if settings.development and (not settings.mcp_token or not settings.browser_token):
+            raise ValueError("Development execution requires caller and browser credentials")
         if settings.auth_mode not in {"none", "basic"}:
             raise ValueError("FOUNDRY_MCP_AUTH_MODE must be none or basic")
         if settings.auth_mode == "basic":
-            credentials = (settings.basic_username, settings.basic_password, settings.bridge_token)
             if (settings.development or not settings.basic_username or ":" in settings.basic_username
-                or any(not value.isascii() or not value.isprintable() for value in credentials)
-                or len(settings.basic_password) < 32 or len(settings.bridge_token) < 32
-                or settings.basic_password == settings.bridge_token):
-                raise ValueError("Production authentication requires an ASCII username without colons, distinct password/bridge credentials of at least 32 characters, and development execution disabled")
+                or not settings.basic_password or not settings.bridge_token):
+                raise ValueError("Production authentication requires a username without colons, password, browser credential, and development execution disabled")
         elif any((settings.basic_username, settings.basic_password, settings.bridge_token)):
             raise ValueError("Production credentials require FOUNDRY_MCP_AUTH_MODE=basic")
         return settings

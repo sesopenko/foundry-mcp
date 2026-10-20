@@ -31,7 +31,7 @@ and a GM browser. The operator decides host addressing and LAN access policy.
 
 ## Production authentication and migration from 1.1
 
-Deploy server and module 1.2.1 together. Source execution defaults to
+Deploy server and module 1.2.2 together. Source execution defaults to
 `FOUNDRY_MCP_AUTH_MODE=none` for backward compatibility; production Compose
 explicitly selects `basic`. Supplying production credentials with mode `none`
 fails startup rather than silently exposing the service. Production Basic Auth
@@ -39,9 +39,9 @@ and development execution cannot be enabled together.
 
 Set `FOUNDRY_MCP_BASIC_USERNAME`, `FOUNDRY_MCP_BASIC_PASSWORD`, and
 `FOUNDRY_MCP_BRIDGE_TOKEN` in the private deployment environment. The username
-must be nonempty printable ASCII without a colon. Password and bridge token
-must be distinct printable ASCII values of at least 32 characters. Generate
-them separately with `python -c 'import secrets; print(secrets.token_urlsafe(32))'`.
+must be nonempty without a colon (the Basic Auth separator). Password and bridge
+token must be nonempty; length, character-strength and distinctness policies
+are left to the operator. Optional credential generation: `python -c 'import secrets; print(secrets.token_urlsafe(32))'`.
 Use a private `.env` with mode 0600; never put real credentials in tracked files.
 All `/mcp` HTTP methods, including initialization, discovery and session cleanup,
 require Basic Auth. Rejected requests return 401 with a Basic challenge.
@@ -96,12 +96,12 @@ left exposed through an internet-facing proxy.
 | `FOUNDRY_MCP_HOST` | `127.0.0.1` in source; `0.0.0.0` in image | Uvicorn bind hostname/IP. |
 | `FOUNDRY_MCP_PORT` | `8000` | Integer port, 1–65535. Protocol paths stay fixed. |
 | `FOUNDRY_MCP_AUTH_MODE` | `none` in source; `basic` in production Compose | Protect MCP and browser bridge in production. |
-| `FOUNDRY_MCP_BASIC_USERNAME` | empty | Production MCP username, ASCII without colons. |
-| `FOUNDRY_MCP_BASIC_PASSWORD` | empty | Production MCP password, at least 32 printable ASCII characters. |
-| `FOUNDRY_MCP_BRIDGE_TOKEN` | empty | Distinct production browser credential, at least 32 printable ASCII characters. |
+| `FOUNDRY_MCP_BASIC_USERNAME` | empty | Production MCP username without colons. |
+| `FOUNDRY_MCP_BASIC_PASSWORD` | empty | Nonempty production MCP password. |
+| `FOUNDRY_MCP_BRIDGE_TOKEN` | empty | Nonempty production browser credential. |
 | `FOUNDRY_MCP_DEV_EXECUTION` | `false` | Exposes the development tool only when explicitly enabled with credentials. |
-| `FOUNDRY_MCP_CALLER_TOKEN` | empty | Development MCP bearer credential; distinct from browser token, at least 32 characters. |
-| `FOUNDRY_MCP_BROWSER_TOKEN` | empty | Development browser credential, at least 32 characters. |
+| `FOUNDRY_MCP_CALLER_TOKEN` | empty | Nonempty development MCP bearer credential. |
+| `FOUNDRY_MCP_BROWSER_TOKEN` | empty | Nonempty development browser credential. |
 | `FOUNDRY_MCP_EXECUTION_TIMEOUT` | `15` | Development execution timeout, finite and greater than zero, at most 120 seconds. |
 | `FOUNDRY_MCP_TRACE_PATH` | unset | Optional private evaluation log; leave unset for ordinary production operation. |
 
@@ -187,7 +187,7 @@ CI runs tests, packages module assets, builds the image, exercises an isolated
 container, and checks graceful shutdown. Trusted main/tag pushes may then publish:
 
 - `<registry>/sesopenko/foundry-mcp:sha-<full-commit>`.
-- `<registry>/sesopenko/foundry-mcp:v1.2.1` for matching release tags.
+- `<registry>/sesopenko/foundry-mcp:v1.2.2` for matching release tags.
 - `<registry>/sesopenko/foundry-mcp:latest` updated alongside each published version tag; main-branch pushes publish only commit tags.
 
 Pull requests do not publish. Registry TLS connectivity is checked before login;
@@ -209,12 +209,12 @@ publication workflow by pushing the reviewed commit/tag.
 ## Module versioning and releases
 
 The Python package, runtime application metadata, and module share version
-`1.2.1`. Release tags are `vX.Y.Z`. For each release, update those versions,
+`1.2.2`. Release tags are `vX.Y.Z`. For each release, update those versions,
 `uv.lock`, module `download`, and the local Compose build-version argument
 consistently. Run tests and package:
 
 ```bash
-.venv/bin/python scripts/package-module.py --tag v1.2.1
+.venv/bin/python scripts/package-module.py --tag v1.2.2
 ```
 
 Outputs under ignored `dist/module/` are `module.json` and `foundry-mcp.zip`.
@@ -232,7 +232,7 @@ https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
 The manifest's `download` points to the matching version-specific ZIP:
 
 ```text
-https://github.com/sesopenko/foundry-mcp/releases/download/v1.2.1/foundry-mcp.zip
+https://github.com/sesopenko/foundry-mcp/releases/download/v1.2.2/foundry-mcp.zip
 ```
 
 The operator must make the repository/releases publicly accessible before
@@ -255,7 +255,7 @@ server restart.
 1. Copy `deploy/compose.yaml` and `deploy/.env.example` to a new bridge deployment
    directory. Rename the latter to `.env`, set private permissions, and replace
    the examples: `FOUNDRY_MCP_IMAGE` with the pinned private image reference,
-   and `FOUNDRY_MCP_LAN_ADDRESS` with the host's intended LAN interface address. Generate and fill both production credentials and set the MCP username.
+   and `FOUNDRY_MCP_LAN_ADDRESS` with the host's intended LAN interface address. Fill both production credentials and set the MCP username.
 2. Log in privately with `docker login <registry-host>`; use password input or
    `--password-stdin`, not a tracked file or password command argument.
 3. Validate privately with `docker compose --env-file .env -f compose.yaml config --quiet`.

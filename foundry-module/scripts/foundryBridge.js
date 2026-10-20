@@ -196,10 +196,9 @@ function openWebSocket() {
 
   const production = Boolean(game.settings.get("foundry-mcp", "productionAuthentication"));
   const credential = production ? game.settings.get("foundry-mcp", "bridgeCredential") : "";
-  if (production && (development || typeof credential !== "string" || credential.length < 32 ||
-      !/^[\x20-\x7E]+$/.test(credential) ||
+  if (production && (development || typeof credential !== "string" || !credential ||
       (url.protocol !== "wss:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
-    reportStatus("Misconfigured", "Production authentication requires a bridge credential of at least 32 ASCII characters, WSS for remote hosts, and development execution disabled.");
+    reportStatus("Misconfigured", "Production authentication requires a nonempty bridge credential, WSS for remote hosts, and development execution disabled.");
     return null;
   }
   let authenticated = !production;

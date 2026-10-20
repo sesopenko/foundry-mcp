@@ -13,7 +13,7 @@ sent over the network does not. Keep credentials private and separate.
 
 ## Configure the server
 
-Generate two distinct random credentials (for example, run
+Choose nonempty credentials (optionally generate them by running
 `.venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(32))'` twice).
 Place them in a private, gitignored `.env.mcp` file:
 
@@ -24,7 +24,7 @@ FOUNDRY_MCP_BROWSER_TOKEN=replace-with-second-random-credential
 FOUNDRY_MCP_EXECUTION_TIMEOUT=15
 ```
 
-Tokens must each contain at least 32 characters. Invalid development
+The project does not enforce credential strength or distinctness. Missing credentials or invalid development
 configuration stops startup. The timeout accepts finite values greater than
 zero and at most 120 seconds.
 
