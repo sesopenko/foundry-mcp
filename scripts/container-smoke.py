@@ -15,7 +15,7 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 import websockets
 
-TOOLS = {'get_bridge_versions', 'get_player_names', 'get_journal_tree', 'get_journal_contents', 'search_journals', 'read_journal_page'}
+TOOLS = {'get_bridge_versions', 'get_player_names', 'get_journal_tree', 'get_journal_contents', 'search_journals', 'read_journal_page', 'list_pdf_documents', 'locate_pdf_entry', 'search_pdf_documents', 'read_pdf_pages', 'refresh_pdf_index'}
 
 
 def health(base):

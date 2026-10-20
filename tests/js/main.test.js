@@ -21,16 +21,23 @@ test("Foundry initializes bridge only when a GM is ready", async () => {
   hooks.get("init")();
   assert.equal(registered.get("developmentExecution").default, false);
   assert.equal(registered.get("browserToken").config, false);
-  for (const setting of registered.values()) assert.equal(setting.scope, "world");
+  for (const [key,setting] of registered) assert.equal(setting.scope, "world");
+  assert.equal(registered.get("pdfUploadToken").config, true);
+  assert.equal(registered.get("pdfUploadToken").name, "PDF upload password");
   assert.equal(registered.get("productionAuthentication").default, false);
   assert.equal(registered.get("bridgeCredential").default, "");
   registered.get("bridgeUrl").onChange();
   assert.equal(sockets.length, 0); // Saving before ready must not start the bridge.
   hooks.get("ready")();
   assert.equal(sockets.length, 0);
+  globalThis.foundry = { applications: { api: { DialogV2: class {} } } };
+  globalThis.Hooks.on = () => {};
+  let menu;
+  game.settings.registerMenu = (namespace, key, options) => { menu = options; };
   globalThis.game.user.isGM = true;
   hooks.get("ready")();
   assert.equal(sockets.length, 1);
+  assert.equal(menu.restricted, true);
   sockets[0].close = () => {};
   registered.get("bridgeUrl").onChange();
   registered.get("developmentExecution").onChange();

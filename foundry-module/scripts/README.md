@@ -33,3 +33,10 @@ its constant inside the ZIP with tag/commit metadata. `versionStatus.js` validat
 server metadata and issues deduplicated, nonblocking operator notifications.
 The read-only `getModuleBuildInfo` RPC returns the imported identity, never a
 manifest fetched after installation. See [version diagnostics](../../docs/bridge-version-diagnostics.md).
+
+PDF management uses `pdfManager.js` (GM-only registered DialogV2 settings menu),
+`pdfUpload.js` (bounded acknowledged transfer), and `pdfChannel.js` (separate
+request correlation on the existing authenticated bridge). The PDF upload password is visible in module configuration beside the production
+bridge credential and is world-scoped. Players can read world settings; possession
+of this password authorizes PDF management independently of UI role checks.
+No player-facing documents, assets or chat messages contain PDFs.

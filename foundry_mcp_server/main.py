@@ -4,6 +4,7 @@ import binascii
 import json
 import secrets
 import logging
+from contextlib import asynccontextmanager
 
 from foundry_mcp_server.config import settings
 from foundry_mcp_server.build_info import SERVER_BUILD
@@ -24,12 +25,29 @@ logging.basicConfig(level=logging.INFO)
 foundry_manager = FoundryConnectionManager()
 register_foundry_manager(foundry_manager)
 
+from foundry_mcp_server.pdf.runtime import library as pdf_library
+from foundry_mcp_server.pdf.uploads import Uploads
+pdf_uploads = Uploads(pdf_library, foundry_manager.send) if pdf_library else None
+
+@asynccontextmanager
+async def lifespan(app):
+    async with mcp_app.lifespan(app):
+        if pdf_library:
+            await pdf_library.start()
+            pdf_uploads.start()
+        try:
+            yield
+        finally:
+            if pdf_uploads:
+                await pdf_uploads.close()
+                await pdf_library.close()
+
 # Create FastAPI app
 app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
     version=SERVER_BUILD["version"] or "unknown",
-    lifespan=mcp_app.lifespan
+    lifespan=lifespan
 )
 
 class MCPAccessControl:
@@ -39,6 +57,11 @@ class MCPAccessControl:
 
     async def __call__(self, scope, receive, send):
         mcp_request = scope["type"] == "http" and (scope["path"] == "/mcp" or scope["path"].startswith("/mcp/"))
+        if mcp_request and pdf_library and scope.get("scheme") != "https" and not pdf_library.config.proxy_tls:
+            peer = (scope.get("client") or ("",))[0]
+            if peer not in {"127.0.0.1", "::1"}:
+                await JSONResponse({"error":"Private PDF MCP requires TLS or explicitly trusted TLS termination"}, status_code=403)(scope, receive, send)
+                return
         if settings.auth_mode == "basic" and mcp_request:
             headers = [value for key, value in scope.get("headers", []) if key == b"authorization"]
             valid = False
@@ -134,12 +157,29 @@ async def foundry_ws(websocket: WebSocket) -> None:
             if len(msg.encode("utf-8")) > settings.max_response_bytes:
                 await websocket.close(code=1009)
                 break
+            try:
+                data = json.loads(msg)
+            except (ValueError, TypeError):
+                data = None
+            if isinstance(data, dict) and isinstance(data.get("type"), str) and data["type"].startswith("pdf."):
+                if pdf_uploads:
+                    peer = websocket.client.host if websocket.client else ""
+                    secure = ((production_auth or settings.development) and
+                        (websocket.scope.get("scheme") == "wss" or
+                         peer in {"127.0.0.1", "::1"} or pdf_library.config.proxy_tls))
+                    await pdf_uploads.handle(websocket, data, secure)
+                else:
+                    await foundry_manager.send(websocket, {"type":"pdf.upload.error", "request_id":data.get("request_id"),
+                        "message":"PDF library disabled", "code":"disabled"})
+                continue
             await foundry_manager.handle_incoming(msg, websocket)
     except WebSocketDisconnect:
         logger.info("Foundry client %s disconnected", client_id)
     except Exception as e:
         logger.exception("Error in WebSocket handler for client %s: %s", client_id, e)
     finally:
+        if pdf_uploads:
+            await pdf_uploads.disconnect(websocket)
         await foundry_manager.unregister(client_id, websocket)
 
 

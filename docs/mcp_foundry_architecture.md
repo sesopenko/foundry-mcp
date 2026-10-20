@@ -230,3 +230,15 @@ The module compares it with its imported JavaScript identity, and exposes
 Version mismatch warnings do not gate game tools. Missing/legacy identities
 remain diagnosable without assuming compatibility. See
 [the version diagnostic contract](bridge-version-diagnostics.md).
+
+## Private PDF evidence
+
+The optional Python-local PDF subsystem uses SQLite FTS5 and bounded pypdf
+subprocesses. Its five MCP tools do not require Foundry RPC. Authenticated MCP
+credentials must be exclusively GM-trusted; players require a separate endpoint.
+Browser-originated `pdf.upload.*` messages use the existing GM socket with a
+separate world-scoped upload password, exact-socket ownership and serialized sends.
+World settings are readable by players; possession of this password permits
+manual PDF management requests even though the interface is GM-only.
+They never enter generic RPC response correlation. See [PDF library](pdf-library.md)
+for protocol, persistent data, resource limits and recovery.

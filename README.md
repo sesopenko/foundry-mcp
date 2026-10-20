@@ -36,7 +36,7 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-1.3.0 migration instructions in the operations guide.
+1.4.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -65,7 +65,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v1.3.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v1.4.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -239,3 +239,10 @@ For a visible development browser that both you and Codex can use, install
 browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
+
+## Private PDF references
+
+An opt-in GM-private PDF library provides lexical lookup and source-page reading,
+plus acknowledged uploads through the existing Foundry bridge. See
+[PDF library setup, access policy and recovery](docs/pdf-library.md).
+Do not share a PDF-enabled endpoint's MCP credentials with players.

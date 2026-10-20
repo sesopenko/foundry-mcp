@@ -181,3 +181,12 @@ node_modules/
 
 # Private operator context
 .local/
+
+# Private PDF library and derived indexes (never release user-owned books)
+pdf-library/
+pdf-state/
+*.pdf
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm

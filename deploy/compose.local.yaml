@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       args:
-        VERSION: 1.3.0
+        VERSION: 1.4.0
     # Public synthetic credentials for isolated tests ONLY; never deploy these.
     environment:
       FOUNDRY_MCP_AUTH_MODE: basic
@@ -24,3 +24,34 @@ services:
     entrypoint: [python, /checks/container-smoke.py, --url, 'http://foundry-mcp:8000']
     volumes:
       - ../scripts/container-smoke.py:/checks/container-smoke.py:ro
+
+  pdf-library-test:
+    image: foundry-mcp:local
+    profiles: [checks]
+    environment:
+      FOUNDRY_MCP_AUTH_MODE: basic
+      FOUNDRY_MCP_BASIC_USERNAME: smoke
+      FOUNDRY_MCP_BASIC_PASSWORD: smoke-password
+      FOUNDRY_MCP_BRIDGE_TOKEN: smoke-bridge
+      FOUNDRY_MCP_PDF_ENABLED: "true"
+      FOUNDRY_MCP_PDF_TRUSTED_GM_MCP: "true"
+      FOUNDRY_MCP_PDF_UPLOAD_ENABLED: "true"
+      FOUNDRY_MCP_PDF_UPLOAD_TOKEN: smoke-private-upload
+      FOUNDRY_MCP_PDF_LIBRARY_DIR: /data/pdf-library
+      FOUNDRY_MCP_PDF_INDEX_DIR: /data/pdf-state
+      # Isolated CI network only; no published ports or real document corpus.
+      FOUNDRY_MCP_PDF_TRUST_TLS_PROXY: "true"
+    volumes:
+      - pdf-test-books:/data/pdf-library
+      - pdf-test-state:/data/pdf-state
+
+  pdf-smoke:
+    image: foundry-mcp:local
+    profiles: [checks]
+    entrypoint: [python, /checks/pdf-smoke.py, 'http://pdf-library-test:8000']
+    volumes:
+      - ../scripts/pdf-smoke.py:/checks/pdf-smoke.py:ro
+
+volumes:
+  pdf-test-books:
+  pdf-test-state:

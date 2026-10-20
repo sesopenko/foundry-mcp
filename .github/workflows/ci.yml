@@ -54,6 +54,12 @@ jobs:
           docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml up -d --no-build --wait --wait-timeout 90
       - name: Protocol-aware container smoke test
         run: .venv/bin/python scripts/container-smoke.py
+      - name: Verify private PDF uploads, retrieval and persistent volumes
+        run: |
+          docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml up -d --no-build --wait --wait-timeout 90 pdf-library-test
+          docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml run --rm --no-deps -T pdf-smoke
+          docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml up -d --no-build --force-recreate --wait --wait-timeout 90 pdf-library-test
+          docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml run --rm --no-deps -T pdf-smoke --verify-only
       - name: Verify graceful shutdown
         run: |
           docker compose -p foundry-mcp-smoke -f deploy/compose.local.yaml stop

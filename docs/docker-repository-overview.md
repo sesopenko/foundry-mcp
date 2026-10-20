@@ -6,7 +6,7 @@ Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance thr
 
 This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide server/module version diagnostics, active player names, and journal navigation, search, and reading, with room for additional GM assistance features.
 
-The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The module declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts or persistent data volumes.
+The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The module declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
 ## Run with Docker Compose
 
@@ -28,6 +28,16 @@ services:
       FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
       FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
+      FOUNDRY_MCP_PDF_ENABLED: ${FOUNDRY_MCP_PDF_ENABLED:-false}
+      FOUNDRY_MCP_PDF_TRUSTED_GM_MCP: ${FOUNDRY_MCP_PDF_TRUSTED_GM_MCP:-false}
+      FOUNDRY_MCP_PDF_LIBRARY_DIR: /data/pdf-library
+      FOUNDRY_MCP_PDF_INDEX_DIR: /data/pdf-state
+      FOUNDRY_MCP_PDF_UPLOAD_ENABLED: ${FOUNDRY_MCP_PDF_UPLOAD_ENABLED:-false}
+      FOUNDRY_MCP_PDF_UPLOAD_TOKEN: ${FOUNDRY_MCP_PDF_UPLOAD_TOKEN:-}
+      FOUNDRY_MCP_PDF_TRUST_TLS_PROXY: ${FOUNDRY_MCP_PDF_TRUST_TLS_PROXY:-false}
+    volumes:
+      - ./pdf-library:/data/pdf-library
+      - ./pdf-state:/data/pdf-state
     ports:
       - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
     stop_grace_period: 15s
@@ -42,13 +52,26 @@ FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD='replace-with-your-mcp-password'
 FOUNDRY_MCP_BRIDGE_TOKEN='replace-with-your-browser-credential'
+# Optional PDF library; see the access and HTTPS/WSS requirements below.
+FOUNDRY_MCP_PDF_ENABLED=false
+FOUNDRY_MCP_PDF_TRUSTED_GM_MCP=false
+FOUNDRY_MCP_PDF_UPLOAD_ENABLED=false
+FOUNDRY_MCP_PDF_UPLOAD_TOKEN='replace-with-a-separate-pdf-upload-password'
+FOUNDRY_MCP_PDF_TRUST_TLS_PROXY=false
 ```
 
 Replace the example address and credentials before starting. The password and bridge credential must be nonempty; the project does not impose password-strength or distinctness requirements. The Basic Auth username cannot contain a colon. Use single quotes in Compose `.env` files to preserve literal `$` signs; those surrounding quotes are not part of the value.
 
+The `./pdf-library` and `./pdf-state` folders are stored on the Docker host,
+alongside `compose.yaml`. They preserve uploaded PDFs, completed uploads awaiting
+indexing, and the SQLite index when the container is restarted or replaced.
+Keep and back up **both folders**. Do not delete them when refreshing the stack.
+Create them for the container's UID/GID 10001 before the first start.
+
 Keep `.env` private and out of version control:
 
 ```bash
+sudo install -d -m 0700 -o 10001 -g 10001 pdf-library pdf-state
 chmod 600 .env
 docker compose config --quiet
 docker compose pull
@@ -222,3 +245,44 @@ Update the companion module through Foundry's package updater and reload the GM 
 | MCP session errors after a server restart | Reconnect the MCP client to establish a new session. |
 
 For detailed operations, compatibility, development setup, and tool contracts, visit the [GitHub project](https://github.com/sesopenko/foundry-mcp).
+
+## Optional GM-private PDF library
+
+The server includes local PDF extraction, heading/bookmark discovery, SQLite
+FTS5 lookup, and source-page reading. It requires no paid API or extra service.
+PDFs are private user data; only enable this on an authenticated endpoint whose
+MCP credentials are exclusively for trusted GMs. Players need a separate endpoint
+with PDFs disabled. Do not put books into Foundry assets or images.
+
+To enable PDFs, set these environment values in the `.env` above. The main
+Compose example already includes both persistent folder mounts. After saving,
+apply the configuration with `docker compose up -d`:
+
+```dotenv
+FOUNDRY_MCP_PDF_ENABLED=true
+FOUNDRY_MCP_PDF_TRUSTED_GM_MCP=true
+FOUNDRY_MCP_PDF_UPLOAD_ENABLED=true
+FOUNDRY_MCP_PDF_UPLOAD_TOKEN='replace-with-a-separate-pdf-upload-password'
+FOUNDRY_MCP_PDF_TRUST_TLS_PROXY=true
+```
+
+The TLS-proxy flag requires operator-enforced HTTPS/WSS and restricted direct
+upstream access. It does not verify your proxy. The mounted host folders must
+remain writable by UID/GID 10001. The GM opens **Manage PDF Library** in module
+settings. Configure **PDF upload password** beside the production bridge credential.
+It is world-scoped and readable by players; editing restrictions do not make it
+secret. Anyone obtaining it can manually authorize PDF uploads and library
+list/status operations, despite the GM-only interface. Only enable this in worlds
+where that access is acceptable. MCP source retrieval remains protected by its
+separate GM-trusted credentials. World bridge credentials alone do not authorize
+PDF management.
+
+Uploads use 32 KiB chunks over the existing authenticated WebSocket; progress is
+server-acknowledged bytes. Transfer completion is followed by validation/indexing;
+only Ready means searchable. MCP tools `list_pdf_documents`, `locate_pdf_entry`,
+`search_pdf_documents`, `read_pdf_pages`, and `refresh_pdf_index` work independently
+of a connected GM browser. Search candidates must be verified by source reads;
+reading order/numeric table structure are unverified, and OCR is unavailable.
+
+See [storage, limits, backup, credential rotation and recovery](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pdf-library.md)
+before enabling this feature. Disable uploads separately while keeping retrieval.

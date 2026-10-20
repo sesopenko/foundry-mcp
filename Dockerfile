@@ -7,7 +7,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 
 FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c AS runtime
-ARG VERSION=1.3.0
+ARG VERSION=1.4.0
 ARG REVISION=unknown
 ARG RELEASE_TAG=
 LABEL org.opencontainers.image.title="Foundry MCP" \
@@ -15,6 +15,7 @@ LABEL org.opencontainers.image.title="Foundry MCP" \
       org.opencontainers.image.version=$VERSION \
       org.opencontainers.image.revision=$REVISION
 RUN groupadd --gid 10001 bridge && useradd --uid 10001 --gid bridge --no-create-home bridge
+RUN mkdir -p /data/pdf-library /data/pdf-state && chown -R 10001:10001 /data && chmod 700 /data/pdf-library /data/pdf-state
 WORKDIR /app
 COPY --from=dependencies /app/.venv /app/.venv
 COPY foundry_mcp_server/ ./foundry_mcp_server/

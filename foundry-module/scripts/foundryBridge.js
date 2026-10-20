@@ -1,3 +1,4 @@
+import { setPdfSocket, handlePdfMessage } from "./pdfChannel.js";
 import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
@@ -215,6 +216,7 @@ function openWebSocket() {
     reportStatus("Misconfigured", "The browser rejected the WebSocket. Check the URL, TLS certificate, and page transport.");
     return null;
   }
+  setPdfSocket(null);
   currentSocket = socket;
   clearCurrentAuthTimer = clearAuthTimer;
   reportStatus("Connecting", "Opening the browser bridge.");
@@ -258,6 +260,7 @@ function openWebSocket() {
     if (!authenticated) {
       if (message?.type === "auth" && message.status === "ok") {
         authenticated = true;
+        setPdfSocket(socket);
         if (message.server_build !== undefined) reportServerBuild(message.server_build);
         clearAuthTimer();
         connected();
@@ -265,9 +268,11 @@ function openWebSocket() {
       return;
     }
     if (message?.type === "serverInfo") {
+      if (development) setPdfSocket(socket);
       reportServerBuild(message.server_build);
       return;
     }
+    if (handlePdfMessage(message)) return;
     console.debug("[foundryBridge] RPC", message?.id, message?.method);
 
     const response = await handleRpcMessage(message);
@@ -291,6 +296,7 @@ function openWebSocket() {
 
     clearAuthTimer();
     if (currentSocket !== socket) return;
+    setPdfSocket(null);
     currentSocket = null;
     clearCurrentAuthTimer = null;
     if (authenticationTimedOut) return;
@@ -335,6 +341,7 @@ export function connectFoundryBridge() {
  */
 export function disconnectFoundryBridge() {
   manuallyClosed = true;
+  setPdfSocket(null);
   clearCurrentAuthTimer?.();
   clearCurrentAuthTimer = null;
 
@@ -345,13 +352,15 @@ export function disconnectFoundryBridge() {
 
   if (currentSocket) {
     const socket = currentSocket;
+    setPdfSocket(null);
     currentSocket = null;
     try {
       socket.close();
     } catch (e) {
       console.error("[foundryBridge] Error while closing WebSocket:", e);
     } finally {
-      currentSocket = null;
+      setPdfSocket(null);
+    currentSocket = null;
     }
   }
 

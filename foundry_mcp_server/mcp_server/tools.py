@@ -174,3 +174,5 @@ async def get_bridge_versions() -> BridgeVersionResult:
         }
         result.update(module=module, comparison=comparison, module_status='connected', message=messages[comparison])
     return result
+
+from . import pdfs  # noqa: E402,F401
