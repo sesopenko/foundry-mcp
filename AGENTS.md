@@ -216,3 +216,21 @@ Repository-local skills capture recurring workflows:
 Use the relevant skill for these tasks. If a new skill is absent from the
 current session's catalog, read its local file directly; a new session can
 discover it normally. Keep the linked developer docs as the source of truth.
+
+
+## Docker Hub repository overview
+
+[docs/docker-repository-overview.md](docs/docker-repository-overview.md) is the
+copy-and-paste source for the public Docker Hub repository overview. Keep it
+current whenever image names/tags, release behavior, Compose configuration,
+environment variables, authentication, endpoints, supported capabilities,
+Foundry setup, or LibreChat/Codex integration changes. Update it in the same
+change as the behavior it documents.
+
+Keep the overview self-contained: use absolute public GitHub/documentation URLs
+rather than repository-relative links, include working Compose and `.env`
+examples, and explain the browser bridge and client authentication. Use only
+generic hosts and placeholder credentials; never include private deployment
+addresses, registry information, or real secrets. Verify YAML/TOML examples
+and current official client documentation when changing integration guidance.
+Do not publish the Docker Hub overview automatically; the user copies it.

@@ -1,0 +1,208 @@
+# Foundry MCP
+
+Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance through the Model Context Protocol (MCP).
+
+**[Source code and issues](https://github.com/sesopenko/foundry-mcp)** · **[Releases](https://github.com/sesopenko/foundry-mcp/releases)** · **[Operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/operations.md)** · **[License](https://github.com/sesopenko/foundry-mcp/blob/main/LICENSE.txt)**
+
+This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide active player names and journal navigation, search, and reading, with room for additional GM assistance features.
+
+The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The module declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts or persistent data volumes.
+
+## Run with Docker Compose
+
+Create a deployment directory containing the following two files.
+
+### `compose.yaml`
+
+```yaml
+services:
+  foundry-mcp:
+    image: ${FOUNDRY_MCP_IMAGE:?set the MCP image}
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      FOUNDRY_MCP_HOST: 0.0.0.0
+      FOUNDRY_MCP_PORT: "8000"
+      FOUNDRY_MCP_DEV_EXECUTION: "false"
+      FOUNDRY_MCP_AUTH_MODE: basic
+      FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
+      FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
+      FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
+    ports:
+      - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
+    stop_grace_period: 15s
+```
+
+### `.env`
+
+```dotenv
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:latest
+# Replace with an actual LAN address belonging to the Docker host.
+FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
+FOUNDRY_MCP_BASIC_USERNAME=librechat
+FOUNDRY_MCP_BASIC_PASSWORD='replace-with-your-mcp-password'
+FOUNDRY_MCP_BRIDGE_TOKEN='replace-with-your-browser-credential'
+```
+
+Replace the example address and credentials before starting. The password and bridge credential must be nonempty; the project does not impose password-strength or distinctness requirements. The Basic Auth username cannot contain a colon. Use single quotes in Compose `.env` files to preserve literal `$` signs; those surrounding quotes are not part of the value.
+
+Keep `.env` private and out of version control:
+
+```bash
+chmod 600 .env
+docker compose config --quiet
+docker compose pull
+docker compose up -d --wait --wait-timeout 90
+```
+
+Public image pulls require no registry login. `latest` follows published version-tag releases; main-branch builds publish `sha-<full-commit>` tags. For controlled upgrades and rollback, replace `latest` with a published `vX.Y.Z` tag or image digest from the repository's Docker Hub tags.
+
+To use another host port, change only the published port in the mapping, for example `"${FOUNDRY_MCP_LAN_ADDRESS}:28643:8000"`. Update client URLs accordingly; the container still listens on port 8000.
+
+### Endpoints and health
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/mcp/mcp` | Streamable HTTP MCP endpoint; requires HTTP Basic Auth. |
+| `/ws/foundry` | GM browser bridge; requires the bridge credential in its first message. |
+| `/health` | Public liveness endpoint; does not require credentials. |
+
+Using your chosen host address and port:
+
+```bash
+curl -fsS http://192.0.2.10:8000/health
+curl -i http://192.0.2.10:8000/mcp/mcp
+```
+
+The first request should return `{"status":"ok","foundry_clients":[]}` before a GM connects. The second should return **401 Unauthorized** with a Basic Auth challenge. An authenticated plain GET is not an MCP initialization request and may return a protocol error; use a real MCP client to verify tool discovery.
+
+For diagnostics:
+
+```bash
+docker compose ps
+docker compose logs --tail=100 foundry-mcp
+```
+
+## Connect the Foundry module
+
+1. In Foundry **Setup → Add-on Modules → Install Module**, enter this manifest URL:
+
+   ```text
+   https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
+   ```
+
+2. Launch your existing world, log in as GM, and enable **Foundry MCP Proxy** in **Manage Modules**.
+3. Open **Configure Settings → Foundry MCP Proxy** and set the full browser-reachable WebSocket URL, ending in `/ws/foundry`.
+4. Enable **Authenticate production bridge** and enter the value of `FOUNDRY_MCP_BRIDGE_TOKEN` in **Production browser bridge credential**. Leave local development execution disabled.
+5. Save and look for **Connected** after authentication. Keep one owning GM browser tab connected; a second bridge is rejected. After installing updated module code, reload the browser normally.
+
+These are world settings. They persist with the world and restrict editing through Foundry permissions, but are not a confidential GM-only secret store. The MCP Basic Auth password belongs in the MCP client, not the Foundry module.
+
+### HTTPS and WSS
+
+For an HTTPS Foundry page, remote bridge connections require a browser-trusted TLS endpoint, such as:
+
+```text
+wss://mcp.example.com/ws/foundry
+```
+
+Configure your reverse proxy to forward WebSocket upgrades to the MCP service and preserve `/ws/foundry`. Use HTTPS for MCP connections across untrusted networks. TLS termination, DNS, and certificates are managed separately from this image.
+
+The browser authenticates inside the WebSocket connection; it cannot add a custom HTTP Authorization header. A proxy Basic Auth challenge on that route would prevent this authentication flow. Let the Python service validate the browser credential.
+
+## Prepare the MCP client's Basic Auth value
+
+MCP clients use the server's `FOUNDRY_MCP_BASIC_USERNAME` and `FOUNDRY_MCP_BASIC_PASSWORD`. The header format is `Authorization: Basic <base64(username:password)>`. Base64 is encoding, not encryption.
+
+In Bash, prompt for the exact configured values without placing the password in shell history:
+
+```bash
+read -r -p 'MCP username: ' mcp_username
+read -r -s -p 'MCP password: ' mcp_password
+printf '\n'
+export FOUNDRY_MCP_BASIC_AUTH="$(printf '%s:%s' "$mcp_username" "$mcp_password" | base64 | tr -d '\r\n')"
+unset mcp_username mcp_password
+```
+
+`FOUNDRY_MCP_BASIC_AUTH` contains only the encoded value, without the `Basic ` prefix. Run this in the shell used to launch your client, or store the value in that client's private environment configuration. Changing a Docker Compose `.env` requires recreating the affected container; restarting alone does not reload its environment.
+
+## LibreChat example
+
+Merge this into `librechat.yaml`, preserving your other MCP servers and allowed-domain entries. Replace `mcp.example.com` with the hostname reachable from LibreChat's container, or use your server's trusted LAN HTTP URL and explicitly allow that host.
+
+```yaml
+mcpSettings:
+  allowedDomains:
+    - "mcp.example.com"
+
+mcpServers:
+  foundry-vtt:
+    type: streamable-http
+    url: https://mcp.example.com/mcp/mcp
+    headers:
+      Authorization: "Basic ${FOUNDRY_MCP_BASIC_AUTH}"
+    requiresOAuth: false
+    timeout: 30000
+    serverInstructions: true
+```
+
+In LibreChat's private `.env`, set the encoded value prepared above:
+
+```dotenv
+FOUNDRY_MCP_BASIC_AUTH='replace-with-base64-of-username-colon-password'
+```
+
+Ensure this variable is loaded into LibreChat's API container, for example through its Compose `env_file: .env`. From the LibreChat stack directory, apply changes to only its API service:
+
+```bash
+docker compose up -d --no-deps --force-recreate api
+```
+
+Select `foundry-vtt` in LibreChat or assign it to an agent. Successful discovery does not require a GM browser, but player and journal calls do. With the intended GM connected, ask for active player names to check the complete path.
+
+LibreChat supports environment-backed custom headers and `requiresOAuth: false` for static authentication. See [LibreChat's MCP configuration documentation](https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/mcp_servers). Treat expanded configuration and client logs as private because they may contain headers.
+
+## OpenAI Codex example
+
+Add this entry to `~/.codex/config.toml`, or the project's `.codex/config.toml` for a trusted project. Replace an existing `foundry-vtt` entry rather than defining it twice. Use the URL reachable from the machine running Codex:
+
+```toml
+[mcp_servers.foundry-vtt]
+url = "https://mcp.example.com/mcp/mcp"
+env_http_headers = { Authorization = "FOUNDRY_MCP_AUTHORIZATION" }
+startup_timeout_sec = 30
+tool_timeout_sec = 30
+```
+
+After preparing `FOUNDRY_MCP_BASIC_AUTH` in the shell above, set the **entire header value** and launch Codex from that same shell:
+
+```bash
+export FOUNDRY_MCP_AUTHORIZATION="Basic ${FOUNDRY_MCP_BASIC_AUTH}"
+codex
+```
+
+Codex's `env_http_headers` reads the complete header from the named environment variable. It does not add `Basic ` automatically. Do not use `bearer_token_env_var` for this Basic Auth setup. A Compose `.env` is not automatically loaded into your Codex process; provide the variable in its launch environment. Restart Codex after changing configuration or credentials, then check `/mcp` for the available server and tools.
+
+See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/).
+
+## Update and troubleshoot
+
+Pull and recreate the bridge after changing its image or server environment:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Update the companion module through Foundry's package updater and reload the GM browser. See [release notes](https://github.com/sesopenko/foundry-mcp/releases) for migrations and matching server/module versions. The bridge stores no world database; keep your existing Foundry data and world backups independently.
+
+| Symptom | Check |
+| --- | --- |
+| MCP client gets 401 | Verify the running username/password, encoded header, and whether containers were recreated after environment changes. |
+| Health is OK, but `foundry_clients` is empty | Enable the module, log in as GM, and check the browser URL and bridge credential. |
+| Browser reports Misconfigured or closes with 1008 | Check credentials and competing GM tabs; save corrected settings to reconnect. |
+| HTTPS page rejects the bridge | Supply a trusted `wss://` endpoint; plain remote `ws://` is insufficient. |
+| Proxy returns 404 or a certificate error | Check hostname routing, backend port, and certificate issuance. |
+| MCP session errors after a server restart | Reconnect the MCP client to establish a new session. |
+
+For detailed operations, compatibility, development setup, and tool contracts, visit the [GitHub project](https://github.com/sesopenko/foundry-mcp).

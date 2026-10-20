@@ -64,34 +64,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate private registry configuration and TLS
+      - name: Validate Docker Hub credentials
         env:
-          REGISTRY_HOST: ${{ secrets.REGISTRY_HOST }}
-          REGISTRY_USERNAME: ${{ secrets.SECRET_REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.SECRET_REGISTRY_PASSWORD }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          python - <<'PY'
-          import os, re, ssl, urllib.request, urllib.error
-          host = os.environ['REGISTRY_HOST']
-          if not re.fullmatch(r'[A-Za-z0-9.-]+(?::[0-9]+)?', host):
-              raise SystemExit('Set REGISTRY_HOST to a registry hostname, without scheme or path')
-          if not os.environ['REGISTRY_USERNAME'] or not os.environ['REGISTRY_PASSWORD']:
-              raise SystemExit('Set both registry credential secrets')
-          try:
-              with urllib.request.urlopen('https://' + host + '/v2/', timeout=20, context=ssl.create_default_context()) as response:
-                  if response.status != 200:
-                      raise SystemExit('Unexpected registry response')
-          except urllib.error.HTTPError as exc:
-              if exc.code != 401:
-                  raise SystemExit('Registry returned an unexpected HTTP status') from None
-          except (OSError, ValueError):
-              raise SystemExit('Registry TLS/connectivity check failed; inspect private configuration') from None
-          PY
-      - uses: docker/login-action@v3
+          python - <<'PYTHON'
+          import os
+          if not os.environ['DOCKERHUB_USERNAME'] or not os.environ['DOCKERHUB_TOKEN']:
+              raise SystemExit('Set DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository secrets')
+          PYTHON
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.REGISTRY_HOST }}
-          username: ${{ secrets.SECRET_REGISTRY_USERNAME }}
-          password: ${{ secrets.SECRET_REGISTRY_PASSWORD }}
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
       - name: Compute version tags
         id: version
@@ -107,12 +95,12 @@ jobs:
       - name: Refuse replacement of a release image
         if: github.ref_type == 'tag'
         env:
-          RELEASE_IMAGE: ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:${{ github.ref_name }}
+          RELEASE_IMAGE: docker.io/sesopenko/foundry-mcp:${{ github.ref_name }}
         run: python scripts/check-image-tag.py
       - name: Preserve an existing immutable commit image
         id: commit-image
         env:
-          RELEASE_IMAGE: ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:sha-${{ github.sha }}
+          RELEASE_IMAGE: docker.io/sesopenko/foundry-mcp:sha-${{ github.sha }}
         run: python scripts/check-image-tag.py --skip-existing
       - name: Push commit image
         if: steps.commit-image.outputs.push == 'true'
@@ -126,7 +114,7 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.number }}
             REVISION=${{ github.sha }}
-          tags: ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:sha-${{ github.sha }}
+          tags: docker.io/sesopenko/foundry-mcp:sha-${{ github.sha }}
       - name: Push release image
         if: github.ref_type == 'tag'
         uses: docker/build-push-action@v7
@@ -140,8 +128,8 @@ jobs:
             VERSION=${{ steps.version.outputs.number }}
             REVISION=${{ github.sha }}
           tags: |
-            ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:${{ github.ref_name }}
-            ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:latest
+            docker.io/sesopenko/foundry-mcp:${{ github.ref_name }}
+            docker.io/sesopenko/foundry-mcp:latest
 
   release-module:
     needs: verify

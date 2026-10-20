@@ -26,12 +26,12 @@ authoritative. Exactly one GM bridge is admitted; a second socket is rejected
 with close code 1008. The connection limit applies after browser authentication. Use one world and one owning GM tab per bridge deployment.
 
 Required: Docker Engine with Compose v2, a `linux/amd64` deployment host,
-registry pull access, a separately managed compatible Foundry installation,
+Docker Hub connectivity, a separately managed compatible Foundry installation,
 and a GM browser. The operator decides host addressing and LAN access policy.
 
 ## Production authentication and migration from 1.1
 
-Deploy server and module 1.2.2 together. Source execution defaults to
+Deploy server and module 1.2.3 together. Source execution defaults to
 `FOUNDRY_MCP_AUTH_MODE=none` for backward compatibility; production Compose
 explicitly selects `basic`. Supplying production credentials with mode `none`
 fails startup rather than silently exposing the service. Production Basic Auth
@@ -168,39 +168,39 @@ No repository mount, source tree, systemd process, or persistent volume is
 needed by the production image. Inspect the [verification record](operationalization-verification.md)
 for actual tests and remaining gates.
 
-## GitHub Actions setup and private image publication
+## GitHub Actions setup and Docker Hub publication
 
 In repository **Settings → Secrets and variables → Actions**, configure:
 
 | Name | Type | Value |
 | --- | --- | --- |
-| `REGISTRY_HOST` | Secret | Private registry hostname, optionally port; no URL scheme or repository path. |
-| `SECRET_REGISTRY_USERNAME` | Secret | Registry account with push permission for this image repository. |
-| `SECRET_REGISTRY_PASSWORD` | Secret | Registry password/token. |
+| `DOCKERHUB_USERNAME` | Secret | Docker Hub account with push access to `sesopenko/foundry-mcp`. |
+| `DOCKERHUB_TOKEN` | Secret | Docker Hub access token with Read/Write permission. |
 | `PUSH_IMAGE_ENABLED` | Variable | Set to `true` to enable publishing; absent/other values leave it disabled. |
 
-The private deployment context belongs in ignored `.local/`, not these public
-instructions. Registry secrets must be available to the publication job; if
-using environment-scoped secrets, configure the job's environment first.
+The workflow logs in to `docker.io` and publishes to the public repository
+[sesopenko/foundry-mcp](https://hub.docker.com/r/sesopenko/foundry-mcp).
+The old `REGISTRY_HOST`, `SECRET_REGISTRY_USERNAME`, and
+`SECRET_REGISTRY_PASSWORD` secrets are no longer used by this workflow.
+Environment-scoped secrets require the publication job's environment to be
+configured; repository secrets work with the supplied workflow.
 
 CI runs tests, packages module assets, builds the image, exercises an isolated
 container, and checks graceful shutdown. Trusted main/tag pushes may then publish:
 
-- `<registry>/sesopenko/foundry-mcp:sha-<full-commit>`.
-- `<registry>/sesopenko/foundry-mcp:v1.2.2` for matching release tags.
-- `<registry>/sesopenko/foundry-mcp:latest` updated alongside each published version tag; main-branch pushes publish only commit tags.
+- `sesopenko/foundry-mcp:sha-<full-commit>`.
+- `sesopenko/foundry-mcp:v1.2.3` for matching release tags.
+- `sesopenko/foundry-mcp:latest` updated alongside each published version tag; main-branch pushes publish only commit tags.
 
-Pull requests do not publish. Registry TLS connectivity is checked before login;
-an unauthenticated 401 is normal, TLS/network failures are not. Existing commit images are preserved on reruns. Versioned release image
+Pull requests do not publish. Docker Hub login must succeed before publication.
+Existing commit images are preserved on reruns. Versioned release image
 replacement is refused; increment versions instead of moving tags. Failed
 verification prevents publication. Image and module publication are independent
 jobs, so inspect both outcomes after a release; one can succeed while the other fails.
 
-Build summaries, build-record uploads, provenance, and SBOM publication are
-disabled to avoid publishing private image references. GitHub masks the secret
-hostname in logs; the operator must inspect the first actual run, including
-errors, for disclosure. Masking is not a guarantee against transformed values.
-Module artifacts and release notes must contain no registry references.
+Build summaries, build-record uploads, provenance, and SBOM publication remain
+disabled. Credentials and private deployment configuration must never be
+included in image layers, logs, module artifacts, or release notes.
 
 No build agent action changes repository visibility, configures secrets, pushes
 commits/tags, or publishes assets automatically. Once ready, the human runs the
@@ -209,12 +209,12 @@ publication workflow by pushing the reviewed commit/tag.
 ## Module versioning and releases
 
 The Python package, runtime application metadata, and module share version
-`1.2.2`. Release tags are `vX.Y.Z`. For each release, update those versions,
+`1.2.3`. Release tags are `vX.Y.Z`. For each release, update those versions,
 `uv.lock`, module `download`, and the local Compose build-version argument
 consistently. Run tests and package:
 
 ```bash
-.venv/bin/python scripts/package-module.py --tag v1.2.2
+.venv/bin/python scripts/package-module.py --tag v1.2.3
 ```
 
 Outputs under ignored `dist/module/` are `module.json` and `foundry-mcp.zip`.
@@ -232,7 +232,7 @@ https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
 The manifest's `download` points to the matching version-specific ZIP:
 
 ```text
-https://github.com/sesopenko/foundry-mcp/releases/download/v1.2.2/foundry-mcp.zip
+https://github.com/sesopenko/foundry-mcp/releases/download/v1.2.3/foundry-mcp.zip
 ```
 
 The operator must make the repository/releases publicly accessible before
@@ -254,10 +254,10 @@ server restart.
 
 1. Copy `deploy/compose.yaml` and `deploy/.env.example` to a new bridge deployment
    directory. Rename the latter to `.env`, set private permissions, and replace
-   the examples: `FOUNDRY_MCP_IMAGE` with the pinned private image reference,
+   the examples: `FOUNDRY_MCP_IMAGE` with a published `sesopenko/foundry-mcp` tag or digest,
    and `FOUNDRY_MCP_LAN_ADDRESS` with the host's intended LAN interface address. Fill both production credentials and set the MCP username.
-2. Log in privately with `docker login <registry-host>`; use password input or
-   `--password-stdin`, not a tracked file or password command argument.
+2. Public Docker Hub pulls require no login. If authenticating for pull limits,
+   use `docker login` interactively or `--password-stdin`.
 3. Validate privately with `docker compose --env-file .env -f compose.yaml config --quiet`.
    Do not post interpolated configuration or credentials in issues/logs.
 4. Run `docker compose --env-file .env -f compose.yaml pull`, then
