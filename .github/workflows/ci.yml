@@ -139,7 +139,9 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.number }}
             REVISION=${{ github.sha }}
-          tags: ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:${{ github.ref_name }}
+          tags: |
+            ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:${{ github.ref_name }}
+            ${{ secrets.REGISTRY_HOST }}/sesopenko/foundry-mcp:latest
 
   release-module:
     needs: verify

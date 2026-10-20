@@ -27,7 +27,7 @@ register_foundry_manager(foundry_manager)
 app = FastAPI(
     title="Foundry MCP Bridge",
     description="MCP HTTP server + WebSocket bridge to Foundry VTT",
-    version="1.2.0",
+    version="1.2.1",
     lifespan=mcp_app.lifespan
 )
 

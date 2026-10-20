@@ -32,8 +32,59 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-1.2.0 migration instructions in the operations guide.
+1.2.1 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
+
+Save this as `compose.yaml` in a separate deployment directory to run only the
+MCP server. It requires no Foundry container, source mounts, or data volumes:
+
+```yaml
+services:
+  foundry-mcp:
+    image: ${FOUNDRY_MCP_IMAGE:?set a pinned image tag or digest}
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      FOUNDRY_MCP_HOST: 0.0.0.0
+      FOUNDRY_MCP_PORT: "8000"
+      FOUNDRY_MCP_DEV_EXECUTION: "false"
+      FOUNDRY_MCP_AUTH_MODE: basic
+      FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
+      FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
+      FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
+    ports:
+      - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
+    stop_grace_period: 15s
+```
+
+Create a private `.env` alongside it, replacing the example registry and LAN
+address. Fill in two distinct random credentials of at least 32 printable ASCII
+characters; empty values deliberately prevent startup:
+
+```dotenv
+FOUNDRY_MCP_IMAGE=registry.example/sesopenko/foundry-mcp:v1.2.1
+FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
+FOUNDRY_MCP_BASIC_USERNAME=librechat
+FOUNDRY_MCP_BASIC_PASSWORD=
+FOUNDRY_MCP_BRIDGE_TOKEN=
+```
+
+Keep `.env` out of version control and restrict it with `chmod 600 .env`. Log
+in to your registry if required, then start the service:
+
+```bash
+docker compose config --quiet
+docker compose pull
+docker compose up -d --wait --wait-timeout 90
+```
+
+The MCP endpoint is `http://<LAN-IP>:8000/mcp/mcp`; `/health` reports liveness.
+Configure your MCP client with HTTP Basic Auth. In the Foundry module's world
+settings, enable production authentication and enter the separate bridge token.
+For an HTTPS Foundry page, supply a browser-trusted
+`wss://<bridge-host>/ws/foundry` endpoint through your reverse proxy. Use HTTPS
+for MCP connections crossing an untrusted network. See the operations guide
+for LibreChat headers, module installation, and credential handling.
 
 ## Foundry (Docker) Dev Env Setup
 
