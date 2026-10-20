@@ -218,6 +218,43 @@ current session's catalog, read its local file directly; a new session can
 discover it normally. Keep the linked developer docs as the source of truth.
 
 
+## Version bumps and Foundry module updates
+
+For an authorized release (version bump, commit, tag and push), use the
+repository-local [foundry-release skill](.agents/skills/foundry-release/SKILL.md).
+The LLM selects the semantic version by reviewing Git history and the actual
+release diff since the last stable release tag, including current changes;
+do not default to patch increments or ask the user to manage version numbers.
+An explicit user-supplied version or narrower publication scope takes precedence.
+
+
+Every release version bump must keep the server, container, and Foundry module
+synchronized. Follow [the release instructions](docs/operations.md#module-versioning-and-releases)
+and update all of the following in the same change:
+
+- The project version in `pyproject.toml` and the matching project entry in
+  `uv.lock`; do not change unrelated dependency versions or hashes.
+- Runtime application version, Dockerfile version argument, local Compose
+  build-version argument, and version-dependent packaging test expectations.
+- `foundry-module/module.json`: set `version` to the new `X.Y.Z` and `download`
+  to `https://github.com/sesopenko/foundry-mcp/releases/download/vX.Y.Z/foundry-mcp.zip`.
+  Keep `manifest` at the stable update URL:
+  `https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json`.
+  Foundry uses that manifest to discover updates; publishing only a Docker
+  image does not update the installed Foundry module.
+- Current version examples in deployment files, README, operator documentation,
+  and the Docker Hub overview where applicable. Preserve historical verification
+  records rather than rewriting their tested versions.
+
+Before committing, run `./scripts/test.sh` and
+`.venv/bin/python scripts/package-module.py --tag vX.Y.Z`, substituting the new
+version. Resolve version, manifest, and archive validation failures before
+creating a release tag. When publication is authorized, push the matching
+`vX.Y.Z` tag and check both image publication and module release jobs. Confirm
+the GitHub release contains `module.json` and `foundry-mcp.zip`, and the stable
+manifest advertises the new version and matching ZIP. Never move an existing
+release tag or replace an existing version's release assets.
+
 ## Docker Hub repository overview
 
 [docs/docker-repository-overview.md](docs/docker-repository-overview.md) is the
