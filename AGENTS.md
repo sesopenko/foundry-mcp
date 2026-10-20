@@ -50,6 +50,48 @@ Respect deprecations and declared module compatibility. Public APIs can still
 change across Foundry versions; use focused tests and live verification for
 supported versions rather than promising compatibility with future releases.
 
+## PF2e-specific functionality and portability audits
+
+Pathfinder Second Edition (`pf2e`) is the primary game system for this project.
+PF2e-specific tools, document schema fields and supported system APIs are
+explicitly allowed. Implement useful PF2e behavior directly when appropriate;
+support for other systems is not a prerequisite, and a generic abstraction or
+multi-system adapter framework is not required before delivering a feature.
+
+Before Actor, Item or encounter-state work, read the
+[PF2e Actor/Item research reference](docs/pf2e-actor-item-reference.md) and
+[actor-reading handoff](docs/prompts/actor-reading-plan.md). They record the
+agreed character/NPC/familiar scope, rulebook-to-schema translations, identity
+and raw/mapped response requirements, and unresolved verification gaps.
+Keep documented evidence and proposed behavior distinct when updating them.
+
+This permission includes dependencies on PF2e's supported system interfaces and
+document schemas despite the general restriction on publisher/module
+implementation details above. It does not authorize private/internal members,
+sheet preparation state, DOM scraping or monkey-patching. Use upstream PF2e
+documentation and schema definitions to establish system-specific contracts;
+record the supported/tested system version and verify relevant behavior in the
+existing development runtime. Runtime observations alone are not an API contract.
+
+Make system assumptions easy to find during a later portability audit:
+
+- In every PF2e-specific function's docstring or JSDoc, explicitly say
+  `PF2e-specific`, identify the relevant actor/item types, schema fields or
+  system API dependencies, and describe any source-versus-derived-value
+  assumptions. Link the upstream documentation/schema and record version
+  constraints or the tested version at the implementation boundary.
+- For an otherwise generic function with a PF2e-only branch, annotate that
+  branch inline and document the conditional behavior in the function's docs.
+  Keep PF2e logic in clearly identifiable helpers when that improves readability.
+- Published MCP tool descriptions must state which functionality or response
+  sections require PF2e and how other systems are handled. Check the system ID
+  before applying PF2e semantics; return an actionable unsupported-system error
+  or explicit unsupported sections instead of silently interpreting another
+  system's data as PF2e.
+- Add focused tests for PF2e behavior and the non-PF2e boundary. Distinguish
+  verified support from untested actor types or system versions. Update these
+  inline contracts alongside implementation changes, not only external docs.
+
 ## Foundry API documentation MCP
 
 Use the `grounded-docs` MCP tools for Foundry API documentation before writing

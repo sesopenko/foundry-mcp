@@ -6,7 +6,7 @@ Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance thr
 
 This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide server/module version diagnostics, active player names, and journal navigation, search, and reading, with room for additional GM assistance features.
 
-The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The module declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
+The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
 ## Run with Docker Compose
 
