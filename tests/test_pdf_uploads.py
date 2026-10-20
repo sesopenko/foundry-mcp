@@ -54,7 +54,7 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(ack['accepted_bytes'],accepted)
                 self.assertEqual(ack['next_seq'],seq+1)
             finish=await self.request('finish',upload_id=begin['upload_id'])
-            self.assertEqual(finish['duplicate'],bool(attempt))
+            self.assertEqual(finish['replacing'],bool(attempt))
             await asyncio.gather(*self.library.tasks)
             status=await self.request('index_status',document_id=finish['document_id'])
             self.assertEqual(status['status'],'ready')
@@ -99,3 +99,85 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
         self.uploads.start()
         await asyncio.sleep(1.05)
         self.assertFalse(self.uploads.sessions)
+    async def test_delete_requires_exact_socket_authorization_and_revision(self):
+        path=self.library.config.library/'Original.pdf';pdf(path)
+        result=await self.library.scan();await asyncio.gather(*self.library.tasks)
+        identifier=result['queued_document_ids'][0];revision=self.library.status(identifier)['revision']
+        self.assertEqual((await self.request('delete',document_id=identifier,revision=revision))['type'],'pdf.upload.error')
+        await self.auth()
+        self.assertEqual((await self.request('delete',ws=object(),document_id=identifier,revision=revision))['type'],'pdf.upload.error')
+        self.assertEqual((await self.request('delete',document_id=identifier,revision='stale'))['type'],'pdf.upload.error')
+        self.assertEqual(self.library.status(identifier)['status'],'ready')
+        response=await self.request('delete',document_id=identifier,revision=revision)
+        self.assertTrue(response['deleted']);self.assertEqual(response['type'],'pdf.upload.delete_ack')
+        self.assertEqual(self.library.documents()['documents'],[])
+        self.assertEqual(self.library.search('Sure Strike')['candidates'],[])
+        self.assertFalse((self.library.config.library/(revision+'.pdf')).exists())
+        # Operator-supplied import files are preserved but must not resurrect deleted content.
+        self.assertTrue(path.exists());self.assertEqual((await self.library.scan())['queued_document_ids'],[])
+        self.assertTrue((await self.request('delete',document_id=identifier,revision=revision))['deleted'])
+        staged=self.library.config.state/'staging'/('c'*32);staged.write_bytes(path.read_bytes())
+        new_id,duplicate=self.library.accept(staged,'Replacement.pdf',revision,staged.stat().st_size)
+        self.assertFalse(duplicate);self.assertNotEqual(new_id,identifier)
+        self.library.enqueue(new_id);await asyncio.gather(*self.library.tasks)
+        self.assertEqual(self.library.status(new_id)['status'],'ready')
+
+    async def test_delete_processing_rejected_and_interrupted_cleanup_recovers(self):
+        path=self.library.config.state/'staging'/('d'*32);pdf(path)
+        from foundry_mcp_server.pdf.library import hash_file,LibraryError
+        identifier,_=self.library.accept(path,'Pending.pdf',hash_file(path),path.stat().st_size)
+        revision=self.library.status(identifier)['revision']
+        self.library.enqueue(identifier)
+        with self.assertRaisesRegex(LibraryError,'processing'):await self.library.delete(identifier,revision)
+        await asyncio.gather(*self.library.tasks)
+        with patch.object(self.library,'_cleanup_deleted',side_effect=OSError('private path')):
+            with self.assertRaises(OSError):await self.library.delete(identifier,revision)
+        self.assertEqual(self.library.documents()['documents'],[])
+        restarted=Library(self.library.config);await restarted.start()
+        self.assertFalse((self.library.config.library/(revision+'.pdf')).exists())
+        await restarted.close()
+        for value in ('../x','/tmp/x',None):
+            with self.assertRaises(LibraryError):await self.library.delete(value,revision)
+
+    async def test_replacement_keeps_old_source_until_success_and_failure_preserves_it(self):
+        original=self.library.config.library/'Edition.pdf';pdf(original,'ORIGINAL RULE')
+        result=await self.library.scan();await asyncio.gather(*self.library.tasks)
+        old_id=result['queued_document_ids'][0]
+        old_revision=self.library.status(old_id)['revision']
+        new=self.library.config.state/'staging'/('e'*32);pdf(new,'UPDATED RULE')
+        from foundry_mcp_server.pdf.library import hash_file,LibraryError
+        new_id,replacing=await self.library.accept_upload(new,'Edition.pdf',hash_file(new),new.stat().st_size)
+        self.assertTrue(replacing);self.assertNotEqual(new_id,old_id)
+        self.assertIn('ORIGINAL RULE',self.library.read(old_id,1)['text'])
+        self.library.enqueue(new_id);await asyncio.gather(*self.library.tasks)
+        self.assertIn('UPDATED RULE',self.library.read(new_id,1)['text'])
+        with self.assertRaises(LibraryError):self.library.status(old_id)
+        self.assertFalse((self.library.config.library/(old_revision+'.pdf')).exists())
+        bad=self.library.config.state/'staging'/('f'*32);bad.write_bytes(b'%PDF-broken')
+        bad_id,replacing=await self.library.accept_upload(bad,'Edition.pdf',hash_file(bad),bad.stat().st_size)
+        self.assertTrue(replacing)
+        self.library.enqueue(bad_id);await asyncio.gather(*self.library.tasks)
+        self.assertEqual(self.library.status(bad_id)['status'],'failed')
+        self.assertIn('UPDATED RULE',self.library.read(new_id,1)['text'])
+        self.assertEqual((await self.library.scan())['queued_document_ids'],[])
+        await asyncio.gather(*self.library.tasks)
+    async def test_legacy_hash_constraint_migration_and_pending_replacement_recovery(self):
+        with self.library.db() as db:
+            db.execute('DROP TABLE documents')
+            db.execute('CREATE TABLE documents(id TEXT PRIMARY KEY,name TEXT,sha256 TEXT UNIQUE,size_bytes INTEGER,status TEXT,revision TEXT,page_count INTEGER DEFAULT 0,error TEXT)')
+        original=self.library.config.library/'Legacy.pdf';pdf(original,'LEGACY RULE')
+        result=await self.library.scan();await asyncio.gather(*self.library.tasks)
+        old_id=result['queued_document_ids'][0]
+        migrated=Library(self.library.config);await migrated.start()
+        self.assertEqual(migrated.status(old_id)['status'],'ready')
+        staged=self.library.config.state/'staging'/('1'*32);staged.write_bytes(original.read_bytes())
+        from foundry_mcp_server.pdf.library import hash_file,LibraryError
+        new_id,replacing=await migrated.accept_upload(staged,'Legacy.pdf',hash_file(staged),staged.stat().st_size)
+        self.assertTrue(replacing)
+        # Do not enqueue: startup must resume this fully received replacement itself.
+        recovered=Library(self.library.config);await recovered.start();await asyncio.gather(*recovered.tasks)
+        self.assertEqual(recovered.status(new_id)['status'],'ready')
+        with self.assertRaises(LibraryError):recovered.status(old_id)
+        self.assertEqual(len(recovered.documents()['documents']),1)
+        self.assertIn('LEGACY RULE',recovered.read(new_id,1)['text'])
+        await migrated.close();await recovered.close()

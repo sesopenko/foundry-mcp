@@ -84,6 +84,10 @@ class Uploads:
                     identifier=message.get('document_id')
                     if not isinstance(identifier,str) or len(identifier)!=32: raise LibraryError('Invalid document_id')
                     await reply('pdf.upload.index_status',**self.library.status(identifier)); return
+                if kind=='pdf.upload.delete':
+                    if ws in self.sessions: raise LibraryError('Finish or cancel the active upload before deleting PDFs')
+                    result=await self.library.delete(message.get('document_id'),message.get('revision'))
+                    await reply('pdf.upload.delete_ack',**result); return
                 if kind=='pdf.upload.begin':
                     if ws in self.sessions: raise LibraryError('Cancel the existing upload first')
                     name=safe_name(message.get('name'))
@@ -127,12 +131,12 @@ class Uploads:
                     session['stream'].close()
                     with session['path'].open('rb') as file:
                         if not file.read(8).startswith(b'%PDF-'): raise LibraryError('Content is not a PDF')
-                    identifier,duplicate=await asyncio.to_thread(self.library.accept,session['path'],session['name'],session['hash'].hexdigest(),session['size'])
+                    identifier,replacing=await self.library.accept_upload(session['path'],session['name'],session['hash'].hexdigest(),session['size'])
                     self.sessions.pop(ws)
                     self.library.reservations.pop(ws,None)
-                    if not duplicate: self.library.enqueue(identifier)
+                    self.library.enqueue(identifier)
                     # Completed bytes are durable in private pending storage. Not yet a validated/readable PDF.
-                    await reply('pdf.upload.index_status',document_id=identifier,index_job_id=identifier,status=self.library.status(identifier)['status'],duplicate=duplicate); return
+                    await reply('pdf.upload.index_status',document_id=identifier,index_job_id=identifier,status=self.library.status(identifier)['status'],replacing=replacing); return
                 raise LibraryError('Unknown PDF upload operation')
             except (LibraryError,OSError,ValueError,TypeError) as error:
                 self.remove(ws)

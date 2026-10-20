@@ -31,7 +31,7 @@ and a GM browser. The operator decides host addressing and LAN access policy.
 
 ## Production authentication and migration from 1.1
 
-Deploy server and module 1.4.0 together. Source execution defaults to
+Deploy server and module 1.5.0 together. Source execution defaults to
 `FOUNDRY_MCP_AUTH_MODE=none` for backward compatibility; production Compose
 explicitly selects `basic`. Supplying production credentials with mode `none`
 fails startup rather than silently exposing the service. Production Basic Auth
@@ -189,7 +189,7 @@ CI runs tests, packages module assets, builds the image, exercises an isolated
 container, and checks graceful shutdown. Trusted main/tag pushes may then publish:
 
 - `sesopenko/foundry-mcp:sha-<full-commit>`.
-- `sesopenko/foundry-mcp:v1.4.0` for matching release tags.
+- `sesopenko/foundry-mcp:v1.5.0` for matching release tags.
 - `sesopenko/foundry-mcp:latest` updated alongside each published version tag; main-branch pushes publish only commit tags.
 
 Pull requests do not publish. Docker Hub login must succeed before publication.
@@ -209,12 +209,12 @@ publication workflow by pushing the reviewed commit/tag.
 ## Module versioning and releases
 
 The Python package, runtime application metadata, and module share version
-`1.4.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
+`1.5.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
 `uv.lock`, both source build identities, module `download`, and the local Compose build-version argument
 consistently. Run tests and package:
 
 ```bash
-.venv/bin/python scripts/package-module.py --tag v1.4.0
+.venv/bin/python scripts/package-module.py --tag v1.5.0
 ```
 
 Outputs under ignored `dist/module/` are `module.json` and `foundry-mcp.zip`.
@@ -232,7 +232,7 @@ https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
 The manifest's `download` points to the matching version-specific ZIP:
 
 ```text
-https://github.com/sesopenko/foundry-mcp/releases/download/v1.4.0/foundry-mcp.zip
+https://github.com/sesopenko/foundry-mcp/releases/download/v1.5.0/foundry-mcp.zip
 ```
 
 The operator must make the repository/releases publicly accessible before
@@ -409,3 +409,9 @@ An opt-in GM-private PDF library provides lexical lookup and source-page reading
 plus acknowledged uploads through the existing Foundry bridge. See
 [PDF library setup, access policy and recovery](pdf-library.md).
 Do not share a PDF-enabled endpoint's MCP credentials with players.
+
+The browser PDF manager also supports confirmed deletion of ready/failed PDFs.
+Uploading the same filename or identical bytes replaces the existing PDF after
+successful reprocessing; the old version remains searchable if the new job fails.
+Keep an original or backup when explicitly deleting a book. See the PDF guide
+for processing-job restrictions and interrupted-cleanup recovery.

@@ -50,14 +50,28 @@ class Library:
         if (self.config.state/'library.sqlite3').is_symlink(): raise LibraryError('Private storage unavailable')
         with self.db() as db:
             db.executescript('''
-            CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, name TEXT, sha256 TEXT UNIQUE, size_bytes INTEGER,
+            CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, name TEXT, sha256 TEXT, size_bytes INTEGER,
               status TEXT, revision TEXT, page_count INTEGER DEFAULT 0, error TEXT);
+            CREATE TABLE IF NOT EXISTS replacement_targets(document_id TEXT, old_id TEXT, old_revision TEXT,
+              PRIMARY KEY(document_id,old_id));
+            CREATE TABLE IF NOT EXISTS deleted_documents(document_id TEXT PRIMARY KEY, sha256 TEXT, cleaned INTEGER DEFAULT 0);
             CREATE TABLE IF NOT EXISTS pages(document_id TEXT, page INTEGER, label TEXT, text TEXT, warnings TEXT,
               PRIMARY KEY(document_id,page));
             CREATE TABLE IF NOT EXISTS entries(document_id TEXT, page INTEGER, title TEXT, context TEXT, provenance TEXT);
             CREATE VIRTUAL TABLE IF NOT EXISTS page_fts USING fts5(document_id UNINDEXED,page UNINDEXED,text);
             CREATE INDEX IF NOT EXISTS entries_document ON entries(document_id);
             ''')
+        # Older libraries required globally unique hashes. Replacement jobs must
+        # coexist with the old ready document until their atomic index commit.
+        with self.db() as db:
+            indexes=db.execute('PRAGMA index_list(documents)').fetchall()
+            unique_hash=any([c['name'] for c in db.execute('PRAGMA index_info("'+i['name'].replace('"','""')+'")')]==['sha256'] and i['unique'] for i in indexes)
+            if unique_hash:
+                db.execute('BEGIN IMMEDIATE')
+                db.execute('ALTER TABLE documents RENAME TO documents_legacy')
+                db.execute('CREATE TABLE documents(id TEXT PRIMARY KEY,name TEXT,sha256 TEXT,size_bytes INTEGER,status TEXT,revision TEXT,page_count INTEGER DEFAULT 0,error TEXT)')
+                db.execute('INSERT INTO documents SELECT * FROM documents_legacy')
+                db.execute('DROP TABLE documents_legacy')
         # Only our server-owned opaque names; never follow user-created symlinks.
         for directory in ('staging', 'results'):
             for p in (self.config.state / directory).iterdir():
@@ -67,6 +81,9 @@ class Library:
             known={r['id'] for r in db.execute('SELECT id FROM documents')}
         for p in (self.config.state/'pending').iterdir():
             if re.fullmatch(r'[a-f0-9]{32}',p.name) and p.name not in known and not p.is_dir(): p.unlink()
+        with self.db() as db:
+            unfinished=[r['document_id'] for r in db.execute('SELECT document_id FROM deleted_documents WHERE cleaned=0')]
+        for identifier in unfinished: self._cleanup_deleted(identifier)
         self.started = True
 
     async def start(self):
@@ -112,6 +129,11 @@ class Library:
 
     def accept(self, path, name, digest, size):
         with self.db() as db:
+            removed=db.execute('SELECT document_id FROM deleted_documents WHERE sha256=?',(digest,)).fetchall()
+        for row in removed: self._cleanup_deleted(row['document_id'])
+        with self.db() as db:
+            db.execute('DELETE FROM deleted_documents WHERE sha256=?',(digest,))
+        with self.db() as db:
             existing = db.execute('SELECT id,status FROM documents WHERE sha256=?',(digest,)).fetchone()
             if existing:
                 path.unlink(missing_ok=True)
@@ -129,6 +151,73 @@ class Library:
                 destination.unlink(missing_ok=True)
                 raise
         return identifier, False
+
+    async def accept_upload(self, path, name, digest, size):
+        async with self.scan_lock:
+            with self.db() as db:
+                matches=db.execute('SELECT id,revision,status FROM documents WHERE name=? OR sha256=?',(name,digest)).fetchall()
+            if any(r['status'] not in {'ready','failed'} or (r['id'] in self.jobs and not self.jobs[r['id']].done()) for r in matches):
+                raise LibraryError('A matching PDF is still processing; wait for it to finish before replacing it')
+            def accept_new():
+                # Clean any old deletion before a new source with this hash exists.
+                with self.db() as db:
+                    removed=db.execute('SELECT document_id FROM deleted_documents WHERE sha256=?',(digest,)).fetchall()
+                for row in removed: self._cleanup_deleted(row['document_id'])
+                identifier=uuid.uuid4().hex
+                destination=self.config.state/'pending'/identifier
+                os.replace(path,destination)
+                try:
+                    with self.db() as db:
+                        db.execute('DELETE FROM deleted_documents WHERE sha256=?',(digest,))
+                        db.execute('INSERT INTO documents(id,name,sha256,size_bytes,status,revision) VALUES(?,?,?,?,?,?)',
+                            (identifier,name,digest,size,'queued',digest))
+                        db.executemany('INSERT INTO replacement_targets VALUES(?,?,?)',[(identifier,r['id'],r['revision']) for r in matches])
+                except BaseException:
+                    destination.unlink(missing_ok=True)
+                    raise
+                return identifier,bool(matches)
+            return await asyncio.to_thread(accept_new)
+
+    def _cleanup_deleted(self, identifier):
+        with self.db() as db:
+            row=db.execute('SELECT sha256,cleaned FROM deleted_documents WHERE document_id=?',(identifier,)).fetchone()
+        if row is None or row['cleaned']: return
+        # All filesystem selectors are server-owned IDs/hashes, never display names.
+        if not re.fullmatch(r'[a-f0-9]{32}',identifier) or not re.fullmatch(r'[a-f0-9]{64}',row['sha256']):
+            raise LibraryError('Invalid stored deletion metadata; ask the operator to repair the index')
+        with self.db() as db:
+            shared=db.execute('SELECT 1 FROM documents WHERE sha256=?',(row['sha256'],)).fetchone()
+        if not shared: (self.config.library/(row['sha256']+'.pdf')).unlink(missing_ok=True)
+        (self.config.state/'pending'/identifier).unlink(missing_ok=True)
+        with self.db() as db:
+            db.execute('UPDATE deleted_documents SET cleaned=1 WHERE document_id=?',(identifier,))
+
+    async def delete(self, identifier, revision):
+        if not isinstance(identifier,str) or not re.fullmatch(r'[a-f0-9]{32}',identifier):
+            raise LibraryError('Invalid document_id; refresh the PDF list')
+        async with self.scan_lock:
+            task=self.jobs.get(identifier)
+            if task is not None and not task.done():
+                raise LibraryError('PDF is still processing; wait for it to finish, refresh and delete again')
+            def remove():
+                with self.db() as db:
+                    row=db.execute('SELECT sha256,status FROM documents WHERE id=?',(identifier,)).fetchone()
+                    if row is None:
+                        row=db.execute('SELECT sha256 FROM deleted_documents WHERE document_id=?',(identifier,)).fetchone()
+                        if row is None: raise LibraryError('PDF no longer exists; refresh the PDF list')
+                    else:
+                        if row['status'] not in {'ready','failed'}:
+                            raise LibraryError('PDF is still processing; wait for it to finish, refresh and delete again')
+                    if revision!=row['sha256']: raise LibraryError('PDF revision changed; refresh the list before deleting')
+                    db.execute('INSERT OR IGNORE INTO deleted_documents(document_id,sha256) VALUES(?,?)',(identifier,row['sha256']))
+                    for table in ('pages','entries','page_fts'):
+                        db.execute('DELETE FROM '+table+' WHERE document_id=?',(identifier,))
+                    db.execute('DELETE FROM documents WHERE id=?',(identifier,))
+                    db.execute('DELETE FROM replacement_targets WHERE document_id=?',(identifier,))
+                # Record intent before unlinking so restart can recover interrupted cleanup.
+                self._cleanup_deleted(identifier)
+                return dict(document_id=identifier,deleted=True)
+            return await asyncio.to_thread(remove)
 
     async def index(self, identifier):
         async with self.lock:
@@ -167,6 +256,7 @@ class Library:
                         finally: temporary.unlink(missing_ok=True)
                     await asyncio.to_thread(promote)
                 def commit():
+                    removed=[]
                     with self.db() as db:
                         db.execute("UPDATE documents SET status='indexing' WHERE id=?",(identifier,))
                         db.execute('DELETE FROM pages WHERE document_id=?',(identifier,))
@@ -178,8 +268,24 @@ class Library:
                         for e in data['entries']:
                             db.execute('INSERT INTO entries VALUES(?,?,?,?,?)',(identifier,e['page'],e['title'],json.dumps(e['context']),e['provenance']))
                         db.execute("UPDATE documents SET status='ready',page_count=?,error=NULL WHERE id=?",(len(data['pages']),identifier))
-                await asyncio.to_thread(commit)
-                if source != final: source.unlink(missing_ok=True)
+                        for target in db.execute('SELECT old_id,old_revision FROM replacement_targets WHERE document_id=?',(identifier,)).fetchall():
+                            old=db.execute('SELECT sha256,revision FROM documents WHERE id=?',(target['old_id'],)).fetchone()
+                            if old is None or old['revision']!=target['old_revision']: continue
+                            db.execute('INSERT OR IGNORE INTO deleted_documents(document_id,sha256) VALUES(?,?)',(target['old_id'],old['sha256']))
+                            for table in ('pages','entries','page_fts'):
+                                db.execute('DELETE FROM '+table+' WHERE document_id=?',(target['old_id'],))
+                            db.execute('DELETE FROM documents WHERE id=?',(target['old_id'],))
+                            db.execute('DELETE FROM replacement_targets WHERE document_id=?',(target['old_id'],))
+                            removed.append(target['old_id'])
+                        db.execute('DELETE FROM replacement_targets WHERE document_id=?',(identifier,))
+                    return removed
+                removed=await asyncio.to_thread(commit)
+                if source != final:
+                    try: source.unlink(missing_ok=True)
+                    except OSError: pass  # A committed replacement remains ready despite redundant pending-file cleanup failure.
+                for old_id in removed:
+                    try: await asyncio.to_thread(self._cleanup_deleted,old_id)
+                    except OSError: pass  # Replacement is committed; startup retries retired-source cleanup.
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -206,6 +312,7 @@ class Library:
             if path.is_symlink() or not path.is_file() or path.stat().st_size>self.config.max_bytes: continue
             digest = await asyncio.to_thread(hash_file,path)
             with self.db() as db:
+                if db.execute('SELECT 1 FROM deleted_documents WHERE sha256=?',(digest,)).fetchone(): continue
                 row = db.execute('SELECT id,status FROM documents WHERE sha256=?',(digest,)).fetchone()
             if row:
                 if row['status']=='failed': self.enqueue(row['id'])

@@ -30,6 +30,18 @@ async def check(base, verify_only=False):
             page=(await client.call_tool('read_pdf_pages',{'document_id':ready[0]['document_id'],'physical_page':1})).data
             assert 'documented synthetic result' in page['text']
             print('PASS: indexed source survives container replacement without a browser')
+            async with websockets.connect(base.replace('http','ws',1)+'/ws/foundry') as ws:
+                await ws.send(json.dumps({'type':'auth','token':'smoke-bridge'}));await ws.recv()
+                await ws.send(json.dumps({'type':'pdf.upload.authorize','request_id':'delete-auth','protocol':1,'token':'smoke-private-upload'}))
+                assert json.loads(await ws.recv())['type']=='pdf.upload.authorize_ack'
+                await ws.send(json.dumps({'type':'pdf.upload.delete','request_id':'delete-book','protocol':1,
+                    'document_id':ready[0]['document_id'],'revision':ready[0]['revision']}))
+                deleted=json.loads(await ws.recv());assert deleted['type']=='pdf.upload.delete_ack' and deleted['deleted'] is True
+            docs=(await client.call_tool('list_pdf_documents',{})).data['documents']
+            assert all(d['document_id']!=ready[0]['document_id'] for d in docs)
+            missing=await client.call_tool('read_pdf_pages',{'document_id':ready[0]['document_id'],'physical_page':1},raise_on_error=False)
+            assert missing.is_error
+            print('PASS: authenticated browser deletion removes source retrieval and library metadata')
             return
         await client.call_tool('refresh_pdf_index',{})
         async with websockets.connect(base.replace('http','ws',1)+'/ws/foundry') as ws:

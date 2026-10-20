@@ -27,7 +27,7 @@ authorization policy; an asserted `isGM` flag is never trusted. Configure the
 Foundry module settings. It is **world-scoped**, shared across browsers, and
 readable by players. Foundry permissions restrict editing, not reading.
 Consequently, this credential is not a confidential GM-only authorization
-boundary: anyone who reads it can manually authorize upload/list/status
+boundary: anyone who reads it can manually authorize upload/list/status/delete
 operations despite the GM-only interface. Use this configuration only in worlds
 where that access is acceptable. MCP PDF source retrieval still requires the
 separate GM-trusted MCP credentials. Existing client-local values are not copied
@@ -94,7 +94,10 @@ The existing `/ws/foundry` socket carries protocol-version-1 JSON messages with
 32 KiB decoded base64 chunks. Transfer is stop-and-wait; progress is acknowledged
 bytes divided by declared bytes. At 100%, bytes are durable in private pending
 storage, **not validated or searchable yet**. The manager polls index status;
-only `ready` after the SQLite transaction commits means searchable. Failed
+only `ready` after the SQLite transaction commits means searchable. The list updates
+while processing, and the final success/error message stays visible. Uploading the same filename or identical bytes creates a replacement job and
+reprocesses the uploaded PDF. The old ready version remains searchable until the
+replacement commits successfully; a failed replacement leaves it available. Failed
 validation/indexing remains failed with a sanitized error. Cancel/disconnect
 removes incomplete transfers; completed transfers survive and continue indexing.
 Reopen/authorize/refresh the manager to recover status after disconnect.
@@ -102,13 +105,45 @@ Reopen/authorize/refresh the manager to recover status after disconnect.
 The protocol uses distinct `pdf.upload.*` types and bounded request IDs:
 `authorize`/`authorize_ack`, `begin`/`begin_ack`, `chunk`/`ack`,
 `cancel`/`cancel_ack`, `finish`/`index_status`, `list`/`list_ack`,
-`index_status`, and `error`. Every request includes `protocol:1` and `request_id`;
+`index_status`, `delete`/`delete_ack`, and `error`. Every request includes `protocol:1` and `request_id`;
 chunks/finish/cancel include the server-owned `upload_id`. Every PDF operation
 requires an independently authorized exact socket. Leases last one hour;
 restart/config rotation/disconnect revoke them. Out-of-order chunks or invalid
 operations discard incomplete data. Filenames are display metadata only.
-Completed bytes are SHA-256 deduplicated. Different contents sharing a name
-receive different document IDs; existing ready sources are never overwritten.
+The finish response includes `replacing:true` when the upload matches existing
+PDFs by exact filename or SHA-256. It always returns a new `document_id` and
+queues validation/indexing, including for identical bytes. A successful commit
+atomically retires the matched old IDs and their index records; their managed
+sources are cleaned up afterward. Shared identical source bytes are preserved
+for the new record. Pending replacements recover after restart. If a matching
+PDF is already processing, wait for that job to finish before trying again.
+Filenames select replacement candidates, never filesystem destinations.
+
+## Delete or replace a PDF
+
+Each ready or failed PDF in **Manage PDF Library** has a **Delete PDF** button.
+Confirm the named PDF to permanently remove its server-owned source, any pending
+copy, extracted pages, entries and full-text index. The list refreshes after the
+server acknowledges deletion. PDFs still processing cannot be deleted until the
+job finishes; active uploads must finish or be cancelled first. Deletion uses
+the same independently authenticated browser connection and upload password as
+other PDF management. It is not an MCP write tool.
+
+The request is `pdf.upload.delete` with the current `document_id` and `revision`
+from the privileged PDF list. The server rejects stale/missing IDs or revisions,
+unauthorized sockets and processing jobs. Success is `pdf.upload.delete_ack`
+with matching `document_id` and `deleted:true`. File cleanup intent is recorded
+transactionally before removing the source; startup retries interrupted cleanup.
+If storage cleanup fails, the book is already excluded from search; repair the
+storage and retry deletion or restart to complete cleanup.
+
+Previously issued document IDs and citations become unavailable after deletion.
+You can also upload the same filename or identical bytes directly to replace it
+without deleting first. It receives a new ID after validation/indexing succeeds. Keep your original PDF/backup if you may need it again.
+Operator-supplied import files are not deleted by filename: the original manual
+copy is preserved, but its content hash is excluded from later scans so it does
+not unexpectedly return. Explicitly uploading those bytes again clears that
+exclusion. Deletion does not remove external backups or copies on your computer.
 
 ## Grounded MCP workflow
 
@@ -140,8 +175,9 @@ require checking the original PDF outside these text-only tools.
 - Manually copy PDFs into the configured library root and call
   `refresh_pdf_index`. Only top-level regular lowercase `.pdf` filenames are
   scanned; symlinks and oversized files are skipped. This uses the same private
-  pending/validation/index pipeline as uploads. Ready content is immutable by
-  SHA-256; changed bytes create another document rather than changing citations.
+  pending/validation/index pipeline as uploads. Filesystem scans deduplicate by SHA-256; changed bytes create a new document.
+  Browser uploads explicitly replace matching filenames or identical content,
+  retiring old IDs after successful indexing. Rediscover IDs after replacements.
 - Disable uploading with `PDF_UPLOAD_ENABLED=false` (full environment prefix
   above) and recreate the service; read-only retrieval remains available.
 - Rotate the upload token in the private server environment and recreate only
@@ -203,3 +239,24 @@ acceptance have not been exercised in this session (development Chrome MCP tools
 are unavailable). No new Foundry instance or production deployment was created.
 These gaps must not be represented as passing UI acceptance tests. Text-only
 table interpretation and general retrieval accuracy remain explicit limitations.
+
+### Deletion verification (2026-10-19)
+
+The deletion change passed 93 Python and 51 JavaScript tests, including
+confirmation/cancel, authorization and stale revisions, active-job rejection,
+source/index removal, re-upload, scan exclusion and interrupted-cleanup recovery.
+A live check through the existing Foundry 14.369 development GM browser uploaded,
+indexed and deleted a synthetic PDF over the existing authenticated bridge. Both
+previously uploaded rulebooks remained listed. No user-owned book was deleted.
+The module archive validation also passed.
+
+### Replacement verification (2026-10-19)
+
+The replacement change passed 95 Python and 53 JavaScript tests and module ZIP
+validation. Coverage includes identical re-uploads, changed contents with the
+same filename, failed replacements preserving readable old content, legacy
+unique-hash schema migration, and restart recovery of queued replacements.
+A live synthetic test through the existing Foundry 14.369 GM browser replaced
+one PDF with a changed version, verified that the old synthetic ID retired,
+then deleted the test version. The existing user-owned PDF remained listed.
+The local index was backed up privately before enabling the additive migration.

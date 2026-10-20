@@ -272,17 +272,26 @@ remain writable by UID/GID 10001. The GM opens **Manage PDF Library** in module
 settings. Configure **PDF upload password** beside the production bridge credential.
 It is world-scoped and readable by players; editing restrictions do not make it
 secret. Anyone obtaining it can manually authorize PDF uploads and library
-list/status operations, despite the GM-only interface. Only enable this in worlds
+list/status/deletion operations, despite the GM-only interface. Only enable this in worlds
 where that access is acceptable. MCP source retrieval remains protected by its
 separate GM-trusted credentials. World bridge credentials alone do not authorize
 PDF management.
 
 Uploads use 32 KiB chunks over the existing authenticated WebSocket; progress is
 server-acknowledged bytes. Transfer completion is followed by validation/indexing;
-only Ready means searchable. MCP tools `list_pdf_documents`, `locate_pdf_entry`,
+only Ready means searchable. The list updates during processing, and uploads matching an existing filename or identical bytes replace it after
+successful reprocessing. The old version remains searchable if processing fails. MCP tools `list_pdf_documents`, `locate_pdf_entry`,
 `search_pdf_documents`, `read_pdf_pages`, and `refresh_pdf_index` work independently
 of a connected GM browser. Search candidates must be verified by source reads;
 reading order/numeric table structure are unverified, and OCR is unavailable.
 
 See [storage, limits, backup, credential rotation and recovery](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pdf-library.md)
 before enabling this feature. Disable uploads separately while keeping retrieval.
+
+To remove an accidental or outdated upload, click **Delete PDF** beside a ready
+or failed book in **Manage PDF Library** and confirm its name. This permanently
+removes its stored server copy and searchable index. Wait for in-progress indexing
+to finish before deleting. You can also upload the same filename directly to replace it after successful
+processing, without deleting first. Keep your original file or backup. Imported host originals remain on disk but are excluded from
+future automatic scans until explicitly uploaded again. Deletion uses the same
+PDF upload password and is available only through the browser manager protocol.

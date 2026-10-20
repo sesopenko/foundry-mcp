@@ -33,11 +33,11 @@ export function registerPDFManager() {
     const status = text => { field("status").textContent = text; };
     let busy = false;
     const act = fn => async () => { try { gmOnly(); await fn(); } catch(error) { status(error.message); } };
-    async function list() {
+    async function list({updateStatus=true,authorize=true}={}) {
       gmOnly();
-      status("Connecting to PDF library…");
+      if (updateStatus) status("Connecting to PDF library…");
       let count = 0;
-      await client.authorize();
+      if (authorize) await client.authorize();
       field("documents").replaceChildren();
       let offset = 0;
       do {
@@ -47,11 +47,35 @@ export function registerPDFManager() {
         for (const book of result.documents) {
           const li = document.createElement("li");
           li.textContent = `${book.name}: ${book.status} (${book.page_count} pages)${book.error ? " — " + book.error : ""}. Warnings: ${(book.warnings || []).join(", ") || "none reported yet"}. No OCR.`;
+          const remove = document.createElement("button");
+          remove.type="button";
+          remove.textContent="Delete PDF";
+          remove.disabled=!['ready','failed'].includes(book.status);
+          remove.title=remove.disabled ? "Wait for processing to finish before deleting." : "Delete this PDF and its searchable index.";
+          remove.addEventListener("click",act(async () => {
+            if (busy) { status("Finish the current operation before deleting PDFs."); return; }
+            busy=true; remove.disabled=true; field("upload").disabled=true;
+            try {
+              // Filename is rendered only as text in the list, never interpolated into HTML.
+              const name=String(book.name).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+              const confirmed=await DialogV2.confirm({window:{title:"Delete PDF?"},
+                content:`<p>Permanently delete <strong>${name}</strong> and its searchable pages from the MCP library? Keep your original file if you want to upload it again.</p>`,
+                rejectClose:false,modal:true});
+              if (!confirmed) return;
+              gmOnly();
+              await client.authorize();
+              const result=await pdfRequest("pdf.upload.delete",{document_id:book.document_id,revision:book.revision});
+              if (result.type!=="pdf.upload.delete_ack" || result.document_id!==book.document_id || result.deleted!==true)
+                throw new Error("Deletion was not confirmed by the server. Refresh PDFs to check its status.");
+              await list();
+            } finally { busy=false; remove.disabled=false; field("upload").disabled=false; }
+          }));
+          li.append(remove);
           field("documents").append(li);
         }
         offset = result.next_offset;
       } while(offset !== null);
-      status(count ? `Connected. ${count} PDF${count === 1 ? "" : "s"} in the library.` : "Connected. No PDFs uploaded yet.");
+      if (updateStatus) status(count ? `Connected. ${count} PDF${count === 1 ? "" : "s"} in the library.` : "Connected. No PDFs uploaded yet.");
     }
     void act(list)();
     input("file").addEventListener("change",act(async () => {
@@ -70,20 +94,26 @@ export function registerPDFManager() {
           field("progress").value=value.accepted/value.total;
           status(value.stage==="uploading"?`Uploading: ${value.accepted} / ${value.total} bytes acknowledged`:`Bytes durably received. ${value.stage}; not yet searchable.`);
         });
-        field("progress").removeAttribute("value");
         let current=result;
+        const processingStatus = state => ({queued:"Upload complete. Waiting to process PDF…",validating:"Upload complete. Validating PDF and extracting text…",indexing:"Upload complete. Building the searchable index…"}[state] || `Upload complete. Processing: ${state}.`);
+        if (!['ready','failed'].includes(current.status)) {
+          field("progress").removeAttribute("value");
+          status(processingStatus(current.status));
+        }
+        await list({updateStatus:false,authorize:false});
         while (!['ready','failed'].includes(current.status)) {
           gmOnly(); if (client.cancelled) break;
           await new Promise(resolve=>setTimeout(resolve,1000));
           current=await pdfRequest("pdf.upload.index_status",{document_id:result.document_id});
-          status(`Transfer complete; ${current.status}.`);
+          if (!['ready','failed'].includes(current.status)) status(processingStatus(current.status));
+          await list({updateStatus:false,authorize:false});
         }
         if (current.status==='ready') {
           completed=true;
-          status("Ready / Searchable. Read extracted pages before making rule claims.");
+          status(result.replacing ? "Ready / Searchable. Existing PDF replaced." : "Ready / Searchable. PDF added to the library.");
         }
         else if (current.status==='failed') status(current.error || "Indexing failed; document is not searchable.");
-        if (!client.cancelled) await list();
+        if (!client.cancelled) await list({updateStatus:false,authorize:false});
       } finally {
         field("progress").value=completed ? 1 : 0;
         busy=false; field("upload").disabled=false;

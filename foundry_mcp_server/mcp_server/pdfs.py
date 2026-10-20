@@ -35,8 +35,8 @@ async def list_pdf_documents(offset:Offset=0,limit:Limit=20)->dict:
     are searchable. No results do not establish that a rule does not exist.
     Use refresh_pdf_index for filesystem additions/retry, locate_pdf_entry for named
     rules, then read_pdf_pages for actual evidence. Failed books report sanitized
-    errors; operator repairs storage/source before retry. Source PDFs are immutable
-    by SHA-256; changed files get new IDs. No OCR or online update checking.
+    errors; operator repairs storage/source before retry. Browser replacements get new IDs and retire old IDs after successful indexing;
+    rediscover selectors after replacements. Failed replacements keep the old book. No OCR or online update checking.
     """
     return await run('documents',offset,limit)
 
