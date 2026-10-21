@@ -91,6 +91,13 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Actual rulebook pages were fully read and pinned schema boundaries recorded. Focused pure/browser/Python actual-DTO checks passed; actual MCP verified six world/owned/compendium samples with unchanged persisted sources.
 - ITEM-effect remains In progress pending explicit origin/target relationship traversal and advanced state integration. Completed stories remain 8/39 (20.5%).
 
+### 12. Effect immediate context references — October 20, 2026
+
+- ITEM-effect now resolves five explicit immediate origin/target Actor, Token and Item roles, preserving all claimed source context. Resolved metadata and token follow-ups are permission checked; unresolved statuses expose no resolved target metadata. Source-only calls do not hydrate links.
+- Full suites passed: 181 Python tests (one skipped) and 155 JavaScript tests. Deterministic checks cover non-null contexts, linked/synthetic follow-ups, standalone packs, duplicate roles, denied privacy, malformed/mismatched targets and stale target identity/permissions.
+- Actual MCP passed six source samples and explicit missing-reference records for their null contexts, with unchanged source fingerprints. Non-null live context is unavailable; effective expiry/current application and recursive provenance remain unsupported advanced gates.
+- ITEM-effect Complete for its declared source/immediate-reference scope. Completed stories are 9/39 (23.1%); the full Actor/state integration objective remains open.
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

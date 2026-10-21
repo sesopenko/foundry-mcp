@@ -382,6 +382,15 @@ and branch-specific primitives, nullable context and exact origin/target UUID
 strings, traits/publication, unidentified and fromSpell fields. Source records use
 `pf2e.effect.source.v1`; no formula is evaluated and no tracking effect becomes a
 learned spell or acquired ability. Source UUIDs remain unverified references;
-relationship traversal and effective expiry/current application remain pending.
+immediate context resolution requires explicit relationships; effective expiry/current application remain pending.
 See [field boundary](actor-item-story-map/effect-fields.md) and
 [actual rulebook/fixture evidence](actor-item-story-map/effect-verification.md).
+
+Effect `relationships` now resolves five immediate origin/target Actor, Token and
+Item roles. Each record retains five exact claimed context source fields.
+`mapped.value` returns status and target_uuid; resolved targets additionally carry
+document_name, name/name_truncated and token_uuid when applicable. Other statuses
+have null target_uuid and no resolved metadata. Claimed raw UUIDs remain source,
+not proof of access or applicability. Follow ordinary Actors with read_actor's
+actor_uuid, token-context Actors/Tokens with token_uuid, and Items with read_item's
+item_uuid plus returned token_uuid. No recursive provenance or target source read.

@@ -120,12 +120,76 @@ def _effect_spec(path):
     return []
 
 
+EFFECT_REFERENCE_ROLES = ('origin_actor','origin_token','origin_item','target_actor','target_token')
+EFFECT_REFERENCE_PATHS = ['/system/context/'+role.replace('_','/') for role in EFFECT_REFERENCE_ROLES]
+
+
+def _effect_reference_uuid(value, kind):
+    """PF2e-specific effect context selector shape; canonical supported documents.
+
+    UUIDs are persisted source selectors, never names or inferred relationships.
+    Core14.369/PF2e8.6.1 contracts are pinned above; synthetic Actor/Item UUIDs
+    retain their explicit Token selector and may not fall back to a base Actor.
+    """
+    if type(value) is not str or not 1 <= len(value) <= 512:return False
+    leaf=r'[^.\s#]+'
+    actor=rf'(?:Actor\.{leaf}|Scene\.{leaf}\.Token\.{leaf}\.Actor\.{leaf}|Compendium\.(?:{leaf}\.)+Actor\.{leaf})'
+    patterns={'Actor':actor,'Token':rf'Scene\.{leaf}\.Token\.{leaf}',
+              'Item':rf'(?:Item\.{leaf}|{actor}\.Item\.{leaf}|Compendium\.(?:{leaf}\.)+Item\.{leaf})'}
+    return re.fullmatch(patterns[kind],value) is not None
+
+
+def _effect_relationship(row,identity):
+    """PF2e-specific effect8.6.1 explicit context references with source provenance.
+
+    All five persisted reference leaves are context contributors. Permission or
+    unsupported targets expose only status, never resolved names/identifiers.
+    Resolution verifies selected Token context in the browser, not by computing
+    effective statistics here. Schema: pinned effect/data.ts above.
+    """
+    role=row['key'].removeprefix('relationships:effect:')
+    if role not in EFFECT_REFERENCE_ROLES or row['key']!='relationships:effect:'+role or row['section']!='relationships' or row['kind']!='relationship':return False
+    if len(row['raw'])!=5 or [raw['path'] for raw in row['raw']]!=EFFECT_REFERENCE_PATHS:return False
+    for raw in row['raw']:
+        if raw['document_uuid']!=identity['uuid'] or raw['present'] and raw['value'] is not None and type(raw['value']) is not str:return False
+    provenance=row['provenance']
+    if provenance['mapping']!='pf2e.effect.context-reference.v1' or not provenance['limitations'] or any(not item for item in provenance['limitations']):return False
+    if provenance['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')} for raw in row['raw']]:return False
+    mapped=row['mapped'];value=mapped['value']
+    if mapped['concept']!='effect_'+role+'_reference' or mapped['unit'] is not None or type(value) is not dict:return False
+    if value.get('status') in ('missing','denied','unsupported','unverified'):
+        return set(value)=={'status','target_uuid'} and value['target_uuid'] is None
+    if value.get('status')!='resolved' or not {'status','target_uuid','document_name','name','name_truncated'}<=set(value) or not set(value)<={'status','target_uuid','document_name','name','name_truncated','token_uuid'}:return False
+    kind={'actor':'Actor','token':'Token','item':'Item'}[role.split('_')[1]]
+    target=value['target_uuid'];raw=row['raw'][EFFECT_REFERENCE_ROLES.index(role)]
+    if value['document_name']!=kind or not _effect_reference_uuid(target,kind) or not raw['present'] or target!=raw['value']:return False
+    if type(value['name']) is not str or len(value['name'])>256 or type(value['name_truncated']) is not bool:return False
+    token=value.get('token_uuid')
+    if token is not None and not _effect_reference_uuid(token,'Token'):return False
+    if 'token_uuid' in value and token is None:return False
+    if kind=='Token':return token==target
+    if target.startswith('Scene.'):
+        if token is None or not target.startswith(token+'.Actor.'):return False
+    if kind=='Actor':
+        paired=row['raw'][1 if role=='origin_actor' else 4].get('value')
+        if paired is not None and token!=paired:return False
+        if paired is None and token is not None and not target.startswith(token+'.Actor.'):return False
+    elif kind=='Item':
+        if token is not None and token!=row['raw'][1].get('value'):return False
+        if '.Item.' in target and not target.startswith('Compendium.'):
+            owner=target.rsplit('.Item.',1)[0]
+            source_actor=row['raw'][0].get('value')
+            if type(source_actor) is str and owner!=source_actor:return False
+    return True
+
+
 def _effect_record(row,identity):
     """PF2e-specific persisted effect8.6.1 DTO; never expired/prepared/activity state.
 
     Source UUID strings remain authored references, not resolved relationships.
     Badge formulas are retained without evaluation. Schema links beside specs.
     """
+    if row['section']=='relationships':return _effect_relationship(row,identity)
     if len(row['raw'])!=1:return False
     raw=row['raw'][0];path=raw['path'];value=raw.get('value')
     if path in SOURCE_PATHS:return row['section'] in ('source','description')
@@ -916,7 +980,14 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     unidentified/fromSpell and origin/target/roll context. Stored UUID strings are
     source references only; source performs no hydration or formula execution.
     Persisted duration expiry is not current expired/active/suppressed state;
-    those effective interpretations and effect relationships remain unsupported.
+    those effective interpretations remain unsupported. Explicit relationships resolve
+    five origin_actor/origin_token/origin_item/target_actor/target_token references.
+    Each retains all five source context paths. mapped.value has status and
+    target_uuid; resolved rows also have document_name, name, name_truncated and
+    optional token_uuid for Actor/Item instance selectors. Unresolved status
+    missing/denied/unsupported/unverified has null target_uuid and no target name.
+    Follow Actor/Item references with read_actor/read_item, passing token_uuid
+    when returned. Token references are instance selectors for read_actor.
     Optional description/rules/relationships/effective are delivered or explicitly
     unsupported as get_actor_types reports. At most 6 unique nonempty section names.
     PF2e-only; UnsupportedSystem/Version/Type explains excluded targets.

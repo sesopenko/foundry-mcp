@@ -205,6 +205,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
                 effect_cursor=page['pagination']['next_cursor']
                 if not effect_cursor:break
             assert effect_cursor is None
+            relationships=payload(await client.call_tool('read_item',{'item_uuid':sample['uuid'],'sections':['relationships'],'limit':25}))
+            assert len(relationships['records'])==5 and relationships['pagination']['complete']
+            assert all(row['mapped']['value']=={'status':'missing','target_uuid':None} for row in relationships['records'])
             unit=next(row for row in records if row['raw'][0]['path']=='/system/duration/unit')
             assert unit['raw'][0]['value']==sample['unit'] and unit['provenance']['mapping']=='pf2e.effect.source.v1'
             badge=next((row for row in records if row['raw'][0]['path']=='/system/badge/type'),None)
@@ -262,7 +265,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

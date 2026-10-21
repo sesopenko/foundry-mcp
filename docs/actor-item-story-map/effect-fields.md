@@ -108,3 +108,24 @@ malformed selected values, mutation avoidance, exclusion of unknown properties
 and guards against reading prepared `expired` or rules getters. Integration,
 Python DTO validation, live verification and rulebook comparison are separate
 story evidence; this helper alone does not complete ITEM-effect.
+
+## Explicit immediate context references
+
+`relationships` resolves five roles: origin_actor, origin_token, origin_item,
+target_actor and target_token. Each record preserves all five claimed source
+UUID fields and their presence/null distinctions with mapping
+`pf2e.effect.context-reference.v1`. Resolved values return canonical target_uuid,
+document_name, bounded name/name_truncated and token_uuid when required for
+linked/synthetic context. Use read_actor with actor_uuid for ordinary Actors or
+token_uuid for token-context Actors/Tokens; use read_item with item_uuid and
+returned token_uuid for Items. Standalone compendium Items resolve independently
+of any contextual token. The reader never merges duplicate roles or origins.
+
+Absent/null references report missing. Denied, unsupported and unverified
+references retain raw claimed source but return null target_uuid and no resolved
+target metadata. Denied: grant target/owner/pack/scene access. Unsupported: inspect
+canonical UUID and supported type. Unverified: retry resolution or inspect stored
+Actor/token mismatch; no base Actor is substituted. Missing: rediscover the target.
+Only immediate identities are resolved; target source is not read and no recursive
+provenance, learned-spell aggregation, roll, import or effect application occurs.
+Target identity/permission changes invalidate relationship continuations.

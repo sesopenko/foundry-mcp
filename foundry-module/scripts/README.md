@@ -70,3 +70,7 @@ Denied Items are not read or named; effective completeness remains unsupported.
 `actorEffect.js` selects persisted PF2e effect source with discriminated badge
 branches and primitive context leaves. It never evaluates formulas, applies
 source defaults, reads prepared expiry or resolves source UUID references.
+
+`actorEffectRelationships.js` resolves explicit immediate effect context through
+existing authorized Actor/Item public-API boundaries. Actor/token mismatches never
+fall back to base templates; unresolved targets return no resolved metadata.

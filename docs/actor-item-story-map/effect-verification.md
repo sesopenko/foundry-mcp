@@ -60,3 +60,14 @@ Deterministic cross-language fixtures additionally verify value badges,
 non-null context, true fromSpell, missing/empty fields and exact descriptions.
 Relationship resolution is still pending; these source checks do not verify
 expiry/current application, provenance traversal or learned-spell aggregation.
+
+## Relationship verification boundary
+
+Deterministic JS and actual cross-language DTO checks verify all five immediate
+roles, linked/synthetic follow-ups, standalone compendium Items, duplicate roles,
+denied/missing/malformed/mismatched targets, source-only nonhydration, and stale
+identity/permission continuations. Existing live samples have null context; live
+MCP therefore verifies five explicit missing-reference records without hydration.
+Non-null live context remains unavailable. Effective expiry/current application,
+suppression and recursive provenance are explicitly unsupported advanced gates;
+source/relationship completion does not close CORE-state or CORE-acceptance.
