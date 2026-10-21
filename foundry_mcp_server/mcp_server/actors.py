@@ -53,12 +53,87 @@ ACTION_PATHS = {'/system/' + path for path in (
     'frequency','frequency/value','frequency/max','frequency/per','selfEffect','selfEffect/uuid','selfEffect/name',
     'publication/title','publication/authors','publication/license','publication/remaster')}
 ACTIVATION_LABELS = {'action':'action_or_activity','reaction':'reaction','free':'free_action','passive':'passive_ability'}
+# PF2e-specific MeleeSystemSource8.6.1: authored NPC attack records, not gear maths.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/melee/data.ts
+MELEE_PATHS = {'/system/' + path for path in (
+    'action','bonus/value','subjectToMAP','slug','area','area/type','area/value','range','range/increment','range/max',
+    'damageRolls','traits/value','traits/otherTags','attackEffects/value','publication/title','publication/authors','publication/license','publication/remaster')}
+MELEE_MODES = {'strike':'Strike','area-fire':'Area Fire','auto-fire':'Auto Fire'}
+DAMAGE_LEAF = re.compile(r'/system/damageRolls/(?:[^~/]|~[01])*/(damage|damageType|category)')
+MELEE_ARRAY_INDEX = re.compile(r'/system/(?:traits/(?:value|otherTags)|attackEffects/value)/(0|[1-9][0-9]*)')
+
+
+def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
+    """PF2e-specific empty NPC damageRolls source map marker; never a map dump."""
+    return identity['document_name']=='Item' and identity['type']=='melee' and path=='/system/damageRolls'
+
+
+def _melee_value(raw: dict[str, Any]) -> bool:
+    """PF2e-specific MeleeSystemSource8.6.1 primitive shapes; no prepared math.
+
+    Source range null differs from absent/nullable ranged leaves; damage formula,
+    category and type remain separate authored values. Schema boundary above.
+    """
+    if not raw['present']:
+        return True
+    path=raw['path'];value=raw['value']
+    if path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'}:
+        return value == []
+    if path=='/system/damageRolls':
+        return value == {}
+    if path in {'/system/area','/system/range'}:
+        return value is None
+    if path in {'/system/subjectToMAP','/system/publication/remaster'}:
+        return type(value) is bool
+    if path in {'/system/bonus/value','/system/area/value','/system/range/increment','/system/range/max'}:
+        return value is None and path in {'/system/range/increment','/system/range/max'} or type(value) in (int,float)
+    if value is None and (path=='/system/slug' or DAMAGE_LEAF.fullmatch(path) and path.endswith('/category')):
+        return True
+    return type(value) is str
+
+
+def _melee_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
+    """PF2e-specific NPC attack source8.6.1 and additional-effect label boundary.
+
+    Only known action codes translate; null range has no explicit range context.
+    Attack-effect strings are unverified labels, never manufactured selectors.
+    Damage source keys retain JSON Pointer escaping and origin Item identity.
+    """
+    if len(row['raw'])!=1 or any(raw['document_uuid']!=identity['uuid'] or not _melee_value(raw) for raw in row['raw']):
+        return False
+    raw=row['raw'][0];mapped=row['mapped'];provenance=row['provenance']
+    if any(c['document_uuid']!=identity['uuid'] or c['path']!=raw['path'] for c in provenance['contributors']):
+        return False
+    if row['kind']=='relationship':
+        match = re.fullmatch(r'/system/attackEffects/value/(0|[1-9][0-9]*)', raw['path'])
+        indexed = (match is not None and raw['present'] and type(raw.get('value')) is str and
+                   row['key'] == 'relationships:attackEffects:' + match.group(1))
+        marker = (raw['path'] == '/system/attackEffects/value' and
+                  row['key'] == 'relationships:attackEffects' and
+                  (not raw['present'] or raw.get('value') == []))
+        return (row['section'] == 'relationships' and (indexed or marker) and
+                mapped == dict(concept='additional_effect', value=dict(target_uuid=None, status='unverified' if indexed else 'missing'), unit=None) and
+                provenance['mapping'] == 'pf2e.melee.attack_effect.v1' and
+                len(provenance['contributors']) == 1 and bool(provenance['limitations']) and
+                all(provenance['limitations']))
+    if raw['path'] not in SOURCE_PATHS and (row['section']!='source' or row['kind']!='field'):
+        return False
+    expected=raw.get('value')
+    if raw['path']=='/system/action' and raw['present']:
+        expected=MELEE_MODES.get(raw['value'],raw['value'])
+    if raw['path']=='/system/range' and raw['present'] and raw['value'] is None:
+        expected='no_explicit_range'
+    if row['kind']=='text':
+        expected=None
+    return type(mapped['value']) is type(expected) and mapped['value']==expected
+
 
 
 def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific source markers for empty attachment/ability-trait arrays only."""
     return (identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
-            identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'})
+            identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'} or
+            identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'})
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -145,6 +220,9 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific action paths exclude toggles, rule elements and prepared data.
     if identity['type'] == 'action':
         return path in ACTION_PATHS or re.fullmatch(r'/system/traits/(value|otherTags)/(0|[1-9][0-9]*)',path) is not None
+    # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
+    if identity['type'] == 'melee':
+        return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
     if identity['type'] not in PHYSICAL_TYPES:
         return False
     item_type = identity['type']
@@ -257,7 +335,7 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     for raw in row['raw']:
         if type(raw) is not dict or not {'document_uuid', 'path', 'present', 'basis'} <= set(raw) or not set(raw) <= {'document_uuid', 'path', 'present', 'basis', 'value'}:
             return False
-        if not _contributor({k: raw[k] for k in ('document_uuid', 'path', 'basis')}, identity) or type(raw['present']) is not bool or raw['present'] != ('value' in raw) or (raw['present'] and raw['value'] is not None and type(raw['value']) not in (str, bool, int, float) and not (_empty_source_array(raw['path'], identity) and raw['value'] == [])):
+        if not _contributor({k: raw[k] for k in ('document_uuid', 'path', 'basis')}, identity) or type(raw['present']) is not bool or raw['present'] != ('value' in raw) or (raw['present'] and raw['value'] is not None and type(raw['value']) not in (str, bool, int, float) and not (_empty_source_array(raw['path'], identity) and raw['value'] == []) and not (_empty_source_object(raw['path'], identity) and raw['value'] == {})):
             return False
         # PF2e-specific alternate description is source text, explicitly selected.
         if raw['path'] == UNIDENTIFIED_DESCRIPTION and (row['section'] != 'description' or raw['present'] and row['kind'] != 'text'):
@@ -279,6 +357,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     # PF2e-specific action source and named self-effect semantics stay type-scoped.
     if identity['document_name'] == 'Item' and identity['type'] == 'action' and not _action_record(row, identity):
+        return False
+    # PF2e-specific NPC attacks preserve authored formulas and non-UUID labels.
+    if identity['document_name'] == 'Item' and identity['type'] == 'melee' and not _melee_record(row, identity):
         return False
     if row['kind'] == 'text':
         text = row.get('text')
@@ -510,7 +591,15 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     resolved target with read_item(item_uuid=target_uuid, token_uuid=token_uuid
     if present). Missing/denied/unsupported/unverified targets retain named raw
     references with null target_uuid. Source alone performs no effect hydration;
-    optional description/rules/relationships/effective are delivered or explicitly
+    melee Items expose authored NPC attack mode/bonus, range/area, separate damage
+    formulas/types/categories, MAP applicability and traits, independent of gear.
+    Only action=strike maps to Strike; null range means no explicit range, not a
+    proven melee capability. Attack-effect relationships retain indexed source
+    labels as unverified with null target_uuid; labels are never resolved as UUIDs.
+    Missing versus empty attackEffects arrays both report missing relationships
+    while their raw present/value fields retain the distinction. Effective attack
+    math and elite/weak adjustments remain unsupported.
+    Optional description/rules/relationships/effective are delivered or explicitly
     unsupported as get_actor_types reports. At most 6 unique nonempty section names.
     PF2e-only; UnsupportedSystem/Version/Type explains excluded targets.
 

@@ -52,9 +52,16 @@ const actionSamples=['passive','free','reaction','action'].map(kind=>items.find(
 const effectAction=items.find(i=>i.type==='action'&&i.toObject(true).system.selfEffect?.uuid);
 const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc');
 const tokenAction=token?.actor.items.find(i=>i.type==='action');
-const fingerprintItems=[...new Map([...actionSamples,effectAction,tokenAction].filter(Boolean).map(i=>[i.uuid,i])).values()];
+const attacks=items.filter(i=>i.type==='melee');
+const meleeSamples=[
+ ['explicit_range',attacks.find(i=>i.toObject(true).system.range!==null&&i.toObject(true).system.range!==undefined)],
+ ['null_thrown',attacks.find(i=>i.toObject(true).system.range===null&&i.toObject(true).system.traits?.value.some(t=>t.startsWith('thrown-')))],
+ ['effect_labels',attacks.find(i=>i.toObject(true).system.attackEffects?.value.length)]
+].filter(([,item])=>item);
+const fingerprintItems=[...new Map([...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i)].filter(Boolean).map(i=>[i.uuid,i])).values()];
 const report=JSON.stringify({actor_uuid:actor.uuid,token_uuid:token?.uuid,
 physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean),
+melee_samples:meleeSamples.map(([context,i])=>({context,uuid:i.uuid})),
 action_samples:await Promise.all(actionSamples.map(async i=>({uuid:i.uuid,kind:i.toObject(true).system.actionType.value,revision:await digest(i.toObject(true))}))),
 self_effect_item_uuid:effectAction?.uuid,token_action_uuid:tokenAction?.uuid,
 source_fingerprints:await Promise.all(fingerprintItems.map(async i=>({uuid:i.uuid,revision:await digest(i.toObject(true))})))});
@@ -124,13 +131,37 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         # Compare persisted source fingerprints after reads; no gameplay mutation.
         after=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
         assert after['action_samples']==selection['action_samples']
+        assert len(selection['melee_samples'])==3, 'Existing explicit range/thrown/effect-label attack samples are missing.'
+        for sample in selection['melee_samples']:
+            attack=payload(await client.call_tool('read_item',{'item_uuid':sample['uuid'],'sections':['source','relationships','effective'],'limit':100}))
+            assert attack['identity']['type']=='melee'
+            assert attack['sections'][0]['status']=='complete' and attack['sections'][2]['status']=='unsupported'
+            if sample['context']=='explicit_range':
+                assert any(record['raw'][0]['path'].startswith('/system/range/') for record in attack['records'])
+            elif sample['context']=='null_thrown':
+                assert next(record for record in attack['records'] if record['raw'][0]['path']=='/system/range')['mapped']['value']=='no_explicit_range'
+            else:
+                assert any(record['kind']=='relationship' and record['mapped']['value']['status']=='unverified' for record in attack['records'])
+        monster_packs=payload(await client.call_tool('list_actor_compendiums',{'document_type':'Actor','query':'monster','limit':10}))
+        assert monster_packs['nodes']
+        monsters=payload(await client.call_tool('search_compendium_actors',{'pack_ids':[node['id'] for node in monster_packs['nodes']],'query':'a','types':['npc'],'limit':1}))
+        assert monsters['nodes']
+        pack_attacks=payload(await client.call_tool('list_actor_items',{'actor_uuid':monsters['nodes'][0]['identity']['uuid'],'types':['melee'],'limit':1}))
+        assert pack_attacks['nodes']
+        attack_call=pack_attacks['nodes'][0]['next_call']
+        pack_attack=payload(await client.call_tool(attack_call['tool'],dict(attack_call['arguments'],limit=100)))
+        assert pack_attack['identity']['source_kind']=='compendium' and pack_attack['identity']['actor']
+        after=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
         assert after['source_fingerprints']==selection['source_fingerprints']
         registry=await client.call_tool('get_actor_types',{})
         assert registry.data['availability']['supported']
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
         assert action_support['mapped_supported'] and not action_support['effective_supported']
         assert action_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
+        assert attack_support['mapped_supported'] and not attack_support['effective_supported']
+        assert attack_support['verification']['live']['status']=='passed'
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

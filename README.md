@@ -251,8 +251,10 @@ explicit scope failures keep duplicate names and partial results distinguishable
 Physical Item readers expose common persisted quantity, Bulk, price/per, carry,
 material, identification and serialized attachment fields. Action Items map
 activation kind/count, frequency, traits and named self-effects; only an explicit
-relationship request resolves the immediate effect, without applying it. Other
-concrete type readers and effective Actor statistics remain staged. See the
+relationship request resolves the immediate effect, without applying it.
+NPC attack Items preserve authored modes, bonus/damage and named effect labels,
+with explicit null-range/thrown limitations. Other concrete type readers and
+effective Actor statistics remain staged. See the
 [contracts](docs/actor-tools.md) and [development story map](docs/actor-item-story-map/index.md).
 
 ## Private PDF references

@@ -347,3 +347,7 @@ For nine physical types, `source` now includes the exact [physical field registr
 ### Action source milestone
 
 Action Items now deliver the [selected field registry](actor-item-story-map/action-fields.md), deterministic activation labels and explicitly requested immediate self-effect references. Source records are complete after pagination; this does not imply current action usability. Source-only calls never hydrate effects. Relationship target permissions/identity and synthetic token context are rechecked for revisions. All other concrete Item readers retain their own pending status; rules and effective sections remain unsupported.
+
+### NPC attack source milestone
+
+The [NPC attack field registry](actor-item-story-map/melee-fields.md) is delivered for `melee` Items. Authored attack mode, bonus and separate damage components are preserved independently of carried gear. Null stored range means no_explicit_range, not exclusive melee capability. Explicit relationship records preserve additional-effect labels as unverified references; they never guess UUIDs or activate an effect. Source/relationship sections are complete for their selected allowlist after pagination. Effective attack calculations remain unsupported; live checks cover Strikes while other modes have schema/fixture coverage.

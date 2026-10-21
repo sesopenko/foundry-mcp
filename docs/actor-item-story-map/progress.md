@@ -55,6 +55,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Live actual MCP passed four activation modes, familiar compendium identity/category, token action reading and self-effect follow-up. Selected persisted sources stayed unchanged. Missing standalone world-action and live synthetic-target fixtures remain named coverage limits.
 - A larger selector probe encountered the known 1000-character development string bound; the runner now returns bounded chunks and rejects truncated snapshots, with a regression test. Production reader limits were not changed.
 
+### 6. NPC attack Item source and effect labels — October 20, 2026
+
+- ITEM-melee delivered authored attack modes, source bonus/range/area, keyed damage components, traits and named additional effects. Only strike is called Strike; effect labels never become guessed UUIDs.
+- Five existing null-range attacks have thrown traits. Mapping now reports no_explicit_range and retains that limitation, avoiding a false exclusive-melee claim. Non-Strike modes have representative source fixtures; no live non-Strike sample exists.
+- Focused source/browser/Python actual-DTO checks and full suites passed. Actual MCP verified explicit ranged, null/thrown, effect-label and compendium-owned attack reads, with unchanged persisted source fingerprints.
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

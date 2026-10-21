@@ -59,6 +59,7 @@ test('discovery registry distinguishes planned mappings and unsupported runtime 
   assert.equal(result.item_types.find(t=>t.type==='campaignFeature').source_supported,false);
   assert.equal(result.actor_types.find(t=>t.type==='npc').mapped_supported,false);
   assert.equal(result.item_types.find(t=>t.type==='action').mapped_supported,true);
+  assert.equal(result.item_types.find(t=>t.type==='melee').mapped_supported,true);
   assert.equal(result.item_sections.find(t=>t.name==='relationships').source_supported,true);
   game.system.id='other';assert.equal((await getActorTypes()).availability.supported,false);
   await assert.rejects(readActor({actor_uuid:'Actor.a'}),/require PF2e/);

@@ -19,8 +19,10 @@ explicit failed/incomplete scopes preserve readable context without imports.
 Shared physical source fields include quantity, Bulk, stack price-per quantity,
 carrying/identification state and serialized attachment metadata. Action Items
 map activation kind/count, stored frequency, traits and named self-effects;
-explicit immediate relationship reads do not apply them. Other concrete type
-readers and effective Actor statistics remain staged or unsupported. These are
+explicit immediate relationship reads do not apply them. NPC attack Items retain
+authored modes, bonus/damage and additional-effect labels, including explicit
+null-range/thrown limitations. Other concrete type readers and effective Actor
+statistics remain staged or unsupported. These are
 unreleased source capabilities; inspect the delivered registry and the
 [Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
 

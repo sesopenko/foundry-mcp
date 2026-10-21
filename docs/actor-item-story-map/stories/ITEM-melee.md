@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -22,7 +22,7 @@ As a GM-trusted LLM, I can read a `melee` Item as **npc attacks and strikes**, r
 
 ## Source and mapped contract
 
-Field paths below are relative to `system`. They are a **proposed allowlist**, checked against the pinned source, to finalize in CORE-contract before implementation. Also retain bounded `description.value`, publication metadata where present, document type/name/UUID, local ID, and actual parent/pack/token context. Missing fields stay missing; prepared data must never be relabelled source.
+Field paths below are relative to `system`. The implemented [exact field registry](../melee-fields.md) finalizes this allowlist against the pinned source. Also retain bounded `description.value`, publication metadata where present, document type/name/UUID, local ID, and actual parent/pack/token context. Missing fields stay missing; prepared data must never be relabelled source.
 
 - Selected fields: `action`, `area`, `bonus.value`, `damageRolls`, `traits.value`, `range.increment`, `range.max`, `attackEffects.value`, `subjectToMAP`.
 - Mapping and relationships: Label only `action=strike` records Strikes; preserve other attack modes explicitly. Show melee/ranged context, separate damage components and additional-effect labels. NPC attacks are authored records, independent of carried weapons.
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -46,4 +46,12 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 All attack-mode variants need representative fixtures. Effective elite/weak and target-dependent attack math remain gated; source bonus/damage is safe to expose.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+The selected source reader passed live MCP checks on Foundry14.369/PF2e8.6.1. Non-Strike modes have representative deterministic fixtures but no live sample; v13 and future releases remain unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+
+## Delivery evidence — October 20, 2026
+
+`read_item` preserves authored attack mode, bonus, range/area, separate damage components, traits and named effect labels. Only action=strike maps to Strike. Null source range maps to no_explicit_range, retaining thrown traits and an explicit limitation rather than claiming exclusive melee capability. Matching carried weapons never replace authored data; no roll, import, activation, enrichment, MAP or elite/weak calculation occurs.
+
+Pure selector, browser integration and actual JS-to-Python DTO tests cover every declared mode, unknown codes, escaped map keys, mixed damage/categories, absent/null/zero/empty values, UUID-looking labels without resolution, exact descriptions, limits/staleness, unsupported systems/effective sections, and relationship-only section isolation. Empty/absent additional-effect arrays retain distinct raw markers.
+
+Live actual MCP checked explicit ranged source, null range with thrown trait, additional-effect labels and an embedded attack on a hydrated compendium NPC. Source fingerprints stayed unchanged. The wider read-only source audit covered 202 existing attacks; all were Strikes. No live non-Strike or standalone world-attack fixture was available; those source paths have deterministic schema/identity coverage and no complete effective-mechanics claim.

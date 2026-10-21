@@ -3,6 +3,7 @@ import { fail, validateParams, integer, selector, selectSections, digest, textFr
 import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
 import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { actionFields, actionReferenceFields } from './actorAction.js';
+import { meleeFields, meleeEffectFields } from './actorMelee.js';
 
 const ACTOR_SECTIONS = ['identity','source','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
 const ITEM_SECTIONS = ['identity','source','description','rules','relationships','effective'];
@@ -10,8 +11,9 @@ const LIMITS = {default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,
 const PENDING = 'type_reader_pending';
 const VERIFICATION = {deterministic:{status:'passed',evidence:['tests/js/actor-readers.test.js','tests/test_actor_tools.py']},live:{status:'not_run',evidence:[]}};
 
-/** PF2e-specific physical source8.6.1 selection, no prepared/effective values.
- * Schema boundary: actorPhysical.js. Descriptions require their explicit section.
+/** PF2e-specific physical/action/NPC attack source8.6.1 selection, no derived values.
+ * Schema boundaries: actorPhysical.js, actorAction.js and actorMelee.js.
+ * Descriptions require their explicit section.
  * Never expose flags, migrations or the whole source object.
  */
 function selection(target, sections) {
@@ -20,6 +22,7 @@ function selection(target, sections) {
   const selected = {};
   let physical=[];
   let action=[];
+  let melee=[];
   if (sections.includes('source')) {
     for (const field of ['name','type']) if (Object.hasOwn(source,field)) {
       if (typeof source[field]!=='string') fail('ReadFailed',`Source ${field} has an unexpected type.`,'Inspect the selected document in Foundry.');
@@ -41,12 +44,20 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected action source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect this action Item source; no prepared defaults are substituted.');
     }
   }
+  // PF2e-specific authored NPC attacks: labels are source, not effect UUIDs.
+  if (target.document.documentName==='Item' && source.type==='melee' && (sections.includes('source')||sections.includes('relationships'))) {
+    try {melee=sections.includes('source')?meleeFields(source):meleeEffectFields(source);}
+    catch (error) {
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
+      fail('ReadFailed',`Selected NPC attack source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect this attack Item; authored fields cannot be replaced with carried weapon or prepared values.');
+    }
+  }
   if (sections.includes('description') && source.system?.description && Object.hasOwn(source.system.description,'value')) selected['/system/description/value'] = source.system.description.value;
   if (sections.includes('description') && PHYSICAL_TYPES.includes(source.type)) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, action, runtime: runtime() };
+  return { identity: target.identity, selected, physical, action, melee, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -107,7 +118,7 @@ function bounds(params, allowed, sectionNames) {
  * PF2e-specific capability registry for character/npc/familiar and 24 Item types.
  * Core14.369/PF2e8.6.1 schema scope: only common core metadata and explicit Item
  * system.description.value and shared physical source fields are delivered;
- * action Items have selected type mappings and explicit self-effect references;
+ * action and NPC attack Items have selected type mappings and named references;
  * other concrete types and all derived/effective values remain gated.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
@@ -131,9 +142,13 @@ export async function getActorTypes(params = {}) {
     action.mapped_supported=true;
     action.limitations=['Selected action activation/frequency/traits/publication source and explicit self-effect references; no effective usability or automatic application.'];
     action.verification={deterministic:{status:'passed',evidence:['tests/js/actor-action.test.js','tests/js/actor-action-readers.test.js','tests/test_actor_action.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/action-fields.md','scripts/actor-live-check.py']}};
+    const melee=result.item_types.find(entry=>entry.type==='melee');
+    melee.mapped_supported=true;
+    melee.limitations=['Authored NPC attack modes, bonus/damage/range source and named effect labels; no effective elite/weak/MAP/target math. Null source range does not exclude thrown traits. Live checks cover Strikes; other modes have schema/fixture coverage.'];
+    melee.verification={deterministic:{status:'passed',evidence:['tests/js/actor-melee.test.js','tests/js/actor-melee-readers.test.js','tests/test_actor_melee.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/melee-fields.md','scripts/actor-live-check.py']}};
     for (const section of result.item_sections.filter(entry=>['source','relationships'].includes(entry.name))) {
       section.source_supported=true;section.mapped_supported=true;
-      section.limitations=['Action Items have delivered source mappings and self-effect relationships; inspect individual type entries for other Items.'];
+      section.limitations=['Action and NPC attack Items have delivered source mappings and explicit self-effect or named effect references; inspect individual type entries for other Items.'];
     }
   }
   if (new TextEncoder().encode(JSON.stringify(result)).length>48000) fail('ResponseTooLarge','Runtime type declarations exceed the registry response budget.','Inspect custom type declarations with the GM; this registry cannot be returned safely.');
@@ -150,15 +165,25 @@ async function read(target,params,sections,tool) {
   const records = [];
   if (sections.includes('source')) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
-    // PF2e-specific descriptors retain persisted values; no derived usage/Bulk.
-    for (const field of selected.physical) {
-      const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
-      entry.provenance.mapping='pf2e.physical.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
-    }
-    for (const field of selected.action) {
+    // PF2e-specific descriptors retain persisted fields. Source mappings never
+    // substitute carried gear, prepared statistics, effective usage or Bulk.
+    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1']]) {
+    for (const field of fields) {
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       if (Object.hasOwn(field,'mapped_value')) entry.mapped.value=field.mapped_value;
-      entry.provenance.mapping='pf2e.action.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+      entry.provenance.mapping=mapping;entry.provenance.limitations=[...field.limitations];records.push(entry);
+    }
+    }
+  }
+  if (target.document.type==='melee'&&sections.includes('relationships')) {
+    for (const field of selected.melee.filter(entry=>entry.path.startsWith('/system/attackEffects/value'))) {
+      const indexed=field.path.startsWith('/system/attackEffects/value/');
+      const entry=record(target.identity.uuid,field.path,field.present,field.value,'relationships','additional_effect');
+      entry.kind='relationship';entry.key=`relationships:attackEffects${indexed?`:${field.path.split('/').at(-1)}`:''}`;
+      entry.mapped.value={target_uuid:null,status:indexed?'unverified':'missing'};
+      entry.provenance.mapping='pf2e.melee.attack_effect.v1';
+      entry.provenance.limitations=indexed?['Stored additional-effect label is not a UUID; discover its definition separately.']:['No stored additional-effect labels; source presence distinguishes an absent array from an empty array.'];
+      records.push(entry);
     }
   }
   if (selected.relationship) {
@@ -181,10 +206,11 @@ async function read(target,params,sections,tool) {
     }
   }
   const isAction=target.document.documentName==='Item'&&target.document.type==='action';
-  const complete=name=>name==='identity'||name==='description'||(isAction&&['source','relationships'].includes(name));
+  const isMelee=target.document.documentName==='Item'&&target.document.type==='melee';
+  const complete=name=>name==='identity'||name==='description'||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'?'partial':'unsupported',
-      reasons:complete(name)?[]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':'Type-specific system fields and effective mappings are pending their stories.']};
+      reasons:complete(name)?[]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);
@@ -198,7 +224,8 @@ export async function readActor(params={}) {
   return read(await actorTarget(params),params,sections,'read_actor');
 }
 
-/** PF2e-specific 8.6.1 Item admission; common metadata/description source only. */
+/** PF2e-specific 8.6.1 Item boundary; selected source and explicit relationships,
+ * never prepared/effective math. Schema contracts live in imported type helpers. */
 export async function readItem(params={}) {
   const sections=bounds(params,['item_uuid','token_uuid','sections','limit','max_bytes','cursor'],ITEM_SECTIONS);ready();
   return read(await itemTarget(params),params,sections,'read_item');
