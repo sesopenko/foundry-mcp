@@ -23,10 +23,12 @@ test('source reads preserve identities and exclude migration, flags and unselect
   const {actor,item}=fixture();
   const a=await readActor({actor_uuid:actor.uuid});
   assert.equal(a.identity.uuid,actor.uuid);assert.equal(a.sections.find(s=>s.name==='source').status,'partial');
-  assert.deepEqual(a.records.map(r=>r.raw[0].path),['/name','/type']);assert.equal(a.pagination.complete,true);
+  assert.deepEqual(a.records.slice(0,2).map(r=>r.raw[0].path),['/name','/type']);
+  assert.equal(a.records.find(r=>r.raw[0].path==='/system/attributes/hp/value').raw[0].value,17);
+  assert.ok(!JSON.stringify(a).includes('private_secret'));assert.equal(a.pagination.complete,true);
   const i=await readItem({item_uuid:item.uuid,sections:['identity','source','effective']});
   assert.equal(i.identity.actor.uuid,actor.uuid);assert.equal(i.sections.at(-1).status,'unsupported');
-  assert.ok(!JSON.stringify(i).includes('never'));assert.ok(!JSON.stringify(a).includes('hp'));
+  assert.ok(!JSON.stringify(i).includes('never'));assert.ok(!JSON.stringify(a).includes('never'));
   await assert.rejects(readActor({actor_uuid:actor.uuid,extra:true}),/Unknown input/);
   await assert.rejects(readActor({actor_uuid:actor.uuid,limit:true}),/integer/);
   await assert.rejects(readItem({item_uuid:item.uuid,sections:['source','source']}),/unique/);
@@ -58,7 +60,7 @@ test('discovery registry distinguishes planned mappings and unsupported runtime 
   assert.equal(result.actor_types.find(t=>t.type==='loot').in_scope,false);
   assert.equal(result.item_types.find(t=>t.type==='campaignFeature').source_supported,false);
   assert.equal(result.actor_types.find(t=>t.type==='npc').mapped_supported,true);
-  assert.match(result.actor_types.find(t=>t.type==='npc').limitations[0],/Lore specialty/);
+  assert.match(result.actor_types.find(t=>t.type==='npc').limitations[0],/Lore references/);
   assert.equal(result.item_types.find(t=>t.type==='action').mapped_supported,true);
   assert.equal(result.item_types.find(t=>t.type==='melee').mapped_supported,true);
   assert.equal(result.item_sections.find(t=>t.name==='relationships').source_supported,true);

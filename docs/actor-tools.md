@@ -361,3 +361,7 @@ Actor `skills` currently exposes only owned Lore specialties and is always
 partial with `other_skills_pending`. Resolved references preserve Item identity
 and selected token context for `read_item`; denied Items expose no selectors.
 See [the evidence and field boundary](actor-item-story-map/lore-fields.md).
+
+NPC source now includes authored stat-block fields with `pf2e.npc.source.v1`
+provenance. Source remains partial; biography notes and integrated/effective
+sections are pending. See [NPC field boundary](actor-item-story-map/npc-fields.md).

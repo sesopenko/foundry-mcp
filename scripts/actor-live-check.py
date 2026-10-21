@@ -59,8 +59,9 @@ const meleeSamples=[
  ['null_thrown',attacks.find(i=>i.toObject(true).system.range===null&&i.toObject(true).system.traits?.value.some(t=>t.startsWith('thrown-')))],
  ['effect_labels',attacks.find(i=>i.toObject(true).system.attackEffects?.value.length)]
 ].filter(([,item])=>item);
-const fingerprintItems=[...new Map([...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i),...loreItems].filter(Boolean).map(i=>[i.uuid,i])).values()];
-const report=JSON.stringify({actor_uuid:actor.uuid,token_uuid:token?.uuid,
+const fingerprintItems=[...new Map([actor,...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i),...loreItems].filter(Boolean).map(i=>[i.uuid,i])).values()];
+const npcSource=actor.toObject(true);
+const report=JSON.stringify({actor_uuid:actor.uuid,npc_ac:npcSource.system.attributes.ac.value,npc_hp:npcSource.system.attributes.hp.value,token_uuid:token?.uuid,
 physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean),
 melee_samples:meleeSamples.map(([context,i])=>({context,uuid:i.uuid})),
 lore_item_uuid:loreItem?.uuid,lore_actor_uuid:loreItem?.parent?.uuid,
@@ -70,7 +71,7 @@ source_fingerprints:await Promise.all(fingerprintItems.map(async i=>({uuid:i.uui
 return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
 """
         selection=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
-        actor=await client.call_tool('read_actor',{'actor_uuid':selection['actor_uuid'],'limit':1})
+        actor=await client.call_tool('read_actor',{'actor_uuid':selection['actor_uuid'],'limit':25})
         assert actor.data['identity']['uuid']==selection['actor_uuid']
         tree=payload(await client.call_tool('get_actor_tree',{'limit':1}))
         assert tree['pagination']['returned']<=1
@@ -87,8 +88,19 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         pack_item=payload(await client.call_tool(candidate['next_call']['tool'],candidate['next_call']['arguments']))
         assert pack_item['identity']['uuid']==candidate['identity']['uuid']
         assert pack_item['identity']['source_kind']=='compendium'
-        next_page=await client.call_tool('read_actor',{'actor_uuid':selection['actor_uuid'],'limit':1,'cursor':actor.data['pagination']['next_cursor']})
-        assert next_page.data['pagination']['complete']
+        source_records=list(actor.data['records'])
+        source_pages=1
+        cursor=actor.data['pagination']['next_cursor']
+        while cursor:
+            assert source_pages<100, 'NPC source continuation exceeded the declared smoke-check bound.'
+            page=payload(await client.call_tool('read_actor',{'actor_uuid':selection['actor_uuid'],'limit':25,'cursor':cursor}))
+            source_records.extend(page['records'])
+            source_pages+=1
+            cursor=page['pagination']['next_cursor']
+        for path,expected in [('/system/attributes/ac/value',selection['npc_ac']),('/system/attributes/hp/value',selection['npc_hp'])]:
+            row=next(row for row in source_records if row['raw'][0]['path']==path)
+            assert row['raw'][0]['value']==expected and row['mapped']['value']==expected
+            assert row['provenance']['mapping']=='pf2e.npc.source.v1'
         items=await client.call_tool('list_actor_items',{'actor_uuid':selection['actor_uuid'],'limit':1})
         item=await client.call_tool(**dict(name=items.data['nodes'][0]['next_call']['tool'],arguments=items.data['nodes'][0]['next_call']['arguments']))
         assert item.data['identity']['actor']['uuid']==selection['actor_uuid']
@@ -181,7 +193,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'npc_source_verified':True,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

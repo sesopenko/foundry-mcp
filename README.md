@@ -259,6 +259,10 @@ effective Actor statistics remain staged. See the
 Lore Items expose owner-aware stored modifiers and labelled ranks; Actor Skills
 currently returns partial Lore specialty references with canonical Item/token
 context. Effective check totals remain unsupported.
+NPC source reading includes authored attributes, defenses, skills, movement and
+IWR with source provenance. Biography notes and integrated/effective statistics
+remain pending; elite/weak adjustments are not calculated.
+
 
 
 ## Private PDF references

@@ -58,3 +58,7 @@ Actor discovery modules `actorWorld.js`, `actorScenes.js` and `actorPacks.js` us
 modifier/rank terminology; rank labels never become calculated totals. `actors.js`
 exposes owned specialties as canonical references in a partial Skills section,
 retaining duplicate identities, permissions and selected token context.
+
+`actorNpc.js` selects authored NPC stat-block source and retained exception
+notes without applying elite/weak math. Biography selection remains unwired;
+source responses remain partial and effective sections unsupported.

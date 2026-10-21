@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; effective views gated |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 

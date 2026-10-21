@@ -5,6 +5,7 @@ import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { actionFields, actionReferenceFields } from './actorAction.js';
 import { meleeFields, meleeEffectFields } from './actorMelee.js';
 import { loreFields } from './actorLore.js';
+import { npcFields } from './actorNpc.js';
 
 const ACTOR_SECTIONS = ['identity','source','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
 const ITEM_SECTIONS = ['identity','source','description','rules','relationships','effective'];
@@ -12,8 +13,8 @@ const LIMITS = {default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,
 const PENDING = 'type_reader_pending';
 const VERIFICATION = {deterministic:{status:'passed',evidence:['tests/js/actor-readers.test.js','tests/test_actor_tools.py']},live:{status:'not_run',evidence:[]}};
 
-/** PF2e-specific physical/action/NPC attack source8.6.1 selection, no derived values.
- * Schema boundaries: actorPhysical.js, actorAction.js and actorMelee.js.
+/** PF2e-specific physical/action/attack/Lore/NPC source8.6.1 selection, no derived values.
+ * Schema boundaries: actorPhysical.js, actorAction.js, actorMelee.js, actorLore.js and actorNpc.js.
  * Descriptions require their explicit section.
  * Never expose flags, migrations or the whole source object.
  */
@@ -25,6 +26,7 @@ function selection(target, sections) {
   let action=[];
   let melee=[];
   let lore=[];
+  let npc=[];
   const specialties=[];const deniedLore=[];
   if (sections.includes('source')) {
     for (const field of ['name','type']) if (Object.hasOwn(source,field)) {
@@ -64,6 +66,15 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected Lore source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect this Lore Item; missing or malformed values cannot become calculated skill totals.');
     }
   }
+  // PF2e-specific NPC8.6.1 authored stat-block source; no elite/weak math.
+  // The pinned schema contract is documented in actorNpc.js.
+  if (target.document.documentName==='Actor' && source.type==='npc' && sections.includes('source')) {
+    try {npc=npcFields(source);}
+    catch (error) {
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
+      fail('ReadFailed',`Selected NPC source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect this NPC source; no prepared statistics or defaults are substituted.');
+    }
+  }
   // PF2e-specific Lore specialties are actual owned Item references only.
   // Source contract: src/module/item/lore.ts at the actorLore.js pinned revision.
   if (target.document.documentName==='Actor' && sections.includes('skills')) {
@@ -84,7 +95,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, action, melee, lore, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, action, melee, lore, npc, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -185,6 +196,9 @@ export async function getActorTypes(params = {}) {
       actor.mapped_supported=true;
       actor.limitations=['Only Lore specialty references in skills are mapped so far; full type-specific source/statistics and effective views remain pending.'];
     }
+    const npc=result.actor_types.find(entry=>entry.type==='npc');
+    npc.limitations=['Authored NPC source statistics and Lore references are delivered. Biography notes, integrated sections and effective/current statistics remain pending; elite/weak math is not applied.'];
+    npc.verification={deterministic:{status:'passed',evidence:['tests/js/actor-npc.test.js','tests/js/actor-npc-readers.test.js','tests/test_actor_npc.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/npc-fields.md','scripts/actor-live-check.py']}};
     for (const section of result.item_sections.filter(entry=>['source','relationships'].includes(entry.name))) {
       section.source_supported=true;section.mapped_supported=true;
       section.limitations=['Action, NPC attack and Lore Items have delivered source mappings; relationships currently cover action self-effects and named attack effects. Inspect individual type entries.'];
@@ -206,7 +220,7 @@ async function read(target,params,sections,tool) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific descriptors retain persisted fields. Source mappings never
     // substitute carried gear, prepared statistics, effective usage or Bulk.
-    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1']]) {
+    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1']]) {
     for (const field of fields) {
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       if (Object.hasOwn(field,'mapped_value')) entry.mapped.value=field.mapped_value;
@@ -262,7 +276,7 @@ async function read(target,params,sections,tool) {
   const complete=name=>name==='identity'||name==='description'||(isLore&&name==='source')||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||(loreSkills&&name==='skills')?'partial':'unsupported',
-      reasons:complete(name)?[]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+      reasons:complete(name)?[]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography notes and integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);

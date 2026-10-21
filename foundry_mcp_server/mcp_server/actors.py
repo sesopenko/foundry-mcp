@@ -70,6 +70,93 @@ LORE_VARIANT = re.compile(r'/system/variants/(?:[^~/]|~[01])*/(label|options)')
 LORE_RANKS = ['Untrained','Trained','Expert','Master','Legendary']
 
 
+# PF2e-specific NPCSystemSource8.6.1 selected source fields, never effective math.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/npc/data.ts
+NPC_SOURCE = {}
+
+def _npc_specs():
+    """PF2e-specific NPC8.6.1 exact source path/concept/type contract."""
+    def add(path,concept,kind,nullable=False):NPC_SOURCE['/system/'+path]=(concept,kind,nullable)
+    for path,concept,kind,nullable in [
+        ('details/level/value','creature_level','number',False),('details/alliance','recorded_alliance','string',True),
+        ('traits/size/value','creature_size_code','string',False),('traits/rarity','creature_rarity_code','string',False),
+        ('attributes/adjustment','recorded_creature_adjustment','string',True),('attributes/ac/value','authored_armor_class','number',False),
+        ('attributes/ac/details','armor_class_exception_notes','string',False),('attributes/hp/details','hit_point_exception_notes','string',False),
+        ('attributes/hp/tempSource','temporary_hit_point_source_item_id','string',False),('attributes/allSaves/value','all_save_exception_notes','string',False),
+        ('perception/mod','authored_perception_bonus','number',False),('perception/details','perception_exception_notes','string',False),
+        ('perception/vision','recorded_vision','boolean',False),('details/languages/details','language_exception_notes','string',False),
+        ('attributes/speed/value','authored_land_speed_feet','number',False),('attributes/speed/details','movement_exception_notes','string',False),
+        ('initiative/statistic','initiative_statistic_code','string',False),('spellcasting/rituals/dc','authored_ritual_dc','number',False)]:add(path,concept,kind,nullable)
+    for key in ('str','dex','con','int','wis','cha'):add('abilities/'+key+'/mod','attribute_modifier_'+key,'number')
+    for key,concept in [('value','recorded_hit_points'),('max','source_maximum_hit_points'),('temp','recorded_temporary_hit_points')]:add('attributes/hp/'+key,concept,'number')
+    for key in ('fortitude','reflex','will'):
+        add('saves/'+key+'/value','authored_'+key+'_save_bonus','number');add('saves/'+key+'/saveDetail',key+'_save_exception_notes','string')
+    for key in ('value','max'):add('resources/focus/'+key,'recorded_focus_'+key,'number')
+    for key in ('title','authors','license','remaster'):add('details/publication/'+key,'publication_'+key,'boolean' if key=='remaster' else 'string')
+_npc_specs()
+
+
+def _npc_spec(path):
+    """PF2e-specific NPC8.6.1 bounded JSON-pointer leaves and empty markers.
+
+    Arbitrary skill names and predicate keys remain escaped source keys. Predicate
+    JSON leaves are preserved without evaluation; maximum depth matches JS32.
+    """
+    if path in NPC_SOURCE:return NPC_SOURCE[path]
+    index=r'(?:0|[1-9][0-9]*)';key=r'(?:[^~/]|~[01])*'
+    for base,concept in [('traits/value','creature_trait_code'),('details/languages/value','language_code')]:
+        if path=='/system/'+base:return concept,'array',False
+        if re.fullmatch('/system/'+base+'/'+index,path):return concept,'string',False
+    for base,concept,children in [
+        ('perception/senses','creature_senses',{'type':('sense_type_code','string',False),'acuity':('sense_acuity_code','string',False),'range':('sense_range_feet','number',False),'source':('sense_source_label','string',True)}),
+        ('attributes/speed/otherSpeeds','other_movement_sources',{'type':('movement_type_code','string',False),'value':('authored_movement_speed_feet','number',False),'label':('movement_source_label','string',False),'source':('movement_source_reference','string',False)})]:
+        if path=='/system/'+base:return concept,'array',False
+        match=re.fullmatch('/system/'+base+'/'+index+'/([^/]+)',path)
+        if match:return children.get(match[1])
+    if path=='/system/skills':return 'authored_skill_sources','object',False
+    skill='/system/skills/'+key
+    for suffix,spec in [('/base',('authored_skill_bonus','number',True)),('/note',('skill_exception_notes','string',False)),('/special',('special_skill_sources','array',False)),('/special/'+index+'/label',('special_skill_label','string',False)),('/special/'+index+'/base',('authored_special_skill_bonus','number',False))]:
+        if re.fullmatch(skill+suffix,path):return spec
+    predicate_bases=[skill+'/special/'+index+'/predicate']
+    for kind in ('immunities','weaknesses','resistances'):
+        base='/system/attributes/'+kind
+        if path==base:return 'source_'+kind,'array',False
+        for suffix,spec in [('/type',(kind+'_type_code','string',False)),('/value',(kind+'_source_value','number',False)),('/applyOnce',('weakness_apply_once_source','boolean',False))]:
+            if suffix=='/value' and kind=='immunities' or suffix=='/applyOnce' and kind!='weaknesses':continue
+            if re.fullmatch(base+'/'+index+suffix,path):return spec
+        for prop in (('exceptions','doubleVs') if kind=='resistances' else ('exceptions',)):
+            propbase=base+'/'+index+'/'+prop
+            for suffix,spec in [('',(kind+'_'+prop,'array',False)),('/'+index,(kind+'_'+prop+'_code','string',False)),('/'+index+'/label',(kind+'_'+prop+'_label','string',False))]:
+                if re.fullmatch(propbase+suffix,path):return spec
+            predicate_bases.append(propbase+'/'+index+'/definition')
+    for base in predicate_bases:
+        match=re.fullmatch('('+base+')(.*)',path)
+        if match:
+            suffix=match[2]
+            if suffix=='':return 'stored_predicate_source','array',False
+            if re.fullmatch('/'+index+'(?:/'+key+'){0,31}',suffix):return 'stored_predicate_source','predicate',False
+    return None
+
+
+def _npc_record(row,identity):
+    """PF2e-specific NPC8.6.1 exact source DTO; no prepared statistics allowed."""
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path']
+    if path in SOURCE_PATHS:return True
+    spec=_npc_spec(path)
+    if spec is None:return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path or row['provenance']['mapping']!='pf2e.npc.source.v1':return False
+    if raw['document_uuid']!=identity['uuid'] or row['provenance']['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')}]:return False
+    if row['mapped']!=dict(concept=concept,value=value,unit=None):return False
+    if not raw['present']:return True
+    if value is None and nullable:return True
+    return {'number':type(value) in (int,float) and math.isfinite(value) if type(value) in (int,float) else False,
+            'string':type(value) is str,'boolean':type(value) is bool,
+            'array':type(value) is list and not value,'object':type(value) is dict and not value,
+            'predicate':value is None or type(value) in (str,bool,int) or type(value) is float and math.isfinite(value) or type(value) in (dict,list) and not value}[kind]
+
+
 def _lore_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     """PF2e-specific Lore8.6.1 source semantics depend on actual owner type.
 
@@ -136,7 +223,7 @@ def _lore_specialty(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -202,7 +289,8 @@ def _melee_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific8.6.1 empty attachment, ability/attack traits and Lore tags."""
-    return (identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('array','predicate') or
+            identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
             identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'} or
             identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'} or
             identity['type'] == 'lore' and path == '/system/traits/otherTags')
@@ -287,6 +375,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return False
     if path in SOURCE_PATHS:
         return True
+    if identity is not None and identity['document_name']=='Actor' and identity['type']=='npc':
+        return _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
     if identity['type'] == 'lore':
@@ -438,6 +528,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'melee' and not _melee_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'lore' and not _lore_record(row, identity):
+        return False
+    if identity['document_name']=='Actor' and identity['type']=='npc' and row['section']=='source' and not _npc_record(row,identity):
         return False
     if identity['document_name'] == 'Actor' and row['section'] == 'skills' and not _lore_specialty(row, identity):
         return False
@@ -629,6 +721,9 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     limitations. Records retain selected raw fields, mapped concepts and provenance;
     sections distinguish partial/unsupported/not_applicable from complete. Missing
     fields differ from null/zero; source is not complete effective statistics.
+    NPC source includes authored attributes, AC/saves/Perception/skills, stored HP,
+    senses/languages/movement, IWR and publication. Elite/weak arithmetic is not
+    applied; biography notes and integrated statistics remain pending.
     Skills currently contains owned Lore specialty references only, with partial
     other_skills_pending. Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate

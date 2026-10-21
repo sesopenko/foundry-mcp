@@ -67,6 +67,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Focused pure/browser/Python DTO checks and full suites passed (157 Python tests, one skipped; 134 JavaScript tests). Denied Items do not leak identity or read source; missing, empty, stale and oversized results retain shared contract behavior.
 - Actual authenticated MCP verified NPC Lore source and Skills follow-ups with unchanged source fingerprints on Foundry14.369/PF2e8.6.1. Character/familiar/world Lore, variants and duplicate specialties have deterministic coverage; those live fixtures are unavailable. Effective checks remain gated.
 
+### 8. NPC authored source integration checkpoint — October 20, 2026
+
+- NPC source now retains authored attributes, defenses, Perception, skills, movement, senses/languages, IWR and recorded resources with source provenance. No elite/weak or effective arithmetic is applied.
+- Focused helper, browser and Python actual-DTO checks passed. Actual MCP consumed all three source pages and verified exact AC/HP with unchanged source fingerprints; previous delivered readers still passed.
+- ACT-npc is In progress: explicit bounded biography notes, embedded summary integration and advanced integrated/effective acceptance remain. Completed stories stay 8/39 (20.5%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.
