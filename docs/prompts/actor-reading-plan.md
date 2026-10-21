@@ -9,6 +9,13 @@ It is the source of truth for the type-by-type audit, technical/rulebook
 references, dated observations, transformation requirements and verification gaps.
 Follow AGENTS.md and its required readings before implementation.
 
+The [development story map](../actor-item-story-map/index.md) now supplies the
+staged backlog, individual Actor/Item stories and authoritative dependency graph.
+Use its [October 20 evidence ledger](../actor-item-story-map/evidence.md) for
+release-pinned schema checks, actual additional rulebook reads, corrections and
+remaining evidence gates. This handoff preserves overall intent; the story map
+owns task sequencing and tracking. Neither artifact implements tools.
+
 ## Goal and agreed scope
 
 Enable a fresh GM-trusted MCP client to follow actor references in journals,

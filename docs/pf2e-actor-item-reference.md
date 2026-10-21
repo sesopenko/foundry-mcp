@@ -4,6 +4,13 @@ Research date: **October 19, 2026**. Runtime examined: **Foundry 14.369,
 PF2e 8.6.1**. This is a research reference and proposed presentation design,
 not documentation of implemented Actor/Item MCP tools.
 
+The **October 20, 2026 follow-up audit** is recorded in the
+[story-map evidence ledger](actor-item-story-map/evidence.md). The
+[development story map](actor-item-story-map/index.md) provides one story per
+in-scope Actor/Item type, shared tasks, stages and a Mermaid dependency graph.
+Its release-pinned schema checks narrow the book/affliction gaps below without
+claiming new live verification. The October 19 observations remain historical.
+
 The [implementation handoff](prompts/actor-reading-plan.md) records the current
 scope and future build sequence. Read this reference before designing Actor,
 Item or encounter-state tools. PF2e is the primary target; a multi-system
@@ -56,8 +63,10 @@ files. Search candidates are not evidence until their pages have been read.
 | GM Core | 86, 119–120, 123, 128 | Afflictions, creature Strikes/abilities and NPC construction |
 | GM Core | 219–221 | Constant benefits, investment, activation and item stat-block format |
 
-Player Core 2 was confirmed indexed and ready but was **not read for this
-Actor/Item audit**. Monster Core compendium documents were inspected; a Monster
+Player Core 2 was confirmed indexed and ready but was **not read for the
+October 19 Actor/Item audit**. The October 20 follow-up read its printed p. 89;
+see the ledger for that limited reading and additional Player Core/GM Core pages.
+Monster Core compendium documents were inspected; a Monster
 Core PDF was not used. Do not attribute conclusions to unconsulted passages.
 The table records relevant readings rather than claiming whole-book review.
 PDF extraction has unverified reading order and table structure; numeric table
@@ -156,7 +165,7 @@ methods just to read an Item.
 | `lore` | Separate Item with proficiency or modifier data; source inspection distinguishes PC `proficient.value` from NPC `mod.value` contributions | Merge into Skills while retaining the Item identity. Display the specialty separately and distinguish proficiency from final modifier. Do not assume a PC Lore source value is a complete check modifier. |
 | `condition` | Valued/unvalued state, persistent damage, parent/child references and override relationships | Present named condition and value, with supported active/suppressed state and origin. Persistent damage needs formula/type/recovery details. Stored presence does not establish active application. Suppressed is not removed; duration can continue while suppressed. Complete effective-state extraction remains open. |
 | `effect` | Description/rules, duration, start time, badge, context, unidentified flag and optional spell origin | Present current benefits/penalties or tracking effects with origins. A badge can have several meanings; do not automatically call it a condition value or remaining uses. Preserve duration unit, expiry timing and sustained state. Do not count an automation effect as another learned ability. |
-| `affliction` | Declared type, but no representative live record or complete supported schema contract was established | Identify source descriptions where safely readable; stage/onset/interval/save/duration interpretation remains open. Do not invent current stage, recovery or expiry from presence alone. The book's affliction format is not proof that all those fields exist structurally in this type. |
+| `affliction` | October 20 pinned 8.6.1 schema check established `save`, `status`, `onset`, `stages`, `duration`, `start` and `context`; no representative live record verified | Separate recorded status from stage definitions: `status.stage` is one-based and `stages` is zero-based. Expose selected source without inventing recovery, expiry or complete current application. See [affliction story](actor-item-story-map/stories/ITEM-affliction.md). |
 
 **Rules:** actions and activities can be granted through feats, spells and magic
 items, not only action Items (Player Core pp. 15, 414). Strike is distinct from
@@ -178,6 +187,7 @@ the same actor/token context and retain unresolved relationships explicitly.
 | Innate casting | Preserve individual uses and special at-will/constant restrictions where established; no universal slot interpretation. |
 | Focus casting | Link focus spells to the actor's focus pool and casting group. Pool capacity is not a per-spell daily use count. |
 | Cantrips | Distinguish unlimited slot-free casting from absence of a resource field; automatic heightening does not change the stored base definition. |
+| Slot rank versus casting rank | Player Core p. 298 permits a spontaneous caster to spend a higher-rank slot without heightening a spell. Preserve base rank, slot rank and casting rank separately; never infer heightening from slot rank alone. |
 | Rituals, item casting and flexible preparation | Preserve the identified mode and source; complete specialized handling has not been verified. Do not force these into ordinary prepared/spontaneous behavior. |
 
 Player Core pp. 297–298 distinguish preparations, repertoires, heightening,
@@ -236,7 +246,7 @@ every zero-valued field as a confirmed usable object statistic.
 | `consumable` | Category, quantity, uses, damage, usage and optional contained spell data | Preserve category-specific behavior for potions, poisons, scrolls and others. Quantity, per-object uses and frequency are different. A generic scroll template can have no specific spell attached; report that instead of inventing one. |
 | `ammo` | Separate physical type with quantity, uses and special effects | Present ammunition, consumption and special rules. Selected ammunition/weapon relationships need explicit evidence. Do not automatically append every carried ammunition effect to every ranged attack. |
 | `backpack` | Container data, capacity, ignored/held-or-stowed Bulk, stowing and usage | Present containers and contents using parent relationships, not the literal word backpack. Avoid duplicate contents or naive total-Bulk calculations that ignore container rules. |
-| `book` | Declared physical model with category/capacity/contents in the shipped template | Present supported book contents without interpreting them as prepared/known spells. This is not the private PDF library. No representative live Item was found in the sampled equipment pack, so full semantics remain unverified. |
+| `book` | October 20 pinned 8.6.1 definition verifies formula/spell category, capacity and Item-UUID contents | Present supported book contents without interpreting them as prepared/known spells. This is not the private PDF library. No representative live Item was verified; see [book story](actor-item-story-map/stories/ITEM-book.md). |
 | `kit` | Bundle definition with nested component UUIDs, quantities and container relationships | Present a bundle definition, not one ordinary possession. Reading must not import/expand it into inventory. Do not count both a kit and its generated contents as owned equipment. |
 | `treasure` | Coins, gems, art objects/materials and associated quantity/value data | Include character valuables despite excluding loot Actors. Preserve unit/stack value semantics and denominations; normalize only when that basis is established. Do not multiply a value twice or silently infer a sale price. |
 
@@ -482,6 +492,12 @@ partial interpretations as complete effective game state.
 
 ## Primary technical references
 
+For new implementation dependencies, prefer the immutable PF2e 8.6.1 sources
+and fresh official API reads in the [follow-up evidence ledger](actor-item-story-map/evidence.md).
+That audit also records the core14/PF2e8.6.1 compatibility boundary, source versus
+derived field distinctions, shield reinforcing-rune context and book-text
+discrepancies. It does not close the live verification gaps above.
+
 - [Foundry public/private API guidance](https://foundryvtt.com/api/v14/)
 - [Actor v14](https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html),
   [Actor v13](https://foundryvtt.com/api/v13/classes/foundry.documents.Actor.html)
@@ -499,10 +515,11 @@ partial interpretations as complete effective game state.
 - [Foundry system data models](https://foundryvtt.com/article/system-data-models/)
 - [PF2e upstream](https://github.com/foundryvtt/pf2e),
   [rule-element documentation](https://github.com/foundryvtt/pf2e/wiki/Quickstart-guide-for-rule-elements)
-- [Upstream feat schema](https://github.com/foundryvtt/pf2e/blob/v14-dev/src/module/item/feat/data.ts),
-  [NPC attack schema](https://github.com/foundryvtt/pf2e/blob/v14-dev/src/module/item/melee/data.ts),
-  [casting-entry data](https://github.com/foundryvtt/pf2e/blob/v14-dev/src/module/item/spellcasting-entry/data.ts)
-  are development-branch research pointers, not pinned evidence of release compatibility.
+- [PF2e 8.6.1 feat schema](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/feat/data.ts),
+  [NPC attack schema](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/melee/data.ts),
+  [casting-entry data](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/spellcasting-entry/data.ts)
+  pin the release-specific schema evidence; they do not establish future
+  compatibility or authorize private/prepared system interfaces.
 
 Keep book citations independent of these technical references. The rules explain
 mechanics; the API/schema evidence explains how the installed system represents
