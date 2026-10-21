@@ -70,6 +70,80 @@ LORE_VARIANT = re.compile(r'/system/variants/(?:[^~/]|~[01])*/(label|options)')
 LORE_RANKS = ['Untrained','Trained','Expert','Master','Legendary']
 
 
+# PF2e-specific EffectSystemSource8.6.1; selected persisted leaves only.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/effect/data.ts
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/abstract-effect/data.ts
+EFFECT_SOURCE = {}
+EFFECT_EVENTS = ('initiative-roll','turn-start','turn-end')
+EFFECT_ARRAYS = {'/system/'+p:c for p,c in [('traits/value','effect_trait_code'),('traits/otherTags','effect_other_tag_code'),('badge/labels','effect_badge_label'),('context/origin/rollOptions','effect_origin_roll_option')]}
+
+
+def _effect_specs():
+    """PF2e-specific effect8.6.1 source path/concept/type/null/choices contract."""
+    for path,concept,kind,nullable,choices in [
+        ('level/value','effect_level','integer',False,None),('duration/value','effect_duration_value','duration',False,None),
+        ('duration/unit','effect_duration_unit','string',False,('rounds','minutes','hours','days','unlimited','encounter')),
+        ('duration/expiry','effect_duration_expiry','string',True,('turn-start','turn-end','round-end')),
+        ('duration/sustained','effect_sustained','boolean',False,None),('start/value','effect_start_time','number',False,None),
+        ('start/initiative','effect_start_initiative','number',True,None),('tokenIcon/show','effect_token_icon_show','boolean',False,None),
+        ('unidentified','effect_unidentified','boolean',False,None),('fromSpell','effect_from_spell','boolean',False,None),('slug','source_slug','string',True,None),
+        ('badge','effect_badge','null',True,None),('badge/type','effect_badge_type','string',False,('counter','value','formula')),
+        ('badge/value','effect_badge_value','badge',False,None),('badge/min','effect_badge_min','integer',True,None),('badge/max','effect_badge_max','integer',True,None),
+        ('badge/loop','effect_badge_loop','boolean',False,None),('badge/evaluate','effect_badge_evaluate','boolean',False,None),
+        ('badge/reevaluate/event','effect_badge_reevaluate_event','string',False,EFFECT_EVENTS),('badge/reevaluate/formula','effect_badge_reevaluate_formula','string',False,None),('badge/reevaluate/initial','effect_badge_reevaluate_initial','number',False,None),
+        ('context','effect_context','null',True,None),('context/origin/actor','effect_origin_actor_uuid','string',False,None),
+        ('context/origin/token','effect_origin_token_uuid','string',True,None),('context/origin/item','effect_origin_item_uuid','string',True,None),
+        ('context/origin/spellcasting','effect_origin_spellcasting','null',True,None),
+        ('context/origin/spellcasting/attribute/type','effect_origin_spellcasting_attribute','string',False,('str','dex','con','int','wis','cha')),
+        ('context/origin/spellcasting/attribute/mod','effect_origin_spellcasting_modifier','number',False,None),
+        ('context/origin/spellcasting/tradition','effect_origin_spellcasting_tradition','string',True,None),
+        ('context/target','effect_target','null',True,None),('context/target/actor','effect_target_actor_uuid','string',False,None),('context/target/token','effect_target_token_uuid','string',True,None),
+        ('context/roll','effect_context_roll','null',True,None),('context/roll/total','effect_context_roll_total','number',False,None),('context/roll/degreeOfSuccess','effect_context_roll_degree','number',True,(0,1,2,3)),
+    ]:EFFECT_SOURCE['/system/'+path]=(concept,kind,nullable,choices)
+    for key in ('title','authors','license','remaster'):
+        EFFECT_SOURCE['/system/publication/'+key]=('publication_'+key,'boolean' if key=='remaster' else 'string',False,None)
+_effect_specs()
+
+
+def _effect_spec(path):
+    """PF2e-specific effect8.6.1 selected arrays and badge union leaf alternatives.
+
+    Records paginate independently, so badge discriminator/value consistency is
+    enforced in the browser selector; this boundary admits only each union leaf.
+    """
+    if path in EFFECT_SOURCE:return [EFFECT_SOURCE[path]]
+    if path=='/system/badge/reevaluate':
+        return [('effect_badge_reevaluate','null',True,None),('effect_badge_reevaluate_event','string',True,EFFECT_EVENTS)]
+    for base,concept in EFFECT_ARRAYS.items():
+        if path==base:return [(concept,'array',base=='/system/badge/labels',None)]
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path):return [(concept,'string',False,None)]
+    return []
+
+
+def _effect_record(row,identity):
+    """PF2e-specific persisted effect8.6.1 DTO; never expired/prepared/activity state.
+
+    Source UUID strings remain authored references, not resolved relationships.
+    Badge formulas are retained without evaluation. Schema links beside specs.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];value=raw.get('value')
+    if path in SOURCE_PATHS:return row['section'] in ('source','description')
+    if row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path or row['provenance']['mapping']!='pf2e.effect.source.v1':return False
+    if raw['document_uuid']!=identity['uuid'] or row['provenance']['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')}]:return False
+    if row['provenance']['limitations']!=['persisted_source_not_effective_or_expiration_state']:return False
+    for concept,kind,nullable,choices in _effect_spec(path):
+        if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):continue
+        if not raw['present']:return True
+        if value is None and nullable:return True
+        number=type(value) in (int,float) and math.isfinite(value)
+        valid={'number':number,'integer':number and int(value)==value,'duration':number and value>=-1,
+               'string':type(value) is str,'boolean':type(value) is bool,'null':False,
+               'badge':type(value) is str or number,'array':type(value) is list and not value}[kind]
+        if valid and (choices is None or value in choices):return True
+    return False
+
+
 # PF2e-specific NPCSystemSource8.6.1 selected source fields, never effective math.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/npc/data.ts
 NPC_NOTES = {'/system/details/'+key:'creature_'+key+'_source' for key in ('blurb','publicNotes','privateNotes')}
@@ -326,7 +400,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
             identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'} or
             identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'} or
-            identity['type'] == 'lore' and path == '/system/traits/otherTags')
+            identity['type'] == 'lore' and path == '/system/traits/otherTags' or
+            identity['type'] == 'effect' and path in EFFECT_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -412,6 +487,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'effect':
+        return bool(_effect_spec(path))
     if identity['type'] == 'lore':
         return path in LORE_PATHS or LORE_VARIANT.fullmatch(path) is not None or re.fullmatch(r'/system/traits/otherTags/(0|[1-9][0-9]*)',path) is not None
     # PF2e-specific action paths exclude toggles, rule elements and prepared data.
@@ -559,6 +636,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     # PF2e-specific NPC attacks preserve authored formulas and non-UUID labels.
     if identity['document_name'] == 'Item' and identity['type'] == 'melee' and not _melee_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'effect' and not _effect_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'lore' and not _lore_record(row, identity):
         return False
@@ -832,6 +911,12 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     identify proficiency ranks. Detached/unknown owners retain stored semantics;
     no effective skill total or roll-option execution is implied. identity.actor
     may include actual owner type character/npc/familiar.
+    Effect Items expose persisted level/duration/start, badge discriminator with
+    numeric counter/value or unevaluated formula, traits, token-icon visibility,
+    unidentified/fromSpell and origin/target/roll context. Stored UUID strings are
+    source references only; source performs no hydration or formula execution.
+    Persisted duration expiry is not current expired/active/suppressed state;
+    those effective interpretations and effect relationships remain unsupported.
     Optional description/rules/relationships/effective are delivered or explicitly
     unsupported as get_actor_types reports. At most 6 unique nonempty section names.
     PF2e-only; UnsupportedSystem/Version/Type explains excluded targets.

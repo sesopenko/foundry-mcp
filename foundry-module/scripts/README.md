@@ -66,3 +66,7 @@ source responses remain partial and effective sections unsupported.
 NPC explicit `strikes`/`abilities` select actual owned melee/action references,
 with source-name/type provenance and preserved linked/synthetic token selectors.
 Denied Items are not read or named; effective completeness remains unsupported.
+
+`actorEffect.js` selects persisted PF2e effect source with discriminated badge
+branches and primitive context leaves. It never evaluates formulas, applies
+source defaults, reads prepared expiry or resolves source UUID references.

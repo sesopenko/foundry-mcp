@@ -265,6 +265,9 @@ NPC blurb, public notes and GM-private notes. Integrated/effective statistics
 remain pending; elite/weak adjustments are not calculated.
 Explicit NPC strikes and abilities expose actual owned attack/action Item
 references for follow-up reading, with partial completeness and token context.
+Effect source preserves duration units, badge types/formulas and context fields.
+Formula evaluation, origin traversal and effective expiry remain unsupported.
+
 
 
 

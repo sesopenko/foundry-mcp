@@ -85,6 +85,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Focused cross-language tests passed, including world/linked/synthetic contexts, strict ownership and provenance, denied privacy, stale membership and mandatory partial semantics for empty sections. Actual MCP followed three existing references and preserved source fingerprints.
 - ACT-npc is Source implemented: source, bounded biography and embedded navigation are delivered. M-NPC integrated casting/inventory/state and verified effective interfaces remain open. Completed stories remain 8/39 (20.5%).
 
+### 11. Effect Item persisted source checkpoint — October 20, 2026
+
+- ITEM-effect now selects duration/start, discriminated counter/value/formula badges, context primitive leaves and identity/publication source. Unlimited/encounter units remain exact; no formulas, expiry or acquisition semantics are evaluated.
+- Actual rulebook pages were fully read and pinned schema boundaries recorded. Focused pure/browser/Python actual-DTO checks passed; actual MCP verified six world/owned/compendium samples with unchanged persisted sources.
+- ITEM-effect remains In progress pending explicit origin/target relationship traversal and advanced state integration. Completed stories remain 8/39 (20.5%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

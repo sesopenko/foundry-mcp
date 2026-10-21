@@ -374,3 +374,14 @@ and `npc_ability_item`. Each resolved mapped value contains `target_uuid`,
 `read_item`. Denied markers contain null target/status denied and no raw identity.
 Both sections remain partial (`other_attacks_pending`/`other_abilities_pending`);
 these references do not claim complete effective attack or acquired ability lists.
+
+## Effect source checkpoint
+
+PF2e effect source now retains selected duration/start fields, badge discriminator
+and branch-specific primitives, nullable context and exact origin/target UUID
+strings, traits/publication, unidentified and fromSpell fields. Source records use
+`pf2e.effect.source.v1`; no formula is evaluated and no tracking effect becomes a
+learned spell or acquired ability. Source UUIDs remain unverified references;
+relationship traversal and effective expiry/current application remain pending.
+See [field boundary](actor-item-story-map/effect-fields.md) and
+[actual rulebook/fixture evidence](actor-item-story-map/effect-verification.md).
