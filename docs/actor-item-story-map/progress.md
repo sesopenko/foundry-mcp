@@ -104,6 +104,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Actual rulebook pages and pinned schema contracts were reviewed. Focused JS/Python actual-DTO checks passed; authenticated MCP verified four existing owned/compendium samples with unchanged persisted source.
 - Populated persistent/reference fixtures and character/familiar conditions are unavailable live; these retain deterministic coverage. Relationships and advanced active/suppression integration remain open. Completed stories remain 9/39 (23.1%).
 
+### 14. Condition owner-local relationships — October 20, 2026
+
+- ITEM-condition resolves actual owner-local parent/child/override reference IDs without constructing UUIDs. Override slugs remain unverified claims. Duplicate identities and distinct persistent-damage source remain separate; no activity/suppression or dominance is computed.
+- Focused JS and actual Python DTO tests cover linked/synthetic follow-up, standalone scope, permissions, stale identity/membership and exact source provenance. Full offline suites and four live source/relationship samples passed; populated reference chains remain a live-fixture gap.
+- ITEM-condition Complete for declared persisted-source and owner-local reference scope. Advanced active/suppressed-state/effective duration remain unsupported and recorded. Completed stories are 10/39 (25.6%); integrated state acceptance remains open.
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

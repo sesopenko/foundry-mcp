@@ -78,3 +78,7 @@ fall back to base templates; unresolved targets return no resolved metadata.
 `actorCondition.js` selects persisted condition/value, persistent damage and local
 reference source. Override slugs remain distinct from local Item IDs. No prepared
 activity, suppression, persistent-damage roll or effective duration is read.
+
+`actorConditionRelationships.js` follows local IDs through the actual owner Item
+collection and public identity/permission boundary. Override slugs remain named
+unverified claims; no target source or active/suppressed state is read.

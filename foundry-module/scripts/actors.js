@@ -8,6 +8,7 @@ import { loreFields } from './actorLore.js';
 import { npcFields, npcNoteFields } from './actorNpc.js';
 import { effectFields } from './actorEffect.js';
 import { conditionFields } from './actorCondition.js';
+import { conditionReferenceFields,conditionRelationships } from './actorConditionRelationships.js';
 import { effectReferenceFields,effectRelationships } from './actorEffectRelationships.js';
 
 const ACTOR_SECTIONS = ['identity','source','description','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
@@ -32,6 +33,7 @@ function selection(target, sections) {
   let npc=[];
   let effect=[];
   let condition=[];
+  let conditionReferences=[];
   let effectReferences=[];
   let npcNotes=[];
   const specialties=[];const deniedLore=[];
@@ -96,6 +98,10 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected condition source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect the condition source; no active state, suppression or damage roll is inferred.');
     }
   }
+  if(target.document.documentName==='Item'&&source.type==='condition'&&sections.includes('relationships')){
+    try{conditionReferences=conditionReferenceFields(source);}
+    catch{fail('ReadFailed','Stored condition reference fields do not match the verified schema.','Inspect the condition source; no origin or suppression is inferred.');}
+  }
   // PF2e-specific NPC8.6.1 authored stat-block source; no elite/weak math.
   // The pinned schema contract is documented in actorNpc.js.
   if (target.document.documentName==='Actor' && source.type==='npc' && sections.includes('source')) {
@@ -149,7 +155,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, action, melee, lore, effect, condition, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -190,6 +196,7 @@ async function snapshot(target,sections) {
   const selected=selection(target,sections);
   if (target.document.type==='action'&&sections.includes('relationships')) selected.relationship=await actionRelationship(target,selected);
   if(target.document.type==='effect'&&sections.includes('relationships'))selected.effectRelationships=await effectRelationships(selected.effectReferences);
+  if(target.document.type==='condition'&&sections.includes('relationships'))selected.conditionRelationships=conditionRelationships(target,selected.conditionReferences);
   return selected;
 }
 
@@ -241,8 +248,8 @@ export async function getActorTypes(params = {}) {
     melee.verification={deterministic:{status:'passed',evidence:['tests/js/actor-melee.test.js','tests/js/actor-melee-readers.test.js','tests/test_actor_melee.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/melee-fields.md','scripts/actor-live-check.py']}};
     const condition=result.item_types.find(entry=>entry.type==='condition');
     condition.mapped_supported=true;
-    condition.limitations=['Persisted condition/value, persistent damage, local references and override slugs only. Activity, suppression, effective duration and damage dominance are unsupported; reference resolution remains pending.'];
-    condition.verification={deterministic:{status:'passed',evidence:['tests/js/actor-condition.test.js','tests/js/actor-condition-readers.test.js','tests/test_actor_condition.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/condition-verification.md','scripts/actor-live-check.py']}};
+    condition.limitations=['Persisted condition/value, persistent damage, local references and override slugs only. Activity, suppression, effective duration and damage dominance are unsupported. Explicit relationships resolve actual owner-local Item IDs; override slugs remain unverified.'];
+    condition.verification={deterministic:{status:'passed',evidence:['tests/js/actor-condition.test.js','tests/js/actor-condition-readers.test.js','tests/js/actor-condition-relationships.test.js','tests/test_actor_condition.py','tests/test_actor_condition_relationships.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/condition-verification.md','scripts/actor-live-check.py']}};
     const effect=result.item_types.find(entry=>entry.type==='effect');
     effect.mapped_supported=true;
     effect.limitations=['Persisted duration/start, badge discriminator and context source only; formulas are not evaluated, source UUID references are unverified until explicit immediate context resolution; expiry/current application remain unsupported.'];
@@ -322,6 +329,12 @@ async function read(target,params,sections,tool) {
       mapped:{concept,value:{target_uuid:null,status:'denied'},unit:null},
       provenance:{contributors:[],mapping:'pf2e.npc.item-reference.v1',limitations:['One or more owned Items are unreadable; have the authorized GM grant access and retry.']}});
   }
+  if(selected.conditionRelationships)for(const reference of selected.conditionRelationships){
+    const raw=reference.raw.map(({path,present,value})=>({document_uuid:target.identity.uuid,path,present,...(present?{value}:{}),basis:'source'}));
+    records.push({key:`relationships:condition:${reference.path}`,section:'relationships',kind:'relationship',raw,
+      mapped:{concept:reference.concept,value:reference.result,unit:null},
+      provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.condition.reference.v1',limitations:['Stored local reference or override slug only; no active/suppressed state or persistent-damage dominance is inferred. Unresolved targets disclose no resolved metadata.']}});
+  }
   if(selected.effectRelationships){
     const raw=selected.effectReferences.map(({path,present,value})=>({document_uuid:target.identity.uuid,path,present,...(present?{value}:{}),basis:'source'}));
     for(const reference of selected.effectRelationships)records.push({key:`relationships:effect:${reference.role}`,section:'relationships',kind:'relationship',raw,
@@ -373,7 +386,7 @@ async function read(target,params,sections,tool) {
   const isCondition=target.document.documentName==='Item'&&target.document.type==='condition';
   const isEffect=target.document.documentName==='Item'&&target.document.type==='effect';
   const loreSkills=target.document.documentName==='Actor'&&sections.includes('skills');
-  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isCondition)&&name==='source')||(isEffect&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
+  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||(isLore&&name==='source')||((isEffect||isCondition)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
       reasons:complete(name)?[]:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};

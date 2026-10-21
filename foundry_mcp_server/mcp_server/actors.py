@@ -10,7 +10,7 @@ import asyncio
 import json
 import math
 import re
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 from fastmcp.exceptions import ToolError
 from fastmcp.tools.tool import FunctionTool
@@ -165,12 +165,71 @@ def _condition_spec(path):
     return None
 
 
+def _condition_relationship(row, identity):
+    """PF2e-specific condition8.6.1 local Item references and override slugs.
+
+    The pinned condition/data.ts schema above defines local IDs, not UUIDs.
+    Only resolved same-owner Items carry canonical selectors; source references
+    never establish effective suppression, activity or persistent damage state.
+    """
+    raw = row['raw']
+    if not raw or row['section'] != 'relationships' or row['kind'] != 'relationship': return False
+    path = raw[0]['path']
+    if row['key'] != 'relationships:condition:' + path: return False
+    if any(r['document_uuid'] != identity['uuid'] for r in raw): return False
+    role = None
+    marker = False
+    if path in ('/system/references/parent', '/system/references/parent/id'):
+        role = 'parent_reference'
+        marker = path.endswith('/parent')
+        if len(raw) != 1: return False
+    else:
+        match = re.fullmatch(r'/system/references/(children|overrides|overriddenBy)(?:/(0|[1-9][0-9]*)/id)?', path)
+        if match:
+            role = {'children':'child_reference','overrides':'override_reference','overriddenBy':'overridden_by_reference'}[match[1]]
+            marker = match[2] is None
+            if marker:
+                if len(raw) != 1: return False
+            elif len(raw) != 2 or raw[1]['path'] != path[:-2] + 'type' or raw[1]['present'] and raw[1].get('value') != 'condition': return False
+        elif re.fullmatch(r'/system/overrides(?:/(0|[1-9][0-9]*))?', path):
+            role = 'override_slug'
+            marker = path == '/system/overrides'
+            if len(raw) != 1: return False
+        else: return False
+    first = raw[0]
+    if marker:
+        if first['present'] and (first.get('value') is not None if role == 'parent_reference' else first.get('value') != []): return False
+    elif first['present'] and type(first.get('value')) is not str: return False
+    provenance = row['provenance']
+    if provenance['mapping'] != 'pf2e.condition.reference.v1' or not provenance['limitations'] or any(not v for v in provenance['limitations']): return False
+    if provenance['contributors'] != [{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]: return False
+    mapped = row['mapped']; value = mapped['value']
+    if mapped['concept'] != 'condition_' + role or mapped['unit'] is not None or type(value) is not dict: return False
+    status = value.get('status')
+    local_id = first.get('value') if first['present'] and not marker else None
+    if status in ('missing','denied','unsupported','unverified'):
+        if set(value) != {'status','target_uuid'} or value['target_uuid'] is not None: return False
+        if not local_id: return status == 'missing'
+        if role == 'override_slug' or identity['actor'] is None: return status == 'unverified'
+        return True
+    if status != 'resolved' or role == 'override_slug' or not local_id or identity['actor'] is None: return False
+    required = {'status','target_uuid','document_name','type','name','name_truncated'}
+    instance = identity['instance']
+    if set(value) != required | ({'token_uuid'} if instance is not None else set()): return False
+    if not re.fullmatch(r'[^.\s#]+', local_id): return False
+    if value['target_uuid'] != identity['actor']['uuid'] + '.Item.' + local_id or value['document_name'] != 'Item': return False
+    if value['type'] not in get_args(ItemType) or role != 'parent_reference' and value['type'] != 'condition': return False
+    if type(value['name']) is not str or len(value['name']) > 256 or type(value['name_truncated']) is not bool: return False
+    return instance is None or value['token_uuid'] == instance['token_uuid']
+
+
 def _condition_record(row,identity):
     """PF2e-specific condition8.6.1 source DTO; no active/suppressed/duration state.
 
     Persisted local reference IDs and override slugs stay unchanged source text;
     this boundary provides no relationship hydration or effective interpretation.
     """
+    if row['section']=='relationships': return _condition_relationship(row,identity)
     if len(row['raw'])!=1:return False
     raw=row['raw'][0];path=raw['path'];value=raw.get('value')
     if path in SOURCE_PATHS:return row['section'] in ('source','description')
@@ -1050,9 +1109,12 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     Condition Items expose persisted valuedness/value, persistent damage formula,
     damage type/recovery DC/critical-hit flag, local parent/child/override IDs and
     override slugs, group, traits and publication. Local IDs remain source text;
-    no UUID conversion, formula execution, current activity, suppression, prepared
-    duration or effective damage is implied. Relationships/effective remain
-    unsupported for conditions.
+    no source-only hydration or formula execution is implied. Explicit relationships
+    resolve local Item IDs only within the actual Actor owner, preserving token
+    selectors; top-level override slugs remain unverified, never UUID selectors.
+    Missing, denied, unsupported and unverified targets have null target_uuid.
+    Resolution does not establish current activity, suppression, prepared duration
+    or effective damage; effective condition state remains unsupported.
     Effect Items expose persisted level/duration/start, badge discriminator with
     numeric counter/value or unevaluated formula, traits, token-icon visibility,
     unidentified/fromSpell and origin/target/roll context. Stored UUID strings are

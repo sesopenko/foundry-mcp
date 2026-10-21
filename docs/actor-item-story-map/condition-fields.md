@@ -77,3 +77,25 @@ reference categories, duplicate override slugs, null/missing/empty markers,
 malformed primitive/container values, optional undefined, exclusion of prepared
 getters and no source mutation. These deterministic checks alone do not prove
 live Foundry integration or complete ITEM-condition acceptance criteria.
+
+## Explicit owner-local relationships
+
+`relationships` returns one record per parent reference, list entry or override
+slug, including absent/null/empty markers. Mapping is
+`pf2e.condition.reference.v1`; keys are `relationships:condition:<source path>`.
+Indexed references retain both id/type source contributors. Parent references
+may resolve any supported owned Item; child/override/overriddenBy lists resolve
+only condition Items. Actual owner membership supplies canonical UUIDs; no UUID
+is manufactured from a local ID. Duplicate local references and same-name Items
+remain separate source records.
+
+Resolved mapped values contain status resolved, target_uuid, document_name Item,
+actual type, bounded name/name_truncated and token_uuid for selected linked or
+synthetic context. Follow read_item with item_uuid and returned token_uuid.
+Denied targets return null target_uuid and no resolved metadata; missing targets
+stay missing. Unsupported types remain unsupported. Without an Actor owner a
+local ID stays unverified; top-level override slugs always stay unverified named
+claims. Source UUIDs/IDs remain raw claims, not evidence of activity/suppression.
+Source-only reads never inspect related Items. No target source, rolls, writes,
+recursive provenance or suppression calculation occurs. Target identity,
+permission and membership changes invalidate relationship cursors.

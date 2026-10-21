@@ -402,6 +402,16 @@ PF2e condition source preserves `value.isValued` independently of nullable store
 IDs and top-level override slugs. Source records use `pf2e.condition.source.v1`.
 Presence and stored override references never establish active/suppressed state;
 formulas are not rolled and same-type persistent-damage dominance is not computed.
-Origin/reference resolution remains a separate explicit relationship increment.
+Explicit owner-local relationships are available as described below.
 See [field boundary](actor-item-story-map/condition-fields.md) and
 [rulebook/runtime evidence](actor-item-story-map/condition-verification.md).
+
+Condition `relationships` resolves local reference IDs only inside the selected
+Item's actual Actor owner. Parent references allow any supported Item type;
+other reference lists require condition Items. Top-level override slugs remain
+unverified labels. Resolved mapped values expose canonical target_uuid,
+document_name Item, type, name/name_truncated and selected token_uuid. Follow
+read_item with that UUID/token selector. Unresolved statuses have null target_uuid
+and no resolved metadata. Standalone Items retain unverified local IDs; absent,
+null and empty source markers remain distinct. No current activity or suppression
+is inferred. See the condition field boundary for keys and provenance.

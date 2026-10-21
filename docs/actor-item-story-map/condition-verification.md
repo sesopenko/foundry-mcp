@@ -49,3 +49,16 @@ nullable values and override slugs matched the hydrated persisted source.
 Effective sections stayed unsupported and world/NPC source fingerprints stayed
 unchanged. Populated persistent metadata and reference chains remain deterministic
 coverage only; relationships and active/suppressed-state verification are pending.
+
+## Owner-local relationship verification
+
+Deterministic JS/Python actual-DTO checks verify duplicate local IDs/names,
+parent effects versus child conditions, linked/synthetic selectors and follow-up,
+standalone unverified IDs, override-slug distinction, denied/unsupported/missing
+status, source-only nonhydration and stale target identity/access/membership.
+Separate persistent-damage Items retain distinct types/formulas and UUIDs;
+no same-type dominance is calculated. Actual MCP on the four existing samples
+verified absent/null/empty reference markers and unverified override slugs;
+source fingerprints stayed unchanged. Populated persistent/reference fixtures
+remain unavailable live. Active/suppressed state and effective duration remain
+unsupported; this completion does not close CORE-state or CORE-acceptance.

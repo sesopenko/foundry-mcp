@@ -34,3 +34,17 @@ test('condition discovery distinguishes delivered persisted source from unsuppor
  fixture();const entry=(await getActorTypes()).item_types.find(row=>row.type==='condition');
  assert.equal(entry.mapped_supported,true);assert.equal(entry.effective_supported,false);assert.equal(entry.verification.live.status,'passed');assert.match(entry.limitations.join(' '),/suppression/);
 });
+test('separate persistent damage Items preserve distinct types and uncertain same-type dominance',async()=>{
+ const f=fixture();const docs=new Map([[f.item.uuid,f.item]]);
+ const sources=[['cold','1d8'],['fire','1d10']].map(([damageType,formula],index)=>{
+  const source=structuredClone(f.source);source.system.persistent.damageType=damageType;source.system.persistent.formula=formula;
+  const item={...f.item,uuid:`Item.damage${index}`,id:`damage${index}`,toObject:()=>structuredClone(source)};docs.set(item.uuid,item);return item;
+ });
+ foundry.utils.fromUuid=async uuid=>docs.get(uuid);
+ const results=[];
+ for(const item of [f.item,...sources]){
+  let cursor,rows=[];do{const page=await readItem({item_uuid:item.uuid,sections:['source','effective'],limit:100,...(cursor?{cursor}:{})});assert.equal(page.sections[1].status,'unsupported');rows.push(...page.records);cursor=page.pagination.next_cursor;}while(cursor);
+  results.push({uuid:item.uuid,type:rows.find(r=>r.raw[0].path==='/system/persistent/damageType').raw[0].value,formula:rows.find(r=>r.raw[0].path==='/system/persistent/formula').raw[0].value});
+ }
+ assert.equal(new Set(results.map(r=>r.uuid)).size,3);assert.deepEqual(results.map(r=>[r.type,r.formula]),[['fire','1d6'],['cold','1d8'],['fire','1d10']]);
+});
