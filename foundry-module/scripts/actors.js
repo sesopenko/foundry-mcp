@@ -1,7 +1,8 @@
 /** Read-only Actor/Item extraction foundation; contract: docs/actor-tools.md. */
 import { fail, validateParams, integer, selector, selectSections, digest, textFragments, paginate } from './actorReadUtils.js';
-import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
+import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
 import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
+import { actionFields, actionReferenceFields } from './actorAction.js';
 
 const ACTOR_SECTIONS = ['identity','source','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
 const ITEM_SECTIONS = ['identity','source','description','rules','relationships','effective'];
@@ -18,6 +19,7 @@ function selection(target, sections) {
   if (!source || typeof source!=='object' || Array.isArray(source)) fail('ReadFailed','Document source is not a serialized object.','Inspect the selected document in Foundry.');
   const selected = {};
   let physical=[];
+  let action=[];
   if (sections.includes('source')) {
     for (const field of ['name','type']) if (Object.hasOwn(source,field)) {
       if (typeof source[field]!=='string') fail('ReadFailed',`Source ${field} has an unexpected type.`,'Inspect the selected document in Foundry.');
@@ -31,12 +33,60 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected physical source${path?` at ${path}`:''} does not match the verified field schema.`,'Inspect this Item source; malformed fields cannot be interpreted safely.');
     }
   }
+  // PF2e-specific action source8.6.1; source-only selection never hydrates effects.
+  if (target.document.documentName==='Item' && source.type==='action' && (sections.includes('source')||sections.includes('relationships'))) {
+    try {action=sections.includes('source')?actionFields(source):actionReferenceFields(source);}
+    catch (error) {
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_/-]+/)?.[0];
+      fail('ReadFailed',`Selected action source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect this action Item source; no prepared defaults are substituted.');
+    }
+  }
   if (sections.includes('description') && source.system?.description && Object.hasOwn(source.system.description,'value')) selected['/system/description/value'] = source.system.description.value;
   if (sections.includes('description') && PHYSICAL_TYPES.includes(source.type)) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, runtime: runtime() };
+  return { identity: target.identity, selected, physical, action, runtime: runtime() };
+}
+
+/** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
+ * relationships requests. Public core14.369 fromUuid(uuid,{relative:Document}):
+ * https://foundryvtt.com/api/v14/functions/foundry.utils.fromUuid.html
+ * Public Actor.token carries synthetic target context (no UUID construction):
+ * https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html#token
+ * Returns identity/status only; no effect preparation, source expansion or use.
+ */
+async function actionRelationship(target,selected) {
+  const reference=selected.action.find(field=>field.path==='/system/selfEffect/uuid');
+  const uuid=reference?.present?reference.value:null;
+  if (uuid===null||uuid===undefined||uuid==='') return {status:'missing',target_uuid:null,reason:'No stored self-effect reference.',dependency:null};
+  if (typeof uuid!=='string'||uuid.length>512||!uuid.trim()) return {status:'unsupported',target_uuid:null,reason:'Stored self-effect reference is not a supported bounded UUID.',dependency:null};
+  let effect;
+  try {effect=await foundry.utils.fromUuid(uuid,{relative:target.document});}
+  catch {return {status:'unverified',target_uuid:null,reason:'Self-effect resolution failed; retry an explicit relationships read.',dependency:null};}
+  if (!effect) return {status:'missing',target_uuid:null,reason:'Stored self-effect target was not found.',dependency:null};
+  const owner=effect.parent?.documentName==='Actor'?effect.parent:null;
+  const pack=effect.compendium??owner?.compendium??null;
+  if (!permitted(effect)||(owner&&!permitted(owner))||(pack&&!permitted(pack))) return {status:'denied',target_uuid:null,reason:'Self-effect target or owner/pack is not readable.',dependency:null};
+  if (effect.documentName!=='Item'||effect.type!=='effect'||(owner&&!ACTOR_TYPES.includes(owner.type))||typeof effect.uuid!=='string'||!effect.uuid.length||effect.uuid.length>512) return {status:'unsupported',target_uuid:null,reason:'Self-effect target is outside the supported effect Item context.',dependency:null};
+  let tokenUuid=null;
+  if (effect.uuid.startsWith('Scene.')) {
+    const token=owner?.token;
+    if (!token?.uuid) return {status:'unverified',target_uuid:null,reason:'Synthetic self-effect target has no available token context.',dependency:null};
+    let instance;
+    try {instance=await actorTarget({token_uuid:token.uuid});}
+    catch (error) {return {status:error?.rpcError?.code==='PermissionDenied'?'denied':'unverified',target_uuid:null,reason:'Synthetic self-effect token context is inaccessible or unavailable.',dependency:null};}
+    if (instance.document.uuid!==owner.uuid||![...instance.document.items.values()].some(item=>item.uuid===effect.uuid)) return {status:'unverified',target_uuid:null,reason:'Synthetic self-effect no longer belongs to its current token Actor.',dependency:null};
+    tokenUuid=token.uuid;
+  }
+  return {status:'resolved',target_uuid:effect.uuid,...(tokenUuid?{token_uuid:tokenUuid}:{}),reason:null,dependency:{uuid:effect.uuid,type:effect.type,parent_uuid:owner?.uuid??null,pack_id:pack?.collection??null}};
+}
+
+/** PF2e-specific detached source+immediate action relationship snapshot. */
+async function snapshot(target,sections) {
+  const selected=selection(target,sections);
+  if (target.document.type==='action'&&sections.includes('relationships')) selected.relationship=await actionRelationship(target,selected);
+  return selected;
 }
 
 /** JSON Pointer source record; values are detached selected document data. */
@@ -57,7 +107,8 @@ function bounds(params, allowed, sectionNames) {
  * PF2e-specific capability registry for character/npc/familiar and 24 Item types.
  * Core14.369/PF2e8.6.1 schema scope: only common core metadata and explicit Item
  * system.description.value and shared physical source fields are delivered;
- * type-specific completeness and derived values remain gated.
+ * action Items have selected type mappings and explicit self-effect references;
+ * other concrete types and all derived/effective values remain gated.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
 export async function getActorTypes(params = {}) {
@@ -73,6 +124,18 @@ export async function getActorTypes(params = {}) {
     item_types:[...new Set([...ITEM_TYPES,...itemAllowed])].map(type=>make(type,itemAllowed.includes(type),ITEM_TYPES.includes(type))),
     actor_sections:ACTOR_SECTIONS.map(name=>make(name,true,true,true)),item_sections:ITEM_SECTIONS.map(name=>make(name,true,true,true)),limits:{...LIMITS},
     limitations:['No complete effective statistics or exhaustive ability list is claimed.']};
+  // PF2e-specific action8.6.1 source milestone; section flags are conditional on
+  // this per-type registry, never a promise for every other Item type.
+  if (supported) {
+    const action=result.item_types.find(entry=>entry.type==='action');
+    action.mapped_supported=true;
+    action.limitations=['Selected action activation/frequency/traits/publication source and explicit self-effect references; no effective usability or automatic application.'];
+    action.verification={deterministic:{status:'passed',evidence:['tests/js/actor-action.test.js','tests/js/actor-action-readers.test.js','tests/test_actor_action.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/action-fields.md','scripts/actor-live-check.py']}};
+    for (const section of result.item_sections.filter(entry=>['source','relationships'].includes(entry.name))) {
+      section.source_supported=true;section.mapped_supported=true;
+      section.limitations=['Action Items have delivered source mappings and self-effect relationships; inspect individual type entries for other Items.'];
+    }
+  }
   if (new TextEncoder().encode(JSON.stringify(result)).length>48000) fail('ResponseTooLarge','Runtime type declarations exceed the registry response budget.','Inspect custom type declarations with the GM; this registry cannot be returned safely.');
   return result;
 }
@@ -83,20 +146,32 @@ export async function getActorTypes(params = {}) {
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
 async function read(target,params,sections,tool) {
-  const snapshot = selection(target,sections); const revision = await digest(snapshot);
+  const selected = await snapshot(target,sections); const revision = await digest(selected);
   const records = [];
   if (sections.includes('source')) {
-    for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(snapshot.selected,`/${field}`),snapshot.selected[`/${field}`],'source',`document_${field}`));
+    for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific descriptors retain persisted values; no derived usage/Bulk.
-    for (const field of snapshot.physical) {
+    for (const field of selected.physical) {
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       entry.provenance.mapping='pf2e.physical.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
     }
+    for (const field of selected.action) {
+      const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
+      if (Object.hasOwn(field,'mapped_value')) entry.mapped.value=field.mapped_value;
+      entry.provenance.mapping='pf2e.action.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+    }
+  }
+  if (selected.relationship) {
+    const paths=['/system/selfEffect/uuid','/system/selfEffect/name'];
+    const raw=paths.map(path=>{const field=selected.action.find(entry=>entry.path===path);return {document_uuid:target.identity.uuid,path,present:field?.present===true,...(field?.present?{value:field.value}:{}),basis:'source'};});
+    records.push({key:'relationships:selfEffect',section:'relationships',kind:'relationship',raw,
+      mapped:{concept:'self_effect',value:{target_uuid:selected.relationship.target_uuid,status:selected.relationship.status,...(selected.relationship.token_uuid?{token_uuid:selected.relationship.token_uuid}:{})},unit:null},
+      provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.action.self_effect.v1',limitations:selected.relationship.reason?[selected.relationship.reason]:[]}});
   }
   if (sections.includes('description')) {
     for (const path of ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])]) {
-    const present=Object.hasOwn(snapshot.selected,path);
-    const value=snapshot.selected[path];
+    const present=Object.hasOwn(selected.selected,path);
+    const value=selected.selected[path];
     if (present && typeof value!=='string') fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected Item source in Foundry.');
     if (present) for (const [index,fragment] of textFragments(value).entries()) {
       const entry=record(target.identity.uuid,path,true,fragment.value,'description',path==='/system/description/value'?'description':'unidentified_description');
@@ -105,13 +180,15 @@ async function read(target,params,sections,tool) {
     else records.push(record(target.identity.uuid,path,false,null,'description',path==='/system/description/value'?'description':'unidentified_description'));
     }
   }
-  const base={contract_version:1,runtime:snapshot.runtime,identity:target.identity,revision,
-    sections:sections.map(name=>({name,status:name==='identity'||name==='description'?'complete':name==='source'?'partial':'unsupported',
-      reasons:name==='identity'||name==='description'?[]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:['Type-specific system fields and effective mappings are pending their stories.']};
+  const isAction=target.document.documentName==='Item'&&target.document.type==='action';
+  const complete=name=>name==='identity'||name==='description'||(isAction&&['source','relationships'].includes(name));
+  const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
+    sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'?'partial':'unsupported',
+      reasons:complete(name)?[]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);
-  if (await digest(selection(fresh,sections))!==revision) fail('ContentChanged','Selected data changed during the read.','Discard accumulated pages and restart without cursor.');
+  if (await digest(await snapshot(fresh,sections))!==revision) fail('ContentChanged','Selected data changed during the read.','Discard accumulated pages and restart without cursor.');
   return result;
 }
 

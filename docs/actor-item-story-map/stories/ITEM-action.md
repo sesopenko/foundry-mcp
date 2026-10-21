@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Ready for source milestone |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -22,7 +22,7 @@ As a GM-trusted LLM, I can read a `action` Item as **actions, reactions and pass
 
 ## Source and mapped contract
 
-Field paths below are relative to `system`. They are a **proposed allowlist**, checked against the pinned source, to finalize in CORE-contract before implementation. Also retain bounded `description.value`, publication metadata where present, document type/name/UUID, local ID, and actual parent/pack/token context. Missing fields stay missing; prepared data must never be relabelled source.
+Field paths below are relative to `system`. The implemented [exact field registry](../action-fields.md) finalizes this allowlist against the pinned source. Also retain bounded `description.value`, publication metadata where present, document type/name/UUID, local ID, and actual parent/pack/token context. Missing fields stay missing; prepared data must never be relabelled source.
 
 - Selected fields: `actionType.value`, `actions.value`, `category`, `frequency`, `selfEffect.uuid`, `selfEffect.name`, `traits.value`.
 - Mapping and relationships: Use the activation discriminator, not null count, to label activation. Preserve trigger, requirements and exceptions in source descriptions; link self-effects without applying them.
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -46,4 +46,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 The source mapping is ready to implement. Effective actor statistics, target-dependent calculations and automatic application of rule elements are excluded; prove supported interfaces and focused live behavior before adding them.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+The selected source and explicit relationship reader passed live MCP checks on Foundry14.369/PF2e8.6.1; v13 system compatibility and future releases remain unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+
+## Delivery evidence — October 20, 2026
+
+`read_item` maps activation kind independently from nullable action count, preserves selected raw frequency/traits/publication and named self-effect source, and resolves only an explicitly requested immediate relationship. Resolved synthetic references return their revalidated token_uuid so clients can follow them without base-Actor substitution. Rules/effective benefits remain unsupported, never implicitly evaluated.
+
+Pure helper, browser reader and actual JavaScript-to-Python DTO tests cover activation/null-count distinctions, unknown codes, schema-optional undefined values, stale/permission boundaries, bounded exact descriptions, ordinary/synthetic target follow-ups and no hydration during source-only reads. Live MCP verified four activation kinds, familiar pack identity/category, existing token action identity and a self-effect follow-up. Selected action/self-effect/token source fingerprints stayed unchanged. No standalone world action or live synthetic self-effect-target fixture was available; those paths have deterministic public-boundary coverage, without claiming complete familiar/Actor derived support.

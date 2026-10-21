@@ -153,7 +153,9 @@ that type; this contract intentionally does not invent those 27 field registries
 
 An unresolved relationship is a record with `kind="relationship"`, raw source
 preserved, mapped `{concept,value:{target_uuid,status},unit:null}`; status is
-`resolved`, `missing`, `denied`, `unsupported`, or `unverified`. Resolve only the
+`resolved`, `missing`, `denied`, `unsupported`, or `unverified`. A resolved synthetic
+Item target also has `token_uuid` in mapped.value; pass it with target_uuid to
+read_item, because its UUID alone is not a sufficient instance selector. Resolve only the
 immediate relationship; no recursive source expansion or automatic cross-pack
 fetch. Next call: `read_actor`, `list_actor_items`, or `read_item` using returned
 selectors. Mere membership, Item presence, rules source and slot counts do not
@@ -341,3 +343,7 @@ The extraction foundation initially reads canonical identity and selected core `
 ### Shared physical source milestone
 
 For nine physical types, `source` now includes the exact [physical field registry](actor-item-story-map/physical-fields.md), including price.per and concrete source omissions. Serialized attachments carry local source paths, not invented document UUIDs. Alternate unidentified description text appears only in an explicit `description` request. Source remains partial with `type_reader_pending` until the concrete type reader ships; no effective Bulk, investment bonus or market price is calculated. The schema-permitted undefined price.sizeSensitive source field is reported absent, never as prepared false.
+
+### Action source milestone
+
+Action Items now deliver the [selected field registry](actor-item-story-map/action-fields.md), deterministic activation labels and explicitly requested immediate self-effect references. Source records are complete after pagination; this does not imply current action usability. Source-only calls never hydrate effects. Relationship target permissions/identity and synthetic token context are rechecked for revisions. All other concrete Item readers retain their own pending status; rules and effective sections remain unsupported.

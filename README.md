@@ -242,16 +242,18 @@ It is disabled in normal sessions. See [shared browser setup](docs/browser-devel
 
 ## Actor and Item source reading (unreleased)
 
-The source branch adds GM-only `get_actor_types`, `read_actor`, `read_item`
-and `list_actor_items` foundations for Foundry 14.369/PF2e 8.6.1. They preserve
-world/pack/token identity, bound selected metadata and exact Item descriptions,
-and report partial or unsupported sections explicitly. Full type-specific book
-mappings and effective statistics remain staged. See [contracts](docs/actor-tools.md)
-and the [development story map](docs/actor-item-story-map/index.md).
+The source branch adds GM-only Actor/Item capability discovery, selected-source
+reading, owned Item navigation, world Actor folders/name search, Scene/Token
+navigation, and scoped Actor/Item compendium index search on Foundry
+14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and
+explicit scope failures keep duplicate names and partial results distinguishable.
 
-World Actor folders/name search, placed Scene/Token navigation and scoped Actor/Item compendium index search now provide bounded discovery with canonical reader follow-ups. Scope failures and stale continuations remain explicit; pack results require a caller-selected literal query.
-
-Physical Item source reading now includes stored quantity, Bulk, price/per, carry state, material, identification and serialized attachment metadata. These shared fields remain separate from effective inventory calculations and complete concrete Item readers.
+Physical Item readers expose common persisted quantity, Bulk, price/per, carry,
+material, identification and serialized attachment fields. Action Items map
+activation kind/count, frequency, traits and named self-effects; only an explicit
+relationship request resolves the immediate effect, without applying it. Other
+concrete type readers and effective Actor statistics remain staged. See the
+[contracts](docs/actor-tools.md) and [development story map](docs/actor-item-story-map/index.md).
 
 ## Private PDF references
 

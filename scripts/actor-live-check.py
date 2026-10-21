@@ -13,6 +13,16 @@ def payload(result):
         return result.structured_content
     return json.loads(next(block.text for block in result.content if block.type=="text"))
 
+def probe(value):
+    """Decode bounded development-probe chunks, rejecting partial snapshots."""
+    if isinstance(value,dict) and 'value' in value:value=value['value']
+    if isinstance(value,dict) and value.get('$type')=='Array':
+        if value.get('truncated') is not False or not all(isinstance(part,str) for part in value.get('values',[])):
+            raise ValueError('Development probe was truncated or malformed.')
+        value=''.join(value['values'])
+    if not isinstance(value,str):raise ValueError('Unexpected development probe shape.')
+    return json.loads(value)
+
 async def main():
     root=Path(__file__).resolve().parent.parent
     values={}
@@ -32,11 +42,25 @@ async def main():
         needed={'get_actor_types','read_actor','read_item','list_actor_items','get_actor_tree','search_actors','list_scene_actors','list_actor_compendiums','search_compendium_actors'}
         assert needed<=available.keys()
         for name in needed:assert available[name].annotations.readOnlyHint
-        selection=(await client.call_tool('execute_javascript',{'code':"const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);const physicalTypes=['weapon','armor','shield','equipment','consumable','ammo','backpack','book','treasure'];const items=[...game.items.contents,...game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type)).flatMap(a=>a.items.contents)];return JSON.stringify({actor_uuid:actor.uuid,token_uuid:game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc')?.uuid,physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean)});"})).data
-        # Development serializer wraps a returned primitive under value.
-        if isinstance(selection,dict) and 'value' in selection:selection=json.loads(selection['value'])
-        elif isinstance(selection,str):selection=json.loads(selection)
-        else:raise ValueError('Unexpected selector probe shape')
+        selector_probe="""
+const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
+const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);
+const supported=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type));
+const items=[...game.items.contents,...supported.flatMap(a=>a.items.contents)];
+const physicalTypes=['weapon','armor','shield','equipment','consumable','ammo','backpack','book','treasure'];
+const actionSamples=['passive','free','reaction','action'].map(kind=>items.find(i=>i.type==='action'&&i.toObject(true).system.actionType?.value===kind)).filter(Boolean);
+const effectAction=items.find(i=>i.type==='action'&&i.toObject(true).system.selfEffect?.uuid);
+const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc');
+const tokenAction=token?.actor.items.find(i=>i.type==='action');
+const fingerprintItems=[...new Map([...actionSamples,effectAction,tokenAction].filter(Boolean).map(i=>[i.uuid,i])).values()];
+const report=JSON.stringify({actor_uuid:actor.uuid,token_uuid:token?.uuid,
+physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean),
+action_samples:await Promise.all(actionSamples.map(async i=>({uuid:i.uuid,kind:i.toObject(true).system.actionType.value,revision:await digest(i.toObject(true))}))),
+self_effect_item_uuid:effectAction?.uuid,token_action_uuid:tokenAction?.uuid,
+source_fingerprints:await Promise.all(fingerprintItems.map(async i=>({uuid:i.uuid,revision:await digest(i.toObject(true))})))});
+return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
+"""
+        selection=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
         actor=await client.call_tool('read_actor',{'actor_uuid':selection['actor_uuid'],'limit':1})
         assert actor.data['identity']['uuid']==selection['actor_uuid']
         tree=payload(await client.call_tool('get_actor_tree',{'limit':1}))
@@ -71,9 +95,42 @@ async def main():
             assert all(raw['basis']=='source' for record in physical['records'] for raw in record['raw'])
             physical_verified+=1
         assert physical_verified, 'No existing in-scope physical Item fixture was available.'
+        assert len(selection['action_samples'])==4, 'Representative activation source fixtures are missing.'
+        labels={'passive':'passive_ability','free':'free_action','reaction':'reaction','action':'action_or_activity'}
+        for sample in selection['action_samples']:
+            action_item=payload(await client.call_tool('read_item',{'item_uuid':sample['uuid'],'limit':100}))
+            activation=next(record for record in action_item['records'] if record['raw'][0]['path']=='/system/actionType/value')
+            assert activation['mapped']['value']==labels[sample['kind']]
+            assert action_item['sections'][1]['status']=='complete'
+        assert selection.get('self_effect_item_uuid')
+        relation=payload(await client.call_tool('read_item',{'item_uuid':selection['self_effect_item_uuid'],'sections':['relationships']}))
+        relationship=relation['records'][0]['mapped']['value']
+        assert relationship['status']=='resolved'
+        effect_args={'item_uuid':relationship['target_uuid']}
+        if relationship.get('token_uuid'):effect_args['token_uuid']=relationship['token_uuid']
+        effect=payload(await client.call_tool('read_item',dict(effect_args,sections=['identity'])))
+        assert effect['identity']['type']=='effect'
+        if selection.get('token_action_uuid'):
+            token_item=payload(await client.call_tool('read_item',{'item_uuid':selection['token_action_uuid'],'token_uuid':selection['token_uuid'],'sections':['identity','source']}))
+            assert token_item['identity']['instance']['token_uuid']==selection['token_uuid']
+        familiar_packs=payload(await client.call_tool('list_actor_compendiums',{'document_type':'Item','query':'familiar'}))
+        assert familiar_packs['nodes']
+        familiar_matches=payload(await client.call_tool('search_compendium_actors',{'document_type':'Item','pack_ids':[node['id'] for node in familiar_packs['nodes'][:10]],'query':'a','types':['action'],'limit':1}))
+        assert familiar_matches['nodes']
+        familiar_call=familiar_matches['nodes'][0]['next_call']
+        familiar=payload(await client.call_tool(familiar_call['tool'],dict(familiar_call['arguments'],limit=100)))
+        assert familiar['identity']['source_kind']=='compendium'
+        assert any(record['raw'][0]['path']=='/system/category' and record['raw'][0].get('value')=='familiar' for record in familiar['records'])
+        # Compare persisted source fingerprints after reads; no gameplay mutation.
+        after=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
+        assert after['action_samples']==selection['action_samples']
+        assert after['source_fingerprints']==selection['source_fingerprints']
         registry=await client.call_tool('get_actor_types',{})
         assert registry.data['availability']['supported']
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'runtime':actor.data['runtime']}))
+        action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
+        assert action_support['mapped_supported'] and not action_support['effective_supported']
+        assert action_support['verification']['live']['status']=='passed'
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

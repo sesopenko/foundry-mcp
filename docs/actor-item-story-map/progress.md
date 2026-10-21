@@ -48,6 +48,13 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Focused helper/integration/Python cross-language tests and full suites passed. Live actual MCP reads passed for six available physical types in the supported-owner scope; broader read-only helper audit found no errors after the correction below. Book/nonempty attachment/alternate unidentified runtime fixtures remain unavailable.
 - Root cause regression: optional schema PriceField.sizeSensitive may be own undefined. The initial strict check rejected it. A failing test proved the defect; the exact schema-permitted undefined field now reports absent without borrowing prepared false. All other source validation remains strict.
 
+### 5. Action Item selected source and self-effects — October 20, 2026
+
+- ITEM-action delivered activation/count mappings, stored frequency, traits/tags, publication and named self-effect source. Explicit relationships resolve only the immediate supported effect and retain synthetic target token context; source-only reads do not hydrate it.
+- Focused pure/browser/Python actual-DTO checks passed, including null-count distinctions, schema-optional undefined values, exact description continuation, permissions/staleness, ordinary and synthetic follow-ups, and unsupported effective sections.
+- Live actual MCP passed four activation modes, familiar compendium identity/category, token action reading and self-effect follow-up. Selected persisted sources stayed unchanged. Missing standalone world-action and live synthetic-target fixtures remain named coverage limits.
+- A larger selector probe encountered the known 1000-character development string bound; the runner now returns bounded chunks and rejects truncated snapshots, with a regression test. Production reader limits were not changed.
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

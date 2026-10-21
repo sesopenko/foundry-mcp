@@ -46,10 +46,91 @@ PHYSICAL_PATHS = {'/system/' + path for path in (
     'material/type','material/grade','identification/status','identification/unidentified/name',
     'identification/unidentified/img','identification/unidentified/data/description/value','temporary','usage/value')}
 UNIDENTIFIED_DESCRIPTION = '/system/identification/unidentified/data/description/value'
+# PF2e-specific AbilitySystemSource8.6.1: no prepared actionCost/frequency getters.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/ability/data.ts
+ACTION_PATHS = {'/system/' + path for path in (
+    'actionType/value','actions/value','category','deathNote','slug','traits/value','traits/otherTags',
+    'frequency','frequency/value','frequency/max','frequency/per','selfEffect','selfEffect/uuid','selfEffect/name',
+    'publication/title','publication/authors','publication/license','publication/remaster')}
+ACTIVATION_LABELS = {'action':'action_or_activity','reaction':'reaction','free':'free_action','passive':'passive_ability'}
+
+
+def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
+    """PF2e-specific source markers for empty attachment/ability-trait arrays only."""
+    return (identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
+            identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'})
+
+
+def _action_value(raw: dict[str, Any]) -> bool:
+    """PF2e-specific AbilitySystemSource8.6.1 primitive types; absent is not default.
+
+    Frequency values are recorded source, not initialized/max/current availability;
+    null action count is not activation type. Publication and traits stay source.
+    """
+    if not raw['present']:
+        return True
+    path=raw['path']; value=raw['value']
+    if path in {'/system/traits/value','/system/traits/otherTags'}:
+        return value == []
+    if path in {'/system/frequency','/system/selfEffect'}:
+        return value is None
+    if path in {'/system/category','/system/slug'} and value is None:
+        return True
+    if path in {'/system/actions/value','/system/frequency/value','/system/frequency/max'}:
+        return value is None and path == '/system/actions/value' or type(value) in (int,float)
+    if path in {'/system/deathNote','/system/publication/remaster'}:
+        return type(value) is bool
+    return type(value) is str
+
+
+
+def _action_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
+    """PF2e-specific action8.6.1 source/activation and immediate selfEffect boundary.
+
+    Only explicit relationships may resolve a canonical effect UUID; source
+    frequency/presence is never castability, activation or a prepared statistic.
+    Raw/provenance remain action source paths, including absent/null references.
+    Schema: pinned ability/data.ts referenced by ACTION_PATHS above.
+    """
+    if any(raw['document_uuid'] != identity['uuid'] or not _action_value(raw) for raw in row['raw']):
+        return False
+    if any(value['document_uuid'] != identity['uuid'] for value in row['provenance']['contributors']):
+        return False
+    mapped=row['mapped']
+    if row['kind']=='relationship':
+        if row['section']!='relationships' or row['key']!='relationships:selfEffect' or [raw['path'] for raw in row['raw']] != ['/system/selfEffect/uuid','/system/selfEffect/name']:
+            return False
+        value=mapped['value']
+        if mapped['concept']!='self_effect' or mapped['unit'] is not None or type(value) is not dict or not {'target_uuid','status'} <= set(value) or not set(value) <= {'target_uuid','status','token_uuid'} or value['status'] not in ('unverified','resolved','missing','denied','unsupported'):
+            return False
+        target=value['target_uuid']
+        if value['status']=='resolved':
+            if type(target) is not str or not 1 <= len(target) <= 512 or re.match(r'^(Item|Actor|Compendium|Scene)\.',target) is None or '#' in target:
+                return False
+        elif target is not None:
+            return False
+        if value['status']=='resolved' and target.startswith('Scene.'):
+            token=value.get('token_uuid')
+            if type(token) is not str or not 1 <= len(token) <= 512 or re.fullmatch(r'Scene\.[^.]+\.Token\.[^.]+',token) is None or not target.startswith(token+'.Actor.') or '.Item.' not in target:
+                return False
+        elif 'token_uuid' in value:
+            return False
+        return row['provenance']['mapping']=='pf2e.action.self_effect.v1' and [c['path'] for c in row['provenance']['contributors']]==['/system/selfEffect/uuid','/system/selfEffect/name']
+    if len(row['raw'])!=1:
+        return False
+    raw=row['raw'][0]
+    if raw['path'] not in SOURCE_PATHS and (row['section']!='source' or row['kind']!='field'):
+        return False
+    expected=raw.get('value')
+    if raw['path']=='/system/actionType/value' and raw['present']:
+        expected=ACTIVATION_LABELS.get(raw['value'],raw['value'])
+    if row['kind']=='text':
+        expected=None
+    return type(mapped['value']) is type(expected) and mapped['value']==expected
 
 
 def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
-    """PF2e-specific: admit only pinned physical source paths for physical Item types.
+    """PF2e-specific: admit pinned physical and AbilitySystemSource8.6.1 paths.
 
     Armor/shield/treasure source overrides exclude usage; treasure excludes
     investment/slot/hands. Serialized attachment identities are source paths,
@@ -59,7 +140,12 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return False
     if path in SOURCE_PATHS:
         return True
-    if identity is None or identity['document_name'] != 'Item' or identity['type'] not in PHYSICAL_TYPES:
+    if identity is None or identity['document_name'] != 'Item':
+        return False
+    # PF2e-specific action paths exclude toggles, rule elements and prepared data.
+    if identity['type'] == 'action':
+        return path in ACTION_PATHS or re.fullmatch(r'/system/traits/(value|otherTags)/(0|[1-9][0-9]*)',path) is not None
+    if identity['type'] not in PHYSICAL_TYPES:
         return False
     item_type = identity['type']
     if path == '/system/usage/value' and item_type in {'armor','shield','treasure'}:
@@ -171,7 +257,7 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     for raw in row['raw']:
         if type(raw) is not dict or not {'document_uuid', 'path', 'present', 'basis'} <= set(raw) or not set(raw) <= {'document_uuid', 'path', 'present', 'basis', 'value'}:
             return False
-        if not _contributor({k: raw[k] for k in ('document_uuid', 'path', 'basis')}, identity) or type(raw['present']) is not bool or raw['present'] != ('value' in raw) or (raw['present'] and raw['value'] is not None and type(raw['value']) not in (str, bool, int, float) and not (raw['path'] == '/system/subitems' and raw['value'] == [])):
+        if not _contributor({k: raw[k] for k in ('document_uuid', 'path', 'basis')}, identity) or type(raw['present']) is not bool or raw['present'] != ('value' in raw) or (raw['present'] and raw['value'] is not None and type(raw['value']) not in (str, bool, int, float) and not (_empty_source_array(raw['path'], identity) and raw['value'] == [])):
             return False
         # PF2e-specific alternate description is source text, explicitly selected.
         if raw['path'] == UNIDENTIFIED_DESCRIPTION and (row['section'] != 'description' or raw['present'] and row['kind'] != 'text'):
@@ -180,16 +266,19 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
             return False
     mapped = row['mapped']
     provenance = row['provenance']
-    if any(raw['path'] not in SOURCE_PATHS for raw in row['raw']):
+    if identity['type'] in PHYSICAL_TYPES and any(raw['path'] not in SOURCE_PATHS for raw in row['raw']):
         # PF2e-specific physical source descriptors cannot smuggle nested mapped data
         # or relabel serialized attachments as separate contributor documents.
         if any(raw['document_uuid'] != identity['uuid'] for raw in row['raw']):
             return False
-        if type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(raw['path'] == '/system/subitems' for raw in row['raw'])):
+        if type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(_empty_source_array(raw['path'], identity) for raw in row['raw'])):
             return False
     if type(mapped) is not dict or set(mapped) != {'concept', 'value', 'unit'} or type(mapped['concept']) is not str or (mapped['unit'] is not None and type(mapped['unit']) is not str):
         return False
     if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x, identity) for x in provenance['contributors']):
+        return False
+    # PF2e-specific action source and named self-effect semantics stay type-scoped.
+    if identity['document_name'] == 'Item' and identity['type'] == 'action' and not _action_record(row, identity):
         return False
     if row['kind'] == 'text':
         text = row.get('text')
@@ -413,6 +502,14 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     Serialized attachments expose local _id/name/type paths, never their own UUIDs.
     Armor/shield/treasure omit persisted usage; kit is not a physical source type.
     Source remains partial until its concrete type story is delivered;
+    action Items have complete selected source mappings for activation kind/count,
+    category, frequency, traits/tags, publication and named self-effect references.
+    Null action counts never imply free actions. Explicit relationships resolve
+    only the immediate self-effect without applying it: mapped.value contains
+    target_uuid/status, plus token_uuid for resolved synthetic targets. Follow a
+    resolved target with read_item(item_uuid=target_uuid, token_uuid=token_uuid
+    if present). Missing/denied/unsupported/unverified targets retain named raw
+    references with null target_uuid. Source alone performs no effect hydration;
     optional description/rules/relationships/effective are delivered or explicitly
     unsupported as get_actor_types reports. At most 6 unique nonempty section names.
     PF2e-only; UnsupportedSystem/Version/Type explains excluded targets.

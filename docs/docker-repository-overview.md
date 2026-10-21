@@ -10,18 +10,19 @@ The image does not include Foundry VTT or a chat interface. Use your existing li
 
 ## Unreleased source capability
 
-The source branch adds GM-only Actor/Item source-reading foundations for the
-verified Foundry 14.369/PF2e 8.6.1 pairing: `get_actor_types`, `read_actor`,
-`read_item` and `list_actor_items`. These preserve canonical world/pack/token
-identity and provide bounded selected metadata and exact Item descriptions.
-Type-specific book views and effective statistics remain partial or unsupported;
-inspect the delivered registry before assuming support. This source change is
-not a new image/module release. See the
+The source branch adds GM-only Actor/Item capability discovery, selected-source
+reading, owned Item navigation, world Actor folders/name search, Scene/Token
+navigation, and scoped Actor/Item pack index search on the verified
+Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and
+explicit failed/incomplete scopes preserve readable context without imports.
+
+Shared physical source fields include quantity, Bulk, stack price-per quantity,
+carrying/identification state and serialized attachment metadata. Action Items
+map activation kind/count, stored frequency, traits and named self-effects;
+explicit immediate relationship reads do not apply them. Other concrete type
+readers and effective Actor statistics remain staged or unsupported. These are
+unreleased source capabilities; inspect the delivered registry and the
 [Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
-
-The same unreleased source adds world Actor folder/name discovery, Scene/Token navigation, and explicit Actor/Item pack index search. These tools require the same verified runtime and GM access; they retain partial-scope failures and bounded continuations. They do not import compendium documents.
-
-Unreleased source reading also exposes common persisted physical Item fields, including stack price-per quantity, carrying/identification state and serialized attachment metadata. It does not calculate effective inventory values or claim complete concrete Item support.
 
 ## Run with Docker Compose
 
