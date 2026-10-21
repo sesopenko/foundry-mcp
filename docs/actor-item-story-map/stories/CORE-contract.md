@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Contract design required |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | None; start here. |
 | Dependency reason | No prerequisite; settle shared contracts and version boundaries first. |
 
@@ -25,3 +25,7 @@ Acceptance: schemas and discovery descriptions are concrete and agree; every inp
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Delivery evidence — October 20, 2026
+
+The [reviewed contract](../../actor-tools.md) settles the selector/permission, response, count/byte/text, continuation/error and version policies before dependent code. Three JSON examples parse; the story-map validator checks prerequisite consistency. This completes the design artifact only; registered-tool and effective/live acceptance belongs to the implementation stories.

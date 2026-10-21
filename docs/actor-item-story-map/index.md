@@ -1,6 +1,6 @@
 # PF2e Actor and Item development story map
 
-Research audit: **October 20, 2026**. **Status: planning artifacts; all implementation work is not started.**
+Research audit: **October 20, 2026**. **Status: development in progress; see the [progress record](progress.md).**
 
 Enable a fresh GM-trusted LLM to discover and read characters, NPCs and familiars, and the Items that contribute to them, using rulebook concepts alongside selected source data and canonical identifiers. This backlog contains **39 stories: 3 Actor types, 24 Item types, and 12 shared tasks**, plus three integration checkpoints inside the Actor stories.
 
@@ -34,11 +34,11 @@ Relevant Item types each have a story below, including source-first book/afflict
 
 ## Stories and authoritative dependencies
 
-All stories are **Not started**. Readiness describes research/design state only. A dash in prerequisites means none. Repeated dependency IDs in this table, story headers and Mermaid must agree.
+Implementation status is tracked in each story and summarized by `./scripts/actor-tools.sh status`. Readiness below describes research/design state only. A dash in prerequisites means none. Repeated dependency IDs in this table, story headers and Mermaid must agree.
 
 | ID / story | Stage | Planning readiness | Prerequisites | Why required |
 | --- | --- | --- | --- | --- |
-| [CORE-contract: Shared read contracts, identity and permissions](stories/CORE-contract.md) | 1 | Contract design required | — | No prerequisite; settle shared contracts and version boundaries first. |
+| [CORE-contract: Shared read contracts, identity and permissions](stories/CORE-contract.md) | 1 | Contract finalized | — | No prerequisite; settle shared contracts and version boundaries first. |
 | [CORE-extract: Bounded Actor and Item source extraction](stories/CORE-extract.md) | 1 | Planned | CORE-contract | Uses agreed selectors, permissions, response bounds and error semantics. |
 | [CORE-journal: Journal references to Actors and Items](stories/CORE-journal.md) | 1 | Planned | CORE-world, CORE-packs | World and pack discovery/read paths supply valid follow-up targets. |
 | [CORE-packs: Scoped Actor and Item compendium discovery](stories/CORE-packs.md) | 1 | Planned | CORE-extract | Adds index/hydration resolution to the shared extraction pipeline. |
