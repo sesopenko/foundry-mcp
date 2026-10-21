@@ -54,6 +54,8 @@ const actionSamples=['passive','free','reaction','action'].map(kind=>items.find(
 const effectAction=items.find(i=>i.type==='action'&&i.toObject(true).system.selfEffect?.uuid);
 const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc');
 const tokenAction=token?.actor.items.find(i=>i.type==='action');
+const weapons=items.filter(i=>i.type==='weapon');
+const weaponSamples=[weapons.find(i=>i.toObject(true).system.range===null),weapons.find(i=>typeof i.toObject(true).system.range==='number')].filter(Boolean);
 const conditions=items.filter(i=>i.type==='condition');
 const effects=items.filter(i=>i.type==='effect');
 const loreItems=items.filter(i=>i.type==='lore');const loreItem=loreItems.find(i=>i.parent?.type==='npc');
@@ -63,11 +65,12 @@ const meleeSamples=[
  ['null_thrown',attacks.find(i=>i.toObject(true).system.range===null&&i.toObject(true).system.traits?.value.some(t=>t.startsWith('thrown-')))],
  ['effect_labels',attacks.find(i=>i.toObject(true).system.attackEffects?.value.length)]
 ].filter(([,item])=>item);
-const fingerprintItems=[...new Map([actor,...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i),...loreItems,...effects,...conditions].filter(Boolean).map(i=>[i.uuid,i])).values()];
+const fingerprintItems=[...new Map([actor,...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i),...loreItems,...effects,...conditions,...weaponSamples].filter(Boolean).map(i=>[i.uuid,i])).values()];
 const npcSource=actor.toObject(true);
 const report=JSON.stringify({actor_uuid:actor.uuid,npc_notes:await Promise.all(['blurb','publicNotes','privateNotes'].map(async key=>{const value=npcSource.system.details[key];return {key,present:typeof value==='string',...(typeof value==='string'?{sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),v=>v.toString(16).padStart(2,'0')).join('')}: {})}})),npc_ac:npcSource.system.attributes.ac.value,npc_hp:npcSource.system.attributes.hp.value,token_uuid:token?.uuid,
 physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean),
 melee_samples:meleeSamples.map(([context,i])=>({context,uuid:i.uuid})),
+weapon_samples:weaponSamples.map(i=>({uuid:i.uuid,range:i.toObject(true).system.range,category:i.toObject(true).system.category,damage_type:i.toObject(true).system.damage.damageType})),
 condition_samples:conditions.slice(0,5).map(i=>({uuid:i.uuid,is_valued:i.toObject(true).system.value.isValued,value:i.toObject(true).system.value.value})),
 effect_samples:[...new Map(effects.map(i=>[`${i.parent?'owned':'world'}:${i.toObject(true).system.badge?.type??'null'}`,i])).values()].slice(0,10).map(i=>({uuid:i.uuid,unit:i.toObject(true).system.duration.unit,badge:i.toObject(true).system.badge?.type??null})),
 lore_item_uuid:loreItem?.uuid,lore_actor_uuid:loreItem?.parent?.uuid,
@@ -183,6 +186,31 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         assert familiar['identity']['source_kind']=='compendium'
         assert any(record['raw'][0]['path']=='/system/category' and record['raw'][0].get('value')=='familiar' for record in familiar['records'])
         # Compare persisted source fingerprints after reads; no gameplay mutation.
+        weapon_probe="""
+const pack=game.packs.get('pf2e.equipment-srd');
+const index=await pack.getIndex({fields:['type','system.ammo','system.damage.persistent','system.meleeUsage','system.specific']});
+const weapons=index.filter(row=>row.type==='weapon');
+const candidates=[weapons.find(row=>row.system?.ammo),weapons.find(row=>row.system?.damage?.persistent),weapons.find(row=>row.system?.meleeUsage),weapons.find(row=>row.system?.specific)].filter(Boolean);
+const report=[];for(const row of candidates){const uuid=pack.getUuid(row._id);const source=(await foundry.utils.fromUuid(uuid)).toObject(true);report.push({uuid,range:source.system.range,category:source.system.category,damage_type:source.system.damage.damageType});}
+const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.length/800)},(_,i)=>json.slice(i*800,(i+1)*800));
+"""
+        pack_weapons=probe(payload(await client.call_tool('execute_javascript',{'code':weapon_probe})))
+        weapon_samples=[*selection['weapon_samples'],*pack_weapons]
+        assert selection['weapon_samples'] and len(pack_weapons)==4
+        for sample in weapon_samples:
+            rows=[];weapon_cursor=None
+            for _ in range(100):
+                args={'item_uuid':sample['uuid'],'sections':['source','effective'],'limit':25}
+                if weapon_cursor:args['cursor']=weapon_cursor
+                page=payload(await client.call_tool('read_item',args));rows.extend(page['records'])
+                assert page['sections'][1]['status']=='unsupported'
+                weapon_cursor=page['pagination']['next_cursor']
+                if not weapon_cursor:break
+            assert weapon_cursor is None
+            assert len({row['raw'][0]['path'] for row in rows})==len(rows)
+            for path,expected in [('/system/range',sample['range']),('/system/category',sample['category']),('/system/damage/damageType',sample['damage_type'])]:
+                row=next(row for row in rows if row['raw'][0]['path']==path)
+                assert row['raw'][0]['value']==expected and row['provenance']['mapping']=='pf2e.weapon.source.v1'
         condition_samples=selection['condition_samples']
         condition_probe="""
 const pack=game.packs.get('pf2e.conditionitems');
@@ -292,6 +320,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
         assert action_support['mapped_supported'] and not action_support['effective_supported']
         assert action_support['verification']['live']['status']=='passed'
+        weapon_support=next(entry for entry in registry.data['item_types'] if entry['type']=='weapon')
+        assert weapon_support['mapped_supported'] and not weapon_support['effective_supported']
+        assert weapon_support['verification']['live']['status']=='passed'
         affliction_support=next(entry for entry in registry.data['item_types'] if entry['type']=='affliction')
         assert not affliction_support['source_supported'] and not affliction_support['mapped_supported'] and not affliction_support['effective_supported']
         assert affliction_support['verification']['live']['status']=='not_run'
@@ -304,7 +335,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

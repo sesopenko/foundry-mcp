@@ -15,7 +15,7 @@ test('physical source reads retain exact values, absent fields and attachment pr
  do {
   const page=await readItem({item_uuid:'Item.i',max_bytes:8000,limit:3,cursor});
   assert.ok(Buffer.byteLength(JSON.stringify(page))<=8000);records.push(...page.records);cursor=page.pagination.next_cursor;
-  assert.equal(page.sections.find(s=>s.name==='source').status,'partial');
+  assert.equal(page.sections.find(s=>s.name==='source').status,page.pagination.complete?'complete':'partial');
  }while(cursor);
  const raw=path=>records.find(r=>r.raw[0].path===path)?.raw[0];
  assert.equal(raw('/system/quantity').value,0);assert.equal(raw('/system/price/per').value,10);

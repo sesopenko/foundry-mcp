@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -592,7 +592,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'} or
             identity['type'] == 'lore' and path == '/system/traits/otherTags' or
             identity['type'] == 'effect' and path in EFFECT_ARRAYS or
-            identity['type'] == 'condition' and path in CONDITION_ARRAYS)
+            identity['type'] == 'condition' and path in CONDITION_ARRAYS or
+            identity['type'] == 'weapon' and path in WEAPON_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -663,6 +664,64 @@ def _action_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     return type(mapped['value']) is type(expected) and mapped['value']==expected
 
 
+# PF2e-specific WeaponSystemSource8.6.1 persisted leaves, never prepared strikes.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/weapon/data.ts
+WEAPON_SOURCE = {'/system/'+p:('weapon_'+c,k,n) for p,c,k,n in (
+ ('traits/rarity','rarity_code','string',False),('slug','source_slug','string',True),
+ ('publication/title','publication_title','string',False),('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),('publication/remaster','publication_remaster','boolean',False),
+ ('category','category_code','string',False),('group','group_code','string',True),
+ ('damage/dice','damage_dice','number',False),('damage/die','damage_die_code','string',True),('damage/damageType','damage_type_code','string',False),('damage/modifier','damage_modifier','number',False),
+ ('range','range_feet','number',True),('maxRange','max_range_feet','number',True),('reload/value','reload_code','string',True),('expend','expend','number',True),('selectedAmmoId','selected_ammo_local_id','string',True),
+ ('bonus/value','bonus','number',False),('splashDamage/value','splash_damage','number',False),('attribute','attribute_code','string',True),('grade','grade_code','string',True),('graspingAppendage','grasping_appendage','boolean',False),('usage/canBeAmmo','can_be_ammo','boolean',False),
+ ('damage/persistent','persistent_damage','object',True),('damage/persistent/number','persistent_damage_number','number',False),('damage/persistent/faces','persistent_damage_faces','number',True),('damage/persistent/type','persistent_damage_type_code','string',False),
+ ('ammo','ammunition','object',True),('ammo/builtIn','ammo_built_in','boolean',False),('ammo/baseType','ammo_base_type_code','string',True),('ammo/capacity','ammo_capacity','number',True),
+ ('meleeUsage','melee_usage','object',False),('meleeUsage/damage/type','melee_damage_type_code','string',False),('meleeUsage/damage/die','melee_damage_die_code','string',False),('meleeUsage/group','melee_group_code','string',False),('meleeUsage/traitToggles','melee_trait_toggles','object',False),('meleeUsage/traitToggles/modular','melee_modular_selected','number',True),('meleeUsage/traitToggles/versatile','melee_versatile_selected_code','string',True),
+ ('traits/toggles','trait_toggles','object',False),('traits/toggles/doubleBarrel','double_barrel_toggle','object',False),('traits/toggles/doubleBarrel/selected','double_barrel_selected','boolean',False),('traits/toggles/modular','modular_toggle','object',True),('traits/toggles/modular/selected','modular_selected','number',True),('traits/toggles/versatile','versatile_toggle','object',False),('traits/toggles/versatile/selected','versatile_selected_code','string',True),
+ ('specific','specific_baseline','object',True),('specific/material','specific_material','object',False),('specific/material/type','specific_material_type_code','string',True),('specific/material/grade','specific_material_grade_code','string',True),
+)}
+for _prefix in ('runes','specific/runes'):
+    WEAPON_SOURCE.update({'/system/'+_prefix+suffix:('weapon_'+concept,kind,False) for suffix,concept,kind in (('', 'runes','object'),('/potency','rune_potency','number'),('/striking','rune_striking','number'))})
+WEAPON_ARRAYS = {'/system/'+p:'weapon_'+c for p,c in (('traits/value','trait_code'),('traits/otherTags','other_tag_code'),('runes/property','property_rune_code'),('specific/runes/property','property_rune_code'),('meleeUsage/traits','melee_trait_code'))}
+
+
+def _weapon_spec(path):
+    """PF2e-specific weapon8.6.1 primitive selected source path contract.
+
+    Source schemas at the pinned URL above; selected ammo IDs remain local text,
+    runes remain authored, and no prepared strike or wielded state is inferred.
+    """
+    if path in WEAPON_SOURCE: return WEAPON_SOURCE[path]
+    for base, concept in WEAPON_ARRAYS.items():
+        if path == base: return (concept, 'array', False)
+        if re.fullmatch(re.escape(base) + r'/(0|[1-9][0-9]*)', path): return (concept, 'string', False)
+    return None
+
+
+def _weapon_record(row, identity):
+    """PF2e-specific weapon8.6.1 strict source DTO, alongside shared physical fields.
+
+    Each new weapon leaf requires exact mapping/concept/source provenance. Shared
+    physical descriptors retain their existing contract; no mapping may cross the
+    path scopes. Description behavior remains the existing explicit text reader.
+    """
+    if len(row['raw']) != 1: return False
+    raw = row['raw'][0]; path = raw['path']; spec = _weapon_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.weapon.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:' + path: return False
+    concept, kind, nullable = spec; value = raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}], mapping='pf2e.weapon.source.v1', limitations=['source_only_no_effective_strike_calculation']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'string':type(value) is str, 'number':type(value) in (int,float) and math.isfinite(value),
+            'boolean':type(value) is bool, 'null':False, 'array':type(value) is list and not value,
+            'object':type(value) is dict and not value}[kind]
+
+
 def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     """PF2e-specific: admit pinned physical/ability/attack/Lore8.6.1 paths.
 
@@ -690,6 +749,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
     if identity['type'] == 'melee':
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
+    if identity['type'] == 'weapon' and _weapon_spec(path) is not None:
+        return True
     if identity['type'] not in PHYSICAL_TYPES:
         return False
     item_type = identity['type']
@@ -818,11 +879,13 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         # or relabel serialized attachments as separate contributor documents.
         if any(raw['document_uuid'] != identity['uuid'] for raw in row['raw']):
             return False
-        if type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(_empty_source_array(raw['path'], identity) for raw in row['raw'])):
+        if type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(_empty_source_array(raw['path'], identity) for raw in row['raw'])) and not (mapped.get('value') == {} and all(_empty_source_object(raw['path'], identity) for raw in row['raw'])):
             return False
     if type(mapped) is not dict or set(mapped) != {'concept', 'value', 'unit'} or type(mapped['concept']) is not str or (mapped['unit'] is not None and type(mapped['unit']) is not str):
         return False
     if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x, identity) for x in provenance['contributors']):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'weapon' and not _weapon_record(row, identity):
         return False
     # PF2e-specific action source and named self-effect semantics stay type-scoped.
     if identity['document_name'] == 'Item' and identity['type'] == 'action' and not _action_record(row, identity):
@@ -1085,6 +1148,12 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     Serialized attachments expose local _id/name/type paths, never their own UUIDs.
     Armor/shield/treasure omit persisted usage; kit is not a physical source type.
     Source remains partial until its concrete type story is delivered;
+    weapon Items additionally expose authored damage dice/die/type/modifier and
+    persistent damage, category/group, range/reload, ammunition capacity and local
+    selectedAmmoId, runes, combination melee usage, trait toggles and specific-magic
+    baseline. These are persisted source values, never effective Strike totals,
+    wielded state or hydrated ammunition; weapon relationships/effective remain
+    unsupported. Source completion covers selected fields, not every schema field.
     action Items have complete selected source mappings for activation kind/count,
     category, frequency, traits/tags, publication and named self-effect references.
     Null action counts never imply free actions. Explicit relationships resolve

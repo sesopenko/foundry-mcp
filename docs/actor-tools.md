@@ -427,3 +427,15 @@ Read original poison/disease/curse descriptions on their supported source Items.
 An offline source selector and stage-correspondence fixtures document schema
 research only; they are not packaged runtime support or proof of current timers,
 advancement, effect application or expiry. See [the audit](actor-item-story-map/affliction-verification.md).
+
+## Weapon source checkpoint
+
+Weapon source now combines shared physical records with selected weapon
+configuration under `pf2e.weapon.source.v1`: damage, range/reload, ammunition
+configuration, runes, alternate melee usage, toggles and specific-magic baseline
+metadata. Common baseItem/material/equipped/attachment paths are emitted once.
+Carry state and hands held do not establish usability; source damage/runes are
+not final Strikes or NPC authored attacks. Serialized attachments retain source
+paths, not fabricated document UUIDs. Ammunition resolution and all effective
+attack/alternate-use calculations remain pending. See [field boundary](actor-item-story-map/weapon-fields.md)
+and [rulebook/runtime evidence](actor-item-story-map/weapon-verification.md).

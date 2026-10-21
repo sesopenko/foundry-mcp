@@ -117,6 +117,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Runtime admission now reports UnsupportedType before source access; registry support is false, owned navigation continues with unsupported_count, and condition links report unsupported. Focused schema and boundary tests pass. No production guard was bypassed.
 - ITEM-affliction remains In progress. Supported runtime access/fixtures are required for its later integration; other independent stories can proceed. Completed stories remain 10/39 (25.6%).
 
+### 16. Weapon definition/configuration source checkpoint — October 20, 2026
+
+- Weapon-specific damage/runes/range/ammunition/alternate-source fields now combine with shared physical source using unique paths and distinct provenance. Carried configuration never becomes a final Strike or recalculated NPC attack.
+- Actual rulebook pages and pinned schema fields were verified. Focused pure/browser/Python DTO checks passed; actual MCP consumed six owned/compendium samples with unchanged selected persisted sources.
+- ITEM-weapon remains In progress pending selected ammunition relationships. Effective character/alternate-use attack calculations retain explicit gates. Completed stories remain 10/39 (25.6%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

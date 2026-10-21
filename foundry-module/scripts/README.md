@@ -87,3 +87,7 @@ unverified claims; no target source or active/suppressed state is read.
 runtime package. PF2e8.6.1 production disables afflictions; public reader admission
 rejects them before source access and discovery reports support false. No guard
 is bypassed and no fixture constructor is invoked.
+
+`actorWeapon.js` selects weapon definition/configuration fields alongside shared
+physical source without duplicate paths. It never generates Strikes, recalculates
+NPC attacks, hydrates selected ammunition or prepares alternate-use results.

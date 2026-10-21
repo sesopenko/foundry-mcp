@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-physical](CORE-physical.md) |
 | Dependency reason | Uses common physical source rules and identity/bounds. |
 
