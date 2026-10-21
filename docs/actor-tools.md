@@ -13,9 +13,11 @@ They never import, activate, cast, roll, enrich HTML, update documents or emit c
 `get_actor_types()` has no inputs and returns `contract_version`, `runtime`,
 `availability`, `actor_types`, `item_types`, `actor_sections`, `item_sections`,
 `limits`, and `limitations`. Runtime contains `core_version`, `system_id`,
-`system_version`. Availability has `supported` and `reason`. Each type/section
+`system_version`. Availability has `supported` and `reason` (null when supported,
+otherwise an explanation string). Each type/section
 entry distinguishes `allowed` (runtime declaration), `in_scope` (this backlog),
 `source_supported`, `mapped_supported`, `effective_supported`, and `limitations`.
+Type entries have `type` (system subtype) and `name` (display label); section entries have `name`. Limits are `{default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,max_text_units:6000,max_cursor_characters:4096,max_selector_characters:512}`.
 These support flags describe delivered behavior, never merely planned behavior.
 Each type/section entry also contains `verification={deterministic,live}`;
 each of those two properties is `{status,evidence}`, with status `not_run`,
@@ -317,3 +319,7 @@ and descriptions to this contract and executes the relevant story tests.
 - [x] Main-agent review approves this contract before dependent implementation.
 - [ ] Delivered tools match their actual MCP descriptions/input schemas and pass
   focused boundary tests plus required existing-runtime verification.
+
+## Incremental delivery registry
+
+The extraction foundation initially reads canonical identity and selected core `/name` and `/type` source fields. Item `description` reads the bounded PF2e `/system/description/value` source explicitly. Type-specific system fields and book mappings are added only after their individual stories pass. Initial source sections are partial with `type_reader_pending` even when all available common records have been paginated; this does not represent a completed type story. `source_supported` can describe that explicitly limited foundation, while `mapped_supported` and `effective_supported` remain false. Later type registrations replace that limitation only for the fields/sections actually delivered.

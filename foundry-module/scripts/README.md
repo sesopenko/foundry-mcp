@@ -40,3 +40,10 @@ request correlation on the existing authenticated bridge). The PDF upload passwo
 bridge credential and is world-scoped. Players can read world settings; possession
 of this password authorizes PDF management independently of UI role checks.
 No player-facing documents, assets or chat messages contain PDFs.
+
+`actors.js` provides the read-only Actor/Item extraction handlers; `actorDocuments.js`
+resolves public documents, permissions and canonical world/pack/token context,
+and `actorReadUtils.js` provides detached revision/text/pagination utilities.
+Only common source metadata and explicit Item descriptions are delivered by the
+foundation; type-specific mappings/effective values remain staged. See
+[the contract and version boundary](../../docs/actor-tools.md).

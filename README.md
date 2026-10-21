@@ -240,6 +240,15 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
+## Actor and Item source reading (unreleased)
+
+The source branch adds GM-only `get_actor_types`, `read_actor`, `read_item`
+and `list_actor_items` foundations for Foundry 14.369/PF2e 8.6.1. They preserve
+world/pack/token identity, bound selected metadata and exact Item descriptions,
+and report partial or unsupported sections explicitly. Full type-specific book
+mappings and effective statistics remain staged. See [contracts](docs/actor-tools.md)
+and the [development story map](docs/actor-item-story-map/index.md).
+
 ## Private PDF references
 
 An opt-in GM-private PDF library provides lexical lookup and source-page reading,

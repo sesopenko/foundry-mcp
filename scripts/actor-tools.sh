@@ -16,5 +16,7 @@ case "${1:-status}" in
     if ((${#actor_tests[@]})); then node --test "${actor_tests[@]}"; fi
     ;;
   full) exec ./scripts/test.sh ;;
-  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full]' >&2; exit 2 ;;
+  browser) exec .venv/bin/python scripts/actor-live-check.py --browser ;;
+  live) exec .venv/bin/python scripts/actor-live-check.py ;;
+  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser]' >&2; exit 2 ;;
 esac

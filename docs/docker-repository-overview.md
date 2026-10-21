@@ -8,6 +8,17 @@ This image runs the Python MCP server. A companion Foundry module connects the G
 
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
+## Unreleased source capability
+
+The source branch adds GM-only Actor/Item source-reading foundations for the
+verified Foundry 14.369/PF2e 8.6.1 pairing: `get_actor_types`, `read_actor`,
+`read_item` and `list_actor_items`. These preserve canonical world/pack/token
+identity and provide bounded selected metadata and exact Item descriptions.
+Type-specific book views and effective statistics remain partial or unsupported;
+inspect the delivered registry before assuming support. This source change is
+not a new image/module release. See the
+[Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
+
 ## Run with Docker Compose
 
 Create a deployment directory containing the following two files.

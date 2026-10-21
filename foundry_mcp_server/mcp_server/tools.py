@@ -100,6 +100,7 @@ if settings.development:
 
 # Registration is independent of the development-only JavaScript console.
 from . import journals  # noqa: E402,F401
+from . import actors  # noqa: E402,F401
 
 
 class BuildIdentity(TypedDict):

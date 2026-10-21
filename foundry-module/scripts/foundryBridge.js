@@ -3,6 +3,7 @@ import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage } from "./journals.js";
+import { getActorTypes, readActor, readItem, listActorItems } from "./actors.js";
 /**
  * ES module responsible for handling WebSocket communication with the
  * Python FoundryConnectionManager and dispatching RPC-style requests.
@@ -53,6 +54,10 @@ const rpcHandlers = {
   getJournalContents,
   searchJournals,
   readJournalPage,
+  getActorTypes,
+  readActor,
+  readItem,
+  listActorItems,
   /**
    * Return the current list of active player names.
    *
