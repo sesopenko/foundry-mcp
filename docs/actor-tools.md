@@ -337,3 +337,7 @@ and descriptions to this contract and executes the relevant story tests.
 ## Incremental delivery registry
 
 The extraction foundation initially reads canonical identity and selected core `/name` and `/type` source fields. Item `description` reads the bounded PF2e `/system/description/value` source explicitly. Type-specific system fields and book mappings are added only after their individual stories pass. Initial source sections are partial with `type_reader_pending` even when all available common records have been paginated; this does not represent a completed type story. `source_supported` can describe that explicitly limited foundation, while `mapped_supported` and `effective_supported` remain false. Later type registrations replace that limitation only for the fields/sections actually delivered.
+
+### Shared physical source milestone
+
+For nine physical types, `source` now includes the exact [physical field registry](actor-item-story-map/physical-fields.md), including price.per and concrete source omissions. Serialized attachments carry local source paths, not invented document UUIDs. Alternate unidentified description text appears only in an explicit `description` request. Source remains partial with `type_reader_pending` until the concrete type reader ships; no effective Bulk, investment bonus or market price is calculated. The schema-permitted undefined price.sizeSensitive source field is reported absent, never as prepared false.

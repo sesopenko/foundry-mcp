@@ -32,7 +32,7 @@ async def main():
         needed={'get_actor_types','read_actor','read_item','list_actor_items','get_actor_tree','search_actors','list_scene_actors','list_actor_compendiums','search_compendium_actors'}
         assert needed<=available.keys()
         for name in needed:assert available[name].annotations.readOnlyHint
-        selection=(await client.call_tool('execute_javascript',{'code':"const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);return JSON.stringify({actor_uuid:actor.uuid,token_uuid:game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc')?.uuid});"})).data
+        selection=(await client.call_tool('execute_javascript',{'code':"const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);const physicalTypes=['weapon','armor','shield','equipment','consumable','ammo','backpack','book','treasure'];const items=[...game.items.contents,...game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type)).flatMap(a=>a.items.contents)];return JSON.stringify({actor_uuid:actor.uuid,token_uuid:game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc')?.uuid,physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean)});"})).data
         # Development serializer wraps a returned primitive under value.
         if isinstance(selection,dict) and 'value' in selection:selection=json.loads(selection['value'])
         elif isinstance(selection,str):selection=json.loads(selection)
@@ -64,9 +64,16 @@ async def main():
             assert token.data['identity']['instance']['token_uuid']==selection['token_uuid']
             placed=payload(await client.call_tool('list_scene_actors',{'scene_uuid':token.data['identity']['instance']['scene_uuid'],'limit':100}))
             assert any(node['uuid']==selection['token_uuid'] for node in placed['nodes']) or not placed['pagination']['complete']
+        physical_verified=0
+        for item_uuid in selection.get('physical_items',[]):
+            physical=payload(await client.call_tool('read_item',{'item_uuid':item_uuid,'limit':100}))
+            assert any(raw['path']=='/system/quantity' for record in physical['records'] for raw in record['raw'])
+            assert all(raw['basis']=='source' for record in physical['records'] for raw in record['raw'])
+            physical_verified+=1
+        assert physical_verified, 'No existing in-scope physical Item fixture was available.'
         registry=await client.call_tool('get_actor_types',{})
         assert registry.data['availability']['supported']
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'token_verified':bool(selection.get('token_uuid')),'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

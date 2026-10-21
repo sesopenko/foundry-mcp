@@ -251,6 +251,8 @@ and the [development story map](docs/actor-item-story-map/index.md).
 
 World Actor folders/name search, placed Scene/Token navigation and scoped Actor/Item compendium index search now provide bounded discovery with canonical reader follow-ups. Scope failures and stale continuations remain explicit; pack results require a caller-selected literal query.
 
+Physical Item source reading now includes stored quantity, Bulk, price/per, carry state, material, identification and serialized attachment metadata. These shared fields remain separate from effective inventory calculations and complete concrete Item readers.
+
 ## Private PDF references
 
 An opt-in GM-private PDF library provides lexical lookup and source-page reading,

@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Applies common physical fields after safe document extraction. |
 
@@ -24,3 +24,9 @@ Acceptance: identified/unidentified GM source, missing/placeholder fields, zero-
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Delivery evidence — October 20, 2026
+
+The [physical field registry](../physical-fields.md) finalizes the allowlist and concrete omissions. Shared fields now flow through read_item with source provenance, byte/count pagination, stale checks and explicit descriptions. Pure/helper, integration and Python cross-language tests cover null/zero/absent values, price.per, type omissions, serialized attachments, long alternate text and malformed/private field rejection.
+
+Live MCP source reads passed for six available physical types on supported owners; a separate source-shape/helper audit covered the broader existing world/embedded scope. No book, nonempty attachment or unidentified alternate-text runtime fixture was available; their deterministic/schema coverage does not claim full specialized behavior. A live treasure mismatch was traced to schema-permitted undefined price.sizeSensitive, proved with a failing regression and corrected narrowly to absent source. Individual Item stories and effective mechanics remain open.

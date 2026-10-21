@@ -1,6 +1,7 @@
 /** Read-only Actor/Item extraction foundation; contract: docs/actor-tools.md. */
 import { fail, validateParams, integer, selector, selectSections, digest, textFragments, paginate } from './actorReadUtils.js';
 import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
+import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 
 const ACTOR_SECTIONS = ['identity','source','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
 const ITEM_SECTIONS = ['identity','source','description','rules','relationships','effective'];
@@ -8,19 +9,34 @@ const LIMITS = {default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,
 const PENDING = 'type_reader_pending';
 const VERIFICATION = {deterministic:{status:'passed',evidence:['tests/js/actor-readers.test.js','tests/test_actor_tools.py']},live:{status:'not_run',evidence:[]}};
 
-/** Read known metadata only; never expose flags, migrations or full source. */
+/** PF2e-specific physical source8.6.1 selection, no prepared/effective values.
+ * Schema boundary: actorPhysical.js. Descriptions require their explicit section.
+ * Never expose flags, migrations or the whole source object.
+ */
 function selection(target, sections) {
   const source = target.document.toObject(true);
   if (!source || typeof source!=='object' || Array.isArray(source)) fail('ReadFailed','Document source is not a serialized object.','Inspect the selected document in Foundry.');
   const selected = {};
+  let physical=[];
   if (sections.includes('source')) {
     for (const field of ['name','type']) if (Object.hasOwn(source,field)) {
       if (typeof source[field]!=='string') fail('ReadFailed',`Source ${field} has an unexpected type.`,'Inspect the selected document in Foundry.');
       selected[`/${field}`] = source[field];
     }
   }
+  if (target.document.documentName==='Item' && PHYSICAL_TYPES.includes(source.type) && sections.includes('source')) {
+    try { physical=physicalFields(source).filter(field=>field.concept!=='unidentified_description'); }
+    catch (error) {
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_/-]+/)?.[0];
+      fail('ReadFailed',`Selected physical source${path?` at ${path}`:''} does not match the verified field schema.`,'Inspect this Item source; malformed fields cannot be interpreted safely.');
+    }
+  }
   if (sections.includes('description') && source.system?.description && Object.hasOwn(source.system.description,'value')) selected['/system/description/value'] = source.system.description.value;
-  return { identity: target.identity, selected, runtime: runtime() };
+  if (sections.includes('description') && PHYSICAL_TYPES.includes(source.type)) {
+    const data=source.system?.identification?.unidentified?.data?.description;
+    if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
+  }
+  return { identity: target.identity, selected, physical, runtime: runtime() };
 }
 
 /** JSON Pointer source record; values are detached selected document data. */
@@ -40,7 +56,8 @@ function bounds(params, allowed, sectionNames) {
 /**
  * PF2e-specific capability registry for character/npc/familiar and 24 Item types.
  * Core14.369/PF2e8.6.1 schema scope: only common core metadata and explicit Item
- * system.description.value are delivered by this increment; no derived values.
+ * system.description.value and shared physical source fields are delivered;
+ * type-specific completeness and derived values remain gated.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
 export async function getActorTypes(params = {}) {
@@ -48,7 +65,7 @@ export async function getActorTypes(params = {}) {
   const supported = current.core_version==='14.369' && current.system_id==='pf2e' && current.system_version==='8.6.1';
   const make = (name, allowed, inScope, sections=false) => ({...(sections?{name}:{type:name,name}),allowed,in_scope:inScope,
     source_supported:supported&&inScope&&(!sections||['identity','source','description'].includes(name)),mapped_supported:false,effective_supported:false,
-    limitations:inScope?['Foundation selects core metadata only; type-specific mappings and effective sections are pending.']:['Type is outside initial Actor/Item scope.'],verification:structuredClone(VERIFICATION)});
+    limitations:inScope?['Foundation selects core metadata, explicit descriptions and shared physical source fields where applicable; type-specific mappings and effective sections are pending.']:['Type is outside initial Actor/Item scope.'],verification:structuredClone(VERIFICATION)});
   const actorAllowed = globalThis.foundry?.documents?.Actor?.TYPES ?? globalThis.Actor?.TYPES ?? [];
   const itemAllowed = globalThis.foundry?.documents?.Item?.TYPES ?? globalThis.Item?.TYPES ?? [];
   const result = {contract_version:1,runtime:current,availability:{supported,reason:supported?null:'Supported pairing: Foundry14.369/PF2e8.6.1.'},
@@ -61,8 +78,8 @@ export async function getActorTypes(params = {}) {
 }
 
 /**
- * PF2e-specific read boundary: selected Item description schema8.6.1 only;
- * character/npc/familiar source metadata has no effective-stat interpretation.
+ * PF2e-specific read boundary: selected Item descriptions and shared physical
+ * source schema8.6.1; character/npc/familiar metadata has no effective meaning.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
 async function read(target,params,sections,tool) {
@@ -70,16 +87,23 @@ async function read(target,params,sections,tool) {
   const records = [];
   if (sections.includes('source')) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(snapshot.selected,`/${field}`),snapshot.selected[`/${field}`],'source',`document_${field}`));
+    // PF2e-specific descriptors retain persisted values; no derived usage/Bulk.
+    for (const field of snapshot.physical) {
+      const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
+      entry.provenance.mapping='pf2e.physical.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+    }
   }
   if (sections.includes('description')) {
-    const path='/system/description/value'; const present=Object.hasOwn(snapshot.selected,path);
+    for (const path of ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])]) {
+    const present=Object.hasOwn(snapshot.selected,path);
     const value=snapshot.selected[path];
     if (present && typeof value!=='string') fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected Item source in Foundry.');
     if (present) for (const [index,fragment] of textFragments(value).entries()) {
-      const entry=record(target.identity.uuid,path,true,fragment.value,'description','description');
+      const entry=record(target.identity.uuid,path,true,fragment.value,'description',path==='/system/description/value'?'description':'unidentified_description');
       entry.kind='text';entry.key+=`:${index}`;entry.mapped.value=null;entry.text={path,...fragment.text};records.push(entry);
     }
-    else records.push(record(target.identity.uuid,path,false,null,'description','description'));
+    else records.push(record(target.identity.uuid,path,false,null,'description',path==='/system/description/value'?'description':'unidentified_description'));
+    }
   }
   const base={contract_version:1,runtime:snapshot.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:name==='identity'||name==='description'?'complete':name==='source'?'partial':'unsupported',

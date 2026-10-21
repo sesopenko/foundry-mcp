@@ -9,6 +9,7 @@ PF2e source boundary: https://github.com/foundryvtt/pf2e/blob/28d9d156f252d08437
 import asyncio
 import json
 import math
+import re
 from typing import Annotated, Any, Literal
 
 from fastmcp.exceptions import ToolError
@@ -34,6 +35,41 @@ ACTOR_SECTIONS = {'identity', 'source', 'build', 'statistics', 'skills', 'strike
 ITEM_SECTIONS = {'identity', 'source', 'description', 'rules', 'relationships', 'effective'}
 ITEM_TYPES = set(ItemType.__args__)
 SOURCE_PATHS = {'/name', '/type', '/system/description/value'}
+# PF2e-specific PhysicalSystemSource 8.6.1 primitive paths. No prepared values.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/physical/data.ts
+PHYSICAL_TYPES = {'weapon','armor','shield','equipment','consumable','ammo','backpack','book','treasure'}
+ATTACHMENT_TYPES = {'weapon','armor','shield','equipment'}
+PHYSICAL_PATHS = {'/system/' + path for path in (
+    'level/value','quantity','baseItem','size','bulk/value','hp/value','hp/max','hardness',
+    'price/value/pp','price/value/gp','price/value/sp','price/value/cp','price/per','price/sizeSensitive',
+    'equipped/carryType','equipped/inSlot','equipped/handsHeld','equipped/invested','containerId',
+    'material/type','material/grade','identification/status','identification/unidentified/name',
+    'identification/unidentified/img','identification/unidentified/data/description/value','temporary','usage/value')}
+UNIDENTIFIED_DESCRIPTION = '/system/identification/unidentified/data/description/value'
+
+
+def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
+    """PF2e-specific: admit only pinned physical source paths for physical Item types.
+
+    Armor/shield/treasure source overrides exclude usage; treasure excludes
+    investment/slot/hands. Serialized attachment identities are source paths,
+    never independent Item UUIDs. No effective Bulk/value/statistic is inferred.
+    """
+    if type(path) is not str:
+        return False
+    if path in SOURCE_PATHS:
+        return True
+    if identity is None or identity['document_name'] != 'Item' or identity['type'] not in PHYSICAL_TYPES:
+        return False
+    item_type = identity['type']
+    if path == '/system/usage/value' and item_type in {'armor','shield','treasure'}:
+        return False
+    if path in {'/system/equipped/invested','/system/equipped/inSlot','/system/equipped/handsHeld'} and item_type == 'treasure':
+        return False
+    if path in PHYSICAL_PATHS:
+        return True
+    return item_type in ATTACHMENT_TYPES and (path == '/system/subitems' or re.fullmatch(r'/system/subitems/(0|[1-9][0-9]*)/(_id|name|type)', path) is not None)
+
 
 
 def _error(code: str, message: str, recovery: str) -> ToolError:
@@ -115,11 +151,18 @@ def _identity(value: Any) -> bool:
     return True
 
 
-def _contributor(value: Any) -> bool:
-    return type(value) is dict and set(value) == {'document_uuid', 'path', 'basis'} and type(value['document_uuid']) is str and 1 <= len(value['document_uuid']) <= 512 and type(value['path']) is str and value['path'] in SOURCE_PATHS and value['basis'] == 'source'
+def _contributor(value: Any, identity: dict[str, Any] | None = None) -> bool:
+    """Validate source provenance; PF2e-specific physical paths use _source_path."""
+    return type(value) is dict and set(value) == {'document_uuid', 'path', 'basis'} and type(value['document_uuid']) is str and 1 <= len(value['document_uuid']) <= 512 and _source_path(value['path'], identity) and value['basis'] == 'source'
 
 
-def _record(row: Any, sections: list[str]) -> bool:
+def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
+    """Validate records including PF2e-specific persisted physical source fields.
+
+    PhysicalSystemSource 8.6.1 permits only primitive selected values and the
+    explicit empty serialized-subitems marker; no derived values or child UUIDs.
+    The pinned schema/type overrides are enforced by _source_path.
+    """
     required = {'key', 'section', 'kind', 'raw', 'mapped', 'provenance'}
     if type(row) is not dict or not required <= set(row) or not set(row) <= required | {'text'}:
         return False
@@ -128,13 +171,25 @@ def _record(row: Any, sections: list[str]) -> bool:
     for raw in row['raw']:
         if type(raw) is not dict or not {'document_uuid', 'path', 'present', 'basis'} <= set(raw) or not set(raw) <= {'document_uuid', 'path', 'present', 'basis', 'value'}:
             return False
-        if not _contributor({k: raw[k] for k in ('document_uuid', 'path', 'basis')}) or type(raw['present']) is not bool or raw['present'] != ('value' in raw) or (raw['present'] and raw['value'] is not None and type(raw['value']) not in (str, bool, int, float)):
+        if not _contributor({k: raw[k] for k in ('document_uuid', 'path', 'basis')}, identity) or type(raw['present']) is not bool or raw['present'] != ('value' in raw) or (raw['present'] and raw['value'] is not None and type(raw['value']) not in (str, bool, int, float) and not (raw['path'] == '/system/subitems' and raw['value'] == [])):
+            return False
+        # PF2e-specific alternate description is source text, explicitly selected.
+        if raw['path'] == UNIDENTIFIED_DESCRIPTION and (row['section'] != 'description' or raw['present'] and row['kind'] != 'text'):
+            return False
+        if raw['path'] == '/system/subitems' and raw['present'] and raw['value'] != []:
             return False
     mapped = row['mapped']
     provenance = row['provenance']
+    if any(raw['path'] not in SOURCE_PATHS for raw in row['raw']):
+        # PF2e-specific physical source descriptors cannot smuggle nested mapped data
+        # or relabel serialized attachments as separate contributor documents.
+        if any(raw['document_uuid'] != identity['uuid'] for raw in row['raw']):
+            return False
+        if type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(raw['path'] == '/system/subitems' for raw in row['raw'])):
+            return False
     if type(mapped) is not dict or set(mapped) != {'concept', 'value', 'unit'} or type(mapped['concept']) is not str or (mapped['unit'] is not None and type(mapped['unit']) is not str):
         return False
-    if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x) for x in provenance['contributors']):
+    if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x, identity) for x in provenance['contributors']):
         return False
     if row['kind'] == 'text':
         text = row.get('text')
@@ -174,7 +229,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                 if valid:
                     rows = result['sections']
                     valid = [row.get('name') for row in rows if type(row) is dict] == sections and all(set(row) == {'name', 'status', 'reasons'} and row['status'] in ('complete', 'partial', 'unsupported', 'not_applicable') and _strings(row['reasons']) for row in rows)
-                    valid = valid and all(_record(row, sections) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
+                    valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -350,7 +405,14 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     names/local IDs/paths are invalid. token_uuid Scene.<id>.Token.<id> is required
     for synthetic-owned Items and permitted for linked-token Items only when the
     Item belongs to that token.actor. No template substitution. Default unique
-    sections identity/source expose common selected metadata, not full type mapping;
+    sections identity/source expose common metadata and shared physical source
+    fields for weapon/armor/shield/equipment/consumable/ammo/backpack/book/treasure:
+    quantity, level, Bulk, denomination prices and price.per, carrying/investment,
+    container local ID, material, identification, HP/Hardness and permitted usage.
+    Missing paths have present=false without value; null/zero/false remain distinct.
+    Serialized attachments expose local _id/name/type paths, never their own UUIDs.
+    Armor/shield/treasure omit persisted usage; kit is not a physical source type.
+    Source remains partial until its concrete type story is delivered;
     optional description/rules/relationships/effective are delivered or explicitly
     unsupported as get_actor_types reports. At most 6 unique nonempty section names.
     PF2e-only; UnsupportedSystem/Version/Type explains excluded targets.
@@ -358,7 +420,8 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     Returns contract_version/runtime/identity/revision/sections/records/pagination/
     limitations; records carry raw selected paths, mapped concepts and provenance.
     Source is not castability, active effect or effective statistics. Exact stored
-    description text is never enriched/executed; text.start/end/total are UTF-16
+    description text (including physical unidentified alternate text only when
+    explicitly requested) is never enriched/executed; text.start/end/total are UTF-16
     offsets (6000 units per fragment); concatenate matching path/revision fragments.
     limit 50 by default (strict integer 1–100 records); max_bytes 48000 by default
     (strict integer 8000–48000 UTF-8 JSON bytes). Pass pagination.next_cursor unchanged

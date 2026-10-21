@@ -42,6 +42,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - The live runner now uses protocol structured JSON for version diagnostics; a regression test covers generated client model objects. Native Codex MCP sessions became stale after server restart, so live verification used a fresh authenticated client to the existing service.
 - Shared physical-field helper/schema evidence is prepared separately; reader integration and individual Item stories remain pending.
 
+### 4. Shared physical Item source fields — October 20, 2026
+
+- CORE-physical delivered the pinned common allowlist, per-type omissions, price.per, identification source, and nonrecursive serialized attachment metadata. Explicit alternate descriptions use bounded exact text fragments. Concrete Item type completeness and effective values remain pending.
+- Focused helper/integration/Python cross-language tests and full suites passed. Live actual MCP reads passed for six available physical types in the supported-owner scope; broader read-only helper audit found no errors after the correction below. Book/nonempty attachment/alternate unidentified runtime fixtures remain unavailable.
+- Root cause regression: optional schema PriceField.sizeSensitive may be own undefined. The initial strict check rejected it. A failing test proved the defect; the exact schema-permitted undefined field now reports absent without borrowing prepared false. All other source validation remains strict.
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

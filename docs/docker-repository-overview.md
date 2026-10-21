@@ -21,6 +21,8 @@ not a new image/module release. See the
 
 The same unreleased source adds world Actor folder/name discovery, Scene/Token navigation, and explicit Actor/Item pack index search. These tools require the same verified runtime and GM access; they retain partial-scope failures and bounded continuations. They do not import compendium documents.
 
+Unreleased source reading also exposes common persisted physical Item fields, including stack price-per quantity, carrying/identification state and serialized attachment metadata. It does not calculate effective inventory values or claim complete concrete Item support.
+
 ## Run with Docker Compose
 
 Create a deployment directory containing the following two files.
