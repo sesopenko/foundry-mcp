@@ -98,6 +98,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Actual MCP passed six source samples and explicit missing-reference records for their null contexts, with unchanged source fingerprints. Non-null live context is unavailable; effective expiry/current application and recursive provenance remain unsupported advanced gates.
 - ITEM-effect Complete for its declared source/immediate-reference scope. Completed stories are 9/39 (23.1%); the full Actor/state integration objective remains open.
 
+### 13. Condition Item persisted source checkpoint — October 20, 2026
+
+- ITEM-condition now preserves valued/unvalued source, persistent-damage formula/type/recovery metadata, local reference IDs and override slugs. Presence is not active state; formulas and dominance are not evaluated.
+- Actual rulebook pages and pinned schema contracts were reviewed. Focused JS/Python actual-DTO checks passed; authenticated MCP verified four existing owned/compendium samples with unchanged persisted source.
+- Populated persistent/reference fixtures and character/familiar conditions are unavailable live; these retain deterministic coverage. Relationships and advanced active/suppression integration remain open. Completed stories remain 9/39 (23.1%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

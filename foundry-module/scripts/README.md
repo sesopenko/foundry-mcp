@@ -74,3 +74,7 @@ source defaults, reads prepared expiry or resolves source UUID references.
 `actorEffectRelationships.js` resolves explicit immediate effect context through
 existing authorized Actor/Item public-API boundaries. Actor/token mismatches never
 fall back to base templates; unresolved targets return no resolved metadata.
+
+`actorCondition.js` selects persisted condition/value, persistent damage and local
+reference source. Override slugs remain distinct from local Item IDs. No prepared
+activity, suppression, persistent-damage roll or effective duration is read.

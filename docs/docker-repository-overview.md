@@ -37,6 +37,9 @@ references for follow-up reading, with partial completeness and token context.
 Effect source preserves duration units, badge types/formulas and context fields.
 Explicit relationships resolve immediate origin/target identities with permission
 and token-context checks. Formula evaluation and effective expiry remain unsupported.
+Condition source preserves valued flags, persistent-damage metadata, local
+references and override slugs. Activity and suppression remain unsupported.
+
 
 
 

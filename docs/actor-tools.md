@@ -394,3 +394,14 @@ have null target_uuid and no resolved metadata. Claimed raw UUIDs remain source,
 not proof of access or applicability. Follow ordinary Actors with read_actor's
 actor_uuid, token-context Actors/Tokens with token_uuid, and Items with read_item's
 item_uuid plus returned token_uuid. No recursive provenance or target source read.
+
+## Condition source checkpoint
+
+PF2e condition source preserves `value.isValued` independently of nullable stored
+`value.value`, persistent-damage formula/type/DC/critical flag, local reference
+IDs and top-level override slugs. Source records use `pf2e.condition.source.v1`.
+Presence and stored override references never establish active/suppressed state;
+formulas are not rolled and same-type persistent-damage dominance is not computed.
+Origin/reference resolution remains a separate explicit relationship increment.
+See [field boundary](actor-item-story-map/condition-fields.md) and
+[rulebook/runtime evidence](actor-item-story-map/condition-verification.md).

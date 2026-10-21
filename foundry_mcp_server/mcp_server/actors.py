@@ -120,6 +120,73 @@ def _effect_spec(path):
     return []
 
 
+
+# PF2e-specific ConditionSystemSource8.6.1; persisted leaves, no prepared activity.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/condition/data.ts
+CONDITION_SOURCE = {
+    '/system/'+path:(concept,kind,nullable) for path,concept,kind,nullable in (
+        ('value/isValued','condition_is_valued','boolean',False),
+        ('value/value','condition_stored_value','number',True),
+        ('persistent','condition_persistent_damage','null',True),
+        ('persistent/formula','condition_persistent_formula','string',False),
+        ('persistent/damageType','condition_persistent_damage_type','string',False),
+        ('persistent/dc','condition_persistent_recovery_dc','number',False),
+        ('persistent/criticalHit','condition_persistent_critical_hit','boolean',False),
+        ('references/parent','condition_parent_reference','null',True),
+        ('references/parent/id','condition_parent_item_id','string',False),
+        ('fromSpell','condition_from_spell','boolean',False),
+        ('group','condition_group','string',True),('slug','source_slug','string',True),
+        *((f'publication/{key}','publication_'+key,'boolean' if key=='remaster' else 'string',False)
+          for key in ('title','authors','license','remaster')),
+    )
+}
+CONDITION_ARRAYS = {'/system/'+path:concept for path,concept in (
+    ('traits/value','condition_trait_code'),('traits/otherTags','condition_other_tag_code'),
+    ('overrides','condition_override_slug'),('references/children','condition_child_reference'),
+    ('references/overrides','condition_override_reference'),('references/overriddenBy','condition_overridden_by_reference'))}
+
+
+def _condition_spec(path):
+    """PF2e-specific condition8.6.1 primitive source paths, never resolved IDs.
+
+    Source schema link above; lists flatten local Item IDs and condition type.
+    Damage formulas and recovery DCs remain authored, never rolled or evaluated.
+    """
+    if path in CONDITION_SOURCE:return CONDITION_SOURCE[path]
+    if path in CONDITION_ARRAYS:return (CONDITION_ARRAYS[path],'array',False)
+    for base,concept in CONDITION_ARRAYS.items():
+        suffix=path.removeprefix(base+'/')
+        if path.startswith(base+'/') and re.fullmatch(r'(0|[1-9][0-9]*)',suffix) and '/references/' not in base:
+            return (concept,'string',False)
+    match=re.fullmatch(r'/system/references/(children|overrides|overriddenBy)/(0|[1-9][0-9]*)/(id|type)',path)
+    if match:
+        role={'children':'child','overrides':'override','overriddenBy':'overridden_by'}[match[1]]
+        return ('condition_'+role+'_item_'+match[3],'condition_type' if match[3]=='type' else 'string',False)
+    return None
+
+
+def _condition_record(row,identity):
+    """PF2e-specific condition8.6.1 source DTO; no active/suppressed/duration state.
+
+    Persisted local reference IDs and override slugs stay unchanged source text;
+    this boundary provides no relationship hydration or effective interpretation.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];value=raw.get('value')
+    if path in SOURCE_PATHS:return row['section'] in ('source','description')
+    spec=_condition_spec(path)
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    concept,kind,nullable=spec
+    if raw['document_uuid']!=identity['uuid'] or row['provenance']['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')}]:return False
+    if row['provenance']['mapping']!='pf2e.condition.source.v1' or row['provenance']['limitations']!=['persisted_source_not_effective_condition_state']:return False
+    if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):return False
+    if not raw['present']:return True
+    if value is None and nullable:return True
+    return {'string':type(value) is str,'number':type(value) in (int,float) and math.isfinite(value),
+            'boolean':type(value) is bool,'null':False,'array':type(value) is list and not value,
+            'condition_type':type(value) is str and value=='condition'}[kind]
+
+
 EFFECT_REFERENCE_ROLES = ('origin_actor','origin_token','origin_item','target_actor','target_token')
 EFFECT_REFERENCE_PATHS = ['/system/context/'+role.replace('_','/') for role in EFFECT_REFERENCE_ROLES]
 
@@ -465,7 +532,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'} or
             identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'} or
             identity['type'] == 'lore' and path == '/system/traits/otherTags' or
-            identity['type'] == 'effect' and path in EFFECT_ARRAYS)
+            identity['type'] == 'effect' and path in EFFECT_ARRAYS or
+            identity['type'] == 'condition' and path in CONDITION_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -551,6 +619,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'condition':
+        return _condition_spec(path) is not None
     if identity['type'] == 'effect':
         return bool(_effect_spec(path))
     if identity['type'] == 'lore':
@@ -700,6 +770,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     # PF2e-specific NPC attacks preserve authored formulas and non-UUID labels.
     if identity['document_name'] == 'Item' and identity['type'] == 'melee' and not _melee_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'condition' and not _condition_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'effect' and not _effect_record(row, identity):
         return False
@@ -975,6 +1047,12 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     identify proficiency ranks. Detached/unknown owners retain stored semantics;
     no effective skill total or roll-option execution is implied. identity.actor
     may include actual owner type character/npc/familiar.
+    Condition Items expose persisted valuedness/value, persistent damage formula,
+    damage type/recovery DC/critical-hit flag, local parent/child/override IDs and
+    override slugs, group, traits and publication. Local IDs remain source text;
+    no UUID conversion, formula execution, current activity, suppression, prepared
+    duration or effective damage is implied. Relationships/effective remain
+    unsupported for conditions.
     Effect Items expose persisted level/duration/start, badge discriminator with
     numeric counter/value or unevaluated formula, traits, token-icon visibility,
     unidentified/fromSpell and origin/target/roll context. Stored UUID strings are
