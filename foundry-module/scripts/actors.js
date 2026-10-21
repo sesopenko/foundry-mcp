@@ -29,6 +29,7 @@ function selection(target, sections) {
   let npc=[];
   let npcNotes=[];
   const specialties=[];const deniedLore=[];
+  const npcItemSections={};
   if (sections.includes('source')) {
     for (const field of ['name','type']) if (Object.hasOwn(source,field)) {
       if (typeof source[field]!=='string') fail('ReadFailed',`Source ${field} has an unexpected type.`,'Inspect the selected document in Foundry.');
@@ -96,12 +97,31 @@ function selection(target, sections) {
     specialties.sort((a,b)=>compare(a.name.toLowerCase(),b.name.toLowerCase())||compare(a.identity.uuid,b.identity.uuid));
     deniedLore.sort(compare);
   }
+  // PF2e-specific NPC8.6.1 melee/action Items are explicit source references,
+  // never prepared Strike arrays, acquired benefits or carried-weapon attacks.
+  if (target.document.documentName==='Actor' && source.type==='npc') {
+    for (const [section,type] of [['strikes','melee'],['abilities','action']]) {
+      if(!sections.includes(section))continue;
+      const entries=[],denied=[];
+      for(const item of target.document.items.values()) {
+        if(item.type!==type)continue;
+        if(!permitted(item)){denied.push(item.uuid);continue;}
+        const identity=embeddedIdentity(item,{document:target.document,token:target.token});
+        const itemSource=item.toObject(true);
+        if(typeof itemSource?.name!=='string'||itemSource.type!==type)fail('ReadFailed','NPC owned Item source identity is invalid.','Inspect the selected NPC attack or ability Item.');
+        entries.push({identity,name:itemSource.name,type:itemSource.type});
+      }
+      const compare=(a,b)=>a<b?-1:a>b?1:0;
+      entries.sort((a,b)=>compare(a.name.toLowerCase(),b.name.toLowerCase())||compare(a.identity.uuid,b.identity.uuid));denied.sort(compare);
+      npcItemSections[section]={entries,denied};
+    }
+  }
   if (sections.includes('description') && source.system?.description && Object.hasOwn(source.system.description,'value')) selected['/system/description/value'] = source.system.description.value;
   if (sections.includes('description') && PHYSICAL_TYPES.includes(source.type)) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, action, melee, lore, npc, npcNotes, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, action, melee, lore, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -202,6 +222,12 @@ export async function getActorTypes(params = {}) {
       actor.mapped_supported=true;
       actor.limitations=['Only Lore specialty references in skills are mapped so far; full type-specific source/statistics and effective views remain pending.'];
     }
+    for(const name of ['strikes','abilities']) {
+      const section=result.actor_sections.find(entry=>entry.name===name);
+      section.source_supported=true;section.mapped_supported=true;
+      section.verification={deterministic:{status:'passed',evidence:['tests/js/actor-npc-readers.test.js','tests/test_actor_npc_references.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/npc-fields.md','scripts/actor-live-check.py']}};
+      section.limitations=['NPC actual owned melee/action Item references only; sections remain partial. Other Actor types and effective attack/ability lists remain unsupported.'];
+    }
     const description=result.actor_sections.find(entry=>entry.name==='description');
     description.limitations=['NPC biography only: blurb, publicNotes and GM-private privateNotes; explicit selection required. Character/familiar biography remains unsupported.'];
     const npc=result.actor_types.find(entry=>entry.type==='npc');
@@ -246,6 +272,18 @@ async function read(target,params,sections,tool) {
     if (selected.deniedLore.length) records.push({key:'skills:lore:denied',section:'skills',kind:'relationship',raw:[],
       mapped:{concept:'lore_specialty',value:{target_uuid:null,status:'denied'},unit:null},
       provenance:{contributors:[],mapping:'pf2e.lore.specialty.v1',limitations:['One or more owned Lore Items are unreadable; have the authorized GM grant document access and retry.']}});
+  }
+  for(const [section,{entries,denied}] of Object.entries(selected.npcItemSections)) {
+    const concept=section==='strikes'?'npc_attack_item':'npc_ability_item';
+    for(const item of entries) {
+      const raw=[['/name',item.name],['/type',item.type]].map(([path,value])=>({document_uuid:item.identity.uuid,path,present:true,value,basis:'source'}));
+      records.push({key:`${section}:item:${item.identity.uuid}`,section,kind:'relationship',raw,
+        mapped:{concept,value:{target_uuid:item.identity.uuid,status:'resolved',...(target.token?{token_uuid:target.token.uuid}:{})},unit:null},
+        provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.npc.item-reference.v1',limitations:['Actual owned Item reference only; follow target_uuid with read_item and supplied token_uuid. Not a complete effective attack or ability list.']}});
+    }
+    if(denied.length)records.push({key:`${section}:items:denied`,section,kind:'relationship',raw:[],
+      mapped:{concept,value:{target_uuid:null,status:'denied'},unit:null},
+      provenance:{contributors:[],mapping:'pf2e.npc.item-reference.v1',limitations:['One or more owned Items are unreadable; have the authorized GM grant access and retry.']}});
   }
   if (target.document.type==='melee'&&sections.includes('relationships')) {
     for (const field of selected.melee.filter(entry=>entry.path.startsWith('/system/attackEffects/value'))) {
@@ -292,8 +330,8 @@ async function read(target,params,sections,tool) {
   const loreSkills=target.document.documentName==='Actor'&&sections.includes('skills');
   const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||(isLore&&name==='source')||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
-    sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||(loreSkills&&name==='skills')?'partial':'unsupported',
-      reasons:complete(name)?[]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+    sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
+      reasons:complete(name)?[]:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);

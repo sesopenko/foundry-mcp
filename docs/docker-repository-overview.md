@@ -32,6 +32,9 @@ NPC source reading includes authored attributes, defenses, skills, movement and
 IWR with source provenance. Explicit Actor description reads separate bounded
 NPC blurb, public notes and GM-private notes. Integrated/effective statistics
 remain pending; elite/weak adjustments are not calculated.
+Explicit NPC strikes and abilities expose actual owned attack/action Item
+references for follow-up reading, with partial completeness and token context.
+
 
 
 

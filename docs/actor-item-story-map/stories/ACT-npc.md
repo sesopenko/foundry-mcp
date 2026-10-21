@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; effective views gated |
-| Implementation status | In progress |
+| Implementation status | Source implemented |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -20,9 +20,15 @@ As a GM-trusted LLM, I can read a `npc` Actor in book terminology while preservi
 
 ## Source checkpoint: ACT-npc
 
-- [ ] Extract identity/name/type/UUID and version/source/parent context through CORE-extract. Selected `system` fields: `abilities`, `details.level`, selected languages/publication/notes, `perception`, `skills`, `saves`, `attributes.ac`, `attributes.hp`, `attributes.speed`, `attributes.adjustment`.
-- [ ] Retain bounded original notes/descriptions and unknown codes. Label every statistic's source/effective basis; do not fill omissions with zeroes. Keep assignment/control separate from subtype.
-- [ ] Return embedded Item summaries and next-reader links; basic reading must work before individual Item readers and joins are complete.
+- [x] Extract identity/name/type/UUID and version/source/parent context through CORE-extract. Selected `system` fields: `abilities`, `details.level`, selected languages/publication/notes, `perception`, `skills`, `saves`, `attributes.ac`, `attributes.hp`, `attributes.speed`, `attributes.adjustment`.
+- [x] Retain bounded original notes/descriptions and unknown codes. Label every statistic's source/effective basis; do not fill omissions with zeroes. Keep assignment/control separate from subtype.
+- [x] Return embedded Item summaries and next-reader links; basic reading must work before individual Item readers and joins are complete.
+
+Source checkpoint evidence: [field boundary and runtime verification](../npc-fields.md).
+`read_actor` supplies selected source and explicit biography, with partial owned
+attack/action/Lore references. `list_actor_items` supplies all supported embedded
+Item summaries and concrete `read_item` next calls without requiring type-reader
+completion. Full integrated views remain the separate M-NPC checkpoint below.
 
 ## Integrated checkpoint: M-NPC
 

@@ -117,3 +117,25 @@ keys, stale-note continuations, malformed source, denied GM access, and unsuppor
 character/familiar descriptions. Actual MCP reconstructed the existing NPC's
 three biography paths and compared each present text's SHA-256 with persisted
 source, without logging content. Source fingerprints remained unchanged.
+
+## Owned attack and ability references
+
+Explicit `strikes` and `abilities` sections select actual NPC-owned `melee` and
+`action` Items respectively. They do not reinterpret carried weapons as attacks
+or claim that every acquired benefit is an action Item. Each relationship keeps
+exact source name/type, canonical Item UUID, owner and selected token context,
+with mapping `pf2e.npc.item-reference.v1`. Duplicate names remain separate.
+Follow `mapped.value.target_uuid` with `read_item` and pass its `token_uuid` when
+present. No recursive Item source reads occur until that explicit follow-up.
+
+Both sections remain partial with `other_attacks_pending` or
+`other_abilities_pending`. A denied marker has no identity/name/raw fields and
+adds `related_items_denied`. Permission or membership changes invalidate cursors.
+Character/familiar sections remain unsupported. Focused checks cover duplicate
+names, strict provenance, linked/synthetic contexts, denied privacy and staleness.
+
+Actual authenticated MCP on Foundry14.369/PF2e8.6.1 followed three existing NPC
+attack/action references with correct type and owner. Source and biography
+fingerprints stayed unchanged, and prior delivered readers still passed. Live
+linked/synthetic reference fixtures remain covered only by deterministic tests;
+this does not establish effective-state completeness or finish M-NPC.

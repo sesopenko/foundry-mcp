@@ -120,6 +120,23 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
             if expected['present']:
                 text=''.join(row['raw'][0]['value'] for row in rows)
                 assert hashlib.sha256(text.encode()).hexdigest()==expected['sha256']
+        reference_count=0
+        ref_cursor=None
+        for _ in range(100):
+            arguments={'actor_uuid':selection['actor_uuid'],'sections':['strikes','abilities'],'limit':25}
+            if ref_cursor:arguments['cursor']=ref_cursor
+            refs=payload(await client.call_tool('read_actor',arguments))
+            assert all(section['status']=='partial' for section in refs['sections'])
+            for row in refs['records']:
+                value=row['mapped']['value']
+                if value['status']!='resolved':continue
+                followed=payload(await client.call_tool('read_item',{'item_uuid':value['target_uuid'],'sections':['identity']}))
+                assert followed['identity']['type']==('melee' if row['section']=='strikes' else 'action')
+                assert followed['identity']['actor']['uuid']==selection['actor_uuid']
+                reference_count+=1
+            ref_cursor=refs['pagination']['next_cursor']
+            if not ref_cursor:break
+        assert ref_cursor is None and reference_count>0, 'Expected bounded existing NPC attack/ability references.'
         items=await client.call_tool('list_actor_items',{'actor_uuid':selection['actor_uuid'],'limit':1})
         item=await client.call_tool(**dict(name=items.data['nodes'][0]['next_call']['tool'],arguments=items.data['nodes'][0]['next_call']['arguments']))
         assert item.data['identity']['actor']['uuid']==selection['actor_uuid']
@@ -212,7 +229,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'npc_source_verified':True,'npc_notes_verified':True,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

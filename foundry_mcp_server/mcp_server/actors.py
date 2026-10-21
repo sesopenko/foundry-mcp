@@ -230,6 +230,30 @@ def _lore_specialty(row: dict[str, Any], identity: dict[str, Any]) -> bool:
             all(provenance['limitations']) and provenance['contributors'] == [{k:r[k] for k in ('document_uuid','path','basis')} for r in raw])
 
 
+def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
+    """PF2e-specific NPC8.6.1 owned melee/action source references only.
+
+    Persisted Item name/type establish membership, never an effective Strike or
+    ability total. Selected token context is preserved for follow-up read_item.
+    Schema: https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/npc/data.ts
+    """
+    section=row['section']
+    if identity['type']!='npc' or section not in ('strikes','abilities'):return False
+    item_type,concept=('melee','npc_attack_item') if section=='strikes' else ('action','npc_ability_item')
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if row['kind']!='relationship' or provenance['mapping']!='pf2e.npc.item-reference.v1' or not provenance['limitations'] or not all(provenance['limitations']):return False
+    if row['key']==section+':items:denied':
+        return raw==[] and provenance['contributors']==[] and mapped==dict(concept=concept,value=dict(target_uuid=None,status='denied'),unit=None)
+    if len(raw)!=2:return False
+    target=raw[0]['document_uuid'];prefix=identity['uuid']+'.Item.'
+    if not target.startswith(prefix) or not target[len(prefix):] or '.' in target[len(prefix):]:return False
+    if row['key']!=section+':item:'+target or [r['path'] for r in raw]!=['/name','/type']:return False
+    if any(r['document_uuid']!=target or not r['present'] for r in raw) or type(raw[0]['value']) is not str or raw[1]['value']!=item_type:return False
+    expected=dict(target_uuid=target,status='resolved')
+    if identity['instance'] is not None:expected['token_uuid']=identity['instance']['token_uuid']
+    return mapped==dict(concept=concept,value=expected,unit=None) and provenance['contributors']==[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]
+
+
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
     return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants'))
@@ -544,6 +568,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if identity['document_name'] == 'Actor' and row['section'] == 'skills' and not _lore_specialty(row, identity):
         return False
+    if identity['document_name']=='Actor' and row['section'] in ('strikes','abilities') and not _npc_item_reference(row,identity):
+        return False
     if row['kind'] == 'text':
         text = row.get('text')
         if type(text) is not dict or set(text) != {'path', 'start', 'end', 'total', 'complete'}:
@@ -582,6 +608,10 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                 if valid:
                     rows = result['sections']
                     valid = [row.get('name') for row in rows if type(row) is dict] == sections and all(set(row) == {'name', 'status', 'reasons'} and row['status'] in ('complete', 'partial', 'unsupported', 'not_applicable') and _strings(row['reasons']) for row in rows)
+                    # PF2e-specific NPC8.6.1 Item references never claim full sections.
+                    if result['identity']['document_name']=='Actor' and result['identity']['type']=='npc':
+                        pending={'strikes':'other_attacks_pending','abilities':'other_abilities_pending'}
+                        valid = valid and all(row['status']=='partial' and pending[row['name']] in row['reasons'] for row in rows if row['name'] in pending)
                     valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
             else:
                 valid = valid and _item_list(result, limit)
@@ -741,6 +771,12 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     other_skills_pending. Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate
     specialty names remain separate Items, never merged skill totals.
+    NPC strikes/abilities contain actual owned melee/action Item references only:
+    npc_attack_item/npc_ability_item values have resolved target_uuid and selected
+    token_uuid when applicable; follow with read_item. Both sections remain partial
+    with other_attacks_pending/other_abilities_pending. Permission-denied related
+    Items produce a generic denied marker with null target_uuid and no selectors;
+    related_items_denied is reported without exposing their names or identities.
     limit defaults 50 (integer 1–100 records); max_bytes defaults 48000 (8000–48000
     UTF-8 JSON bytes). Exact text fragments use UTF-16 text.start/end/total offsets,
     at most 6000 units; concatenate same-path/revision raw values without enrichment.

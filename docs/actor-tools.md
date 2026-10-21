@@ -366,3 +366,11 @@ NPC source now includes authored stat-block fields with `pf2e.npc.source.v1`
 provenance. Source remains partial; explicit `description` returns bounded NPC blurb, public
 notes and GM-private notes separately. Character/familiar description and NPC
 integrated/effective sections remain pending. See [NPC field boundary](actor-item-story-map/npc-fields.md).
+
+NPC `strikes` and `abilities` now return only actual owned melee/action Item
+references, with mapping `pf2e.npc.item-reference.v1` and concepts `npc_attack_item`
+and `npc_ability_item`. Each resolved mapped value contains `target_uuid`,
+`status: resolved` and selected `token_uuid` when applicable. Follow with
+`read_item`. Denied markers contain null target/status denied and no raw identity.
+Both sections remain partial (`other_attacks_pending`/`other_abilities_pending`);
+these references do not claim complete effective attack or acquired ability lists.

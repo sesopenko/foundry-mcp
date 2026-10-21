@@ -62,3 +62,7 @@ retaining duplicate identities, permissions and selected token context.
 `actorNpc.js` selects authored NPC stat-block source and retained exception
 notes without applying elite/weak math. Biography requires explicit `description` selection with separate blurb/public/private paths;
 source responses remain partial and effective sections unsupported.
+
+NPC explicit `strikes`/`abilities` select actual owned melee/action references,
+with source-name/type provenance and preserved linked/synthetic token selectors.
+Denied Items are not read or named; effective completeness remains unsupported.

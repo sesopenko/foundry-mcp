@@ -79,6 +79,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Focused JS/Python tests cover exact Unicode pages, empty/missing, malformed/denied/stale results and cross-language DTOs. Actual MCP reconstructed the selected NPC biography and matched stored-source SHA-256 values without outputting text; persisted source fingerprints remained unchanged.
 - ACT-npc remains In progress pending embedded view integration and advanced acceptance. Completed story count remains 8/39 (20.5%).
 
+### 10. NPC attack/action references and source checkpoint — October 20, 2026
+
+- Explicit NPC strikes/abilities now expose actual owned melee/action Items with exact source-name/type provenance, separate duplicate UUIDs and selected token context. They remain partial; unreadable Items disclose no name or selector.
+- Focused cross-language tests passed, including world/linked/synthetic contexts, strict ownership and provenance, denied privacy, stale membership and mandatory partial semantics for empty sections. Actual MCP followed three existing references and preserved source fingerprints.
+- ACT-npc is Source implemented: source, bounded biography and embedded navigation are delivered. M-NPC integrated casting/inventory/state and verified effective interfaces remain open. Completed stories remain 8/39 (20.5%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.
