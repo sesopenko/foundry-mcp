@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Lists source identities without waiting for type mapping. |
 
@@ -24,3 +24,7 @@ Acceptance: duplicate names produce candidates; folder cycles/depth/count/byte l
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Delivery evidence — October 20, 2026
+
+Implemented world Actor folder/navigation and literal scoped search with canonical identities, duplicate names, empty/unfiled folders, depth expansion, byte/count pagination and revision/permission checks. Tests: `tests/js/actor-world.test.js`, `tests/js/actor-dispatch.test.js`, `tests/test_actor_discovery.py`. Existing-runtime HTTP MCP discovery, world tree/search and reader follow-ups passed on Foundry14.369/PF2e8.6.1. This closes discovery only, not type-specific or effective reading.

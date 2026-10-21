@@ -19,6 +19,8 @@ inspect the delivered registry before assuming support. This source change is
 not a new image/module release. See the
 [Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
 
+The same unreleased source adds world Actor folder/name discovery, Scene/Token navigation, and explicit Actor/Item pack index search. These tools require the same verified runtime and GM access; they retain partial-scope failures and bounded continuations. They do not import compendium documents.
+
 ## Run with Docker Compose
 
 Create a deployment directory containing the following two files.

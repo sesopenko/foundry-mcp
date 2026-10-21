@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Adds instance-correct resolution to the shared extraction pipeline. |
 
@@ -23,3 +23,7 @@ Acceptance: two unlinked tokens from one base retain different HP/Items/identiti
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Navigation checkpoint — October 20, 2026
+
+`list_scene_actors` now navigates readable scenes and placed linked/synthetic tokens without canvas access. Missing Actors/base Actors, unsupported counts, permissions and stale continuations are explicit. Focused JavaScript and Python cross-language tests plus existing-runtime MCP navigation passed. Full acceptance remains open: type-specific readers must demonstrate distinct synthetic HP/Items and any relevant master dependencies; identity-only tests do not establish those values.

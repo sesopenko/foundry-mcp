@@ -249,6 +249,8 @@ and report partial or unsupported sections explicitly. Full type-specific book
 mappings and effective statistics remain staged. See [contracts](docs/actor-tools.md)
 and the [development story map](docs/actor-item-story-map/index.md).
 
+World Actor folders/name search, placed Scene/Token navigation and scoped Actor/Item compendium index search now provide bounded discovery with canonical reader follow-ups. Scope failures and stale continuations remain explicit; pack results require a caller-selected literal query.
+
 ## Private PDF references
 
 An opt-in GM-private PDF library provides lexical lookup and source-page reading,

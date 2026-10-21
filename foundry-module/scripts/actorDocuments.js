@@ -65,7 +65,7 @@ function supported(document) {
 }
 
 /** Read public identities with permission checks on every related record. */
-function documentContext(document, actor, token) {
+export function documentIdentity(document, actor, token) {
   const pack = document.compendium ?? actor?.compendium ?? null;
   if (pack) requirePermission(pack);
   const folder = document.folder && permitted(document.folder) ? document.folder : null;
@@ -100,7 +100,7 @@ export async function actorTarget(params) {
     actor = await resolve(params.actor_uuid, "Actor");
   }
   supported(actor);
-  return { document: actor, actor: null, token, identity: documentContext(actor, null, token) };
+  return { document: actor, actor: null, token, identity: documentIdentity(actor, null, token) };
 }
 
 /** Resolve an Item with its owner/instance; PF2e-specific 8.6.1 type filter. */
@@ -111,18 +111,18 @@ export async function itemTarget(params) {
     const item = [...target.document.items.values()].find(candidate => candidate.uuid === params.item_uuid);
     if (!item) fail("DocumentNotFound", "Item does not belong to the selected token Actor.", "Call list_actor_items for that token and reuse its Item UUID and token_uuid.");
     requirePermission(item); supported(item);
-    return { document: item, actor: target.document, token: target.token, identity: documentContext(item, target.document, target.token) };
+    return { document: item, actor: target.document, token: target.token, identity: documentIdentity(item, target.document, target.token) };
   }
   if (params.item_uuid.startsWith("Scene.")) fail("InvalidRequest", "Synthetic-owned Item reads also require token_uuid.", "Reuse the Item UUID and token_uuid from list_actor_items.");
   const item = await resolve(params.item_uuid, "Item");
   const actor = item.parent?.documentName === "Actor" ? item.parent : null;
   if (actor) { requirePermission(actor); supported(actor); }
   supported(item);
-  return { document: item, actor, token: null, identity: documentContext(item, actor, null) };
+  return { document: item, actor, token: null, identity: documentIdentity(item, actor, null) };
 }
 
 /** Build owned Item identity; PF2e-specific 8.6.1 type filter, no derived data. */
 export function embeddedIdentity(item, owner) {
   requirePermission(item); supported(item);
-  return documentContext(item, owner.document, owner.token);
+  return documentIdentity(item, owner.document, owner.token);
 }

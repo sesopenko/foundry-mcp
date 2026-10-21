@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Adds index/hydration resolution to the shared extraction pipeline. |
 
@@ -24,3 +24,7 @@ Acceptance: unloaded/cached packs yield consistent discovery; partial pack failu
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Delivery evidence — October 20, 2026
+
+Implemented explicit Actor/Item pack listing and selected index search, partial failed/denied/incomplete scopes, unknown index type handling, canonical public getUuid selectors and stale-result checks. Flat folder context is explicitly limited; pack editing locks do not prevent reads. Tests: `tests/js/actor-packs.test.js`, `tests/js/actor-dispatch.test.js`, `tests/test_actor_compendiums.py`. Live selected pack search followed its returned Item UUID through the full reader without import on Foundry14.369/PF2e8.6.1.

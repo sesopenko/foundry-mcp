@@ -11,9 +11,10 @@ The 39 stories retain the full agreed scope. Source checkpoints, integrated Acto
 ./scripts/actor-tools.sh full
 ./scripts/actor-tools.sh live
 ./scripts/actor-tools.sh browser
+./scripts/actor-tools.sh refresh
 ```
 
-The fixed runner accepts only those commands. `live` exercises the existing development MCP server using its caller credential from `.env.mcp`, with read-only selectors and no secret/document-ID output. `browser` inspects readiness and console-error counts in the dedicated development profile; neither command creates worlds or changes game documents. It uses installed Python/Node dependencies, performs no network setup or release, and can be approved by its script prefix for unattended checks. The full runner uses the existing repository test script. PDF subprocess tests need host execution when sandboxed child-process waiting stalls; do not repeatedly run them in the known-failing sandbox environment.
+The fixed runner accepts only those commands. `refresh` reloads only the existing dedicated development tab; it does not change game documents. `live` exercises the existing development MCP server using its caller credential from `.env.mcp`, with read-only selectors and no secret/document-ID output. `browser` inspects readiness and console-error counts in the dedicated development profile; neither command creates worlds or changes game documents. It uses installed Python/Node dependencies, performs no network setup or release, and can be approved by its script prefix for unattended checks. The full runner uses the existing repository test script. PDF subprocess tests need host execution when sandboxed child-process waiting stalls; do not repeatedly run them in the known-failing sandbox environment.
 
 ## Verified increments
 
@@ -32,6 +33,14 @@ The fixed runner accepts only those commands. `live` exercises the existing deve
 - Focused and full offline suites passed. Live HTTP discovery and two-page NPC, owned Item and token-instance reads passed on the existing test world after refresh/restart. No game documents changed. Independent console audit found no reader-module errors; cached errors were a core window-size warning and reconnect-period socket errors.
 - Root cause of the first live attempt was connection timing after refresh/service restart; health later showed GM admission. The fixed live runner now waits for the existing bridge rather than starting another server or requesting another login.
 - Next ready tasks are independent world/pack/token discovery, physical source helpers and individual Actor/Item source readers. Complete source checkpoints do not close effective/live gates.
+
+### 3. World, scene and scoped pack discovery — October 20, 2026
+
+- CORE-world and CORE-packs delivered bounded canonical discovery, literal queries, folder expansion and explicit scope failures. Pack search uses selected indexes and public UUIDs; no imports or bulk hydration.
+- CORE-token navigation is in progress: linked/synthetic identities and inactive scene navigation work, but distinct HP/Items and relevant master state remain pending type readers.
+- Focused cross-language DTO/discovery/schema/RPC tests passed. Live HTTP MCP discovery verified nine tools, world search/tree, selected scene/token follow-up and selected pack Item hydration on Foundry14.369/PF2e8.6.1. No game documents changed. Console audit after refresh found only the existing core window-width warning.
+- The live runner now uses protocol structured JSON for version diagnostics; a regression test covers generated client model objects. Native Codex MCP sessions became stale after server restart, so live verification used a fresh authenticated client to the existing service.
+- Shared physical-field helper/schema evidence is prepared separately; reader integration and individual Item stories remain pending.
 
 ## Open acceptance evidence
 

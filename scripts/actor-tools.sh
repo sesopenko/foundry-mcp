@@ -17,6 +17,7 @@ case "${1:-status}" in
     ;;
   full) exec ./scripts/test.sh ;;
   browser) exec .venv/bin/python scripts/actor-live-check.py --browser ;;
+  refresh) exec .venv/bin/python scripts/actor-live-check.py --refresh ;;
   live) exec .venv/bin/python scripts/actor-live-check.py ;;
-  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser]' >&2; exit 2 ;;
+  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh]' >&2; exit 2 ;;
 esac

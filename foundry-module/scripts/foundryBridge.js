@@ -4,6 +4,9 @@ import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage } from "./journals.js";
 import { getActorTypes, readActor, readItem, listActorItems } from "./actors.js";
+import { getActorTree, searchActors } from "./actorWorld.js";
+import { listSceneActors } from "./actorScenes.js";
+import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
 /**
  * ES module responsible for handling WebSocket communication with the
  * Python FoundryConnectionManager and dispatching RPC-style requests.
@@ -55,6 +58,11 @@ const rpcHandlers = {
   searchJournals,
   readJournalPage,
   getActorTypes,
+  getActorTree,
+  searchActors,
+  listSceneActors,
+  listActorCompendiums,
+  searchCompendiumActors,
   readActor,
   readItem,
   listActorItems,

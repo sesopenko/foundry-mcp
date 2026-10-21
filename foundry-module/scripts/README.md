@@ -47,3 +47,5 @@ and `actorReadUtils.js` provides detached revision/text/pagination utilities.
 Only common source metadata and explicit Item descriptions are delivered by the
 foundation; type-specific mappings/effective values remain staged. See
 [the contract and version boundary](../../docs/actor-tools.md).
+
+Actor discovery modules `actorWorld.js`, `actorScenes.js` and `actorPacks.js` use public document relationships and selected pack indexes. Python discovery adapters validate their bounded DTOs and expose self-contained tool contracts. Scene navigation retains current token Actor identity; effective token state remains a separate acceptance gate.

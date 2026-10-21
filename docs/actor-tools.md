@@ -229,8 +229,22 @@ brackets here describe returned values, not literal selectors. Identity has
 `next_call.arguments` directly and add section/limit inputs. If only source
 reading is delivered, next_call still points to that source-capable reader;
 never offer a reader that has not shipped. Folder expansion uses the separately
-defined `expand` object. Pack and Scene nodes point to their scoped search or
-list tool with `pack_ids`/`scene_uuid`, respectively.
+defined `expand` object. Scene nodes point to their scoped list tool with
+`scene_uuid`. Pack nodes have `next_call:null`,
+`search_scope={pack_ids:[id],document_type}` and an actionable limitation: add a
+literal `query` and call `search_compendium_actors`. A pack title is never
+invented as the search query.
+
+World Actor nodes include `parent_uuid`, `depth` and `folder_path` (ordered
+`{id,uuid,name,name_truncated}` ancestors). Folder nodes contain `id`, `uuid`,
+`name`, `name_truncated`, `parent_uuid`, `depth`, `children_complete` and `expand`.
+Scene nodes contain `id`, `uuid`, `name`, `name_truncated`, `parent_uuid:null` and
+`next_call`. Token nodes additionally contain nullable current Actor `identity`,
+`actor_link`, nullable `base_actor`, and `limitations`; their `parent_uuid` is the
+Scene UUID. `list_scene_actors` also returns `unsupported_count`, counting placed
+tokens whose resolved Actor type is outside this backlog, separately from
+caller type filters (zero when only listing scenes). Missing current Actors
+remain visible with `next_call:null` and an actionable limitation.
 
 Optional query uses the search normalization above; blank is invalid. Omitted
 types means all in-scope types; empty lists/unknown types are invalid. Bounds are
