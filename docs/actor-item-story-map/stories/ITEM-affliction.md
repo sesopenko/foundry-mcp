@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -27,6 +27,19 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 - Selected fields: `save.type`, `save.value`, `status.onset`, `status.stage`, `status.progress`, `onset`, `stages`, `duration`, `start`, `context`, `fromSpell`.
 - Mapping and relationships: Expose persisted tracked status separately from stage definitions. `status.stage` is one-based while `stages` is zero-based; resolve only in range, retaining malformed source explicitly. Preserve stage condition/effect links without applying them.
 - Preserve each contributor's canonical identity; unresolved links remain named references with an explicit reason. Nested source objects without document identity use source-path provenance, never fabricated UUIDs.
+
+## Current runtime limit
+
+PF2e8.6.1's production constructor explicitly rejects affliction Items. The
+current reader returns UnsupportedType before source extraction; discovery marks
+affliction source/mapped/effective support false. See [runtime and rulebook
+evidence](../affliction-verification.md). A pure offline selector and stage-mapping
+fixtures are prepared in [the schema audit](../affliction-fields.md), but no live
+reader or story completion is claimed. Do not bypass the upstream guard or
+construct speculative fixtures. Original poison/disease/curse descriptions remain
+readable through their actual supported Item types. Resume runtime integration
+only after a supported system version and representative existing fixtures are
+available and audited.
 
 ## Implementation checklist
 

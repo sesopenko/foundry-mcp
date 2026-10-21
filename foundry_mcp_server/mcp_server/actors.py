@@ -1106,6 +1106,10 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     identify proficiency ranks. Detached/unknown owners retain stored semantics;
     no effective skill total or roll-option execution is implied. identity.actor
     may include actual owner type character/npc/familiar.
+    Affliction Items are explicitly unsupported in the tested PF2e8.6.1 runtime:
+    upstream construction is disabled. read_item rejects affliction selectors with
+    UnsupportedType before reading their source; inspect get_actor_types for this
+    limitation. No schema-only prototype establishes runtime affliction support.
     Condition Items expose persisted valuedness/value, persistent damage formula,
     damage type/recovery DC/critical-hit flag, local parent/child/override IDs and
     override slugs, group, traits and publication. Local IDs remain source text;
@@ -1171,7 +1175,8 @@ async def list_actor_items(actor_uuid: Identifier | None = None, token_uuid: Ide
     and supported named relationships; call next_call.tool with next_call.arguments
     (normally read_item(item_uuid=node.identity.uuid), retaining token_uuid).
     Scope statuses searched/failed/incomplete/denied distinguish incomplete results;
-    unsupported_count counts excluded Items. Empty only means no literal matches
+    unsupported_count counts excluded Items, including runtime-disabled PF2e8.6.1
+    afflictions; those Items do not break navigation of other owned Items. Empty only means no literal matches
     in completed scope, never no possible actions. limit defaults 50 (integer
     1–100 nodes), max_bytes 48000 (8000–48000 UTF-8 JSON bytes). Follow returned
     pagination.next_cursor unchanged with ALL original inputs until complete/null;

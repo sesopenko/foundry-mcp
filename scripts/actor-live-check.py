@@ -292,6 +292,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
         assert action_support['mapped_supported'] and not action_support['effective_supported']
         assert action_support['verification']['live']['status']=='passed'
+        affliction_support=next(entry for entry in registry.data['item_types'] if entry['type']=='affliction')
+        assert not affliction_support['source_supported'] and not affliction_support['mapped_supported'] and not affliction_support['effective_supported']
+        assert affliction_support['verification']['live']['status']=='not_run'
         condition_support=next(entry for entry in registry.data['item_types'] if entry['type']=='condition')
         assert condition_support['mapped_supported'] and not condition_support['effective_supported']
         assert condition_support['verification']['live']['status']=='passed'

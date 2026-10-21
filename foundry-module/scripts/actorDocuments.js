@@ -60,6 +60,11 @@ async function resolve(uuid, kind) {
 
 /** PF2e-specific 8.6.1 type boundary; ACTOR_TYPES/ITEM_TYPES do not infer role. */
 function supported(document) {
+  // PF2e-specific8.6.1 production affliction constructor is explicitly disabled:
+  // https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/affliction/document.ts
+  // Offline source fixtures do not establish externally supported runtime reads.
+  if(document.documentName==='Item'&&document.type==='affliction')fail('UnsupportedType','PF2e8.6.1 disables affliction Items in production.','Use the original poison/disease/curse description; schema-only affliction research is not a live reader.');
+
   const allowed = document.documentName === "Actor" ? ACTOR_TYPES : ITEM_TYPES;
   if (!allowed.includes(document.type)) fail("UnsupportedType", `Type '${String(document.type)}' has no supported Actor/Item interpretation.`, "Inspect get_actor_types for supported types.");
 }

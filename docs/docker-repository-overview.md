@@ -40,6 +40,9 @@ and token-context checks. Formula evaluation and effective expiry remain unsuppo
 Condition source preserves valued flags, persistent-damage metadata, local
 references and override slugs. Explicit relationships resolve actual owner-local
 Item IDs; slugs remain unverified. Activity and suppression remain unsupported.
+PF2e8.6.1 production disables affliction Items. Discovery marks their reading
+unsupported; original poison/disease/curse descriptions remain the source.
+
 
 
 

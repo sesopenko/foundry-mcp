@@ -246,6 +246,10 @@ export async function getActorTypes(params = {}) {
     melee.mapped_supported=true;
     melee.limitations=['Authored NPC attack modes, bonus/damage/range source and named effect labels; no effective elite/weak/MAP/target math. Null source range does not exclude thrown traits. Live checks cover Strikes; other modes have schema/fixture coverage.'];
     melee.verification={deterministic:{status:'passed',evidence:['tests/js/actor-melee.test.js','tests/js/actor-melee-readers.test.js','tests/test_actor_melee.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/melee-fields.md','scripts/actor-live-check.py']}};
+    const affliction=result.item_types.find(entry=>entry.type==='affliction');
+    affliction.source_supported=false;affliction.mapped_supported=false;
+    affliction.limitations=['PF2e8.6.1 production disables affliction Item construction. Offline schema selectors exist but runtime reading is unsupported; use original poison/disease/curse descriptions.'];
+    affliction.verification={deterministic:{status:'passed',evidence:['tests/js/actor-affliction.test.js','tests/js/actor-affliction-support.test.js']},live:{status:'not_run',evidence:['docs/actor-item-story-map/affliction-verification.md']}};
     const condition=result.item_types.find(entry=>entry.type==='condition');
     condition.mapped_supported=true;
     condition.limitations=['Persisted condition/value, persistent damage, local references and override slugs only. Activity, suppression, effective duration and damage dominance are unsupported. Explicit relationships resolve actual owner-local Item IDs; override slugs remain unverified.'];
@@ -431,7 +435,7 @@ export async function listActorItems(params={}) {
   const build=async()=>{
     const owner=await actorTarget(params); const nodes=[];let unsupported_count=0;
     for (const item of owner.document.items.values()) {
-      if (!ITEM_TYPES.includes(item.type)) {unsupported_count++;continue;}
+      if (!ITEM_TYPES.includes(item.type)||item.type==='affliction') {unsupported_count++;continue;}
       if (!types.includes(item.type)||!String(item.name).toLowerCase().includes(query)) continue;
       const identity=embeddedIdentity(item,owner);
       nodes.push({kind:'item',identity,parent_uuid:owner.document.uuid,relationships:[],next_call:{tool:'read_item',arguments:{item_uuid:identity.uuid,...(owner.token?{token_uuid:owner.token.uuid}:{})}}});

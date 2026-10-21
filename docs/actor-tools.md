@@ -415,3 +415,15 @@ read_item with that UUID/token selector. Unresolved statuses have null target_uu
 and no resolved metadata. Standalone Items retain unverified local IDs; absent,
 null and empty source markers remain distinct. No current activity or suppression
 is inferred. See the condition field boundary for keys and provenance.
+
+## Runtime-disabled afflictions
+
+PF2e8.6.1 production rejects affliction Item construction. `get_actor_types`
+marks affliction source/mapped/effective support false, with live verification
+not_run. `read_item` returns UnsupportedType before extracting an affliction
+source. `list_actor_items` counts afflictions as unsupported and continues other
+Items; condition-parent links to one report unsupported without resolved metadata.
+Read original poison/disease/curse descriptions on their supported source Items.
+An offline source selector and stage-correspondence fixtures document schema
+research only; they are not packaged runtime support or proof of current timers,
+advancement, effect application or expiry. See [the audit](actor-item-story-map/affliction-verification.md).

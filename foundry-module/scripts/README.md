@@ -82,3 +82,8 @@ activity, suppression, persistent-damage roll or effective duration is read.
 `actorConditionRelationships.js` follows local IDs through the actual owner Item
 collection and public identity/permission boundary. Override slugs remain named
 unverified claims; no target source or active/suppressed state is read.
+
+`actorAffliction.js` is an offline schema-research selector, excluded from the
+runtime package. PF2e8.6.1 production disables afflictions; public reader admission
+rejects them before source access and discovery reports support false. No guard
+is bypassed and no fixture constructor is invoked.

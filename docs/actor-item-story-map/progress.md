@@ -110,6 +110,13 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Focused JS and actual Python DTO tests cover linked/synthetic follow-up, standalone scope, permissions, stale identity/membership and exact source provenance. Full offline suites and four live source/relationship samples passed; populated reference chains remain a live-fixture gap.
 - ITEM-condition Complete for declared persisted-source and owner-local reference scope. Advanced active/suppressed-state/effective duration remain unsupported and recorded. Completed stories are 10/39 (25.6%); integrated state acceptance remains open.
 
+### 15. Affliction schema preparation and verified runtime limit — October 20, 2026
+
+- Actual rulebook pages and the pinned affliction schema were reviewed. Offline pure fixtures preserve stage definitions, one-based tracked stage correspondence, missing/empty arrays and out-of-range values without clamping or advancement.
+- Upstream and installed PF2e8.6.1 production code reject affliction construction. No existing affliction was found in world/owned Items, 565 token Actor contexts or 26 Item pack indexes. Actor-pack embeddings were not exhaustively hydrated.
+- Runtime admission now reports UnsupportedType before source access; registry support is false, owned navigation continues with unsupported_count, and condition links report unsupported. Focused schema and boundary tests pass. No production guard was bypassed.
+- ITEM-affliction remains In progress. Supported runtime access/fixtures are required for its later integration; other independent stories can proceed. Completed stories remain 10/39 (25.6%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

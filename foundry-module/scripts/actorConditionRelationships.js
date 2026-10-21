@@ -32,7 +32,7 @@ export function conditionRelationships(target,fields){
     const item=[...target.actor.items.values()].find(candidate=>candidate.id===field.value);
     if(item){
      if(!permitted(item))result={status:'denied',target_uuid:null};
-     else if(!ITEM_TYPES.includes(item.type)||(!parent&&item.type!=='condition'))result={status:'unsupported',target_uuid:null};
+     else if(!ITEM_TYPES.includes(item.type)||item.type==='affliction'||(!parent&&item.type!=='condition'))result={status:'unsupported',target_uuid:null};
      else{
       const identity=embeddedIdentity(item,{document:target.actor,token:target.token});
       result={status:'resolved',target_uuid:identity.uuid,document_name:'Item',type:identity.type,name:identity.name,name_truncated:identity.name_truncated,...(target.token?{token_uuid:target.token.uuid}:{})};
