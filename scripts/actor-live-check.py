@@ -208,6 +208,12 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
                 if not weapon_cursor:break
             assert weapon_cursor is None
             assert len({row['raw'][0]['path'] for row in rows})==len(rows)
+            selected_ammo=next(row['raw'][0] for row in rows if row['raw'][0]['path']=='/system/selectedAmmoId')
+            relations=payload(await client.call_tool('read_item',{'item_uuid':sample['uuid'],'sections':['relationships']}))
+            assert relations['pagination']['complete'] and len(relations['records'])==1
+            ref=relations['records'][0]
+            assert ref['raw'][0]==selected_ammo and ref['provenance']['mapping']=='pf2e.weapon.selected-ammo.v1'
+            assert ref['mapped']['value']=={'status':'missing','target_uuid':None}
             for path,expected in [('/system/range',sample['range']),('/system/category',sample['category']),('/system/damage/damageType',sample['damage_type'])]:
                 row=next(row for row in rows if row['raw'][0]['path']==path)
                 assert row['raw'][0]['value']==expected and row['provenance']['mapping']=='pf2e.weapon.source.v1'
@@ -335,7 +341,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

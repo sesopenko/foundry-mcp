@@ -697,6 +697,38 @@ def _weapon_spec(path):
     return None
 
 
+def _weapon_ammunition_relationship(row, identity):
+    """PF2e-specific WeaponSystemSource.selectedAmmoId8.6.1 local reference.
+
+    The pinned weapon/data.ts schema above defines an authored local ID. A
+    resolved same-owner selector never establishes loading, compatibility,
+    availability, usability or a prepared strike's ammunition.
+    """
+    if row['section'] != 'relationships' or row['kind'] != 'relationship' or row['key'] != 'relationships:weapon:selectedAmmoId': return False
+    if len(row['raw']) != 1: return False
+    raw = row['raw'][0]
+    if raw['document_uuid'] != identity['uuid'] or raw['path'] != '/system/selectedAmmoId': return False
+    local_id = raw.get('value') if raw['present'] else None
+    if local_id is not None and type(local_id) is not str: return False
+    provenance = row['provenance']
+    if provenance['mapping'] != 'pf2e.weapon.selected-ammo.v1' or not provenance['limitations'] or any(not v for v in provenance['limitations']): return False
+    if provenance['contributors'] != [{k:raw[k] for k in ('document_uuid','path','basis')}]: return False
+    mapped = row['mapped']; value = mapped['value']
+    if mapped['concept'] != 'stored_selected_ammunition_reference' or mapped['unit'] is not None or type(value) is not dict: return False
+    status = value.get('status')
+    if status in ('missing','denied','unsupported','unverified'):
+        if set(value) != {'status','target_uuid'} or value['target_uuid'] is not None: return False
+        if not local_id: return status == 'missing'
+        if identity['actor'] is None: return status == 'unverified'
+        return True
+    if status != 'resolved' or not local_id or identity['actor'] is None or re.fullmatch(r'[^.\s#]+',local_id) is None: return False
+    instance = identity['instance']
+    required = {'status','target_uuid','document_name','type','name','name_truncated'} | ({'token_uuid'} if instance is not None else set())
+    if set(value) != required or value['target_uuid'] != identity['actor']['uuid'] + '.Item.' + local_id or value['document_name'] != 'Item' or value['type'] not in ('ammo','weapon'): return False
+    if type(value['name']) is not str or len(value['name']) > 256 or type(value['name_truncated']) is not bool: return False
+    return instance is None or value['token_uuid'] == instance['token_uuid']
+
+
 def _weapon_record(row, identity):
     """PF2e-specific weapon8.6.1 strict source DTO, alongside shared physical fields.
 
@@ -705,6 +737,7 @@ def _weapon_record(row, identity):
     path scopes. Description behavior remains the existing explicit text reader.
     """
     if len(row['raw']) != 1: return False
+    if row['section'] == 'relationships': return _weapon_ammunition_relationship(row,identity)
     raw = row['raw'][0]; path = raw['path']; spec = _weapon_spec(path)
     if spec is None:
         if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
@@ -879,7 +912,7 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         # or relabel serialized attachments as separate contributor documents.
         if any(raw['document_uuid'] != identity['uuid'] for raw in row['raw']):
             return False
-        if type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(_empty_source_array(raw['path'], identity) for raw in row['raw'])) and not (mapped.get('value') == {} and all(_empty_source_object(raw['path'], identity) for raw in row['raw'])):
+        if not (identity['type'] == 'weapon' and row['section'] == 'relationships') and type(mapped) is dict and isinstance(mapped.get('value'), (dict, list)) and not (mapped.get('value') == [] and all(_empty_source_array(raw['path'], identity) for raw in row['raw'])) and not (mapped.get('value') == {} and all(_empty_source_object(raw['path'], identity) for raw in row['raw'])):
             return False
     if type(mapped) is not dict or set(mapped) != {'concept', 'value', 'unit'} or type(mapped['concept']) is not str or (mapped['unit'] is not None and type(mapped['unit']) is not str):
         return False
@@ -1152,8 +1185,18 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     persistent damage, category/group, range/reload, ammunition capacity and local
     selectedAmmoId, runes, combination melee usage, trait toggles and specific-magic
     baseline. These are persisted source values, never effective Strike totals,
-    wielded state or hydrated ammunition; weapon relationships/effective remain
-    unsupported. Source completion covers selected fields, not every schema field.
+    wielded state or hydrated ammunition. Explicit weapon relationships return one
+    relationship record with raw /system/selectedAmmoId and mapped concept
+    stored_selected_ammunition_reference. mapped.value has status and target_uuid;
+    missing/denied/unsupported/unverified expose null target_uuid. Resolved ammo or
+    weapon Items include document_name, type, name, name_truncated and token_uuid
+    when the source Item has a token context. Follow with read_item using returned
+    target_uuid/token_uuid. Resolution is owner-local, permission checked and
+    immediate; detached nonempty IDs remain unverified. Missing/null/empty IDs
+    remain missing. This records a chosen ID, never loaded/current ammunition,
+    compatibility or usability. Source alone performs no target hydration;
+    effective remains unsupported. Source completion covers selected fields,
+    not every schema field.
     action Items have complete selected source mappings for activation kind/count,
     category, frequency, traits/tags, publication and named self-effect references.
     Null action counts never imply free actions. Explicit relationships resolve

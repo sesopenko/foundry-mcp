@@ -185,6 +185,14 @@ current working tree, so stage the intended changes before committing.
 
 ### Codex
 
+For Debian 13 development bootstrap, run `./scripts/dev-setup.sh` (or add
+`--install-system-packages` to provision missing Debian prerequisites).
+This installs locked Python/npm tools and a local Python/JavaScript code graph.
+See [code graph setup and navigation](docs/code-graph.md).
+Use `./scripts/codex.sh --code-only` for source analysis without Docker,
+Foundry, or the development browser. An installed, authenticated Codex CLI is
+required only when launching Codex.
+
 The repository's `.codex/config.toml` enables the `foundry-vtt` MCP server
 at `http://127.0.0.1:8000/mcp/mcp` for Codex sessions in this project.
 Codex loads project configuration only for trusted projects; accept the

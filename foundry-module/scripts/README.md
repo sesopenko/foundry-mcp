@@ -91,3 +91,7 @@ is bypassed and no fixture constructor is invoked.
 `actorWeapon.js` selects weapon definition/configuration fields alongside shared
 physical source without duplicate paths. It never generates Strikes, recalculates
 NPC attacks, hydrates selected ammunition or prepares alternate-use results.
+
+`actorWeaponRelationships.js` resolves explicit stored selectedAmmoId through
+actual owner membership and public identities. It does not use prepared ammo,
+loaded subitems, compatibility checks, consumption or effective attack values.

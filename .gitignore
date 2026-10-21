@@ -190,3 +190,5 @@ pdf-state/
 *.sqlite3-journal
 *.sqlite3-wal
 *.sqlite3-shm
+
+/.code-graph/

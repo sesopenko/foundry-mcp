@@ -39,3 +39,18 @@ args = ["./scripts/chrome-devtools.sh"]
 enabled = false
 startup_timeout_sec = 30
 tool_timeout_sec = 60
+
+[mcp_servers.code-graph]
+command = "bash"
+args = ["./scripts/code-graph.sh", "serve"]
+enabled = true
+required = false
+startup_timeout_sec = 60
+tool_timeout_sec = 120
+enabled_tools = ["project_map", "module_overview", "get_ast_node", "get_call_graph", "find_references", "semantic_code_search", "ast_search"]
+
+[mcp_servers.code-graph.tools.get_ast_node]
+approval_mode = "approve"
+
+[mcp_servers.code-graph.tools.module_overview]
+approval_mode = "approve"

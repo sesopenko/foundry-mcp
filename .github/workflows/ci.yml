@@ -180,3 +180,27 @@ jobs:
           curl -fLsS --retry 3 --retry-delay 2 --output /tmp/latest-module.json \
             'https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json'
           cmp dist/module/module.json /tmp/latest-module.json
+
+  code-graph-debian:
+    runs-on: ubuntu-latest
+    container: debian:13
+    steps:
+      - name: Install Debian bootstrap prerequisites
+        run: apt-get update && apt-get install -y ca-certificates curl git nodejs npm python3 ripgrep util-linux
+      - uses: actions/checkout@v4
+      - name: Bootstrap without Codex, Docker, Foundry or models
+        shell: bash
+        run: |
+          ./scripts/dev-setup.sh
+          ./scripts/dev-setup.sh
+          git diff --exit-code
+          cat /etc/os-release
+          uname -m
+          node --version
+          npm --version
+          "$HOME/.local/bin/uv" --version
+          .venv/bin/python --version
+          ./scripts/code-graph.sh --version
+      - name: Exercise native graph contracts in disposable fixtures
+        shell: bash
+        run: CODE_GRAPH_INTEGRATION=1 .venv/bin/python -m unittest discover -s tests -p test_code_graph.py -v

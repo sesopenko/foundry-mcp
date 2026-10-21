@@ -316,3 +316,27 @@ generic hosts and placeholder credentials; never include private deployment
 addresses, registry information, or real secrets. Verify YAML/TOML examples
 and current official client documentation when changing integration guidance.
 Do not publish the Docker Hub overview automatically; the user copies it.
+
+## Local code graph
+
+Use the `code-graph` MCP server for structural questions about this checkout's
+Python server, Foundry JavaScript, and tests. See
+[setup, tool examples, freshness and recovery](docs/code-graph.md).
+If tools are missing, run `./scripts/code-graph-doctor.sh`. Provision missing
+dependencies with `./scripts/dev-setup.sh` before a new Codex session.
+Use `./scripts/codex.sh --code-only` for source analysis without the Foundry stack.
+
+For a known area, start with `module_overview` or named `get_ast_node`;
+use `project_map` for orientation. Begin compact, with small result counts and
+call depth 1–2. Use `get_ast_node(include_impact=true)` or `find_references`
+before changing shared behavior. Include tests when selecting validation.
+Read current source before editing: edges can be inferred, incomplete or stale.
+No callers does not establish that an entry point is unused. Use `rg` for exact
+RPC methods, hooks, settings keys and dynamic dispatch; trace Python and
+JavaScript sides of WebSocket methods separately.
+
+Use Grounded Docs and existing Foundry verification guidance for external API
+contracts; a local graph does not establish public API status or runtime support.
+For incomplete results, check local index/parse health, attempt one targeted
+recovery, then fall back to `rg` and source reading. Do not dump the whole graph
+or rebuild after every edit.

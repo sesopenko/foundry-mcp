@@ -27,3 +27,25 @@ Explicit undefined is missing only where the schema marks a field optional: `max
 Shared physical source already supplies quantity, equipped hands/carry/investment, source material, base item, usage code, source Bulk/HP/price, and serialized attachments. No weapon descriptor duplicates those paths. Flags, sheet state, prepared traits, rune effects, reload labels, final Strikes, rule elements and descriptions are excluded. Selecting a mode or toggle never changes the source or executes a rule.
 
 `tests/js/actor-weapon.test.js` covers exact damage/ammunition/runes, zero/false/null, unknown code preservation, optional undefined, missing versus empty markers, malformed selected types, source immutability, forbidden prepared getters and uniqueness alongside shared physical paths. These pure tests establish neither effective weapon totals nor successful ammunition relationship resolution.
+
+## Explicit stored ammunition selection
+
+`relationships` reads only `/system/selectedAmmoId`, returning one record with
+key `relationships:weapon:selectedAmmoId`, concept
+`stored_selected_ammunition_reference` and mapping
+`pf2e.weapon.selected-ammo.v1`. It looks up that local ID only in the actual
+owning Actor's Item collection. Only ammo/weapon targets resolve; no UUID is
+constructed and no target source is read. Resolved metadata includes target_uuid,
+document_name Item, type, bounded name/name_truncated and selected token_uuid
+for linked/synthetic context. Follow read_item with those selectors.
+
+Absent/null/empty selection is missing; an absent owned target is missing;
+unreadable targets are denied, other types unsupported, and a standalone local ID
+unverified. Unresolved values have null target_uuid and no resolved metadata.
+Source-only reading never inspects related Items. Identity/permission/membership
+changes are included in relationship snapshot checks.
+
+The stored selection is not the PF2e prepared ammo getter. That getter also uses
+reload/repeating logic and loaded serialized subitems; its implementation is not
+adopted as an external API. No loaded/compatible ammunition, quantity, usability,
+consumption, roll or final Strike is inferred by this reference reader.

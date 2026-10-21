@@ -252,6 +252,16 @@ Codex's `env_http_headers` reads the complete header from the named environment 
 
 See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/).
 
+For contributors working from a source checkout, the separate
+[Debian 13 development setup](https://github.com/sesopenko/foundry-mcp/blob/main/docs/code-graph.md)
+provides a pinned local Python/JavaScript code graph for Codex. Run
+`./scripts/dev-setup.sh`, then `./scripts/codex.sh --code-only` for source analysis
+without the Foundry stack, or the normal development launcher for runtime work.
+The graph engine and index are development tools and are excluded from this
+production image and the Foundry module ZIP. Container operators do not need
+Node, npm or graph setup.
+
+
 ## Check server and module versions
 
 Ask your MCP client to call `get_bridge_versions` with no arguments. It returns

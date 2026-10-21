@@ -436,6 +436,14 @@ configuration, runes, alternate melee usage, toggles and specific-magic baseline
 metadata. Common baseItem/material/equipped/attachment paths are emitted once.
 Carry state and hands held do not establish usability; source damage/runes are
 not final Strikes or NPC authored attacks. Serialized attachments retain source
-paths, not fabricated document UUIDs. Ammunition resolution and all effective
-attack/alternate-use calculations remain pending. See [field boundary](actor-item-story-map/weapon-fields.md)
+paths, not fabricated document UUIDs. Explicit stored ammunition references are now available; all effective
+attack/alternate-use calculations remain unsupported. See [field boundary](actor-item-story-map/weapon-fields.md)
 and [rulebook/runtime evidence](actor-item-story-map/weapon-verification.md).
+
+Weapon `relationships` returns the stored selectedAmmoId claim with concept
+`stored_selected_ammunition_reference` and mapping `pf2e.weapon.selected-ammo.v1`.
+Resolved actual owner-local ammo/weapon Items expose target_uuid, document_name,
+type, name/name_truncated and selected token_uuid. Follow read_item with those
+selectors. Missing/denied/unsupported/unverified results have null target_uuid and
+no resolved metadata. Standalone IDs stay unverified. This does not identify
+loaded or compatible ammunition, evaluate quantity/usability, or calculate Strikes.
