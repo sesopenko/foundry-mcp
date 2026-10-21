@@ -53,3 +53,8 @@ Actor discovery modules `actorWorld.js`, `actorScenes.js` and `actorPacks.js` us
 `actorAction.js` selects persisted PF2e action fields. `actors.js` maps their activation discriminator and resolves immediate self-effect references only for explicit relationship requests, preserving synthetic target context and rechecking authorization. It never applies an effect or evaluates an action.
 
 `actorMelee.js` selects authored NPC attack source and additional-effect labels. Null source range does not rule out thrown traits; source damage and bonuses never come from carried gear or preparation. `actors.js` emits named unresolved relationships without guessing selectors.
+
+`actorLore.js` selects persisted PF2e Lore source. Actual owner type controls
+modifier/rank terminology; rank labels never become calculated totals. `actors.js`
+exposes owned specialties as canonical references in a partial Skills section,
+retaining duplicate identities, permissions and selected token context.

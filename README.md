@@ -256,6 +256,10 @@ NPC attack Items preserve authored modes, bonus/damage and named effect labels,
 with explicit null-range/thrown limitations. Other concrete type readers and
 effective Actor statistics remain staged. See the
 [contracts](docs/actor-tools.md) and [development story map](docs/actor-item-story-map/index.md).
+Lore Items expose owner-aware stored modifiers and labelled ranks; Actor Skills
+currently returns partial Lore specialty references with canonical Item/token
+context. Effective check totals remain unsupported.
+
 
 ## Private PDF references
 

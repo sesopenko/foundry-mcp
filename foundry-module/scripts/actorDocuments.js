@@ -64,7 +64,9 @@ function supported(document) {
   if (!allowed.includes(document.type)) fail("UnsupportedType", `Type '${String(document.type)}' has no supported Actor/Item interpretation.`, "Inspect get_actor_types for supported types.");
 }
 
-/** Read public identities with permission checks on every related record. */
+/** Read public identities with permission checks on every related record.
+ * Owner type is persisted document context, never a narrative/control inference.
+ */
 export function documentIdentity(document, actor, token) {
   const pack = document.compendium ?? actor?.compendium ?? null;
   if (pack) requirePermission(pack);
@@ -80,7 +82,7 @@ export function documentIdentity(document, actor, token) {
     source_kind: token ? "token" : pack ? "compendium" : "world",
     folder: folder ? { id: folder.id, uuid: folder.uuid, ...named(folder) } : null,
     pack: pack ? { id: pack.collection, title: String(pack.title).slice(0, 256) } : null,
-    actor: actor ? { uuid: actor.uuid, ...named(actor) } : null, instance };
+    actor: actor ? { uuid: actor.uuid, ...named(actor), type: actor.type } : null, instance };
 }
 
 /** Resolve a world/pack Actor or token; PF2e-specific supported type filter. */

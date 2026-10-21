@@ -80,7 +80,7 @@ merely because the Item UUID is world-owned.
 
 A uniform `identity` record contains `document_name`, `id`, `uuid`, `name`,
 `type`, `source_kind` (world, compendium, token), `folder` (null or `{id,uuid,name}`),
-`pack` (null or `{id,title}`), `actor` (null or `{uuid,name}`), and `instance`.
+`pack` (null or `{id,title}`), `actor` (null or `{uuid,name,type}`; `type` is optional for older DTOs), and `instance`.
 `instance` is null outside token context; otherwise it contains `scene_uuid`,
 `scene_name`, `token_uuid`, `token_name`, `actor_link`, and `base_actor`
 (null or `{uuid,name}`). Actor identities have null `actor`; owned Item identities
@@ -351,3 +351,13 @@ Action Items now deliver the [selected field registry](actor-item-story-map/acti
 ### NPC attack source milestone
 
 The [NPC attack field registry](actor-item-story-map/melee-fields.md) is delivered for `melee` Items. Authored attack mode, bonus and separate damage components are preserved independently of carried gear. Null stored range means no_explicit_range, not exclusive melee capability. Explicit relationship records preserve additional-effect labels as unverified references; they never guess UUIDs or activate an effect. Source/relationship sections are complete for their selected allowlist after pagination. Effective attack calculations remain unsupported; live checks cover Strikes while other modes have schema/fixture coverage.
+
+## Lore source milestone
+
+PF2e Lore source uses actual owner type: NPC authored modifier, character
+proficiency rank, neutral stored semantics otherwise. Rank mappings retain the
+original integer and readable label; no effective check total is calculated.
+Actor `skills` currently exposes only owned Lore specialties and is always
+partial with `other_skills_pending`. Resolved references preserve Item identity
+and selected token context for `read_item`; denied Items expose no selectors.
+See [the evidence and field boundary](actor-item-story-map/lore-fields.md).

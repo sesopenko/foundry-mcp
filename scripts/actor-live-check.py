@@ -52,16 +52,18 @@ const actionSamples=['passive','free','reaction','action'].map(kind=>items.find(
 const effectAction=items.find(i=>i.type==='action'&&i.toObject(true).system.selfEffect?.uuid);
 const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>t.actor?.type==='npc');
 const tokenAction=token?.actor.items.find(i=>i.type==='action');
+const loreItems=items.filter(i=>i.type==='lore');const loreItem=loreItems.find(i=>i.parent?.type==='npc');
 const attacks=items.filter(i=>i.type==='melee');
 const meleeSamples=[
  ['explicit_range',attacks.find(i=>i.toObject(true).system.range!==null&&i.toObject(true).system.range!==undefined)],
  ['null_thrown',attacks.find(i=>i.toObject(true).system.range===null&&i.toObject(true).system.traits?.value.some(t=>t.startsWith('thrown-')))],
  ['effect_labels',attacks.find(i=>i.toObject(true).system.attackEffects?.value.length)]
 ].filter(([,item])=>item);
-const fingerprintItems=[...new Map([...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i)].filter(Boolean).map(i=>[i.uuid,i])).values()];
+const fingerprintItems=[...new Map([...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i),...loreItems].filter(Boolean).map(i=>[i.uuid,i])).values()];
 const report=JSON.stringify({actor_uuid:actor.uuid,token_uuid:token?.uuid,
 physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean),
 melee_samples:meleeSamples.map(([context,i])=>({context,uuid:i.uuid})),
+lore_item_uuid:loreItem?.uuid,lore_actor_uuid:loreItem?.parent?.uuid,
 action_samples:await Promise.all(actionSamples.map(async i=>({uuid:i.uuid,kind:i.toObject(true).system.actionType.value,revision:await digest(i.toObject(true))}))),
 self_effect_item_uuid:effectAction?.uuid,token_action_uuid:tokenAction?.uuid,
 source_fingerprints:await Promise.all(fingerprintItems.map(async i=>({uuid:i.uuid,revision:await digest(i.toObject(true))})))});
@@ -153,6 +155,24 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         assert pack_attack['identity']['source_kind']=='compendium' and pack_attack['identity']['actor']
         after=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
         assert after['source_fingerprints']==selection['source_fingerprints']
+        assert selection.get('lore_item_uuid') and selection.get('lore_actor_uuid'), 'Existing NPC Lore fixture is unavailable.'
+        lore=payload(await client.call_tool('read_item',{'item_uuid':selection['lore_item_uuid'],'limit':100}))
+        assert lore['identity']['actor']['type']=='npc'
+        modifier=next(record for record in lore['records'] if record['raw'][0]['path']=='/system/mod/value')
+        assert modifier['mapped']['concept']=='npc_lore_authored_modifier'
+        assert modifier['mapped']['value']==modifier['raw'][0]['value']
+        rank=next(record for record in lore['records'] if record['raw'][0]['path']=='/system/proficient/value')
+        assert rank['mapped']['value']['rank']==rank['raw'][0]['value']
+        skills=payload(await client.call_tool('read_actor',{'actor_uuid':selection['lore_actor_uuid'],'sections':['skills'],'limit':100}))
+        assert skills['sections'][0]['status']=='partial' and 'other_skills_pending' in skills['sections'][0]['reasons']
+        assert any(record['mapped']['value']['target_uuid']==selection['lore_item_uuid'] for record in skills['records'])
+        for record in skills['records']:
+            value=record['mapped']['value']
+            if value['status']!='resolved':continue
+            followed=payload(await client.call_tool('read_item',{'item_uuid':value['target_uuid'],'sections':['identity']}))
+            assert followed['identity']['type']=='lore' and followed['identity']['actor']['type']=='npc'
+        after=probe(payload(await client.call_tool('execute_javascript',{'code':selector_probe})))
+        assert after['source_fingerprints']==selection['source_fingerprints']
         registry=await client.call_tool('get_actor_types',{})
         assert registry.data['availability']['supported']
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
@@ -161,7 +181,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':2,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

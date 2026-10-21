@@ -61,6 +61,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Five existing null-range attacks have thrown traits. Mapping now reports no_explicit_range and retains that limitation, avoiding a false exclusive-melee claim. Non-Strike modes have representative source fixtures; no live non-Strike sample exists.
 - Focused source/browser/Python actual-DTO checks and full suites passed. Actual MCP verified explicit ranged, null/thrown, effect-label and compendium-owned attack reads, with unchanged persisted source fingerprints.
 
+### 7. Lore specialties and partial Skills references — October 20, 2026
+
+- ITEM-lore delivered owner-aware authored/stored modifiers and labelled original ranks, exact variants/tags/publication source and bounded descriptions. Actor Skills exposes separate canonical Lore references, including duplicate names and linked/synthetic token context, while remaining explicitly partial.
+- Focused pure/browser/Python DTO checks and full suites passed (157 Python tests, one skipped; 134 JavaScript tests). Denied Items do not leak identity or read source; missing, empty, stale and oversized results retain shared contract behavior.
+- Actual authenticated MCP verified NPC Lore source and Skills follow-ups with unchanged source fingerprints on Foundry14.369/PF2e8.6.1. Character/familiar/world Lore, variants and duplicate specialties have deterministic coverage; those live fixtures are unavailable. Effective checks remain gated.
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

@@ -57,7 +57,8 @@ test('discovery registry distinguishes planned mappings and unsupported runtime 
   fixture();const result=await getActorTypes();
   assert.equal(result.actor_types.find(t=>t.type==='loot').in_scope,false);
   assert.equal(result.item_types.find(t=>t.type==='campaignFeature').source_supported,false);
-  assert.equal(result.actor_types.find(t=>t.type==='npc').mapped_supported,false);
+  assert.equal(result.actor_types.find(t=>t.type==='npc').mapped_supported,true);
+  assert.match(result.actor_types.find(t=>t.type==='npc').limitations[0],/Lore specialty/);
   assert.equal(result.item_types.find(t=>t.type==='action').mapped_supported,true);
   assert.equal(result.item_types.find(t=>t.type==='melee').mapped_supported,true);
   assert.equal(result.item_sections.find(t=>t.name==='relationships').source_supported,true);

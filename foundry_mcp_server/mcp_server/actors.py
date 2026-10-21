@@ -63,9 +63,80 @@ DAMAGE_LEAF = re.compile(r'/system/damageRolls/(?:[^~/]|~[01])*/(damage|damageTy
 MELEE_ARRAY_INDEX = re.compile(r'/system/(?:traits/(?:value|otherTags)|attackEffects/value)/(0|[1-9][0-9]*)')
 
 
+# PF2e-specific LoreSystemSource8.6.1; exact persisted fields, no skill total.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/lore.ts
+LORE_PATHS = {'/system/'+p for p in ('mod/value','proficient/value','variants','traits/otherTags','slug','publication/title','publication/authors','publication/license','publication/remaster')}
+LORE_VARIANT = re.compile(r'/system/variants/(?:[^~/]|~[01])*/(label|options)')
+LORE_RANKS = ['Untrained','Trained','Expert','Master','Legendary']
+
+
+def _lore_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
+    """PF2e-specific Lore8.6.1 source semantics depend on actual owner type.
+
+    NPC modifier is authored source; character rank is proficiency, not a total.
+    World/unknown owner fields retain stored meaning without assuming character.
+    Schema URL and supported version are recorded beside LORE_PATHS.
+    """
+    if len(row['raw']) != 1 or row['kind'] not in ('field','text'):
+        return False
+    raw=row['raw'][0];path=raw['path'];value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid'] or len(row['provenance']['contributors']) != 1 or any(c['document_uuid'] != identity['uuid'] or c['path'] != path for c in row['provenance']['contributors']):
+        return False
+    expected=value
+    if path not in SOURCE_PATHS:
+        if row['section'] != 'source' or row['kind'] != 'field' or row['provenance']['mapping'] != 'pf2e.lore.source.v1':
+            return False
+        owner=(identity.get('actor') or {}).get('type')
+        concept=None
+        if path == '/system/mod/value':
+            concept='npc_lore_authored_modifier' if owner == 'npc' else 'stored_lore_modifier'
+            if raw['present'] and type(value) not in (int,float):return False
+        elif path == '/system/proficient/value':
+            concept='character_lore_proficiency_rank' if owner == 'character' else 'stored_lore_proficiency_rank'
+            if raw['present']:
+                if type(value) is not int or not 0 <= value <= 4:return False
+                expected=dict(rank=value,label=LORE_RANKS[value])
+        elif raw['present']:
+            if path == '/system/variants':
+                if type(value) is not dict or value != {}:return False
+            elif path == '/system/traits/otherTags':
+                if type(value) is not list or value != []:return False
+            elif path == '/system/publication/remaster':
+                if type(value) is not bool:return False
+            elif not (value is None and path == '/system/slug') and type(value) is not str:return False
+        if concept is not None and row['mapped']['concept'] != concept:return False
+    if row['kind'] == 'text':expected=None
+    return type(row['mapped']['value']) is type(expected) and row['mapped']['value'] == expected
+
+
+def _lore_specialty(row: dict[str, Any], identity: dict[str, Any]) -> bool:
+    """PF2e-specific Actor skills contain actual owned Lore references only.
+
+    Lore8.6.1 source name/type identify specialty; no effective skill is inferred.
+    Source UUID must be an immediate embedded Item of the selected current Actor.
+    """
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if row['key'] == 'skills:lore:denied':
+        return (row['kind'] == 'relationship' and row['section'] == 'skills' and raw == [] and
+                mapped == dict(concept='lore_specialty',value=dict(target_uuid=None,status='denied'),unit=None) and
+                provenance['contributors'] == [] and provenance['mapping'] == 'pf2e.lore.specialty.v1' and
+                bool(provenance['limitations']) and all(provenance['limitations']))
+    if len(raw) != 2 or row['kind'] != 'relationship' or row['section'] != 'skills':return False
+    target=raw[0]['document_uuid'];prefix=identity['uuid']+'.Item.'
+    if not target.startswith(prefix) or not target[len(prefix):] or '.' in target[len(prefix):]:return False
+    if row['key'] != 'skills:lore:'+target or [r['path'] for r in raw] != ['/name','/type']:return False
+    if any(r['document_uuid'] != target or not r['present'] for r in raw) or type(raw[0]['value']) is not str or raw[1]['value'] != 'lore':return False
+    expected=dict(target_uuid=target,status='resolved')
+    instance=identity['instance']
+    if instance is not None:expected['token_uuid']=instance['token_uuid']
+    return (mapped == dict(concept='lore_specialty',value=expected,unit=None) and
+            provenance['mapping'] == 'pf2e.lore.specialty.v1' and bool(provenance['limitations']) and
+            all(provenance['limitations']) and provenance['contributors'] == [{k:r[k] for k in ('document_uuid','path','basis')} for r in raw])
+
+
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
-    """PF2e-specific empty NPC damageRolls source map marker; never a map dump."""
-    return identity['document_name']=='Item' and identity['type']=='melee' and path=='/system/damageRolls'
+    """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
+    return identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -130,10 +201,11 @@ def _melee_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 
 def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
-    """PF2e-specific source markers for empty attachment/ability-trait arrays only."""
+    """PF2e-specific8.6.1 empty attachment, ability/attack traits and Lore tags."""
     return (identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
             identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'} or
-            identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'})
+            identity['type'] == 'melee' and path in {'/system/traits/value','/system/traits/otherTags','/system/attackEffects/value'} or
+            identity['type'] == 'lore' and path == '/system/traits/otherTags')
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -205,7 +277,7 @@ def _action_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 
 def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
-    """PF2e-specific: admit pinned physical and AbilitySystemSource8.6.1 paths.
+    """PF2e-specific: admit pinned physical/ability/attack/Lore8.6.1 paths.
 
     Armor/shield/treasure source overrides exclude usage; treasure excludes
     investment/slot/hands. Serialized attachment identities are source paths,
@@ -217,6 +289,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return True
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'lore':
+        return path in LORE_PATHS or LORE_VARIANT.fullmatch(path) is not None or re.fullmatch(r'/system/traits/otherTags/(0|[1-9][0-9]*)',path) is not None
     # PF2e-specific action paths exclude toggles, rule elements and prepared data.
     if identity['type'] == 'action':
         return path in ACTION_PATHS or re.fullmatch(r'/system/traits/(value|otherTags)/(0|[1-9][0-9]*)',path) is not None
@@ -299,8 +373,10 @@ def _identity(value: Any) -> bool:
         return False
     for key, keys in [('folder', {'id', 'uuid', 'name'}), ('pack', {'id', 'title'}), ('actor', {'uuid', 'name'})]:
         row = value[key]
-        if row is not None and (type(row) is not dict or not keys <= set(row) or not set(row) <= keys | {'name_truncated'} or not all(type(row[k]) is str for k in keys) or ('name_truncated' in row and type(row['name_truncated']) is not bool)):
+        if row is not None and (type(row) is not dict or not keys <= set(row) or not set(row) <= keys | {'name_truncated'} | ({'type'} if key == 'actor' else set()) or not all(type(row[k]) is str for k in keys) or ('name_truncated' in row and type(row['name_truncated']) is not bool)):
             return False
+    if value['actor'] is not None and 'type' in value['actor'] and value['actor']['type'] not in ('character','npc','familiar'):
+        return False
     instance = value['instance']
     if value['source_kind'] == 'token':
         if type(instance) is not dict or set(instance) != {'scene_uuid', 'scene_name', 'token_uuid', 'token_name', 'actor_link', 'base_actor'}:
@@ -360,6 +436,10 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     # PF2e-specific NPC attacks preserve authored formulas and non-UUID labels.
     if identity['document_name'] == 'Item' and identity['type'] == 'melee' and not _melee_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'lore' and not _lore_record(row, identity):
+        return False
+    if identity['document_name'] == 'Actor' and row['section'] == 'skills' and not _lore_specialty(row, identity):
         return False
     if row['kind'] == 'text':
         text = row.get('text')
@@ -549,6 +629,10 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     limitations. Records retain selected raw fields, mapped concepts and provenance;
     sections distinguish partial/unsupported/not_applicable from complete. Missing
     fields differ from null/zero; source is not complete effective statistics.
+    Skills currently contains owned Lore specialty references only, with partial
+    other_skills_pending. Each lore_specialty mapped value has resolved target_uuid
+    and token_uuid for token-context ownership; follow with read_item. Duplicate
+    specialty names remain separate Items, never merged skill totals.
     limit defaults 50 (integer 1–100 records); max_bytes defaults 48000 (8000–48000
     UTF-8 JSON bytes). Exact text fragments use UTF-16 text.start/end/total offsets,
     at most 6000 units; concatenate same-path/revision raw values without enrichment.
@@ -599,6 +683,11 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     Missing versus empty attackEffects arrays both report missing relationships
     while their raw present/value fields retain the distinction. Effective attack
     math and elite/weak adjustments remain unsupported.
+    Lore Items expose stored modifier, proficiency rank with rank/label, variants
+    and publication. NPC owners identify authored modifiers; character owners
+    identify proficiency ranks. Detached/unknown owners retain stored semantics;
+    no effective skill total or roll-option execution is implied. identity.actor
+    may include actual owner type character/npc/familiar.
     Optional description/rules/relationships/effective are delivered or explicitly
     unsupported as get_actor_types reports. At most 6 unique nonempty section names.
     PF2e-only; UnsupportedSystem/Version/Type explains excluded targets.

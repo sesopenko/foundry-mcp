@@ -25,6 +25,10 @@ null-range/thrown limitations. Other concrete type readers and effective Actor
 statistics remain staged or unsupported. These are
 unreleased source capabilities; inspect the delivered registry and the
 [Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
+Lore Items expose owner-aware stored modifiers and labelled ranks; Actor Skills
+currently returns partial Lore specialty references with canonical Item/token
+context. Effective check totals remain unsupported.
+
 
 ## Run with Docker Compose
 
