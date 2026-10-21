@@ -5,9 +5,9 @@ import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { actionFields, actionReferenceFields } from './actorAction.js';
 import { meleeFields, meleeEffectFields } from './actorMelee.js';
 import { loreFields } from './actorLore.js';
-import { npcFields } from './actorNpc.js';
+import { npcFields, npcNoteFields } from './actorNpc.js';
 
-const ACTOR_SECTIONS = ['identity','source','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
+const ACTOR_SECTIONS = ['identity','source','description','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
 const ITEM_SECTIONS = ['identity','source','description','rules','relationships','effective'];
 const LIMITS = {default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,max_text_units:6000,max_cursor_characters:4096,max_selector_characters:512};
 const PENDING = 'type_reader_pending';
@@ -27,6 +27,7 @@ function selection(target, sections) {
   let melee=[];
   let lore=[];
   let npc=[];
+  let npcNotes=[];
   const specialties=[];const deniedLore=[];
   if (sections.includes('source')) {
     for (const field of ['name','type']) if (Object.hasOwn(source,field)) {
@@ -75,6 +76,11 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected NPC source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect this NPC source; no prepared statistics or defaults are substituted.');
     }
   }
+  // PF2e-specific NPC biography8.6.1 is explicit GM-only description source.
+  if (target.document.documentName==='Actor' && source.type==='npc' && sections.includes('description')) {
+    try {npcNotes=npcNoteFields(source);}
+    catch {fail('ReadFailed','Selected NPC biography has an unexpected type.','Inspect the NPC blurb/public/private source notes; no prepared text is substituted.');}
+  }
   // PF2e-specific Lore specialties are actual owned Item references only.
   // Source contract: src/module/item/lore.ts at the actorLore.js pinned revision.
   if (target.document.documentName==='Actor' && sections.includes('skills')) {
@@ -95,7 +101,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, action, melee, lore, npc, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, action, melee, lore, npc, npcNotes, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -196,8 +202,10 @@ export async function getActorTypes(params = {}) {
       actor.mapped_supported=true;
       actor.limitations=['Only Lore specialty references in skills are mapped so far; full type-specific source/statistics and effective views remain pending.'];
     }
+    const description=result.actor_sections.find(entry=>entry.name==='description');
+    description.limitations=['NPC biography only: blurb, publicNotes and GM-private privateNotes; explicit selection required. Character/familiar biography remains unsupported.'];
     const npc=result.actor_types.find(entry=>entry.type==='npc');
-    npc.limitations=['Authored NPC source statistics and Lore references are delivered. Biography notes, integrated sections and effective/current statistics remain pending; elite/weak math is not applied.'];
+    npc.limitations=['Authored NPC source statistics and Lore references are delivered. Explicit description exposes separate bounded biography notes; integrated sections and effective/current statistics remain pending; elite/weak math is not applied.'];
     npc.verification={deterministic:{status:'passed',evidence:['tests/js/actor-npc.test.js','tests/js/actor-npc-readers.test.js','tests/test_actor_npc.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/npc-fields.md','scripts/actor-live-check.py']}};
     for (const section of result.item_sections.filter(entry=>['source','relationships'].includes(entry.name))) {
       section.source_supported=true;section.mapped_supported=true;
@@ -258,25 +266,34 @@ async function read(target,params,sections,tool) {
       provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.action.self_effect.v1',limitations:selected.relationship.reason?[selected.relationship.reason]:[]}});
   }
   if (sections.includes('description')) {
-    for (const path of ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])]) {
-    const present=Object.hasOwn(selected.selected,path);
-    const value=selected.selected[path];
-    if (present && typeof value!=='string') fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected Item source in Foundry.');
-    if (present) for (const [index,fragment] of textFragments(value).entries()) {
-      const entry=record(target.identity.uuid,path,true,fragment.value,'description',path==='/system/description/value'?'description':'unidentified_description');
-      entry.kind='text';entry.key+=`:${index}`;entry.mapped.value=null;entry.text={path,...fragment.text};records.push(entry);
-    }
-    else records.push(record(target.identity.uuid,path,false,null,'description',path==='/system/description/value'?'description':'unidentified_description'));
+    const fields=target.document.documentName==='Actor'?selected.npcNotes:
+      ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])].map(path=>({path,present:Object.hasOwn(selected.selected,path),value:selected.selected[path],concept:path==='/system/description/value'?'description':'unidentified_description'}));
+    for (const field of fields) {
+      const {path,present,value,concept}=field;
+      if (present && typeof value!=='string') fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected document source in Foundry.');
+      const make=(present,value)=>{
+        const entry=record(target.identity.uuid,path,present,value,'description',concept);
+        if(target.document.documentName==='Actor') {
+          entry.provenance.mapping='pf2e.npc.notes.v1';
+          entry.provenance.limitations=['Exact stored NPC biography; public and GM-private notes remain separate source paths. No enrichment is executed.'];
+        }
+        return entry;
+      };
+      if (present) for (const [index,fragment] of textFragments(value).entries()) {
+        const entry=make(true,fragment.value);
+        entry.kind='text';entry.key+=`:${index}`;entry.mapped.value=null;entry.text={path,...fragment.text};records.push(entry);
+      }
+      else records.push(make(false,null));
     }
   }
   const isAction=target.document.documentName==='Item'&&target.document.type==='action';
   const isMelee=target.document.documentName==='Item'&&target.document.type==='melee';
   const isLore=target.document.documentName==='Item'&&target.document.type==='lore';
   const loreSkills=target.document.documentName==='Actor'&&sections.includes('skills');
-  const complete=name=>name==='identity'||name==='description'||(isLore&&name==='source')||((isAction||isMelee)&&['source','relationships'].includes(name));
+  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||(isLore&&name==='source')||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||(loreSkills&&name==='skills')?'partial':'unsupported',
-      reasons:complete(name)?[]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography notes and integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+      reasons:complete(name)?[]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);

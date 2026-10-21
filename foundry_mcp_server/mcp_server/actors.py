@@ -24,14 +24,14 @@ Identifier = Annotated[str, Field(min_length=1, max_length=512, strict=True)]
 Cursor = Annotated[str, Field(min_length=1, max_length=4096, pattern=r"^[\x00-\x7f]+$", strict=True)]
 Limit = Annotated[int, Field(ge=1, le=100, strict=True)]
 ByteLimit = Annotated[int, Field(ge=8000, le=48000, strict=True)]
-ActorSection = Literal['identity', 'source', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective']
+ActorSection = Literal['identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective']
 ItemSection = Literal['identity', 'source', 'description', 'rules', 'relationships', 'effective']
-ActorSections = Annotated[list[ActorSection], Field(min_length=1, max_length=11)]
+ActorSections = Annotated[list[ActorSection], Field(min_length=1, max_length=12)]
 ItemSections = Annotated[list[ItemSection], Field(min_length=1, max_length=6)]
 ItemType = Literal['melee', 'action', 'feat', 'spell', 'spellcastingEntry', 'lore', 'condition', 'effect', 'affliction', 'ancestry', 'heritage', 'background', 'class', 'deity', 'weapon', 'armor', 'shield', 'equipment', 'consumable', 'ammo', 'backpack', 'book', 'kit', 'treasure']
 ItemTypes = Annotated[list[ItemType], Field(min_length=1, max_length=24)]
 Query = Annotated[str, Field(min_length=1, max_length=200, strict=True)]
-ACTOR_SECTIONS = {'identity', 'source', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective'}
+ACTOR_SECTIONS = {'identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective'}
 ITEM_SECTIONS = {'identity', 'source', 'description', 'rules', 'relationships', 'effective'}
 ITEM_TYPES = set(ItemType.__args__)
 SOURCE_PATHS = {'/name', '/type', '/system/description/value'}
@@ -72,6 +72,7 @@ LORE_RANKS = ['Untrained','Trained','Expert','Master','Legendary']
 
 # PF2e-specific NPCSystemSource8.6.1 selected source fields, never effective math.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/npc/data.ts
+NPC_NOTES = {'/system/details/'+key:'creature_'+key+'_source' for key in ('blurb','publicNotes','privateNotes')}
 NPC_SOURCE = {}
 
 def _npc_specs():
@@ -142,7 +143,15 @@ def _npc_record(row,identity):
     """PF2e-specific NPC8.6.1 exact source DTO; no prepared statistics allowed."""
     if len(row['raw'])!=1:return False
     raw=row['raw'][0];path=raw['path']
-    if path in SOURCE_PATHS:return True
+    if path in SOURCE_PATHS:return row['section']=='source'
+    if path in NPC_NOTES:
+        # PF2e-specific NPC biography is opt-in source text, including GM notes.
+        if row['section']!='description' or row['provenance']['mapping']!='pf2e.npc.notes.v1':return False
+        if raw['document_uuid']!=identity['uuid'] or row['provenance']['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')}]:return False
+        if row['mapped']!=dict(concept=NPC_NOTES[path],value=None,unit=None):return False
+        if raw['present']:
+            return row['kind']=='text' and type(raw.get('value')) is str and re.fullmatch(re.escape('description:'+path)+r':(?:0|[1-9][0-9]*)',row['key']) is not None
+        return row['kind']=='field' and row['key']=='description:'+path
     spec=_npc_spec(path)
     if spec is None:return False
     concept,kind,nullable=spec;value=raw.get('value')
@@ -376,7 +385,7 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     if path in SOURCE_PATHS:
         return True
     if identity is not None and identity['document_name']=='Actor' and identity['type']=='npc':
-        return _npc_spec(path) is not None
+        return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
     if identity['type'] == 'lore':
@@ -529,7 +538,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'lore' and not _lore_record(row, identity):
         return False
-    if identity['document_name']=='Actor' and identity['type']=='npc' and row['section']=='source' and not _npc_record(row,identity):
+    if identity['document_name']=='Actor' and identity['type']=='npc' and row['section'] in ('source','description') and not _npc_record(row,identity):
+        return False
+    if identity['document_name']=='Actor' and row['section']=='description' and identity['type']!='npc':
         return False
     if identity['document_name'] == 'Actor' and row['section'] == 'skills' and not _lore_specialty(row, identity):
         return False
@@ -712,9 +723,9 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     records. A token reads token.actor current state, never silently its base.
     Synthetic actor UUIDs require token_uuid instead. Default sections identity,
     source expose common selected metadata; type-specific full mapping is staged.
-    Known sections build/statistics/skills/strikes/abilities/spellcasting/inventory/
+    Known sections description/build/statistics/skills/strikes/abilities/spellcasting/inventory/
     state/effective can be unsupported; get_actor_types reports delivered support.
-    Sections must be unique/nonempty (at most 11). PF2e character/npc/familiar only;
+    Sections must be unique/nonempty (at most 12). PF2e character/npc/familiar only;
     other systems/versions/types give UnsupportedSystem/Version/Type errors.
 
     Returns contract_version/runtime/identity/revision/sections/records/pagination/
@@ -723,7 +734,9 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     fields differ from null/zero; source is not complete effective statistics.
     NPC source includes authored attributes, AC/saves/Perception/skills, stored HP,
     senses/languages/movement, IWR and publication. Elite/weak arithmetic is not
-    applied; biography notes and integrated statistics remain pending.
+    applied; integrated statistics remain pending. Explicit description returns NPC
+    stored blurb, publicNotes and privateNotes only, including GM-private biography;
+    default source never includes them. Character/familiar description is unsupported.
     Skills currently contains owned Lore specialty references only, with partial
     other_skills_pending. Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate

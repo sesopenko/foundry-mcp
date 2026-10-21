@@ -69,10 +69,12 @@ legality checker: unknown codes and authored exceptional values remain exact.
 
 Default `npcFields` excludes `details.blurb`, `details.publicNotes` and
 `details.privateNotes`. The separate `npcNoteFields` helper selects those exact
-strings only; it has no current MCP exposure. Actor reading has no description
-section today. A later explicit section contract must decide where these notes
-belong, fragment their exact source and preserve GM/document authorization.
-No implicit biography disclosure is introduced by the source selector.
+strings only, through an explicit Actor `description` request. Three separate
+paths preserve blurb, public notes and GM-private notes with mapping
+`pf2e.npc.notes.v1`. Present text uses exact UTF-16 fragments and bounded byte
+pages; missing fields remain absent records. No HTML is parsed or enriched.
+Character/familiar descriptions remain explicitly unsupported. No biography is
+included by a default/source-only request.
 
 Seven focused deterministic tests cover authored-versus-effective semantics,
 exceptional text, senses/movement/languages, IWR compound and string exceptions,
@@ -93,8 +95,8 @@ excluded. This helper alone does not complete ACT-npc or milestone M-NPC.
 
 The shared reader now emits these descriptors in `source`, with mapping
 `pf2e.npc.source.v1`, exact raw source paths and contributors. Source remains
-partial: biography notes and integrated sections are pending. The pure notes
-selector remains unwired; private biography is not implicitly disclosed.
+partial: integrated sections are pending. Biography is available only through
+the explicit description section; private text is never implicitly included.
 
 Focused helper/reader tests cover paginated authored values, no elite arithmetic,
 source immutability, malformed source, stale continuations and excluded notes.
@@ -106,3 +108,12 @@ This is an implementation checkpoint, not completion of ACT-npc or M-NPC.
 
 Final offline validation: 161 Python tests (one skipped) and 136 JavaScript
 tests passed with zero failures before the local checkpoint commit.
+
+## Explicit biography verification — October 20, 2026
+
+Focused JavaScript/Python checks passed exact Unicode reconstruction across
+multiple bounded pages, empty/missing distinctions, strict provenance and text
+keys, stale-note continuations, malformed source, denied GM access, and unsupported
+character/familiar descriptions. Actual MCP reconstructed the existing NPC's
+three biography paths and compared each present text's SHA-256 with persisted
+source, without logging content. Source fingerprints remained unchanged.

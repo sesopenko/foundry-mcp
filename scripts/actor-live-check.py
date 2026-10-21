@@ -3,7 +3,7 @@
 Run through scripts/actor-tools.sh live. Requires .env.mcp caller credential
 and the authorized development console. Never outputs document IDs or secrets.
 """
-import asyncio,json,sys
+import asyncio,hashlib,json,sys
 from pathlib import Path
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
@@ -42,6 +42,8 @@ async def main():
         needed={'get_actor_types','read_actor','read_item','list_actor_items','get_actor_tree','search_actors','list_scene_actors','list_actor_compendiums','search_compendium_actors'}
         assert needed<=available.keys()
         for name in needed:assert available[name].annotations.readOnlyHint
+        assert 'description' in available['read_actor'].inputSchema['properties']['sections']['items']['enum']
+        assert 'GM-private biography' in available['read_actor'].description
         selector_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);
@@ -61,7 +63,7 @@ const meleeSamples=[
 ].filter(([,item])=>item);
 const fingerprintItems=[...new Map([actor,...actionSamples,effectAction,tokenAction,...meleeSamples.map(([,i])=>i),...loreItems].filter(Boolean).map(i=>[i.uuid,i])).values()];
 const npcSource=actor.toObject(true);
-const report=JSON.stringify({actor_uuid:actor.uuid,npc_ac:npcSource.system.attributes.ac.value,npc_hp:npcSource.system.attributes.hp.value,token_uuid:token?.uuid,
+const report=JSON.stringify({actor_uuid:actor.uuid,npc_notes:await Promise.all(['blurb','publicNotes','privateNotes'].map(async key=>{const value=npcSource.system.details[key];return {key,present:typeof value==='string',...(typeof value==='string'?{sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),v=>v.toString(16).padStart(2,'0')).join('')}: {})}})),npc_ac:npcSource.system.attributes.ac.value,npc_hp:npcSource.system.attributes.hp.value,token_uuid:token?.uuid,
 physical_items:physicalTypes.map(type=>items.find(item=>item.type===type)?.uuid).filter(Boolean),
 melee_samples:meleeSamples.map(([context,i])=>({context,uuid:i.uuid})),
 lore_item_uuid:loreItem?.uuid,lore_actor_uuid:loreItem?.parent?.uuid,
@@ -101,6 +103,23 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
             row=next(row for row in source_records if row['raw'][0]['path']==path)
             assert row['raw'][0]['value']==expected and row['mapped']['value']==expected
             assert row['provenance']['mapping']=='pf2e.npc.source.v1'
+        notes=[]
+        note_cursor=None
+        for _ in range(100):
+            arguments={'actor_uuid':selection['actor_uuid'],'sections':['description'],'limit':25}
+            if note_cursor:arguments['cursor']=note_cursor
+            note_page=payload(await client.call_tool('read_actor',arguments))
+            notes.extend(note_page['records'])
+            note_cursor=note_page['pagination']['next_cursor']
+            if not note_cursor:break
+        assert note_cursor is None, 'NPC biography exceeds smoke-check continuation bound.'
+        for expected in selection['npc_notes']:
+            rows=[row for row in notes if row['raw'][0]['path']=='/system/details/'+expected['key']]
+            assert rows and all(row['provenance']['mapping']=='pf2e.npc.notes.v1' for row in rows)
+            assert all(row['raw'][0]['present']==expected['present'] for row in rows)
+            if expected['present']:
+                text=''.join(row['raw'][0]['value'] for row in rows)
+                assert hashlib.sha256(text.encode()).hexdigest()==expected['sha256']
         items=await client.call_tool('list_actor_items',{'actor_uuid':selection['actor_uuid'],'limit':1})
         item=await client.call_tool(**dict(name=items.data['nodes'][0]['next_call']['tool'],arguments=items.data['nodes'][0]['next_call']['arguments']))
         assert item.data['identity']['actor']['uuid']==selection['actor_uuid']
@@ -193,7 +212,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'npc_source_verified':True,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'npc_source_verified':True,'npc_notes_verified':True,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

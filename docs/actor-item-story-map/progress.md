@@ -73,6 +73,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Focused helper, browser and Python actual-DTO checks passed. Actual MCP consumed all three source pages and verified exact AC/HP with unchanged source fingerprints; previous delivered readers still passed.
 - ACT-npc is In progress: explicit bounded biography notes, embedded summary integration and advanced integrated/effective acceptance remain. Completed stories stay 8/39 (20.5%).
 
+### 9. Explicit bounded NPC biography — October 20, 2026
+
+- Actor `description` now selects NPC blurb, public notes and GM-private notes on separate exact source paths. Default source requests disclose none of them; other Actor descriptions remain explicitly unsupported.
+- Focused JS/Python tests cover exact Unicode pages, empty/missing, malformed/denied/stale results and cross-language DTOs. Actual MCP reconstructed the selected NPC biography and matched stored-source SHA-256 values without outputting text; persisted source fingerprints remained unchanged.
+- ACT-npc remains In progress pending embedded view integration and advanced acceptance. Completed story count remains 8/39 (20.5%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

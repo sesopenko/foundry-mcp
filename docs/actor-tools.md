@@ -113,12 +113,12 @@ Items and permitted for linked-token context. If supplied, the Item must belong
 to the selected current `token.actor`, otherwise return `InvalidRequest`. `list_actor_items` takes the same actor selector pair,
 optional `types`, `query`, `limit=50`, `max_bytes=48000`, `cursor`.
 
-`sections` is a nonempty unique list with at most 11 Actor sections or 6 Item
+`sections` is a nonempty unique list with at most 12 Actor sections or 6 Item
 sections; unknown names are invalid even when unsupported known sections remain
 valid requests. `types` is a nonempty unique list with at most 3 Actor types or
 24 Item types as appropriate; excluded/unknown types are invalid filters.
 
-Identity always appears once per page. Actor sections are `identity`, `source`,
+Identity always appears once per page. Actor sections are `identity`, `source`, `description`,
 `build`, `statistics`, `skills`, `strikes`, `abilities`, `spellcasting`,
 `inventory`, `state`, `effective`. Item sections are `identity`, `source`,
 `description`, `rules`, `relationships`, `effective`. `source` contains approved
@@ -363,5 +363,6 @@ and selected token context for `read_item`; denied Items expose no selectors.
 See [the evidence and field boundary](actor-item-story-map/lore-fields.md).
 
 NPC source now includes authored stat-block fields with `pf2e.npc.source.v1`
-provenance. Source remains partial; biography notes and integrated/effective
-sections are pending. See [NPC field boundary](actor-item-story-map/npc-fields.md).
+provenance. Source remains partial; explicit `description` returns bounded NPC blurb, public
+notes and GM-private notes separately. Character/familiar description and NPC
+integrated/effective sections remain pending. See [NPC field boundary](actor-item-story-map/npc-fields.md).
