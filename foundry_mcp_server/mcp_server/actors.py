@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -598,7 +598,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
-            identity['type'] == 'consumable' and path in CONSUMABLE_ARRAYS)
+            identity['type'] == 'consumable' and path in CONSUMABLE_ARRAYS or
+            identity['type'] == 'spell' and _spell_spec(path) is not None and _spell_spec(path)[1] == 'array')
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -733,6 +734,145 @@ def _weapon_ammunition_relationship(row, identity):
     if type(value['name']) is not str or len(value['name']) > 256 or type(value['name_truncated']) is not bool: return False
     return instance is None or value['token_uuid'] == instance['token_uuid']
 
+
+
+# PF2e-specific SpellSystemSource8.6.1 primitive schema; no prepared variants.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/spell/data.ts
+SPELL_LIMIT = ['source_only_no_spell_casting_or_variant_application']
+SPELL_LEAVES = {p:('spell_'+c,k,n) for p,c,k,n in (
+ ('level/value','base_rank','number',False),('time/value','casting_time_text','string',False),
+ ('requirements','requirements_text','string',False),('cost/value','cost_text','string',False),
+ ('range/value','range_text','string',False),('target/value','target_text','string',False),
+ ('traits/rarity','rarity_code','string',False),('area/type','area_shape_code','string',False),
+ ('area/value','area_value','number',False),('area/details','area_details_text','string',False),
+ ('duration/value','duration_text','string',False),('duration/sustained','duration_sustained','boolean',False),
+ ('defense/passive/statistic','passive_defense_statistic_code','string',False),
+ ('defense/save/statistic','save_statistic_code','string',False),('defense/save/basic','save_basic','boolean',False),
+ ('counteraction','counteraction','boolean',False),('ritual/primary/check','ritual_primary_check_text','string',False),
+ ('ritual/secondary/checks','ritual_secondary_checks_text','string',False),('ritual/secondary/casters','ritual_secondary_casters','number',False),
+ ('location/value','casting_entry_local_id','string',True),('location/signature','signature','boolean',False),
+ ('location/heightenedLevel','configured_heightened_rank','number',False),('location/autoHeightenLevel','configured_auto_heighten_rank','number',True),
+ ('location/uses/value','innate_uses_value','number',False),('location/uses/max','innate_uses_max','number',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+SPELL_CONTAINERS = {p:('spell_'+c,'container',n) for p,c,n in (
+ ('level','level',False),('traits','traits',False),('time','time',False),('cost','cost',False),
+ ('range','range',False),('target','target',False),('area','area',True),('duration','duration',False),
+ ('defense','defense',True),('defense/passive','passive_defense',True),('defense/save','save',True),
+ ('ritual','ritual',True),('ritual/primary','ritual_primary',False),('ritual/secondary','ritual_secondary',False),
+ ('location','location',False),('location/uses','innate_uses',False),('publication','publication',False),
+)}
+SPELL_ARRAYS = {p:'spell_'+c for p,c in (('traits/traditions','tradition_code'),('traits/value','trait_code'),('traits/otherTags','other_tag_code'))}
+SPELL_DAMAGE = {p:('spell_'+c,k,n) for p,c,k,n in (
+ ('formula','damage_formula','string',False),('applyMod','damage_apply_mod','boolean',False),
+ ('type','damage_type_code','string',False),('category','damage_category_code','string',True),
+)}
+SPELL_SEGMENT = r'(?:[^~/]|~[01])*'
+
+
+def _spell_relative_spec(parts, *, depth=0, overlays=True):
+    """PF2e-specific8.6.1 spell schema walk, fixed layers and overlay source only.
+
+    Pinned schema above. Layers retain paths, not document identities; source
+    heightening configuration does not calculate a current cast or variant rank.
+    JSON Pointer keys preserve escaped slash/tilde and no arbitrary object leaks.
+    """
+    if depth > 12: return None
+    path='/'.join(parts)
+    if not path and depth: return ('spell_system_patch','object',False)
+    if path in SPELL_LEAVES: return SPELL_LEAVES[path]
+    if path in SPELL_CONTAINERS:
+        concept,kind,nullable=SPELL_CONTAINERS[path]
+        return (concept,'object' if depth else kind,nullable)
+    if path == 'description/value': return ('spell_description_text','text',False)
+    for base,concept in SPELL_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    if parts and parts[0] == 'damage':
+        if len(parts) == 1: return ('spell_damage_components','object',False)
+        if re.fullmatch(SPELL_SEGMENT,parts[1]) is None: return None
+        if len(parts) == 2: return ('spell_damage_component','object' if depth else 'container',False)
+        leaf='/'.join(parts[2:])
+        if leaf in SPELL_DAMAGE: return SPELL_DAMAGE[leaf]
+        for key,concept in [('kinds','spell_damage_kind_code'),('materials','spell_damage_material_code')]:
+            if leaf == key: return (concept,'array',False)
+            if re.fullmatch(key+r'/(0|[1-9][0-9]*)',leaf): return (concept,'string',False)
+    if parts and parts[0] == 'heightening':
+        if len(parts) == 1: return ('spell_heightening','object' if depth else 'absent',False)
+        direct={'type':('spell_heightening_type','heightening',False),'interval':('spell_heightening_interval','number',False),'area':('spell_heightening_area_increment','number',False),'damage':('spell_heightening_damage','object',False),'levels':('spell_fixed_heightening_levels','object',False)}
+        if len(parts) == 2: return direct.get(parts[1])
+        if len(parts) == 3 and parts[1] == 'damage' and re.fullmatch(SPELL_SEGMENT,parts[2]) is not None: return ('spell_heightening_damage_formula','string',False)
+        if len(parts) >= 3 and parts[1] == 'levels' and re.fullmatch(r'[1-9]|10',parts[2]): return _spell_relative_spec(parts[3:],depth=depth+1,overlays=overlays)
+    if overlays and parts and parts[0] == 'overlays':
+        if len(parts) == 1: return ('spell_overlays','object',False)
+        if len(parts) < 3 or re.fullmatch(SPELL_SEGMENT,parts[1]) is None: return None
+        if len(parts) == 3 and parts[2] == 'system': return ('spell_system_patch','object',False)
+        if len(parts) == 3:
+            return {'name':('spell_overlay_name','string',False),'overlayType':('spell_overlay_type','string',False),'sort':('spell_overlay_sort','number',False)}.get(parts[2])
+        if parts[2] == 'system': return _spell_relative_spec(parts[3:],depth=depth+1,overlays=False)
+    return None
+
+
+def _spell_spec(path):
+    """PF2e-specific8.6.1 spell selected paths; prepared cast/effective fields excluded."""
+    if not path.startswith('/system/'): return None
+    return _spell_relative_spec(path[len('/system/'):].split('/'))
+
+
+def _spell_record(row, identity):
+    """PF2e-specific8.6.1 strict spell source, description and local assignment DTO.
+
+    Schema pinned above. Base rank, configured ranks and exact prose remain source;
+    neither overlays nor fixed/interval heightening are applied to an actor's cast.
+    """
+    if row['section'] == 'relationships': return _spell_entry_relationship(row,identity)
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_spell_spec(path)
+    if path in ('/name','/type'): return row['section'] == 'source' and row['provenance']['mapping'] != 'pf2e.spell.source.v1'
+    if spec is None or raw['document_uuid'] != identity['uuid']: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.spell.source.v1',limitations=SPELL_LIMIT): return False
+    if kind == 'text':
+        return row['section'] == 'description' and row['kind'] == ('text' if raw['present'] else 'field') and row['mapped'] == dict(concept=concept,value=None,unit=None) and (not raw['present'] or type(value) is str)
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'string':type(value) is str,'number':type(value) in (int,float) and math.isfinite(value),
+            'boolean':type(value) is bool,'array':type(value) is list and not value,
+            'object':type(value) is dict and not value,'container':False,'absent':False,
+            'heightening':type(value) is str and value in ('interval','fixed')}[kind]
+
+def _spell_entry_relationship(row, identity):
+    """PF2e-specific SpellSystemSource.location.value8.6.1 stored local assignment.
+
+    Schema: https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/spell/data.ts
+    Resolution names the actual owner-local casting entry only; no cast rank,
+    resource availability, prepared spell or castability is inferred.
+    """
+    if row['section'] != 'relationships' or row['kind'] != 'relationship' or row['key'] != 'relationships:spell:location': return False
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0]
+    if raw['document_uuid'] != identity['uuid'] or raw['path'] != '/system/location/value': return False
+    local_id=raw.get('value') if raw['present'] else None
+    if local_id is not None and type(local_id) is not str: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.spell.casting-entry.v1',limitations=['stored_assignment_not_castability']): return False
+    mapped=row['mapped'];value=mapped['value']
+    if mapped['concept'] != 'stored_spellcasting_entry_reference' or mapped['unit'] is not None or type(value) is not dict: return False
+    status=value.get('status')
+    if status in ('missing','denied','unsupported','unverified'):
+        if set(value) != {'status','target_uuid'} or value['target_uuid'] is not None: return False
+        if not local_id: return status == 'missing'
+        if identity['actor'] is None: return status == 'unverified'
+        return True
+    if status != 'resolved' or not local_id or identity['actor'] is None or re.fullmatch(r'[^.\s#]+',local_id) is None: return False
+    instance=identity['instance']
+    required={'status','target_uuid','document_name','type','name','name_truncated'} | ({'token_uuid'} if instance is not None else set())
+    if set(value) != required or value['target_uuid'] != identity['actor']['uuid']+'.Item.'+local_id or value['document_name'] != 'Item' or value['type'] != 'spellcastingEntry': return False
+    if type(value['name']) is not str or len(value['name']) > 256 or type(value['name_truncated']) is not bool: return False
+    return instance is None or value['token_uuid'] == instance['token_uuid']
 
 def _weapon_record(row, identity):
     """PF2e-specific weapon8.6.1 strict source DTO, alongside shared physical fields.
@@ -1031,6 +1171,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'spell':
+        return _spell_spec(path) is not None
     if identity['type'] == 'condition':
         return _condition_spec(path) is not None
     if identity['type'] == 'effect':
@@ -1188,6 +1330,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if type(mapped) is not dict or set(mapped) != {'concept', 'value', 'unit'} or type(mapped['concept']) is not str or (mapped['unit'] is not None and type(mapped['unit']) is not str):
         return False
     if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x, identity) for x in provenance['contributors']):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'spell' and not _spell_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'weapon' and not _weapon_record(row, identity):
         return False
@@ -1498,6 +1642,24 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     equipment can retain mundane benefits; no carried or magical benefit is applied
     or declared active. Selected source is complete; relationships/effective/rules
     remain unsupported.
+    spell Items expose selected definition source: level.value maps to base rank;
+    stored location heightenedLevel/autoHeightenLevel remain configuration, never
+    a computed cast rank. Casting time, range, target, requirements and cost remain
+    exact text. Damage components preserve formulas, damage/healing kind codes,
+    materials, categories and applyMod independently; no formula is evaluated.
+    Area, defense/save, sustained duration, ritual checks, traits/traditions and
+    publication remain source. Fixed heightening layers and override overlays
+    retain primitive leaves at their original source paths, including empty patch
+    markers; no variant is applied and no nested Item UUID is invented. Explicit
+    description returns exact root and nested layer/overlay prose with the shared
+    continuation. Explicit relationships follows only location.value through the
+    actual owner's Items to a spellcastingEntry: mapped.value.status distinguishes
+    resolved/missing/denied/unsupported/unverified; target_uuid is null unless
+    resolved, when document_name/type/name/name_truncated and token_uuid for token
+    context are included. Follow read_item(item_uuid=target_uuid, token_uuid if
+    returned) without assuming castability, prepared status, slots or resources.
+    Effective/rules remain unsupported; no casting or spontaneous heightening is
+    inferred from a higher configured rank.
     consumable Items expose a source checkpoint: category, uses.value/max/autoDestroy,
     nullable damage formula/type/kind, traits/tags, slug and publication. Quantity
     and uses remain separate persisted values; no consumption, damage or healing

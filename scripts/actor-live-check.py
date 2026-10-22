@@ -48,6 +48,8 @@ async def main():
         assert 'equipment Items' in available['read_item'].description
         assert 'consumable Items expose a source checkpoint' in available['read_item'].description
         assert 'rank is stored base rank, not heightened casting rank' in available['read_item'].description
+        assert 'spell Items expose selected definition source' in available['read_item'].description
+        assert 'actual owner' in available['read_item'].description
         selector_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);
@@ -194,6 +196,55 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         assert familiar['identity']['source_kind']=='compendium'
         assert any(record['raw'][0]['path']=='/system/category' and record['raw'][0].get('value')=='familiar' for record in familiar['records'])
         # Compare persisted source fingerprints after reads; no gameplay mutation.
+        spell_probe="""
+const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
+const pack=game.packs.get('pf2e.spells-srd');const index=await pack.getIndex({fields:['type','system.time','system.damage','system.heightening','system.overlays','system.ritual']});
+const rows=index.filter(row=>row.type==='spell');
+const predicates=[r=>/or|to/.test(r.system?.time?.value??''),r=>/minute|hour|day/.test(r.system?.time?.value??''),r=>Object.values(r.system?.damage??{}).some(d=>d.kinds?.includes('healing')&&d.kinds?.includes('damage')),r=>r.system?.heightening?.type==='interval',r=>r.system?.heightening?.type==='fixed',r=>Object.keys(r.system?.overlays??{}).length,r=>r.system?.ritual!=null];
+const owned=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type)).flatMap(a=>a.items.contents).filter(i=>i.type==='spell');
+const candidates=[...predicates.map(match=>rows.find(match)).filter(Boolean).map(row=>pack.getUuid(row._id)),owned.find(i=>i.toObject(true).system.location.value),owned.find(i=>!i.toObject(true).system.location.value)];
+const report=[];for(const selected of candidates){const doc=typeof selected==='string'?await foundry.utils.fromUuid(selected):selected;if(!doc)continue;const source=doc.toObject(true),s=source.system;report.push({uuid:doc.uuid,base:s.level.value,time:s.time.value,damage:Object.entries(s.damage).map(([key,v])=>({key,formula:v.formula,kinds:v.kinds})),entry_uuid:doc.parent?.items.get(s.location.value)?.uuid??null,revision:await digest(source),description_sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s.description.value))),v=>v.toString(16).padStart(2,'0')).join('')});}
+const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.length/800)},(_,i)=>json.slice(i*800,(i+1)*800));
+"""
+        spell_samples=probe(payload(await client.call_tool('execute_javascript',{'code':spell_probe})))
+        assert len(spell_samples)==9
+        for sample in spell_samples:
+            rows=[];spell_cursor=None
+            for _ in range(100):
+                args={'item_uuid':sample['uuid'],'sections':['source','effective'],'limit':25}
+                if spell_cursor:args['cursor']=spell_cursor
+                page=payload(await client.call_tool('read_item',args));rows.extend(page['records'])
+                assert page['sections'][1]['status']=='unsupported'
+                spell_cursor=page['pagination']['next_cursor']
+                if not spell_cursor:break
+            assert spell_cursor is None and page['sections'][0]['status']=='complete'
+            assert len({row['raw'][0]['path'] for row in rows})==len(rows)
+            for path,expected in [('/system/level/value',sample['base']),('/system/time/value',sample['time'])]:
+                row=next(row for row in rows if row['raw'][0]['path']==path)
+                assert row['raw'][0]['value']==expected and row['provenance']['mapping']=='pf2e.spell.source.v1'
+            for component in sample['damage']:
+                key=component['key'].replace('~','~0').replace('/','~1');path='/system/damage/'+key
+                assert next(row for row in rows if row['raw'][0]['path']==path+'/formula')['raw'][0]['value']==component['formula']
+                if component.get('kinds'):
+                    assert [row['raw'][0]['value'] for row in rows if row['raw'][0]['path'].startswith(path+'/kinds/')]==component['kinds']
+            relation=payload(await client.call_tool('read_item',{'item_uuid':sample['uuid'],'sections':['relationships']}))['records'][0]['mapped']['value']
+            if sample['entry_uuid']:
+                assert relation['status']=='resolved' and relation['target_uuid']==sample['entry_uuid']
+                follow=payload(await client.call_tool('read_item',{'item_uuid':relation['target_uuid'],'sections':['identity']}))
+                assert follow['identity']['type']=='spellcastingEntry'
+            else:assert relation['status'] in ('missing','unverified')
+            description=[];spell_cursor=None
+            for _ in range(100):
+                args={'item_uuid':sample['uuid'],'sections':['description'],'limit':25}
+                if spell_cursor:args['cursor']=spell_cursor
+                page=payload(await client.call_tool('read_item',args));description.extend(page['records'])
+                spell_cursor=page['pagination']['next_cursor']
+                if not spell_cursor:break
+            assert spell_cursor is None
+            text=''.join(row['raw'][0]['value'] for row in description if row['raw'][0]['path']=='/system/description/value')
+            assert hashlib.sha256(text.encode()).hexdigest()==sample['description_sha256']
+            fingerprint_code="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const doc=await foundry.utils.fromUuid("+json.dumps(sample['uuid'])+");return JSON.stringify({revision:await digest(doc.toObject(true))});"
+            assert probe(payload(await client.call_tool('execute_javascript',{'code':fingerprint_code})))['revision']==sample['revision']
         consumable_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const pack=game.packs.get('pf2e.equipment-srd');
@@ -481,6 +532,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
         assert action_support['mapped_supported'] and not action_support['effective_supported']
         assert action_support['verification']['live']['status']=='passed'
+        spell_support=next(entry for entry in registry.data['item_types'] if entry['type']=='spell')
+        assert spell_support['mapped_supported'] and not spell_support['effective_supported']
+        assert spell_support['verification']['live']['status']=='passed'
         consumable_support=next(entry for entry in registry.data['item_types'] if entry['type']=='consumable')
         assert consumable_support['mapped_supported'] and not consumable_support['effective_supported']
         assert consumable_support['verification']['live']['status']=='passed'
@@ -512,7 +566,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

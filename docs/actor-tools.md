@@ -512,3 +512,26 @@ complete contained-spell interpretation. Explicit description remains exact
 bounded consumable prose; nested spell prose and mechanics are not yet delivered.
 See [field contract](actor-item-story-map/consumable-fields.md) and
 [evidence](actor-item-story-map/consumable-verification.md).
+
+## Spell definitions and casting-entry assignment
+
+Spell source uses `pf2e.spell.source.v1`: `level.value` is base rank, while
+location heightened/auto-heightened ranks and innate-use counts are stored
+configuration. Casting time, requirements, costs, range and target stay text.
+Damage and healing component kinds remain distinct. Interval heightening, fixed
+layers and override overlays retain selected primitive source at separate paths;
+empty partial patches stay explicit. No patch is merged or variant applied.
+Selection rejects nesting beyond 12 or over 12,000 descriptors with ReadFailed;
+it does not silently truncate complex source. Explicit descriptions read root and
+nested layer/overlay prose through normal text/byte continuations.
+
+Explicit relationships follows only `location.value` in the actual owner's Items.
+The record key is `relationships:spell:location`, mapping is
+`pf2e.spell.casting-entry.v1`, and concept is `stored_spellcasting_entry_reference`.
+`mapped.value.status` is resolved, missing, denied, unsupported or unverified;
+`target_uuid` is null unless resolved. Resolved entries include actual Item UUID,
+name/type/document_name/name_truncated and token_uuid when applicable. Follow
+`read_item` with those returned selectors. No owner means an unverified local
+scope; no target source, spell preparation, slot resources or castability is read.
+See [field contract](actor-item-story-map/spell-fields.md) and
+[evidence](actor-item-story-map/spell-verification.md).

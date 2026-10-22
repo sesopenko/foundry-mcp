@@ -54,6 +54,8 @@ Equipment preserves usage, investment, traits and exact prose abilities;
 uninvested mundane uses remain readable and magical benefits are not applied.
 Consumable source separates stock, uses and healing/damage formulas; contained-spell
 metadata retains source-path identity, with full spell interpretation still pending.
+Spell definitions preserve base rank, textual casting time, damage/healing and
+variant source; entry links retain owner context without assuming castability.
 
 
 

@@ -164,3 +164,10 @@ Each implementation increment must record focused/full results and a local commi
 - ITEM-consumable now reads category, independent stock/uses, healing versus damage formulas, traits/publication and selected contained-spell source metadata. Nested source keeps consumable provenance without fabricated UUIDs; base rank is not heightened casting rank.
 - Full suites passed (223 Python, one skipped; 232 JavaScript). Five actual MCP source cases matched persisted values and retained source fingerprints, including an empty scroll template whose index omitted spell but hydrated source contained explicit null. No consumption, rolls or casting occurred.
 - ITEM-consumable remains In progress: complete contained-spell mechanics/prose mapping depends on ITEM-spell. Source explicitly stays partial; activation/castability/expenditure are unsupported. Completed stories remain 15/39 (38.5%). Next: implement ITEM-spell and return to the contained-spell mapping.
+
+### 23. Spell definitions and immediate casting-entry references — October 22, 2026
+
+- ITEM-spell preserves base rank, textual casting time, spell format, healing/damage components, location configuration and bounded recursive fixed-heightening/overlay source. Explicit root/nested prose is kept separate without merging or executing variants.
+- Immediate owner-local casting-entry references resolve actual identities without target source; missing, denied, unsupported and unverified remain explicit, including linked/synthetic token context. Stored configuration never proves cast rank, slot resources or castability.
+- Focused source/browser/Python tests and full suites passed (228 Python, one skipped; 245 JavaScript). Nine live source/prose cases matched persisted data and retained source fingerprints, with assigned/unassigned entry follow-up. Effective casting remains unsupported.
+- ITEM-spell Complete for definition/source scope. Completed stories: 16/39 (41.0%). Next: integrate its source/prose mapping into consumable contained spells, then casting-entry reading.

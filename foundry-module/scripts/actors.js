@@ -8,6 +8,8 @@ import { armorFields } from './actorArmor.js';
 import { shieldFields } from './actorShield.js';
 import { equipmentFields } from './actorEquipment.js';
 import { consumableFields } from './actorConsumable.js';
+import { spellFields,spellDescriptionFields } from './actorSpell.js';
+import { spellEntryReference,spellEntryRelationship } from './actorSpellRelationships.js';
 import { weaponAmmoReference,weaponAmmoRelationship } from './actorWeaponRelationships.js';
 import { actionFields, actionReferenceFields } from './actorAction.js';
 import { meleeFields, meleeEffectFields } from './actorMelee.js';
@@ -40,6 +42,7 @@ function selection(target, sections) {
   let shield=[];
   let equipment=[];
   let consumable=[];
+  let spell=[];let spellReference=null;let spellDescriptions=[];
   let weaponReference=null;
   let action=[];
   let melee=[];
@@ -121,6 +124,17 @@ function selection(target, sections) {
     catch(error){
       const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
       fail('ReadFailed',`Selected consumable source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect consumable source; no use, activation, spell casting or formula evaluation occurs.');
+    }
+  }
+  // PF2e-specific spell8.6.1 authored definitions; never prepare cast variants.
+  if(target.document.documentName==='Item'&&source.type==='spell'){
+    try{
+      if(sections.includes('source'))spell=spellFields(source);
+      if(sections.includes('relationships'))spellReference=spellEntryReference(source);
+      if(sections.includes('description'))spellDescriptions=spellDescriptionFields(source);
+    }catch(error){
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
+      fail('ReadFailed',`Selected spell source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect spell source; no overlay evaluation, heightening or castability is calculated.');
     }
   }
   // PF2e-specific action source8.6.1; source-only selection never hydrates effects.
@@ -227,7 +241,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, shield, equipment, consumable, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, shield, equipment, consumable, spell, spellReference, spellDescriptions, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -269,6 +283,7 @@ async function snapshot(target,sections) {
   if (target.document.type==='action'&&sections.includes('relationships')) selected.relationship=await actionRelationship(target,selected);
   if(target.document.type==='effect'&&sections.includes('relationships'))selected.effectRelationships=await effectRelationships(selected.effectReferences);
   if(target.document.type==='condition'&&sections.includes('relationships'))selected.conditionRelationships=conditionRelationships(target,selected.conditionReferences);
+  if(target.document.type==='spell'&&sections.includes('relationships'))selected.spellRelationship=spellEntryRelationship(target,selected.spellReference);
   if(target.document.type==='weapon'&&sections.includes('relationships'))selected.weaponRelationship=weaponAmmoRelationship(target,selected.weaponReference);
   return selected;
 }
@@ -319,6 +334,10 @@ export async function getActorTypes(params = {}) {
     melee.mapped_supported=true;
     melee.limitations=['Authored NPC attack modes, bonus/damage/range source and named effect labels; no effective elite/weak/MAP/target math. Null source range does not exclude thrown traits. Live checks cover Strikes; other modes have schema/fixture coverage.'];
     melee.verification={deterministic:{status:'passed',evidence:['tests/js/actor-melee.test.js','tests/js/actor-melee-readers.test.js','tests/test_actor_melee.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/melee-fields.md','scripts/actor-live-check.py']}};
+    const spell=result.item_types.find(entry=>entry.type==='spell');
+    spell.mapped_supported=true;
+    spell.limitations=['Stored spell definition, base rank, heightening/overlay source and immediate casting-entry assignment only. No evaluated variants, cast rank, spell slot availability or castability.'];
+    spell.verification={deterministic:{status:'passed',evidence:['tests/js/actor-spell.test.js','tests/js/actor-spell-readers.test.js','tests/js/actor-spell-relationships.test.js','tests/test_actor_spell.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/spell-verification.md','scripts/actor-live-check.py']}};
     const consumable=result.item_types.find(entry=>entry.type==='consumable');
     consumable.mapped_supported=true;
     consumable.limitations=['Partial source: category, stock, uses, damage/healing and selected contained spell metadata. Full contained spell mapping is pending ITEM-spell; no fabricated spell UUID, consumption, activation, castability or frequency expenditure.'];
@@ -399,7 +418,7 @@ async function read(target,params,sections,tool) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific descriptors retain persisted fields. Source mappings never
     // substitute carried gear, prepared statistics, effective usage or Bulk.
-    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.ammo,'pf2e.ammo.source.v1'],[selected.armor,'pf2e.armor.source.v1'],[selected.shield,'pf2e.shield.source.v1'],[selected.equipment,'pf2e.equipment.source.v1'],[selected.consumable,'pf2e.consumable.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
+    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.ammo,'pf2e.ammo.source.v1'],[selected.armor,'pf2e.armor.source.v1'],[selected.shield,'pf2e.shield.source.v1'],[selected.equipment,'pf2e.equipment.source.v1'],[selected.consumable,'pf2e.consumable.source.v1'],[selected.spell,'pf2e.spell.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
     for (const field of fields) {
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       if (Object.hasOwn(field,'mapped_value')) entry.mapped.value=field.mapped_value;
@@ -429,6 +448,13 @@ async function read(target,params,sections,tool) {
     if(denied.length)records.push({key:`${section}:items:denied`,section,kind:'relationship',raw:[],
       mapped:{concept,value:{target_uuid:null,status:'denied'},unit:null},
       provenance:{contributors:[],mapping:'pf2e.npc.item-reference.v1',limitations:['One or more owned Items are unreadable; have the authorized GM grant access and retry.']}});
+  }
+  if(selected.spellRelationship){
+    const {path,present,value}=selected.spellReference;
+    const raw=[{document_uuid:target.identity.uuid,path,present,...(present?{value}:{}),basis:'source'}];
+    records.push({key:'relationships:spell:location',section:'relationships',kind:'relationship',raw,
+      mapped:{concept:'stored_spellcasting_entry_reference',value:selected.spellRelationship,unit:null},
+      provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.spell.casting-entry.v1',limitations:['stored_assignment_not_castability']}});
   }
   if(selected.weaponRelationship){
     const {path,present,value}=selected.weaponReference;
@@ -468,13 +494,14 @@ async function read(target,params,sections,tool) {
       provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.action.self_effect.v1',limitations:selected.relationship.reason?[selected.relationship.reason]:[]}});
   }
   if (sections.includes('description')) {
-    const fields=target.document.documentName==='Actor'?selected.npcNotes:
+    const fields=target.document.documentName==='Actor'?selected.npcNotes:target.document.type==='spell'?selected.spellDescriptions:
       ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])].map(path=>({path,present:Object.hasOwn(selected.selected,path),value:selected.selected[path],concept:path==='/system/description/value'?'description':'unidentified_description'}));
     for (const field of fields) {
       const {path,present,value,concept}=field;
       if (present && typeof value!=='string') fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected document source in Foundry.');
       const make=(present,value)=>{
         const entry=record(target.identity.uuid,path,present,value,'description',concept);
+        if(target.document.documentName==='Item'&&target.document.type==='spell'){entry.provenance.mapping='pf2e.spell.source.v1';entry.provenance.limitations=['source_only_no_spell_casting_or_variant_application'];}
         if(target.document.documentName==='Actor') {
           entry.provenance.mapping='pf2e.npc.notes.v1';
           entry.provenance.limitations=['Exact stored NPC biography; public and GM-private notes remain separate source paths. No enrichment is executed.'];
@@ -491,6 +518,7 @@ async function read(target,params,sections,tool) {
   const isAction=target.document.documentName==='Item'&&target.document.type==='action';
   const isMelee=target.document.documentName==='Item'&&target.document.type==='melee';
   const isLore=target.document.documentName==='Item'&&target.document.type==='lore';
+  const isSpell=target.document.documentName==='Item'&&target.document.type==='spell';
   const isConsumable=target.document.documentName==='Item'&&target.document.type==='consumable';
   const isEquipment=target.document.documentName==='Item'&&target.document.type==='equipment';
   const isShield=target.document.documentName==='Item'&&target.document.type==='shield';
@@ -500,10 +528,10 @@ async function read(target,params,sections,tool) {
   const isCondition=target.document.documentName==='Item'&&target.document.type==='condition';
   const isEffect=target.document.documentName==='Item'&&target.document.type==='effect';
   const loreSkills=target.document.documentName==='Actor'&&sections.includes('skills');
-  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isAmmo||isArmor||isShield||isEquipment)&&name==='source')||((isEffect||isCondition||isWeapon)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
+  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isAmmo||isArmor||isShield||isEquipment)&&name==='source')||((isEffect||isCondition||isWeapon||isSpell)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
-      reasons:complete(name)?[]:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[isConsumable?'contained_spell_mapping_pending':PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isConsumable?'Stored consumable category, stock, uses and damage/healing formulas only; contained spell metadata has source-path identity, not a document UUID. Full contained spell mapping is pending; no consumption, frequency, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+      reasons:complete(name)?[]:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[isConsumable?'contained_spell_mapping_pending':PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable category, stock, uses and damage/healing formulas only; contained spell metadata has source-path identity, not a document UUID. Full contained spell mapping is pending; no consumption, frequency, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);

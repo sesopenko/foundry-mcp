@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -47,4 +47,4 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 Supported computed variants/cast ranks require CORE-casting. Ritual, flexible and item-casting execution semantics remain partial; do not evaluate overlay/preparation methods merely to read.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Definition/source reading and immediate casting-entry references are verified; see [field contract](../spell-fields.md) and [rulebook/runtime evidence](../spell-verification.md). Nine live spell cases cover variable/long time, mixed healing/damage, interval/fixed heightening, overlays, ritual and owned assigned/unassigned entries. Exact root and nested source prose use bounded continuation without merging variants. Deterministic checks cover missing/denied/wrong-type links, canonical linked/synthetic contexts, malformed/empty/optional source and stale reads. Computed cast ranks, variants, slot resources and castability remain explicitly unsupported under CORE-casting. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
