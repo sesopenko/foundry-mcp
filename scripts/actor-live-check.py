@@ -50,6 +50,9 @@ async def main():
         assert 'rank is stored base rank, not heightened casting rank' in available['read_item'].description
         assert 'spell Items expose selected definition source' in available['read_item'].description
         assert 'actual owner' in available['read_item'].description
+        assert 'spellcastingEntry Items expose stored tradition' in available['read_item'].description
+        assert 'slot11 is retained without spell-rank semantics' in available['read_item'].description
+        assert 'Missing id/expended fields stay absent' in available['read_item'].description
         selector_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);
@@ -196,6 +199,37 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         assert familiar['identity']['source_kind']=='compendium'
         assert any(record['raw'][0]['path']=='/system/category' and record['raw'][0].get('value')=='familiar' for record in familiar['records'])
         # Compare persisted source fingerprints after reads; no gameplay mutation.
+        casting_probe="""
+const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
+const entries=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type)).flatMap(a=>a.items.contents).filter(i=>i.type==='spellcastingEntry');
+const samples=['prepared','spontaneous','innate','focus'].map(mode=>({doc:entries.find(i=>i.toObject(true).system.prepared.value===mode)}));
+const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>['character','npc','familiar'].includes(t.actor?.type)&&t.actor.items.some(i=>i.type==='spellcastingEntry'));
+if(token)samples.push({doc:token.actor.items.find(i=>i.type==='spellcastingEntry'),token_uuid:token.uuid});
+const report=[];for(const {doc,token_uuid}of samples){if(!doc)continue;const source=doc.toObject(true),s=source.system,expected={'/system/prepared/value':s.prepared.value,'/system/tradition/value':s.tradition.value,'/system/spelldc/value':s.spelldc.value,'/system/spelldc/dc':s.spelldc.dc};const absent=[];for(let rank=0;rank<=11;rank++){const slot=s.slots['slot'+rank];if(!slot)continue;const path='/system/slots/slot'+rank;expected[path+'/value']=slot.value;expected[path+'/max']=slot.max;for(let i=0;i<slot.prepared.length;i++)for(const key of ['id','expended']){const p=path+'/prepared/'+i+'/'+key;if(Object.hasOwn(slot.prepared[i],key))expected[p]=slot.prepared[i][key];else absent.push(p);}}report.push({uuid:doc.uuid,...(token_uuid?{token_uuid}:{}),expected,absent,revision:await digest(source)});}
+const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.length/800)},(_,i)=>json.slice(i*800,(i+1)*800));
+"""
+        casting_samples=probe(payload(await client.call_tool('execute_javascript',{'code':casting_probe})))
+        assert len(casting_samples)==5
+        assert {s['expected']['/system/prepared/value'] for s in casting_samples}>={'prepared','spontaneous','innate','focus'}
+        for sample in casting_samples:
+            rows=[];casting_cursor=None
+            for _ in range(100):
+                args={'item_uuid':sample['uuid'],'sections':['source','effective'],'limit':25}
+                if sample.get('token_uuid'):args['token_uuid']=sample['token_uuid']
+                if casting_cursor:args['cursor']=casting_cursor
+                page=payload(await client.call_tool('read_item',args));rows.extend(page['records'])
+                assert page['sections'][1]['status']=='unsupported'
+                casting_cursor=page['pagination']['next_cursor']
+                if not casting_cursor:break
+            assert casting_cursor is None and page['sections'][0]['status']=='complete'
+            assert len({row['raw'][0]['path'] for row in rows})==len(rows)
+            for path,expected in sample['expected'].items():
+                row=next(row for row in rows if row['raw'][0]['path']==path)
+                assert row['raw'][0]['value']==expected and row['provenance']['mapping']=='pf2e.spellcasting-entry.source.v1'
+            for path in sample['absent']:assert next(row for row in rows if row['raw'][0]['path']==path)['raw'][0]['present'] is False
+            if sample.get('token_uuid'):assert page['identity']['instance']['token_uuid']==sample['token_uuid']
+            fingerprint_code="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const doc=await foundry.utils.fromUuid("+json.dumps(sample['uuid'])+");return JSON.stringify({revision:await digest(doc.toObject(true))});"
+            assert probe(payload(await client.call_tool('execute_javascript',{'code':fingerprint_code})))['revision']==sample['revision']
         spell_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const pack=game.packs.get('pf2e.spells-srd');const index=await pack.getIndex({fields:['type','system.time','system.damage','system.heightening','system.overlays','system.ritual']});
@@ -544,6 +578,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
         assert action_support['mapped_supported'] and not action_support['effective_supported']
         assert action_support['verification']['live']['status']=='passed'
+        casting_support=next(entry for entry in registry.data['item_types'] if entry['type']=='spellcastingEntry')
+        assert casting_support['mapped_supported'] and not casting_support['effective_supported']
+        assert casting_support['verification']['live']['status']=='passed'
         spell_support=next(entry for entry in registry.data['item_types'] if entry['type']=='spell')
         assert spell_support['mapped_supported'] and not spell_support['effective_supported']
         assert spell_support['verification']['live']['status']=='passed'
@@ -578,7 +615,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent

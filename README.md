@@ -295,6 +295,8 @@ Consumable source separates stock, uses and healing/damage formulas; contained-s
 definitions and exact prose retain source-path identity without separate spell UUIDs.
 Spell definitions preserve base rank, textual casting time, damage/healing and
 variant source; entry links retain owner context without assuming castability.
+Casting entries preserve mode-specific resource source and individual preparations;
+zero slot counters do not prove exhaustion, and missing expenditure flags stay absent.
 
 
 

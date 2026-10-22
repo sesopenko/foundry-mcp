@@ -121,3 +121,8 @@ resolution, consumption, formula roll or castability calculation occurs.
 explicit source prose without preparing variants. `actorSpellRelationships.js`
 follows stored owner-local entry IDs through actual Item identities; no casting,
 slot evaluation or target entry source is read.
+
+`actorSpellcastingEntry.js` selects stored casting modes and individual resource
+records. Legacy/malformed preparations remain explicit partial source with safe
+siblings retained; no exhaustion, focus pool, innate uses or effective castability
+is inferred from slot counters. Template slot11 has no spell-rank semantics.

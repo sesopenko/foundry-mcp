@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -45,6 +45,6 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Evidence gates and exclusions
 
-Pinned interfaces declare `slots.slotN.prepared[]` with `id` and `expended`; existing observations included mixed shapes. Representative persisted/live expenditure checks are required before claiming usable current resources. DC/attack source values are not guaranteed final PC statistics.
+Pinned interfaces declare `slots.slotN.prepared[]` with `id` and `expended`; the official template also declares slot11 beyond the interface slot0–10 union. Preserve slot11 without rank semantics. Current live preparations are arrays with absent expenditure flags; absence stays absent. Legacy/malformed preparation shapes remain explicitly partial without normalization. Representative supported expenditure checks remain required before claiming usable current resources. DC/attack source values are not final PC statistics.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Selected source/resource configuration and exact descriptions are verified; see [field contract](../spellcasting-entry-fields.md) and [book/runtime evidence](../spellcasting-entry-verification.md). Five live reads cover four modes and a token-context entry, with exact values, absent flags and unchanged source fingerprints. Deterministic fixtures cover independent repeated preparations, zero-value slot interpretation, malformed/legacy partial data, unsupported/denied/stale/system boundaries and Unicode description continuation. Entry-to-spell joins remain CORE-casting; effective resource availability and casting remain unsupported. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.

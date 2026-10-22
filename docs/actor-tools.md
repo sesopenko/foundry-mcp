@@ -541,3 +541,28 @@ name/type/document_name/name_truncated and token_uuid when applicable. Follow
 scope; no target source, spell preparation, slot resources or castability is read.
 See [field contract](actor-item-story-map/spell-fields.md) and
 [evidence](actor-item-story-map/spell-verification.md).
+
+## Spellcasting-entry resource source
+
+`spellcastingEntry` source uses `pf2e.spellcasting-entry.source.v1` for stored
+mode/tradition, flexible/item configuration, ability/proficiency, attack/DC and
+auto-heighten settings, plus individual slot values/maxima and preparations.
+The official template includes slot11 beyond the TypeScript slot0–10 union;
+slot11 is preserved with `template_slot11_no_spell_rank_semantics` and never
+interpreted as an 11th spell rank. Prepared value zero does not establish
+exhaustion. Repeated spell IDs keep distinct array indexes and independent
+expended flags; missing flags remain absent. Focus pools, innate per-spell uses
+and spontaneous shared slots are not interchangeable. No usable-cast count,
+final PC statistic, casting eligibility or expenditure is calculated.
+
+Source completes after pagination unless malformed or unsupported source remains.
+Legacy object preparations and malformed members/leaves are omitted without
+coercion; safe siblings remain. Source becomes partial with `malformed_slot`,
+`malformed_preparations`, `malformed_preparation` or `unsupported_slot_key`
+reasons; limitations identify exact source paths. Selection rejects over 12,000
+descriptors, 6,000 preparations per array or 64 issues with ReadFailed. These are
+source-complexity bounds, separate from normal response count/byte/text limits.
+Explicit description preserves authored exceptions without enrichment. Preparation
+IDs remain local source claims; CORE-casting will join actual spells. Relationships,
+effective and rules remain unsupported. See [field contract](actor-item-story-map/spellcasting-entry-fields.md)
+and [evidence](actor-item-story-map/spellcasting-entry-verification.md).

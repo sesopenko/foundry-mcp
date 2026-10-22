@@ -178,3 +178,10 @@ Each implementation increment must record focused/full results and a local commi
 - Source completes after pagination. Null/absent templates, separate stock/uses, damage/healing kinds, base/configured ranks, partial variants and source identity remain explicit. Activation, castability, expenditure and effective benefits remain unsupported.
 - Focused and full suites passed (231 Python, one skipped; 251 JavaScript). Actual MCP source reads matched five persisted cases; contained wand prose matched its SHA256 and every source fingerprint was unchanged. No console errors after refresh.
 - ITEM-consumable Complete for source/definition scope. Completed stories: 17/39 (43.6%).
+
+### 25. Spellcasting-entry source and mode-specific resources — October 22, 2026
+
+- ITEM-spellcastingEntry preserves casting mode/configuration, authored attack/DC and per-slot values/preparations. Repeated spell IDs retain indexes, absent expenditure stays absent, and zero slot counters do not establish exhaustion. Official template slot11 is retained without 11th-rank semantics despite the interface union ending at10.
+- Malformed/legacy preparation portions remain explicit partial source with safe sibling records retained and exact issue paths; no object-to-array coercion or fabricated source defaults occurs. Actor spell joins, focus/innate resources, effective statistics and usable cast availability remain CORE-casting work.
+- Focused/full suites passed (235 Python, one skipped; 262 JavaScript). Actual MCP read four modes plus a token-context entry, matching source fields/absence and unchanged source fingerprints. Discovery contracts match limits and unsupported sections.
+- ITEM-spellcastingEntry Complete for selected resource-source scope. Completed stories: 18/39 (46.2%).

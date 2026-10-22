@@ -599,6 +599,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
             identity['type'] == 'consumable' and (path in CONSUMABLE_ARRAYS or _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1] == 'array') or
+            identity['type'] == 'spellcastingEntry' and _casting_entry_spec(path) is not None and _casting_entry_spec(path)[1] == 'array' or
             identity['type'] == 'spell' and _spell_spec(path) is not None and _spell_spec(path)[1] == 'array')
 
 
@@ -734,6 +735,60 @@ def _weapon_ammunition_relationship(row, identity):
     if type(value['name']) is not str or len(value['name']) > 256 or type(value['name_truncated']) is not bool: return False
     return instance is None or value['token_uuid'] == instance['token_uuid']
 
+
+
+
+# PF2e-specific SpellcastingEntrySystemSource8.6.1 source schema, never computed casting.
+# Official template also declares slot11; retain it without invented spell-rank meaning.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/static/template.json
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/spellcasting-entry/data.ts
+CASTING_ENTRY_LIMIT = ['source_only_no_castability_or_resource_expenditure','template_slot11_no_spell_rank_semantics']
+CASTING_ENTRY_LEAVES = {p:('casting_entry_'+c,k,n) for p,c,k,n in (
+ ('tradition/value','tradition_code','string',False),('prepared/value','mode_code','string',False),
+ ('prepared/flexible','flexible','boolean',False),('prepared/validItems','valid_items_code','string',True),
+ ('ability/value','ability_code','string',False),('proficiency/value','proficiency_rank','number',False),
+ ('spelldc/value','spell_attack_source','number',False),('spelldc/dc','spell_dc_source','number',False),
+ ('autoHeightenLevel/value','auto_heighten_rank','number',True),('slug','source_slug','string',True),
+ ('publication/title','publication_title','string',False),('publication/authors','publication_authors','string',False),
+ ('publication/license','publication_license','string',False),('publication/remaster','publication_remaster','boolean',False),
+)}
+
+
+def _casting_entry_spec(path):
+    """PF2e-specific8.6.1 casting entry source paths; indexed preparations keep identity.
+
+    Schema pinned above. slot value/max and each preparation's expended flag remain
+    independent authored fields. Legacy object preparations are not array-coerced.
+    """
+    if not path.startswith('/system/'): return None
+    relative=path[len('/system/'):]
+    if relative in CASTING_ENTRY_LEAVES: return CASTING_ENTRY_LEAVES[relative]
+    if relative == 'traits/otherTags': return ('casting_entry_other_tag_code','array',False)
+    if re.fullmatch(r'traits/otherTags/(0|[1-9][0-9]*)',relative): return ('casting_entry_other_tag_code','string',False)
+    match=re.fullmatch(r'slots/slot(?:[0-9]|10|11)/(value|max|prepared)(?:/(0|[1-9][0-9]*)/(id|expended))?',relative)
+    if match is None: return None
+    leaf,index,prepared_leaf=match.groups()
+    if index is not None:
+        if leaf != 'prepared': return None
+        return ('casting_entry_prepared_spell_local_id','string',True) if prepared_leaf == 'id' else ('casting_entry_prepared_expended','boolean',False)
+    return ('casting_entry_preparations','array',False) if leaf == 'prepared' else ('casting_entry_slot_'+leaf,'number',False)
+
+
+def _casting_entry_record(row, identity):
+    """PF2e-specific8.6.1 casting entry DTO: exact source, no effective/resource inference."""
+    if row['section'] == 'description':
+        return len(row['raw']) == 1 and row['raw'][0]['path'] == '/system/description/value' and row['provenance']['mapping'] != 'pf2e.spellcasting-entry.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path']
+    if path in ('/name','/type'): return row['provenance']['mapping'] != 'pf2e.spellcasting-entry.source.v1'
+    spec=_casting_entry_spec(path)
+    if spec is None or raw['document_uuid'] != identity['uuid'] or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.spellcasting-entry.source.v1',limitations=CASTING_ENTRY_LIMIT): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'string':type(value) is str,'boolean':type(value) is bool,'number':type(value) in (int,float) and math.isfinite(value),'array':type(value) is list and not value}[kind]
 
 
 # PF2e-specific SpellSystemSource8.6.1 primitive schema; no prepared variants.
@@ -1212,6 +1267,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'spellcastingEntry':
+        return _casting_entry_spec(path) is not None
     if identity['type'] == 'spell':
         return _spell_spec(path) is not None
     if identity['type'] == 'condition':
@@ -1371,6 +1428,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if type(mapped) is not dict or set(mapped) != {'concept', 'value', 'unit'} or type(mapped['concept']) is not str or (mapped['unit'] is not None and type(mapped['unit']) is not str):
         return False
     if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x, identity) for x in provenance['contributors']):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'spellcastingEntry' and not _casting_entry_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'spell' and not _spell_record(row, identity):
         return False
@@ -1683,6 +1742,22 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     equipment can retain mundane benefits; no carried or magical benefit is applied
     or declared active. Selected source is complete; relationships/effective/rules
     remain unsupported.
+    spellcastingEntry Items expose stored tradition, casting mode/flexible/validItems,
+    ability/proficiency, source spell attack/DC, auto-heighten rank and indexed slot
+    value/max/preparations. Template slot11 is retained without spell-rank semantics.
+    Slot value zero never proves exhaustion: each preparation
+    keeps its own array index, nullable local spell ID and expended flag, including
+    repeated IDs. These are stored resources/configuration, never current castability
+    or a computed character spell statistic. Legacy object or malformed preparations
+    are omitted with explicit partial-section reasons rather than coerced into arrays.
+    Missing id/expended fields stay absent, never defaults. Prepared, spontaneous,
+    innate and focus modes remain distinct; slot counters are not focus pools or
+    innate per-spell uses. Selection rejects over 12000 descriptors, 6000 preparations
+    per array or 64 malformed-source issues with ReadFailed; inspect/fix the selected
+    source or request identity/description separately.
+    Preparation IDs remain owner-local claims; no spell hydration or entry-to-spell
+    relationship is provided. Request description for exact prose and follow returned
+    continuation. Relationships/effective/rules remain unsupported.
     spell Items expose selected definition source: level.value maps to base rank;
     stored location heightenedLevel/autoHeightenLevel remain configuration, never
     a computed cast rank. Casting time, range, target, requirements and cost remain
