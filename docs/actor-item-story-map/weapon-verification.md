@@ -117,3 +117,15 @@ Standalone world weapons, populated character/familiar owners and selected
 ammunition links remain live gaps; deterministic fixtures cover source shapes,
 serialized attachments and exact description continuation. These checks do not
 establish a complete effective Strike interface or alternate-use calculations.
+
+## Stored ammunition reference acceptance — October 22, 2026
+
+After reboot/reconnection, actual authenticated MCP verified six weapon samples
+and their missing selectedAmmoId references on Foundry14.369/PF2e8.6.1.
+Selected source fingerprints remained unchanged. Populated selections are absent
+from the available fixtures; deterministic JS and Python actual-DTO checks cover
+owned, detached, linked and synthetic contexts, ammo/weapon target types,
+missing/denied/unsupported/unverified statuses and concurrent identity changes.
+Source-only reads never inspect related Items. No loaded ammunition, compatibility,
+quantity/usability or final Strike is inferred. Full offline suites passed before
+the implementation checkpoint: 203 Python tests (one skipped), 189 JavaScript tests.

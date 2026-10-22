@@ -123,6 +123,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Actual rulebook pages and pinned schema fields were verified. Focused pure/browser/Python DTO checks passed; actual MCP consumed six owned/compendium samples with unchanged selected persisted sources.
 - ITEM-weapon remains In progress pending selected ammunition relationships. Effective character/alternate-use attack calculations retain explicit gates. Completed stories remain 10/39 (25.6%).
 
+### 17. Stored ammunition references and weapon acceptance — October 22, 2026
+
+- ITEM-weapon now follows explicit stored selectedAmmoId through actual owner membership, preserving linked/synthetic selectors and exact source provenance. Selection remains distinct from loaded/compatible ammunition and effective attacks.
+- Deterministic JS/Python DTO checks and full offline suites passed. Actual MCP after reboot verified six weapon sources, missing-selection relationships and delivered-reader regressions without changing persisted data. Populated live selections remain unavailable.
+- ITEM-weapon Complete for its declared source/configuration and stored-reference scope. Effective PC Strikes/alternate-use calculations retain their advanced gates. Completed stories: 11/39 (28.2%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.
