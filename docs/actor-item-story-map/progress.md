@@ -141,6 +141,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Actual rulebook/schema evidence, focused JS/Python actual-DTO checks and full suites passed (211 Python tests, one skipped; 207 JavaScript tests). Actual MCP verified five owned/compendium examples without source changes.
 - ITEM-armor Complete for stored-source/configuration scope. Effective Actor AC/saves/Speed and automatic rune/rule application remain unsupported. Completed stories: 13/39 (33.3%).
 
+### 20. Shield source and durability acceptance — October 22, 2026
+
+- ITEM-shield preserves definition/durability, reinforcing runes, specific baselines, integrated source and publication. Held is not raised; ownership does not grant Shield Block. Persisted HP56/max12 is retained without clamping or effective reinforcement math.
+- Three full rulebook pages and pinned schema evidence were verified. Full suites passed (215 Python tests, one skipped; 216 JavaScript tests). Actual MCP verified three distinct compendium shields with unchanged source fingerprints; no world/owned/token shields exist live.
+- ITEM-shield Complete for stored-source/configuration scope. Raised/current state, blocking/class benefits and generated attachment attacks remain unsupported. Completed stories: 14/39 (35.9%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

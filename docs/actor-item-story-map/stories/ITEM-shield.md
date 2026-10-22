@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-physical](CORE-physical.md) |
 | Dependency reason | Uses common physical source rules and identity/bounds. |
 
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -46,4 +46,4 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 Raised/current state, class-granted reinforcement and attachment attacks require supported live extraction. Do not infer these from possession.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Source/configuration reading is verified; see [field contract](../shield-fields.md) and [rulebook/runtime evidence](../shield-verification.md). Live checks cover three distinct compendium sources only; no world/owned/token shields exist. Held-source and mixed provenance have deterministic coverage. Raised state, Shield Block eligibility, class-granted reinforcement and generated attachment attacks remain explicitly unsupported. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.

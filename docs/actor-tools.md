@@ -472,3 +472,16 @@ or Speed. Armor usage is not persisted and is not synthesized. Serialized
 attachments keep source-path identity. Effective and rule application remain
 unsupported. See [field boundary](actor-item-story-map/armor-fields.md) and
 [rulebook/runtime evidence](actor-item-story-map/armor-verification.md).
+
+## Shield source
+
+Shield source combines shared physical HP/hardness/carrying/attachments with
+`pf2e.shield.source.v1` AC bonus, speed penalty, reinforcing rune, specific
+baseline and integrated-weapon source configuration plus publication. Held is
+not raised; possession never grants Shield Block. Source maximum HP can differ
+from effective reinforced maximum, so current stored HP above source max is
+preserved without clamping, broken thresholds or effective reinforcement math.
+Integrated configuration is not a generated attack document. Raised state,
+class benefits, blocking access and effective actor defenses remain unsupported.
+See [field contract](actor-item-story-map/shield-fields.md) and
+[rulebook/runtime evidence](actor-item-story-map/shield-verification.md).

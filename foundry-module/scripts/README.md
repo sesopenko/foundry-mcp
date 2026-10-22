@@ -103,3 +103,7 @@ reverse weapon selection occurs; weapon references remain explicit reads.
 `actorArmor.js` selects stored armor constraints/runes/baselines beside shared
 physical source. No Actor AC, saves, Speed, worn benefits or prepared usage is
 read or calculated; attachments retain serialized source paths.
+
+`actorShield.js` selects shield/rune/integrated source alongside physical HP and
+hardness. It preserves HP above source max without clamping, never infers raised
+state, Shield Block access, effective reinforcement or generated attacks.

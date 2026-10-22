@@ -287,6 +287,9 @@ Ammunition reading preserves separate stock/uses and crafting categories. Only
 explicit weapon selection follows a stack; carried effects are not applied.
 Armor reading preserves stored defenses, thresholds, runes and carrying state;
 source armor bonuses are not total Actor AC or automatic worn benefits.
+Shield reading preserves source durability, reinforcing and integrated configuration;
+held is not raised, and source values do not establish blocking or class benefits.
+
 
 
 
