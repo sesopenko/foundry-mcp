@@ -485,3 +485,16 @@ Integrated configuration is not a generated attack document. Raised state,
 class benefits, blocking access and effective actor defenses remain unsupported.
 See [field contract](actor-item-story-map/shield-fields.md) and
 [rulebook/runtime evidence](actor-item-story-map/shield-verification.md).
+
+## Equipment source and prose abilities
+
+Equipment combines shared physical usage, carrying/investment and attachment
+metadata with `pf2e.equipment.source.v1` traits/tags, rarity, slug and publication.
+Request `description` explicitly and follow returned continuations for exact
+prose activation, frequency and constant-benefit rules. No structured equipment
+activation/frequency field exists in the pinned schema; its absence never means
+no ability. Uninvested does not erase mundane uses, and investment/traits do not
+prove active magical benefits. No activation, expenditure or rule application is
+performed. Serialized attachments retain source-path provenance. See
+[field contract](actor-item-story-map/equipment-source-fields.md) and
+[rulebook/runtime evidence](actor-item-story-map/equipment-verification.md).

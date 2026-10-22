@@ -152,3 +152,9 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.
 
 Each implementation increment must record focused/full results and a local commit after review. No version bump, release, tag or push is authorized by this development run.
+
+### 21. Equipment source and prose abilities — October 22, 2026
+
+- ITEM-equipment preserves usage, carrying/investment, attachments, traits and publication without applying benefits. Structured activation/frequency is absent from the schema; explicit bounded prose remains authoritative.
+- Focused and full suites passed (219 Python, one skipped; 223 JavaScript). Actual MCP source and exact description fingerprints matched one owned NPC and two selected compendium Items; all source fingerprints remained unchanged. Explicit false investment and large Unicode continuation use deterministic fixtures because live investment flags are null.
+- ITEM-equipment Complete for selected source/prose scope. Effective benefits, activation/expenditure and rule application remain unsupported. Completed stories: 15/39 (38.5%).

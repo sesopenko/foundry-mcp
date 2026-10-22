@@ -107,3 +107,7 @@ read or calculated; attachments retain serialized source paths.
 `actorShield.js` selects shield/rune/integrated source alongside physical HP and
 hardness. It preserves HP above source max without clamping, never infers raised
 state, Shield Block access, effective reinforcement or generated attacks.
+
+`actorEquipment.js` selects equipment traits and publication alongside shared
+usage, investment and attachment metadata. Explicit bounded description retains
+prose abilities; no active benefits or activation resources are inferred.

@@ -596,7 +596,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'weapon' and path in WEAPON_ARRAYS or
             identity['type'] == 'ammo' and path in AMMO_ARRAYS or
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
-            identity['type'] == 'shield' and path in SHIELD_ARRAYS)
+            identity['type'] == 'shield' and path in SHIELD_ARRAYS or
+            identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -806,6 +807,53 @@ def _ammo_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific EquipmentSystemSource8.6.1 authored metadata; no benefit activation state.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/equipment/data.ts
+EQUIPMENT_SOURCE = {'/system/'+p:('equipment_'+c,k,n) for p,c,k,n in (
+ ('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+EQUIPMENT_ARRAYS = {'/system/'+p:'equipment_'+c for p,c in (
+ ('traits/value','trait_code'),('traits/otherTags','other_tag_code'))}
+
+
+def _equipment_spec(path):
+    """PF2e-specific equipment8.6.1 source schema above; arrays retain exact codes.
+
+    No activation structure or effective carried benefits are inferred.
+    """
+    if path in EQUIPMENT_SOURCE: return EQUIPMENT_SOURCE[path]
+    for base,concept in EQUIPMENT_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _equipment_record(row,identity):
+    """PF2e-specific equipment8.6.1 strict selected source and physical separation.
+
+    Schema pinned above; traits remain authored, not active benefit calculations.
+    Shared physical usage, investment and attachment paths retain their mapping.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_equipment_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.equipment.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.equipment.source.v1',limitations=['source_only_no_equipment_benefit_application']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value}[kind]
+
+
 # PF2e-specific ArmorSystemSource8.6.1 persisted leaves, never Actor defenses.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/armor/data.ts
 ARMOR_SOURCE = {'/system/'+p:('armor_'+c,k,n) for p,c,k,n in (
@@ -938,6 +986,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
     if identity['type'] == 'melee':
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
+    if identity['type'] == 'equipment' and _equipment_spec(path) is not None:
+        return True
     if identity['type'] == 'shield' and _shield_spec(path) is not None:
         return True
     if identity['type'] == 'armor' and _armor_spec(path) is not None:
@@ -1085,6 +1135,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'ammo' and not _ammo_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'armor' and not _armor_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'equipment' and not _equipment_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'shield' and not _shield_record(row, identity):
         return False
@@ -1377,6 +1429,14 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     physical HP preserves persisted current/max independently: source maximum can
     differ from an effective reinforced maximum and current HP is not clamped. Source
     completion covers selected fields; relationships/effective/rules remain unsupported.
+    equipment Items additionally expose source traits/tags, rarity, slug and
+    publication alongside shared physical usage, carrying, investment and serialized
+    attachment identities. Activations and modifications may exist only in prose:
+    explicitly request description and follow its returned continuation for exact
+    text. Missing structured activation fields do not mean no ability. Uninvested
+    equipment can retain mundane benefits; no carried or magical benefit is applied
+    or declared active. Selected source is complete; relationships/effective/rules
+    remain unsupported.
     ammo Items additionally expose persisted uses.value/max/autoDestroy, nullable
     craftableAs codes, traits/tags, source slug and publication. Uses are authored
     values, not a calculation of shots remaining or consumption. craftableAs codes

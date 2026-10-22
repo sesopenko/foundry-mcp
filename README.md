@@ -289,6 +289,8 @@ Armor reading preserves stored defenses, thresholds, runes and carrying state;
 source armor bonuses are not total Actor AC or automatic worn benefits.
 Shield reading preserves source durability, reinforcing and integrated configuration;
 held is not raised, and source values do not establish blocking or class benefits.
+Equipment preserves usage, investment, traits and exact prose abilities;
+uninvested mundane uses remain readable and magical benefits are not applied.
 
 
 
