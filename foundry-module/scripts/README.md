@@ -131,3 +131,9 @@ is inferred from slot counters. Template slot11 has no spell-rank semantics.
 Items, preserving individual preparations and focus-source provenance. Every
 casting section remains partial with availability_not_evaluated; character focus
 max, effective options, casting and resource use are not inferred.
+
+`actorContainer.js` selects backpack/container Bulk configuration and metadata.
+`actorContainerRelationships.js` builds explicit same-owner containment claims
+from persisted containerId without prepared contents or Bulk calculations. Each
+readable descendant appears once; cycles, invalid parents, denial and unowned
+scope are explicit, with public canonical identities and token context.

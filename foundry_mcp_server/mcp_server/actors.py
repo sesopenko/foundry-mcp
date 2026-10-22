@@ -598,6 +598,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
+            identity['type'] == 'backpack' and path in CONTAINER_ARRAYS or
             identity['type'] == 'consumable' and (path in CONSUMABLE_ARRAYS or _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1] == 'array') or
             identity['type'] == 'spellcastingEntry' and _casting_entry_spec(path) is not None and _casting_entry_spec(path)[1] == 'array' or
             identity['type'] == 'spell' and _spell_spec(path) is not None and _spell_spec(path)[1] == 'array')
@@ -1050,6 +1051,97 @@ def _equipment_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific ContainerSystemSource8.6.1 authored metadata; no benefit activation state.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/container/data.ts
+CONTAINER_SOURCE = {'/system/'+p:('container_'+c,k,n) for p,c,k,n in (
+ ('bulk/heldOrStowed','bulk_held_or_stowed','number',False),
+ ('bulk/capacity','bulk_capacity','number',False),('bulk/ignored','bulk_ignored','number',False),
+ ('stowing','stowing','boolean',False),
+ ('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+CONTAINER_ARRAYS = {'/system/'+p:'container_'+c for p,c in (
+ ('traits/value','trait_code'),('traits/otherTags','other_tag_code'))}
+
+
+def _container_spec(path):
+    """PF2e-specific backpack8.6.1 source schema above; arrays retain exact codes.
+
+    No derived container Bulk, capacity usage or encumbrance is inferred.
+    """
+    if path in CONTAINER_SOURCE: return CONTAINER_SOURCE[path]
+    for base,concept in CONTAINER_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _container_relationship(row, identity):
+    """PF2e-specific8.6.1 persisted containerId owner-local graph boundary.
+
+    Container/physical source schemas linked above define containment claims;
+    actual public Item identities supply selectors, never computed Bulk or access.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship':return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if type(raw) is not list or type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'} or provenance['mapping']!='pf2e.container.contents.v1' or provenance['limitations']!=['stored_containment_not_effective_bulk']:return False
+    for r in raw:
+        if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
+        if r['path']!='/system/containerId' or r['basis']!='source' or type(r['present']) is not bool or r['present']!=('value' in r) or r['present'] and r['value'] is not None and type(r['value']) is not str:return False
+    if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    owner=identity['actor'];instance=identity['instance']
+    def owned(uuid):
+        """PF2e-specific immediate physical Item identity within the actual owner."""
+        prefix=owner['uuid']+'.Item.' if owner else ''
+        return bool(prefix) and type(uuid) is str and len(uuid)<=512 and uuid.startswith(prefix) and re.fullmatch(r'[^.\s#]+',uuid[len(prefix):]) is not None
+    def target(extra):
+        """PF2e-specific detached actual containment target, never effective Bulk."""
+        expected={'status','target_uuid','document_name','type','name','name_truncated'}|set(extra)
+        if instance is not None:expected.add('token_uuid')
+        return set(value)==expected and value['status']=='resolved' and owned(value['target_uuid']) and value['document_name']=='Item' and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (instance is None or value['token_uuid']==instance['token_uuid'])
+    if row['key']=='relationships:container:scope':
+        return raw==[] and mapped['concept']=='container_contents' and value in [dict(status=x,target_uuid=None) for x in ('unverified','empty','denied')] and (value['status'] in ('empty','denied') if owner is not None else value['status']=='unverified')
+    if len(raw)!=1:return False
+    r=raw[0];local_id=r.get('value')
+    if row['key']=='relationships:container:parent':
+        if mapped['concept']!='container_parent' or r['document_uuid']!=identity['uuid']:return False
+        if value.get('status')!='resolved':
+            if value not in [dict(status=x,target_uuid=None,cycle=False) for x in ('missing','denied','unsupported','unverified')] or value['cycle'] is not False:return False
+            return value['status']=='missing' if not local_id else value['status']=='unverified' if owner is None else value['status'] in ('missing','denied','unsupported')
+        return bool(local_id) and target({'cycle'}) and value['type']=='backpack' and type(value['cycle']) is bool and value['target_uuid']==owner['uuid']+'.Item.'+local_id
+    uuid=r['document_uuid']
+    if row['key']!='relationships:container:content:'+uuid or mapped['concept']!='container_content' or not owned(uuid) or uuid==identity['uuid'] or not r['present'] or not local_id:return False
+    return target({'parent_uuid','parent_status','depth'}) and value['target_uuid']==uuid and value['type'] in PHYSICAL_TYPES and owned(value['parent_uuid']) and value['parent_uuid']==owner['uuid']+'.Item.'+local_id and value['parent_status'] in ('resolved','unsupported') and type(value['depth']) is int and 1<=value['depth']<=12000 and (value['depth']==1)==(value['parent_uuid']==identity['uuid'])
+
+
+def _container_record(row,identity):
+    """PF2e-specific backpack8.6.1 strict selected source and physical separation.
+
+    Schema pinned above; traits remain authored, not active benefit calculations.
+    Shared physical usage, investment and base Bulk paths retain their mapping.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_container_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.container.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.container.source.v1',limitations=['source_only_no_container_bulk_calculation']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value}[kind]
+
+
 # PF2e-specific ConsumableSystemSource8.6.1 authored source; no use/spell application.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/consumable/data.ts
 CONSUMABLE_SOURCE = {'/system/'+p:('consumable_'+c,k,n) for p,c,k,n in (
@@ -1285,6 +1377,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
     if identity['type'] == 'consumable' and (_consumable_spec(path) is not None or _contained_spell_spec(path) is not None):
         return True
+    if identity['type'] == 'backpack' and _container_spec(path) is not None:
+        return True
     if identity['type'] == 'equipment' and _equipment_spec(path) is not None:
         return True
     if identity['type'] == 'shield' and _shield_spec(path) is not None:
@@ -1480,6 +1574,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='backpack' and row['section']=='relationships':
+        return _container_relationship(row,identity)
     if identity['document_name']=='Actor' and row['section']=='spellcasting':
         return _actor_casting_record(row,identity)
     for raw in row['raw']:
@@ -1516,6 +1612,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'armor' and not _armor_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'equipment' and not _equipment_record(row, identity):
         return False
@@ -1835,6 +1933,26 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     equipment can retain mundane benefits; no carried or magical benefit is applied
     or declared active. Selected source is complete; relationships/effective/rules
     remain unsupported.
+    backpack Items are containers, including source stowing, held/stowed Bulk,
+    capacity and ignored Bulk alongside common physical fields, traits and publication.
+    Capacity is not current contents Bulk; ignored Bulk is not a universal subtraction.
+    No total Bulk, encumbrance, access action or effective inventory state is calculated.
+    Explicit relationships follows stored parent/descendant containerId claims only
+    within the same owning Actor instance. container_parent reports a resolved
+    backpack selector or missing/denied/unsupported/unverified and a cycle flag.
+    An unresolved parent cycle:false means no verified cycle, not proof of acyclicity;
+    unverified standalone scope is partial.
+    container_content returns each reachable readable physical Item once with its
+    actual target_uuid, parent_uuid, parent_status, depth and optional token_uuid.
+    A non-container parent is explicit unsupported; cycles make the section partial.
+    container_contents scope markers distinguish empty, denied and unverified
+    standalone scope; denied can accompany readable descendants. Follow selectors
+    with read_item, carrying token_uuid unchanged. Source-only reads do not scan contents.
+    Standalone scope is unverified and never claims empty contents. Owned scope
+    markers are empty or denied. Relationships inspect at most 12000 owner Items;
+    exceeding that hard scope bound returns ReadFailed. Partial section reasons are
+    container_scope_unverified, containment_cycle, container_parent_missing,
+    container_parent_denied, container_parent_unsupported and container_contents_denied.
     spellcastingEntry Items expose stored tradition, casting mode/flexible/validItems,
     ability/proficiency, source spell attack/DC, auto-heighten rank and indexed slot
     value/max/preparations. Template slot11 is retained without spell-rank semantics.

@@ -1,6 +1,6 @@
 # Actor spellcasting source joins
 
-This is a source-reading checkpoint for CORE-casting, audited against PF2e **8.6.1** and Foundry **14.369**. It does not establish current spell availability or complete the story's live-mode availability gate.
+This is a source-reading checkpoint for CORE-casting, audited against PF2e **8.6.1** and Foundry **14.369**. It does not establish current spell availability; contextual option presentation and the story's conditional availability verification remain separate work.
 
 The public document boundary reads the selected Actor's actual owned Item collection and each readable spell or spellcastingEntry's `toObject(true)` source. It retains real Item UUIDs and the selected token context. No UUID is synthesized for a nonexistent relationship; another Actor's matching local ID cannot supply a target. No casting, preparation, expenditure, statistic getter, sheet state or recursive hydration is used.
 

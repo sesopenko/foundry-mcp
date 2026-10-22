@@ -74,3 +74,14 @@ checkpoint does not prove current castability, usable focus/innate resources,
 signature rank options or specialized mode execution. CORE-casting stays open;
 character/familiar live casting and absent/mismatched assignment cases remain
 unavailable in the existing world, with deterministic source-boundary coverage.
+
+## Eligibility-interface audit — October 22, 2026
+
+Read the pinned [entry canCast implementation](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/spellcasting-entry/document.ts#L243-L265).
+Its result tests item origin, casting-feature eligibility, tradition or list
+membership. It does not inspect remaining preparations, expended flags, slots
+or focus resources. Therefore it cannot establish current availability. This
+source inspection explains behavior; it does not by itself establish an external
+API contract, and production does not adopt this method. Explicit contextual
+option presentation remains separate work. Any future claim of complete current
+availability retains the original story's mode-specific verification requirement.

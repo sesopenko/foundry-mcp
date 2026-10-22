@@ -54,7 +54,7 @@ Implementation status is tracked in each story and summarized by `./scripts/acto
 | [ITEM-ancestry: Ancestry choices and benefits](stories/ITEM-ancestry.md) | 2 | Ready for source milestone | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 | [ITEM-armor: Armor properties and wearing state](stories/ITEM-armor.md) | 2 | Ready for source milestone | CORE-physical | Uses common physical source rules and identity/bounds. |
 | [ITEM-background: Background benefit packages](stories/ITEM-background.md) | 2 | Ready for source milestone | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
-| [ITEM-backpack: Containers and contents](stories/ITEM-backpack.md) | 2 | Ready for source milestone | CORE-physical | Uses common physical source rules and identity/bounds. |
+| [ITEM-backpack: Containers and contents](stories/ITEM-backpack.md) | 2 | Source ready; advanced gated | CORE-physical | Uses common physical source rules and identity/bounds. |
 | [ITEM-book: Formula and spell books](stories/ITEM-book.md) | 2 | Source ready; advanced gated | CORE-physical | Uses common physical source rules and identity/bounds. |
 | [ITEM-class: Class definition and progression](stories/ITEM-class.md) | 2 | Ready for source milestone | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 | [ITEM-condition: Conditions and persistent damage](stories/ITEM-condition.md) | 2 | Source ready; advanced gated | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |

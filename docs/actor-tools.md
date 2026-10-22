@@ -588,3 +588,19 @@ not complete CORE-casting. Selection rejects over 12,000 owned Items or 24,000
 selected records with ReadFailed, independently of response pagination bounds.
 See [fields](actor-item-story-map/casting-fields.md) and
 [evidence](actor-item-story-map/casting-verification.md).
+
+## Container source and containment claims
+
+`backpack` means a container type. `pf2e.container.source.v1` preserves stowing,
+stored held/stowed Bulk, capacity and ignored Bulk alongside common physical
+source. Capacity is not current contents Bulk; ignored Bulk is conditional, and
+no Actor total or access action is calculated. Explicit relationships uses
+`pf2e.container.contents.v1` for the selected root's parent and reachable physical
+source claims in the same Actor instance. Every descendant appears once; cycles,
+missing/denied/unsupported parents remain explicit. Resolved children include
+actual target_uuid, parent_uuid, parent_status, depth and optional token_uuid;
+follow `read_item` with supplied selectors. Unowned Items return an unverified
+scope, and denied potential contents prevent an exhaustive empty claim. Source-
+only reads never scan contents. A 12,000-owner-Item source guard is separate from
+normal response paging. See [fields](actor-item-story-map/container-fields.md)
+and [runtime limits](actor-item-story-map/container-verification.md).

@@ -37,7 +37,8 @@ coverage. Live source reads cover four contexts across the four common modes and
 a scene token; exact identities, joins, focus values and source fingerprints match.
 
 This does not complete CORE-casting. Availability remains `not_evaluated` and the
-section remains partial; source declarations do not establish effective casting
-options. Supported current availability, signature/heightening options, ritual,
-flexible/item-casting semantics and representative resource-use verification remain
-required before closing the story. No casts, preparation, rolls or writes occur.
+section remains partial; explicit contextual option presentation, including
+signature/heightening distinctions and specialized-mode boundaries, remains work.
+The original acceptance condition applies before any claim of complete current
+availability; it does not authorize casting or expenditure tests that write state.
+No casts, preparation, rolls or writes occur.

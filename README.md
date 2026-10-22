@@ -299,6 +299,8 @@ Casting entries preserve mode-specific resource source and individual preparatio
 zero slot counters do not prove exhaustion, and missing expenditure flags stay absent.
 Actor casting joins owned spells, entries and individual preparations with focus
 source; availability remains explicitly unevaluated in a partial section.
+Containers preserve stored capacity and containment claims with unique descendants
+and explicit cycles/missing parents; no total Bulk or unowned contents are inferred.
 
 
 
