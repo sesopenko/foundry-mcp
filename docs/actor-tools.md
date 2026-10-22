@@ -447,3 +447,16 @@ type, name/name_truncated and selected token_uuid. Follow read_item with those
 selectors. Missing/denied/unsupported/unverified results have null target_uuid and
 no resolved metadata. Standalone IDs stay unverified. This does not identify
 loaded or compatible ammunition, evaluate quantity/usability, or calculate Strikes.
+
+## Ammunition source
+
+Ammunition `source` combines shared physical stock/identity fields with
+`pf2e.ammo.source.v1` uses.value/max/autoDestroy, craftableAs, traits, slug and
+publication. Quantity and remaining uses are separate stored values. A null
+craftableAs requires a selected category; an empty array denotes any non-magazine
+category; populated arrays preserve ordered codes. None proves compatibility or
+a usable attack. Weapon selectedAmmoId references remain explicit owner-local
+links; carried ammo never automatically contributes rules or effects. Rules,
+effective values and reverse weapon inference remain unsupported.
+See [field contract](actor-item-story-map/ammo-fields.md) and
+[rulebook/runtime evidence](actor-item-story-map/ammo-verification.md).

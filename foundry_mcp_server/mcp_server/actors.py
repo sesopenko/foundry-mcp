@@ -593,7 +593,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'lore' and path == '/system/traits/otherTags' or
             identity['type'] == 'effect' and path in EFFECT_ARRAYS or
             identity['type'] == 'condition' and path in CONDITION_ARRAYS or
-            identity['type'] == 'weapon' and path in WEAPON_ARRAYS)
+            identity['type'] == 'weapon' and path in WEAPON_ARRAYS or
+            identity['type'] == 'ammo' and path in AMMO_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -755,6 +756,54 @@ def _weapon_record(row, identity):
             'object':type(value) is dict and not value}[kind]
 
 
+# PF2e-specific AmmoSystemSource8.6.1 authored leaves; no consumption state.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/ammo/data.ts
+AMMO_SOURCE = {'/system/'+p:('ammo_'+c,k,n) for p,c,k,n in (
+ ('uses/value','uses_value','number',False),('uses/max','uses_max','number',False),
+ ('uses/autoDestroy','auto_destroy','boolean',False),('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+AMMO_ARRAYS = {'/system/'+p:'ammo_'+c for p,c in (
+ ('craftableAs','craftable_as_code'),('traits/value','trait_code'),('traits/otherTags','other_tag_code'))}
+
+
+def _ammo_spec(path):
+    """PF2e-specific ammo8.6.1 source schema above; arrays retain exact codes.
+
+    craftableAs null is distinct from absent/empty; no compatibility is inferred.
+    """
+    if path in AMMO_SOURCE: return AMMO_SOURCE[path]
+    for base,concept in AMMO_ARRAYS.items():
+        if path == base: return (concept,'array',base == '/system/craftableAs')
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _ammo_record(row,identity):
+    """PF2e-specific ammo8.6.1 strict selected source and physical separation.
+
+    Schema pinned above; uses remain authored, not remaining shots/compatibility.
+    Shared physical paths retain their mapping; no reverse weapon search occurs.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_ammo_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.ammo.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.ammo.source.v1',limitations=['source_only_no_ammunition_consumption_or_compatibility']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value}[kind]
+
+
 def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     """PF2e-specific: admit pinned physical/ability/attack/Lore8.6.1 paths.
 
@@ -782,6 +831,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
     if identity['type'] == 'melee':
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
+    if identity['type'] == 'ammo' and _ammo_spec(path) is not None:
+        return True
     if identity['type'] == 'weapon' and _weapon_spec(path) is not None:
         return True
     if identity['type'] not in PHYSICAL_TYPES:
@@ -919,6 +970,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if type(provenance) is not dict or set(provenance) != {'contributors', 'mapping', 'limitations'} or type(provenance['mapping']) is not str or not _strings(provenance['limitations']) or type(provenance['contributors']) is not list or not all(_contributor(x, identity) for x in provenance['contributors']):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'weapon' and not _weapon_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'ammo' and not _ammo_record(row, identity):
         return False
     # PF2e-specific action source and named self-effect semantics stay type-scoped.
     if identity['document_name'] == 'Item' and identity['type'] == 'action' and not _action_record(row, identity):
@@ -1197,6 +1250,11 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     compatibility or usability. Source alone performs no target hydration;
     effective remains unsupported. Source completion covers selected fields,
     not every schema field.
+    ammo Items additionally expose persisted uses.value/max/autoDestroy, nullable
+    craftableAs codes, traits/tags, source slug and publication. Uses are authored
+    values, not a calculation of shots remaining or consumption. craftableAs codes
+    do not establish weapon compatibility. No reverse weapon search occurs;
+    relationships/effective/rules remain explicitly unsupported for ammunition.
     action Items have complete selected source mappings for activation kind/count,
     category, frequency, traits/tags, publication and named self-effect references.
     Null action counts never imply free actions. Explicit relationships resolve

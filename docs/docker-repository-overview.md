@@ -44,6 +44,9 @@ PF2e8.6.1 production disables affliction Items. Discovery marks their reading
 unsupported; original poison/disease/curse descriptions remain the source.
 Weapon source includes damage, runes, range and ammunition configuration;
 carried weapons are not automatically effective Strikes or usable attacks.
+Ammunition reading preserves separate stock/uses and crafting categories. Only
+explicit weapon selection follows a stack; carried effects are not applied.
+
 
 
 

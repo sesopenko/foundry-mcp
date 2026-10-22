@@ -3,6 +3,7 @@ import { fail, validateParams, integer, selector, selectSections, digest, textFr
 import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
 import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { weaponFields } from './actorWeapon.js';
+import { ammoFields } from './actorAmmo.js';
 import { weaponAmmoReference,weaponAmmoRelationship } from './actorWeaponRelationships.js';
 import { actionFields, actionReferenceFields } from './actorAction.js';
 import { meleeFields, meleeEffectFields } from './actorMelee.js';
@@ -30,6 +31,7 @@ function selection(target, sections) {
   const selected = {};
   let physical=[];
   let weapon=[];
+  let ammo=[];
   let weaponReference=null;
   let action=[];
   let melee=[];
@@ -67,6 +69,15 @@ function selection(target, sections) {
   if(target.document.documentName==='Item'&&source.type==='weapon'&&sections.includes('relationships')){
     try{weaponReference=weaponAmmoReference(source);}
     catch{fail('ReadFailed','Stored weapon ammunition reference has an unexpected type.','Inspect selectedAmmoId source; no loaded ammunition or compatibility is inferred.');}
+  }
+  // PF2e-specific ammo8.6.1 stored stock/use configuration, not compatibility,
+  // automatic rule application or proof of a usable attack. See actorAmmo.js.
+  if(target.document.documentName==='Item'&&source.type==='ammo'&&sections.includes('source')){
+    try{ammo=ammoFields(source);}
+    catch(error){
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
+      fail('ReadFailed',`Selected ammunition source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect ammunition stock/use source; no weapon compatibility or consumption is inferred.');
+    }
   }
   // PF2e-specific action source8.6.1; source-only selection never hydrates effects.
   if (target.document.documentName==='Item' && source.type==='action' && (sections.includes('source')||sections.includes('relationships'))) {
@@ -172,7 +183,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -264,6 +275,10 @@ export async function getActorTypes(params = {}) {
     melee.mapped_supported=true;
     melee.limitations=['Authored NPC attack modes, bonus/damage/range source and named effect labels; no effective elite/weak/MAP/target math. Null source range does not exclude thrown traits. Live checks cover Strikes; other modes have schema/fixture coverage.'];
     melee.verification={deterministic:{status:'passed',evidence:['tests/js/actor-melee.test.js','tests/js/actor-melee-readers.test.js','tests/test_actor_melee.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/melee-fields.md','scripts/actor-live-check.py']}};
+    const ammo=result.item_types.find(entry=>entry.type==='ammo');
+    ammo.mapped_supported=true;
+    ammo.limitations=['Stored stock/use and crafting categories only; counts do not establish compatibility or a usable attack. Only explicit weapon selection follows an ammo stack; carried rules/effects are not automatically applied.'];
+    ammo.verification={deterministic:{status:'passed',evidence:['tests/js/actor-ammo.test.js','tests/js/actor-ammo-readers.test.js','tests/test_actor_ammo.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/ammo-verification.md','scripts/actor-live-check.py']}};
     const weapon=result.item_types.find(entry=>entry.type==='weapon');
     weapon.mapped_supported=true;
     weapon.limitations=['Persisted weapon definition/configuration and shared physical source only. No final Strike or NPC authored attack is generated; carried gear is not proof of usability. Explicit stored selectedAmmoId resolves actual owner-local ammo/weapon Items; loaded/compatible ammunition and effective alternate-use calculations remain unsupported.'];
@@ -324,7 +339,7 @@ async function read(target,params,sections,tool) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific descriptors retain persisted fields. Source mappings never
     // substitute carried gear, prepared statistics, effective usage or Bulk.
-    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
+    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.ammo,'pf2e.ammo.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
     for (const field of fields) {
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       if (Object.hasOwn(field,'mapped_value')) entry.mapped.value=field.mapped_value;
@@ -416,14 +431,15 @@ async function read(target,params,sections,tool) {
   const isAction=target.document.documentName==='Item'&&target.document.type==='action';
   const isMelee=target.document.documentName==='Item'&&target.document.type==='melee';
   const isLore=target.document.documentName==='Item'&&target.document.type==='lore';
+  const isAmmo=target.document.documentName==='Item'&&target.document.type==='ammo';
   const isWeapon=target.document.documentName==='Item'&&target.document.type==='weapon';
   const isCondition=target.document.documentName==='Item'&&target.document.type==='condition';
   const isEffect=target.document.documentName==='Item'&&target.document.type==='effect';
   const loreSkills=target.document.documentName==='Actor'&&sections.includes('skills');
-  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||(isLore&&name==='source')||((isEffect||isCondition||isWeapon)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
+  const complete=name=>name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isAmmo)&&name==='source')||((isEffect||isCondition||isWeapon)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':name==='source'||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
-      reasons:complete(name)?[]:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+      reasons:complete(name)?[]:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?[PENDING]:['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);

@@ -95,3 +95,7 @@ NPC attacks, hydrates selected ammunition or prepares alternate-use results.
 `actorWeaponRelationships.js` resolves explicit stored selectedAmmoId through
 actual owner membership and public identities. It does not use prepared ammo,
 loaded subitems, compatibility checks, consumption or effective attack values.
+
+`actorAmmo.js` selects persisted ammo use/crafting/metadata fields alongside
+shared stock source. No consumption, rule application, attack calculation or
+reverse weapon selection occurs; weapon references remain explicit reads.
