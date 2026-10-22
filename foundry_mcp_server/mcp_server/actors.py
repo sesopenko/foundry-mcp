@@ -597,7 +597,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'ammo' and path in AMMO_ARRAYS or
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
-            identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS)
+            identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
+            identity['type'] == 'consumable' and path in CONSUMABLE_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -854,6 +855,62 @@ def _equipment_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific ConsumableSystemSource8.6.1 authored source; no use/spell application.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/consumable/data.ts
+CONSUMABLE_SOURCE = {'/system/'+p:('consumable_'+c,k,n) for p,c,k,n in (
+ ('category','category_code','string',False),
+ ('uses/value','uses_value','number',False),('uses/max','uses_max','number',False),
+ ('uses/autoDestroy','uses_auto_destroy','boolean',False),
+ ('damage','damage_healing','null',True),('damage/formula','damage_formula','string',False),
+ ('damage/type','damage_type_code','string',False),('damage/kind','damage_kind_code','string',False),
+ ('spell','contained_spell','null',True),('spell/_id','contained_spell_id','string',False),
+ ('spell/name','contained_spell_name','string',False),('spell/type','contained_spell_type','spell',False),
+ ('spell/system/level/value','contained_spell_base_rank','number',False),
+ ('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+CONSUMABLE_ARRAYS = {'/system/'+p:'consumable_'+c for p,c in (
+ ('traits/value','trait_code'),('traits/otherTags','other_tag_code'))}
+
+
+def _consumable_spec(path):
+    """PF2e-specific consumable8.6.1 source schema above; arrays retain exact codes.
+
+    Damage formulas are source text; contained spells have selected metadata only.
+    """
+    if path in CONSUMABLE_SOURCE: return CONSUMABLE_SOURCE[path]
+    for base,concept in CONSUMABLE_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _consumable_record(row,identity):
+    """PF2e-specific consumable8.6.1 strict selected source and physical separation.
+
+    Schema pinned above; no damage roll or contained-spell application is inferred.
+    Shared physical fields retain their mapping; contained spell IDs are local source IDs.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_consumable_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.consumable.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.consumable.source.v1',limitations=['source_only_no_consumable_use_or_spell_application']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value,
+            'null':False,'spell':type(value) is str and value == 'spell'}[kind]
+
+
 # PF2e-specific ArmorSystemSource8.6.1 persisted leaves, never Actor defenses.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/armor/data.ts
 ARMOR_SOURCE = {'/system/'+p:('armor_'+c,k,n) for p,c,k,n in (
@@ -986,6 +1043,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
     if identity['type'] == 'melee':
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
+    if identity['type'] == 'consumable' and _consumable_spec(path) is not None:
+        return True
     if identity['type'] == 'equipment' and _equipment_spec(path) is not None:
         return True
     if identity['type'] == 'shield' and _shield_spec(path) is not None:
@@ -1135,6 +1194,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'ammo' and not _ammo_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'armor' and not _armor_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'equipment' and not _equipment_record(row, identity):
         return False
@@ -1437,6 +1498,15 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     equipment can retain mundane benefits; no carried or magical benefit is applied
     or declared active. Selected source is complete; relationships/effective/rules
     remain unsupported.
+    consumable Items expose a source checkpoint: category, uses.value/max/autoDestroy,
+    nullable damage formula/type/kind, traits/tags, slug and publication. Quantity
+    and uses remain separate persisted values; no consumption, damage or healing
+    is applied. Contained spell source is null or selected local _id/name/type/rank
+    metadata (rank is stored base rank, not heightened casting rank), never an
+    independently resolvable Item UUID. Full contained-spell
+    mapping awaits the spell reader. Request description for exact activation prose
+    and follow returned continuation. Source remains partial; relationships,
+    effective and rules remain unsupported.
     ammo Items additionally expose persisted uses.value/max/autoDestroy, nullable
     craftableAs codes, traits/tags, source slug and publication. Uses are authored
     values, not a calculation of shots remaining or consumption. craftableAs codes

@@ -498,3 +498,17 @@ prove active magical benefits. No activation, expenditure or rule application is
 performed. Serialized attachments retain source-path provenance. See
 [field contract](actor-item-story-map/equipment-source-fields.md) and
 [rulebook/runtime evidence](actor-item-story-map/equipment-verification.md).
+
+## Consumable source checkpoint
+
+Consumables expose `pf2e.consumable.source.v1` category, per-object uses and
+nullable healing/damage formulas with a separate kind code. Shared physical
+records retain quantity and usage independently; reading never consumes, rolls
+or activates. Contained spell source is null or selected local ID/name/type/base
+rank metadata, with source paths under the consumable's UUID. It is not a new
+Item selector, and base rank does not establish heightened casting rank. Source
+stays partial with `contained_spell_mapping_pending` until ITEM-spell supplies
+complete contained-spell interpretation. Explicit description remains exact
+bounded consumable prose; nested spell prose and mechanics are not yet delivered.
+See [field contract](actor-item-story-map/consumable-fields.md) and
+[evidence](actor-item-story-map/consumable-verification.md).

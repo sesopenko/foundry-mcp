@@ -111,3 +111,7 @@ state, Shield Block access, effective reinforcement or generated attacks.
 `actorEquipment.js` selects equipment traits and publication alongside shared
 usage, investment and attachment metadata. Explicit bounded description retains
 prose abilities; no active benefits or activation resources are inferred.
+
+`actorConsumable.js` selects category, uses, healing/damage and contained spell
+metadata alongside common stock source. Nested spells retain source-path identity;
+source stays partial until full spell mapping. No consumption or formula roll occurs.

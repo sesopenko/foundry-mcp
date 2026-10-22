@@ -158,3 +158,9 @@ Each implementation increment must record focused/full results and a local commi
 - ITEM-equipment preserves usage, carrying/investment, attachments, traits and publication without applying benefits. Structured activation/frequency is absent from the schema; explicit bounded prose remains authoritative.
 - Focused and full suites passed (219 Python, one skipped; 223 JavaScript). Actual MCP source and exact description fingerprints matched one owned NPC and two selected compendium Items; all source fingerprints remained unchanged. Explicit false investment and large Unicode continuation use deterministic fixtures because live investment flags are null.
 - ITEM-equipment Complete for selected source/prose scope. Effective benefits, activation/expenditure and rule application remain unsupported. Completed stories: 15/39 (38.5%).
+
+### 22. Consumable stock, uses and contained-source checkpoint — October 22, 2026
+
+- ITEM-consumable now reads category, independent stock/uses, healing versus damage formulas, traits/publication and selected contained-spell source metadata. Nested source keeps consumable provenance without fabricated UUIDs; base rank is not heightened casting rank.
+- Full suites passed (223 Python, one skipped; 232 JavaScript). Five actual MCP source cases matched persisted values and retained source fingerprints, including an empty scroll template whose index omitted spell but hydrated source contained explicit null. No consumption, rolls or casting occurred.
+- ITEM-consumable remains In progress: complete contained-spell mechanics/prose mapping depends on ITEM-spell. Source explicitly stays partial; activation/castability/expenditure are unsupported. Completed stories remain 15/39 (38.5%). Next: implement ITEM-spell and return to the contained-spell mapping.

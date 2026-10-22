@@ -52,6 +52,8 @@ Shield reading preserves source durability, reinforcing and integrated configura
 held is not raised, and source values do not establish blocking or class benefits.
 Equipment preserves usage, investment, traits and exact prose abilities;
 uninvested mundane uses remain readable and magical benefits are not applied.
+Consumable source separates stock, uses and healing/damage formulas; contained-spell
+metadata retains source-path identity, with full spell interpretation still pending.
 
 
 
