@@ -5,8 +5,8 @@
 | Tracking | Value |
 | --- | --- |
 | Stage | 2 |
-| Planning readiness | Ready for source milestone |
-| Implementation status | Not started |
+| Planning readiness | Source ready; advanced gated |
+| Implementation status | Complete |
 | Prerequisites | [CORE-physical](CORE-physical.md) |
 | Dependency reason | Uses common physical source rules and identity/bounds. |
 
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -46,4 +46,4 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 The source mapping is ready to implement. Effective actor statistics, target-dependent calculations and automatic application of rule elements are excluded; prove supported interfaces and focused live behavior before adding them.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Selected valuables source is implemented and verified; see [field contract](../treasure-fields.md) and [book/runtime evidence](../treasure-verification.md). Quantity, price.per and all stored denominations remain separate without valuation or sale arithmetic. Six live reads cover NPC-owned, synthetic-token and four pack categories, including explicit null category. Exact descriptions and complete source fingerprints match. Deterministic character/NPC/familiar fixtures retain valuables while loot-Actor ownership stays unsupported; malformed, denied, stale and non-PF2e boundaries are tested. Usage, investment and derived stackGroup are not synthesized. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.

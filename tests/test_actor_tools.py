@@ -121,12 +121,12 @@ class ActorToolTests(unittest.IsolatedAsyncioTestCase):
 import {getActorTypes,readActor,readItem,listActorItems} from './foundry-module/scripts/actors.js';
 const docs=new Map();
 function make(uuid,documentName,type,system={}) {
- const source={name:'Example 😀',type,system,flags:{private:'excluded'}};
+ const source={name:'Example 😀',type,system,flags:{private:'private_source_sentinel_783f'}};
  const doc={uuid,id:uuid.split('.').at(-1),name:source.name,type,documentName,parent:null,folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject:()=>structuredClone(source)};
  docs.set(uuid,doc);return doc;
 }
 const actor=make('Actor.a','Actor','npc');
-const item=make('Actor.a.Item.i','Item','action',{description:{value:'<p>Exact 😀 &amp;</p>',gm:'excluded'}});
+const item=make('Actor.a.Item.i','Item','action',{description:{value:'<p>Exact 😀 &amp;</p>',gm:'private_source_sentinel_783f'}});
 item.parent=actor;actor.items.set('i',item);
 const scene=make('Scene.s','Scene','');const token=make('Scene.s.Token.t','Token','');
 token.parent=scene;token.actor=actor;token.baseActor=actor;token.isLinked=true;
@@ -140,7 +140,7 @@ console.log(JSON.stringify([await getActorTypes(),await readActor({actor_uuid:ac
             with self.subTest(tool=tool.name,args=args):
                 self.manager.call.return_value=response
                 self.assertEqual(await tool.fn(**args),response)
-                self.assertNotIn('excluded',json.dumps(response))
+                self.assertNotIn('private_source_sentinel_783f',json.dumps(response))
 
     async def test_token_context_is_preserved_for_linked_and_synthetic_items(self):
         for uuid, linked in [('Actor.a.Item.i', True), ('Scene.s.Token.t.Actor.a.Item.i', False)]:

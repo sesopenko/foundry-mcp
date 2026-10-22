@@ -301,6 +301,8 @@ Actor casting joins owned spells, entries and individual preparations with focus
 source; availability remains explicitly unevaluated in a partial section.
 Containers preserve stored capacity and containment claims with unique descendants
 and explicit cycles/missing parents; no total Bulk or unowned contents are inferred.
+Treasure preserves category, quantity and denomination price/per independently;
+Actor valuables remain readable without inferred sale proceeds or doubled value.
 
 
 

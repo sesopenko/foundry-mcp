@@ -199,3 +199,10 @@ Each implementation increment must record focused/full results and a local commi
 - Focused/full tests cover nested/cyclic/synthetic graphs, denied source privacy, no source-only inventory scan, stale changes and strict cross-language contracts. Actual MCP reads passed two compendium sources and exact prose fingerprints; relationships correctly stayed unverified for unowned scope.
 - Corrected the live inventory audit: its three owned containers are on excluded loot Actors, not supported NPCs. Owned/nested/cyclic graphs have deterministic coverage only; the runtime gap remains explicit. Casting eligibility audit also confirms canCast does not establish resource availability, with no new production API dependency.
 - ITEM-backpack Complete for source/containment scope. Completed stories: 19/39 (48.7%). CORE-casting remains In progress; its original conditional availability gate is preserved without adding an unconditional execution requirement.
+
+### 28. Treasure source and independent price basis — October 22, 2026
+
+- ITEM-treasure preserves nullable category, traits/publication and independent shared quantity, denominations and price.per, without using asset value, stackGroup, sale or conversion math. No usage/investment state is synthesized. Supported Actor valuables remain readable while loot Actors remain unsupported.
+- Focused/full suites passed (251 Python, one skipped; 291 JavaScript). Six actual MCP reads cover NPC-owned, synthetic-token and four pack categories, with exact source/description fingerprints unchanged. Character/familiar and non-unit basis cases have deterministic coverage.
+- Corrected an over-broad private-data test marker whose ordinary word collided with legitimate capability documentation; the unique fake source marker keeps exposure detection intact. No production behavior was weakened to satisfy the assertion.
+- ITEM-treasure Complete for valuables/source scope. Completed stories: 20/39 (51.3%). The Item prerequisites for CORE-inventory are now delivered.

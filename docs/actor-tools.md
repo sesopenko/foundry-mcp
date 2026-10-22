@@ -604,3 +604,16 @@ scope, and denied potential contents prevent an exhaustive empty claim. Source-
 only reads never scan contents. A 12,000-owner-Item source guard is separate from
 normal response paging. See [fields](actor-item-story-map/container-fields.md)
 and [runtime limits](actor-item-story-map/container-verification.md).
+
+## Treasure and price basis
+
+Treasure source adds `pf2e.treasure.source.v1` nullable category, traits/tags,
+rarity, slug and publication to common physical records. Quantity, price.per and
+individual pp/gp/sp/cp amounts remain separate stored inputs. Reading performs
+no conversion, stack valuation, sale arithmetic or market assumption. In particular,
+it never multiplies a derived asset value by quantity again. Treasure usage and
+investment are not persisted and are not synthesized; derived stackGroup stays
+excluded. Character/NPC/familiar valuables are supported independently of loot-
+Actor exclusion. Source completes after paging; relationships, rules and effective
+remain unsupported. See [field contract](actor-item-story-map/treasure-fields.md)
+and [evidence](actor-item-story-map/treasure-verification.md).

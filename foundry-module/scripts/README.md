@@ -137,3 +137,7 @@ max, effective options, casting and resource use are not inferred.
 from persisted containerId without prepared contents or Bulk calculations. Each
 readable descendant appears once; cycles, invalid parents, denial and unowned
 scope are explicit, with public canonical identities and token context.
+
+`actorTreasure.js` selects nullable valuables categories and metadata alongside
+shared quantity/denomination/price-per source. It never uses derived asset values,
+stackGroup, synthesized usage or investment, conversion or sale arithmetic.

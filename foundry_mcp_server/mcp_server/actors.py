@@ -598,6 +598,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
+            identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
             identity['type'] == 'backpack' and path in CONTAINER_ARRAYS or
             identity['type'] == 'consumable' and (path in CONSUMABLE_ARRAYS or _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1] == 'array') or
             identity['type'] == 'spellcastingEntry' and _casting_entry_spec(path) is not None and _casting_entry_spec(path)[1] == 'array' or
@@ -1051,6 +1052,54 @@ def _equipment_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific TreasureSystemSchema8.6.1 authored metadata; no derived valuation or sale.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/treasure/data.ts
+TREASURE_SOURCE = {'/system/'+p:('treasure_'+c,k,n) for p,c,k,n in (
+ ('category','category_code','string',True),
+ ('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+TREASURE_ARRAYS = {'/system/'+p:'treasure_'+c for p,c in (
+ ('traits/value','trait_code'),('traits/otherTags','other_tag_code'))}
+
+
+def _treasure_spec(path):
+    """PF2e-specific treasure8.6.1 source schema above; arrays retain exact codes.
+
+    No stack group, sale price, total valuation or usage is inferred.
+    """
+    if path in TREASURE_SOURCE: return TREASURE_SOURCE[path]
+    for base,concept in TREASURE_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _treasure_record(row,identity):
+    """PF2e-specific treasure8.6.1 strict selected source and physical separation.
+
+    Schema pinned above; traits and category remain authored, not valuation.
+    Shared physical quantity, price.per and coin values retain their mapping.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_treasure_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.treasure.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.treasure.source.v1',limitations=['source_only_no_treasure_valuation_or_sale']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value}[kind]
+
+
 # PF2e-specific ContainerSystemSource8.6.1 authored metadata; no benefit activation state.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/container/data.ts
 CONTAINER_SOURCE = {'/system/'+p:('container_'+c,k,n) for p,c,k,n in (
@@ -1379,6 +1428,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return True
     if identity['type'] == 'backpack' and _container_spec(path) is not None:
         return True
+    if identity['type'] == 'treasure' and _treasure_spec(path) is not None:
+        return True
     if identity['type'] == 'equipment' and _equipment_spec(path) is not None:
         return True
     if identity['type'] == 'shield' and _shield_spec(path) is not None:
@@ -1614,6 +1665,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'treasure' and not _treasure_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'equipment' and not _equipment_record(row, identity):
         return False
@@ -1925,6 +1978,13 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     physical HP preserves persisted current/max independently: source maximum can
     differ from an effective reinforced maximum and current HP is not clamped. Source
     completion covers selected fields; relationships/effective/rules remain unsupported.
+    treasure Items expose nullable category and authored traits/tags, rarity, slug
+    and publication alongside shared physical quantity and price coin denominations
+    and price.per. Quantity and price.per are independent stored values; no total
+    value, sale proceeds, automatic currency conversion or derived stackGroup is
+    calculated. Treasure Items owned by character, NPC or familiar Actors are supported;
+    this does not add support for Loot Actors. Selected source is complete;
+    relationships/effective/rules remain unsupported.
     equipment Items additionally expose source traits/tags, rarity, slug and
     publication alongside shared physical usage, carrying, investment and serialized
     attachment identities. Activations and modifications may exist only in prose:
