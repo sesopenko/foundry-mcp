@@ -99,3 +99,7 @@ loaded subitems, compatibility checks, consumption or effective attack values.
 `actorAmmo.js` selects persisted ammo use/crafting/metadata fields alongside
 shared stock source. No consumption, rule application, attack calculation or
 reverse weapon selection occurs; weapon references remain explicit reads.
+
+`actorArmor.js` selects stored armor constraints/runes/baselines beside shared
+physical source. No Actor AC, saves, Speed, worn benefits or prepared usage is
+read or calculated; attachments retain serialized source paths.

@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -594,7 +594,8 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'effect' and path in EFFECT_ARRAYS or
             identity['type'] == 'condition' and path in CONDITION_ARRAYS or
             identity['type'] == 'weapon' and path in WEAPON_ARRAYS or
-            identity['type'] == 'ammo' and path in AMMO_ARRAYS)
+            identity['type'] == 'ammo' and path in AMMO_ARRAYS or
+            identity['type'] == 'armor' and path in ARMOR_ARRAYS)
 
 
 def _action_value(raw: dict[str, Any]) -> bool:
@@ -804,6 +805,58 @@ def _ammo_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific ArmorSystemSource8.6.1 persisted leaves, never Actor defenses.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/armor/data.ts
+ARMOR_SOURCE = {'/system/'+p:('armor_'+c,k,n) for p,c,k,n in (
+ ('category','category_code','string',False),('group','group_code','string',True),
+ ('acBonus','ac_bonus','number',False),('strength','strength_requirement','number',True),
+ ('dexCap','dex_cap','number',False),('checkPenalty','check_penalty','number',False),
+ ('speedPenalty','speed_penalty','number',False),('grade','grade_code','string',True),
+ ('specific','specific_baseline','object',True),('specific/material','specific_material','object',False),
+ ('specific/material/type','specific_material_type_code','string',True),('specific/material/grade','specific_material_grade_code','string',True),
+ ('traits/rarity','rarity_code','string',False),('slug','source_slug','string',True),
+ ('publication/title','publication_title','string',False),('publication/authors','publication_authors','string',False),
+ ('publication/license','publication_license','string',False),('publication/remaster','publication_remaster','boolean',False),
+)}
+for _prefix in ('runes','specific/runes'):
+    ARMOR_SOURCE.update({'/system/'+_prefix+suffix:('armor_'+concept,kind,False) for suffix,concept,kind in (('', 'runes','object'),('/potency','rune_potency','number'),('/resilient','rune_resilient','number'))})
+ARMOR_ARRAYS = {'/system/'+p:'armor_'+c for p,c in (('traits/value','trait_code'),('traits/otherTags','other_tag_code'),('runes/property','property_rune_code'),('specific/runes/property','property_rune_code'))}
+
+
+def _armor_spec(path):
+    """PF2e-specific armor8.6.1 source schema above; codes stay authored.
+
+    Item acBonus and rune values never establish Actor AC, saves or movement.
+    """
+    if path in ARMOR_SOURCE: return ARMOR_SOURCE[path]
+    for base,concept in ARMOR_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _armor_record(row,identity):
+    """PF2e-specific armor8.6.1 exact source DTO and shared physical separation.
+
+    Schema pinned above; source penalties/runes remain authored, not applied.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_armor_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.armor.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.armor.source.v1',limitations=['source_only_no_actor_armor_calculation']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
+
+
 def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     """PF2e-specific: admit pinned physical/ability/attack/Lore8.6.1 paths.
 
@@ -831,6 +884,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
     if identity['type'] == 'melee':
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
+    if identity['type'] == 'armor' and _armor_spec(path) is not None:
+        return True
     if identity['type'] == 'ammo' and _ammo_spec(path) is not None:
         return True
     if identity['type'] == 'weapon' and _weapon_spec(path) is not None:
@@ -972,6 +1027,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'weapon' and not _weapon_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'ammo' and not _ammo_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'armor' and not _armor_record(row, identity):
         return False
     # PF2e-specific action source and named self-effect semantics stay type-scoped.
     if identity['document_name'] == 'Item' and identity['type'] == 'action' and not _action_record(row, identity):
@@ -1250,6 +1307,11 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     compatibility or usability. Source alone performs no target hydration;
     effective remains unsupported. Source completion covers selected fields,
     not every schema field.
+    armor Items additionally expose authored category/group, acBonus, Strength
+    requirement, Dexterity cap, check/speed penalties, grade, rune values/property
+    codes, specific-magic baseline, traits/tags, slug and publication. No Actor AC,
+    saves, speed or automatic rune application is calculated. Source completion
+    covers selected fields; relationships/effective/rules remain unsupported.
     ammo Items additionally expose persisted uses.value/max/autoDestroy, nullable
     craftableAs codes, traits/tags, source slug and publication. Uses are authored
     values, not a calculation of shots remaining or consumption. craftableAs codes

@@ -135,6 +135,12 @@ The fixed runner accepts only those commands. `refresh` reloads only the existin
 - Actual rulebook/schema evidence, focused JS/Python DTO checks and full suites passed (207 Python tests, one skipped; 197 JavaScript tests). Actual MCP verified five owned/compendium examples and exact crafting categories without source changes.
 - ITEM-ammo Complete for declared stored-source and explicit-selection scope. Compatibility, consumption, automatic rule application and effective attacks remain unsupported. Completed stories: 12/39 (30.8%).
 
+### 19. Armor source and wearing-state acceptance — October 22, 2026
+
+- ITEM-armor preserves source defenses/constraints, runes, specific baselines and shared carrying/investment state. Missing/null/zero Strength remain distinct, serialized attachments retain source-path identity, and unworn gear never becomes Actor AC.
+- Actual rulebook/schema evidence, focused JS/Python actual-DTO checks and full suites passed (211 Python tests, one skipped; 207 JavaScript tests). Actual MCP verified five owned/compendium examples without source changes.
+- ITEM-armor Complete for stored-source/configuration scope. Effective Actor AC/saves/Speed and automatic rune/rule application remain unsupported. Completed stories: 13/39 (33.3%).
+
 ## Open acceptance evidence
 
 Full effective PC/familiar values, mode-specific casting resources, condition suppression/expiry and specialized Item behavior retain their named gates in the [evidence ledger](evidence.md#open-verification-gates). Do not close those gates with source-only fallback or unit mocks. The existing development session can support live NPC checks; missing populated PC/familiar fixtures remain a distinct gap.

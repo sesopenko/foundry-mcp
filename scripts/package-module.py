@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from foundry_mcp_server.build_info import make_build_info
 
 PUBLIC = 'https://github.com/sesopenko/foundry-mcp'
-RUNTIME_SCRIPTS = ('main.js', 'foundryBridge.js', 'connectionConfig.js', 'exploration.js', 'journals.js', 'actorReadUtils.js', 'actorDocuments.js', 'actors.js', 'actorPhysical.js', 'actorWeapon.js', 'actorAmmo.js', 'actorWeaponRelationships.js', 'actorAction.js', 'actorMelee.js', 'actorLore.js', 'actorNpc.js', 'actorEffect.js', 'actorCondition.js', 'actorConditionRelationships.js', 'actorEffectRelationships.js', 'actorWorld.js', 'actorScenes.js', 'actorPacks.js', 'buildInfo.js', 'versionStatus.js', 'pdfChannel.js', 'pdfUpload.js', 'pdfManager.js')
+RUNTIME_SCRIPTS = ('main.js', 'foundryBridge.js', 'connectionConfig.js', 'exploration.js', 'journals.js', 'actorReadUtils.js', 'actorDocuments.js', 'actors.js', 'actorPhysical.js', 'actorWeapon.js', 'actorAmmo.js', 'actorArmor.js', 'actorWeaponRelationships.js', 'actorAction.js', 'actorMelee.js', 'actorLore.js', 'actorNpc.js', 'actorEffect.js', 'actorCondition.js', 'actorConditionRelationships.js', 'actorEffectRelationships.js', 'actorWorld.js', 'actorScenes.js', 'actorPacks.js', 'buildInfo.js', 'versionStatus.js', 'pdfChannel.js', 'pdfUpload.js', 'pdfManager.js')
 
 
 def manifest(root=ROOT, tag=None):

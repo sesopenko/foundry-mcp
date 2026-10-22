@@ -460,3 +460,15 @@ links; carried ammo never automatically contributes rules or effects. Rules,
 effective values and reverse weapon inference remain unsupported.
 See [field contract](actor-item-story-map/ammo-fields.md) and
 [rulebook/runtime evidence](actor-item-story-map/ammo-verification.md).
+
+## Armor source
+
+Armor source combines shared physical carrying/investment/material/attachment
+records with `pf2e.armor.source.v1` category/group, source AC bonus, Strength
+modifier threshold, Dex cap, penalties, runes and specific-magic baseline fields.
+Missing/null/zero Strength remain distinct. Source AC bonus is not total Actor AC;
+unworn source and rune configuration never automatically change defenses, saves
+or Speed. Armor usage is not persisted and is not synthesized. Serialized
+attachments keep source-path identity. Effective and rule application remain
+unsupported. See [field boundary](actor-item-story-map/armor-fields.md) and
+[rulebook/runtime evidence](actor-item-story-map/armor-verification.md).

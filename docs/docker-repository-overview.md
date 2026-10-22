@@ -46,6 +46,9 @@ Weapon source includes damage, runes, range and ammunition configuration;
 carried weapons are not automatically effective Strikes or usable attacks.
 Ammunition reading preserves separate stock/uses and crafting categories. Only
 explicit weapon selection follows a stack; carried effects are not applied.
+Armor reading preserves stored defenses, thresholds, runes and carrying state;
+source armor bonuses are not total Actor AC or automatic worn benefits.
+
 
 
 
