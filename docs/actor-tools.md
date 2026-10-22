@@ -499,18 +499,24 @@ performed. Serialized attachments retain source-path provenance. See
 [field contract](actor-item-story-map/equipment-source-fields.md) and
 [rulebook/runtime evidence](actor-item-story-map/equipment-verification.md).
 
-## Consumable source checkpoint
+## Consumable source and contained spells
 
 Consumables expose `pf2e.consumable.source.v1` category, per-object uses and
 nullable healing/damage formulas with a separate kind code. Shared physical
 records retain quantity and usage independently; reading never consumes, rolls
-or activates. Contained spell source is null or selected local ID/name/type/base
-rank metadata, with source paths under the consumable's UUID. It is not a new
-Item selector, and base rank does not establish heightened casting rank. Source
-stays partial with `contained_spell_mapping_pending` until ITEM-spell supplies
-complete contained-spell interpretation. Explicit description remains exact
-bounded consumable prose; nested spell prose and mechanics are not yet delivered.
-See [field contract](actor-item-story-map/consumable-fields.md) and
+or activates. Contained spell source is null or local ID/name/type/base-rank
+metadata plus the spell definition allowlist under `/system/spell/system/...`.
+Metadata/base rank keeps its existing consumable mapping; additional definition
+fields use `pf2e.spell.source.v1` and spell concepts. Every contributor keeps the
+actual consumable UUID; nested source has no independent Item selector.
+
+Source completes after pagination. Explicit descriptions preserve consumable and
+contained root/fixed-layer/overlay prose with full source paths and normal text
+continuations. Base rank does not establish configured or effective cast rank.
+Nested location IDs remain stored claims without owner-entry resolution. No
+heightening, overlays, spell preparation, activation or expenditure is applied.
+Relationships, effective and rules stay unsupported. The shared spell depth/count
+limits apply. See [field contract](actor-item-story-map/consumable-fields.md) and
 [evidence](actor-item-story-map/consumable-verification.md).
 
 ## Spell definitions and casting-entry assignment

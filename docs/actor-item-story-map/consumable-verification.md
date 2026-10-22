@@ -67,7 +67,7 @@ for (const predicate of predicates) {
 }
 ```
 
-## Remaining acceptance gates
+## Initial acceptance gates (before reader integration)
 
 Verify actual `read_item` source/mapped provenance and continuations, null-versus-absent spell distinction, separate stock/uses, exact descriptions, owner/pack/token identity and unchanged source fingerprints. Exercise malformed values, permissions, stale continuation, non-PF2e rejection and unavailable world/character/familiar contexts deterministically. Contained spell mapping remains gated on ITEM-spell; an incomplete spell interpretation must remain explicit. Poison/scroll legality, damage outcomes, daily frequency, resource expenditure and effective actor benefits are not established by these source observations.
 
@@ -84,8 +84,33 @@ remained unsupported. Full suites passed: 223 Python tests (one skipped) and
 232 JavaScript tests. Fresh discovery exposes the source checkpoint and explains
 base rank, nested-source identity and the unfinished spell mapping.
 
-This does not close ITEM-consumable. Full contained-spell mechanics and prose
+That checkpoint did not close ITEM-consumable. Full contained-spell mechanics and prose
 need the spell reader and shared mapping; poison/scroll castability, activation,
 frequency expenditure and effective benefits remain unsupported. Standalone world
 and character/familiar consumables are unavailable live; inherited deterministic
 identity/permission tests cover those boundaries without manufacturing fixtures.
+
+## Completed contained-definition and prose acceptance
+
+After ITEM-spell was delivered, the consumable reader reused its entire selected
+schema and exact prose selector under `/system/spell/system/...`. Existing local
+identity/base-rank metadata keeps the consumable mapping, avoiding duplicate paths;
+additional spell fields use `pf2e.spell.source.v1` and spell concepts. All raw
+contributors retain the actual consumable UUID. Nested casting-entry IDs remain
+source claims with no target resolution or independently addressable spell UUID.
+
+Actual authenticated MCP reread all five source cases. Source completed after
+pagination, including the explicit null scroll and contained wand. The wand's
+base rank 4, configured heightened rank 7 and textual casting time matched source.
+Its contained spell description reconstructed to the identical SHA256 fingerprint.
+All complete source fingerprints remained unchanged. Shared physical and nested
+spell paths stayed unique; effective, rules and relationships remained unsupported.
+Focused tests additionally verify long Unicode continuation across consumable,
+contained root and overlay prose; partial patches; no inferred actor-entry link;
+stale nested-source cursors; and source-path-specific malformed errors.
+
+Full suites passed: 231 Python tests (one skipped) and 251 JavaScript tests.
+Actual discovery describes nested paths, identity and continuation. This closes
+ITEM-consumable's definition/source acceptance; poison/scroll execution, castability,
+resource expenditure, active benefits and rule-element application remain excluded.
+No game document was created, imported, consumed, rolled, activated or modified.

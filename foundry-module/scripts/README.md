@@ -113,8 +113,9 @@ usage, investment and attachment metadata. Explicit bounded description retains
 prose abilities; no active benefits or activation resources are inferred.
 
 `actorConsumable.js` selects category, uses, healing/damage and contained spell
-metadata alongside common stock source. Nested spells retain source-path identity;
-source stays partial until full spell mapping. No consumption or formula roll occurs.
+metadata alongside common stock source. It reuses the full spell source/prose
+allowlist with consumable provenance and separate source paths; no nested entry
+resolution, consumption, formula roll or castability calculation occurs.
 
 `actorSpell.js` selects spell definitions, partial heightening/overlay patches and
 explicit source prose without preparing variants. `actorSpellRelationships.js`

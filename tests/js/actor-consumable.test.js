@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {consumableFields} from '../../foundry-module/scripts/actorConsumable.js';
+import {consumableFields,consumableSpellFields,consumableSpellDescriptionFields} from '../../foundry-module/scripts/actorConsumable.js';
 import {physicalFields} from '../../foundry-module/scripts/actorPhysical.js';
 const source=()=>({type:'consumable',system:{category:'potion',quantity:3,usage:{value:'held-in-one-hand'},uses:{value:0,max:2,autoDestroy:false},damage:{formula:'2d8+5',type:'vitality',kind:'healing'},spell:null,traits:{value:['magical','future-trait'],otherTags:[],rarity:'common'},slug:null,publication:{title:'Source',authors:'Author',license:'ORC',remaster:true}}});
 const row=(rows,path)=>rows.find(r=>r.path==='/system/'+path);
@@ -33,4 +33,38 @@ test('malformed selected consumable source rejects without coercion or nonfinite
 test('consumable source selection never reads rules, descriptive activation text or derived state',()=>{
  const input=source();for(const key of ['rules','description','activation','frequency','prepared','subitems'])Object.defineProperty(input.system,key,{get(){throw new Error(key);}});
  assert.ok(consumableFields(input).length>0);
+});
+test('contained mechanics retain base versus configured rank and recursive partial layers without duplicate paths',()=>{
+ const s=source();s.system.spell={type:'spell',system:{level:{value:4},location:{value:'entry',heightenedLevel:7},heightening:{type:'fixed',levels:{6:{damage:{x:{formula:'6d6'}}}}},overlays:{'a/b':{overlayType:'override',sort:0,system:{heightening:{damage:{x:'1d6'}}}}}}};
+ const before=JSON.stringify(s),rows=[...consumableFields(s),...consumableSpellFields(s)];
+ assert.equal(row(rows,'spell/system/level/value').value,4);assert.equal(row(rows,'spell/system/location/heightenedLevel').value,7);
+ assert.equal(row(rows,'spell/system/heightening/levels/6/damage/x/formula').value,'6d6');
+ assert.equal(row(rows,'spell/system/overlays/a~1b/system/heightening/damage/x').value,'1d6');
+ assert.equal(rows.some(r=>r.path.includes('levels/6/damage/x/type')),false);
+ assert.equal(new Set(rows.map(r=>r.path)).size,rows.length);assert.equal(JSON.stringify(s),before);
+});
+test('contained prose preserves exact Unicode in root, fixed layers and overlays',()=>{
+ const s=source(),text='<p>Activate 🐉 é</p>';
+ s.system.spell={type:'spell',system:{description:{value:text},heightening:{type:'fixed',levels:{5:{description:{value:'固定 🧙'}}}},overlays:{x:{overlayType:'override',sort:0,system:{description:{value:'variant 💫'}}}}}};
+ const rows=consumableSpellDescriptionFields(s);assert.deepEqual(rows.filter(r=>r.present).map(r=>r.value),[text,'固定 🧙','variant 💫']);
+ assert.ok(rows.every(r=>r.path.startsWith('/system/spell/system/')));assert.equal(consumableSpellFields(s).some(r=>r.path.includes('description')),false);
+});
+test('null templates and missing contained source yield no invented spell descriptors',()=>{
+ for(const s of [null,{type:'weapon'},source(),{type:'consumable',system:{}}]){assert.deepEqual(consumableSpellFields(s),[]);assert.deepEqual(consumableSpellDescriptionFields(s),[]);}
+ const s=source();s.system.spell={};assert.ok(consumableSpellFields(s).every(r=>!r.present));
+});
+test('contained wrappers reject malformed selected data and recursive excess while leaving unknown fields unread',()=>{
+ for(const spell of [undefined,false,[],{type:'weapon'},{type:'spell',system:null},{type:'spell',system:[]},{type:'spell',system:{damage:{x:{formula:4}}}}]){const s=source();s.system.spell=spell;assert.throws(()=>consumableSpellFields(s),TypeError);}
+ const s=source();s.system.spell={type:'spell',system:{}};
+ for(const key of ['uuid','actor','sheet'])Object.defineProperty(s.system.spell,key,{get(){throw Error(key);}});
+ for(const key of ['rules','flags','prepared','cast'])Object.defineProperty(s.system.spell.system,key,{get(){throw Error(key);}});
+ assert.ok(consumableSpellFields(s).length);assert.ok(consumableSpellDescriptionFields(s).length);
+ const layer={};layer.heightening={type:'fixed',levels:{2:layer}};s.system.spell.system.heightening=layer.heightening;
+ assert.throws(()=>consumableSpellFields(s),/nesting depth/);assert.throws(()=>consumableSpellDescriptionFields(s),/nesting depth/);
+});
+test('contained validation errors name the actual nested consumable source path',()=>{
+ const s=source();s.system.spell={type:'spell',system:{time:{value:4}}};
+ assert.throws(()=>consumableSpellFields(s),/Spell source \/system\/spell\/system\/time\/value has an unexpected type/);
+ s.system.spell.system={description:{value:4}};
+ assert.throws(()=>consumableSpellDescriptionFields(s),/Spell source \/system\/spell\/system\/description\/value has an unexpected type/);
 });

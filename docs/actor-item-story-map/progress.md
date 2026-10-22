@@ -171,3 +171,10 @@ Each implementation increment must record focused/full results and a local commi
 - Immediate owner-local casting-entry references resolve actual identities without target source; missing, denied, unsupported and unverified remain explicit, including linked/synthetic token context. Stored configuration never proves cast rank, slot resources or castability.
 - Focused source/browser/Python tests and full suites passed (228 Python, one skipped; 245 JavaScript). Nine live source/prose cases matched persisted data and retained source fingerprints, with assigned/unassigned entry follow-up. Effective casting remains unsupported.
 - ITEM-spell Complete for definition/source scope. Completed stories: 16/39 (41.0%). Next: integrate its source/prose mapping into consumable contained spells, then casting-entry reading.
+
+### 24. Complete contained-spell source and prose integration — October 22, 2026
+
+- ITEM-consumable now reuses the spell field/prose selectors under the consumable source path. Existing metadata/base rank stays unique; additional definitions and exact nested prose retain spell concepts and the actual consumable UUID. Nested location IDs never become owner-entry links.
+- Source completes after pagination. Null/absent templates, separate stock/uses, damage/healing kinds, base/configured ranks, partial variants and source identity remain explicit. Activation, castability, expenditure and effective benefits remain unsupported.
+- Focused and full suites passed (231 Python, one skipped; 251 JavaScript). Actual MCP source reads matched five persisted cases; contained wand prose matched its SHA256 and every source fingerprint was unchanged. No console errors after refresh.
+- ITEM-consumable Complete for source/definition scope. Completed stories: 17/39 (43.6%).

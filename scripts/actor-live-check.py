@@ -46,7 +46,7 @@ async def main():
         assert 'GM-private biography' in available['read_actor'].description
         assert 'Missing structured activation fields do not mean no ability' in available['read_item'].description
         assert 'equipment Items' in available['read_item'].description
-        assert 'consumable Items expose a source checkpoint' in available['read_item'].description
+        assert 'consumable Items expose selected source' in available['read_item'].description
         assert 'rank is stored base rank, not heightened casting rank' in available['read_item'].description
         assert 'spell Items expose selected definition source' in available['read_item'].description
         assert 'actual owner' in available['read_item'].description
@@ -252,7 +252,7 @@ const index=await pack.getIndex({fields:['type','system.category','system.damage
 const rows=index.filter(row=>row.type==='consumable');
 const owned=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type)).flatMap(a=>a.items.contents).find(i=>i.type==='consumable');
 const candidates=[owned,...[rows.find(row=>row.system?.category==='scroll'&&row.system?.spell==null),rows.find(row=>row.system?.damage?.kind==='healing'),rows.find(row=>row.system?.damage?.kind==='damage'),rows.find(row=>row.system?.spell)].filter(Boolean).map(row=>pack.getUuid(row._id))];
-const report=[];for(const selected of candidates){const doc=typeof selected==='string'?await foundry.utils.fromUuid(selected):selected;if(!doc)continue;const source=doc.toObject(true),s=source.system;const expected={'/system/category':s.category,'/system/quantity':s.quantity,'/system/uses/value':s.uses.value,'/system/uses/max':s.uses.max,'/system/uses/autoDestroy':s.uses.autoDestroy};if(s.damage===null)expected['/system/damage']=null;else for(const key of ['formula','type','kind'])expected['/system/damage/'+key]=s.damage[key];if(s.spell===null)expected['/system/spell']=null;else{expected['/system/spell/name']=s.spell.name;expected['/system/spell/system/level/value']=s.spell.system.level.value;}report.push({uuid:doc.uuid,expected,revision:await digest(source)});}
+const report=[];for(const selected of candidates){const doc=typeof selected==='string'?await foundry.utils.fromUuid(selected):selected;if(!doc)continue;const source=doc.toObject(true),s=source.system;const expected={'/system/category':s.category,'/system/quantity':s.quantity,'/system/uses/value':s.uses.value,'/system/uses/max':s.uses.max,'/system/uses/autoDestroy':s.uses.autoDestroy};if(s.damage===null)expected['/system/damage']=null;else for(const key of ['formula','type','kind'])expected['/system/damage/'+key]=s.damage[key];if(s.spell===null)expected['/system/spell']=null;else{expected['/system/spell/name']=s.spell.name;expected['/system/spell/system/level/value']=s.spell.system.level.value;expected['/system/spell/system/time/value']=s.spell.system.time.value;if(Object.hasOwn(s.spell.system.location,'heightenedLevel'))expected['/system/spell/system/location/heightenedLevel']=s.spell.system.location.heightenedLevel;}const text=s.spell?.system.description.value;report.push({uuid:doc.uuid,expected,revision:await digest(source),...(typeof text==='string'?{spell_description_sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),v=>v.toString(16).padStart(2,'0')).join('')}:{})});}
 const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.length/800)},(_,i)=>json.slice(i*800,(i+1)*800));
 """
         consumable_samples=probe(payload(await client.call_tool('execute_javascript',{'code':consumable_probe})))
@@ -263,15 +263,27 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
                 args={'item_uuid':sample['uuid'],'sections':['source','effective'],'limit':25}
                 if consumable_cursor:args['cursor']=consumable_cursor
                 page=payload(await client.call_tool('read_item',args));rows.extend(page['records'])
-                assert page['sections'][0]['status']=='partial' and 'contained_spell_mapping_pending' in page['sections'][0]['reasons']
+                assert 'contained_spell_mapping_pending' not in page['sections'][0]['reasons']
                 assert page['sections'][1]['status']=='unsupported'
                 consumable_cursor=page['pagination']['next_cursor']
                 if not consumable_cursor:break
-            assert consumable_cursor is None and len({row['raw'][0]['path'] for row in rows})==len(rows)
+            assert consumable_cursor is None and page['sections'][0]['status']=='complete' and len({row['raw'][0]['path'] for row in rows})==len(rows)
             for path,expected in sample['expected'].items():
                 assert next(row for row in rows if row['raw'][0]['path']==path)['raw'][0]['value']==expected
             assert next(row for row in rows if row['raw'][0]['path']=='/system/category')['provenance']['mapping']=='pf2e.consumable.source.v1'
             assert all(row['raw'][0]['document_uuid']==sample['uuid'] for row in rows)
+            if 'spell_description_sha256' in sample:
+                description=[];contained_cursor=None
+                for _ in range(100):
+                    args={'item_uuid':sample['uuid'],'sections':['description'],'limit':25}
+                    if contained_cursor:args['cursor']=contained_cursor
+                    page=payload(await client.call_tool('read_item',args));description.extend(page['records'])
+                    contained_cursor=page['pagination']['next_cursor']
+                    if not contained_cursor:break
+                assert contained_cursor is None
+                text=''.join(row['raw'][0]['value'] for row in description if row['raw'][0]['path']=='/system/spell/system/description/value')
+                assert hashlib.sha256(text.encode()).hexdigest()==sample['spell_description_sha256']
+                assert all(row['raw'][0]['document_uuid']==sample['uuid'] for row in description)
             fingerprint_code="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const doc=await foundry.utils.fromUuid("+json.dumps(sample['uuid'])+");return JSON.stringify({revision:await digest(doc.toObject(true))});"
             assert probe(payload(await client.call_tool('execute_javascript',{'code':fingerprint_code})))['revision']==sample['revision']
         equipment_probe="""
@@ -538,7 +550,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         consumable_support=next(entry for entry in registry.data['item_types'] if entry['type']=='consumable')
         assert consumable_support['mapped_supported'] and not consumable_support['effective_supported']
         assert consumable_support['verification']['live']['status']=='passed'
-        assert 'pending ITEM-spell' in ' '.join(consumable_support['limitations'])
+        assert 'contained spell definitions' in ' '.join(consumable_support['limitations'])
         equipment_support=next(entry for entry in registry.data['item_types'] if entry['type']=='equipment')
         assert equipment_support['mapped_supported'] and not equipment_support['effective_supported']
         assert equipment_support['verification']['live']['status']=='passed'

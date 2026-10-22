@@ -6,7 +6,7 @@ function fixture(){
  const item={documentName:'Item',uuid:'Item.c',id:'c',name:source.name,type:'consumable',folder:null,compendium:null,testUserPermission:()=>true,toObject:()=>structuredClone(source)};
  globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map(),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>uuid===item.uuid?item:null}};return {source,item};
 }
-async function sourceRows(f){let cursor,rows=[];do{const page=await readItem({item_uuid:f.item.uuid,sections:['source','effective'],limit:6,max_bytes:8000,...(cursor?{cursor}:{})});assert.equal(page.sections[0].status,'partial');assert.ok(page.sections[0].reasons.includes('contained_spell_mapping_pending'));assert.equal(page.sections[1].status,'unsupported');rows.push(...page.records);cursor=page.pagination.next_cursor;}while(cursor);return rows;}
+async function sourceRows(f){let cursor,rows=[];do{const page=await readItem({item_uuid:f.item.uuid,sections:['source','effective'],limit:6,max_bytes:8000,...(cursor?{cursor}:{})});assert.equal(page.sections[0].status,page.pagination.complete?'complete':'partial');assert.equal(page.sections[1].status,'unsupported');rows.push(...page.records);cursor=page.pagination.next_cursor;}while(cursor);return rows;}
 test('healing source keeps stock and uses separate without consuming or rolling',async()=>{
  const f=fixture(),before=JSON.stringify(f.source),rows=await sourceRows(f);
  assert.equal(new Set(rows.map(r=>r.raw[0].path)).size,rows.length);
@@ -25,6 +25,19 @@ test('consumable malformed source stale continuations permissions and system bou
  f.source.system.damage.formula={secret:true};await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source']}),e=>e.rpcError.code==='ReadFailed');
  game.system.id='other';await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='UnsupportedSystem');game.system.id='pf2e';f.item.testUserPermission=()=>false;await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='PermissionDenied');
 });
-test('consumable discovery advertises partial source and no castability',async()=>{
- fixture();const entry=(await getActorTypes()).item_types.find(row=>row.type==='consumable');assert.equal(entry.mapped_supported,true);assert.equal(entry.effective_supported,false);assert.match(entry.limitations.join(' '),/Full contained spell mapping is pending/);
+test('consumable discovery advertises contained definitions and no castability',async()=>{
+ fixture();const entry=(await getActorTypes()).item_types.find(row=>row.type==='consumable');assert.equal(entry.mapped_supported,true);assert.equal(entry.effective_supported,false);assert.match(entry.limitations.join(' '),/contained spell definitions/);
+});
+
+test('contained definitions and continued prose retain consumable provenance without applying variants',async()=>{
+ const f=fixture();const prose='<p>'+ 'Contained 🙂 spell '.repeat(900)+'</p>';
+ f.source.system.spell={_id:'nested',name:'Contained',type:'spell',system:{level:{value:4},time:{value:'1 minute'},location:{value:'claimed-entry',heightenedLevel:7},damage:{component:{formula:'1d6',type:'fire',kinds:['damage'],category:null,materials:[]}},description:{value:prose},overlays:{variant:{overlayType:'override',sort:1,system:{damage:{component:{formula:'2d6'}},description:{value:'Variant prose'}}}}}};
+ const before=JSON.stringify(f.source),rows=await sourceRows(f);
+ assert.equal(rows.find(r=>r.raw[0].path==='/system/spell/system/location/heightenedLevel').raw[0].value,7);
+ const base=rows.find(r=>r.raw[0].path==='/system/spell/system/level/value');assert.equal(base.raw[0].value,4);assert.equal(base.provenance.mapping,'pf2e.consumable.source.v1');
+ const time=rows.find(r=>r.raw[0].path==='/system/spell/system/time/value');assert.equal(time.raw[0].value,'1 minute');assert.equal(time.provenance.mapping,'pf2e.spell.source.v1');assert.ok(rows.every(r=>r.raw[0].document_uuid===f.item.uuid));
+ let cursor,text='',variant='',pages=0;do{const page=await readItem({item_uuid:f.item.uuid,sections:['description'],limit:1,max_bytes:8000,...(cursor?{cursor}:{})});for(const row of page.records){assert.equal(row.raw[0].document_uuid,f.item.uuid);if(row.raw[0].path==='/system/spell/system/description/value'){assert.equal(row.text.start,text.length);text+=row.raw[0].value;}if(row.raw[0].path.endsWith('/overlays/variant/system/description/value'))variant+=row.raw[0].value;}pages++;cursor=page.pagination.next_cursor;}while(cursor);
+ assert.ok(pages>3);assert.equal(text,prose);assert.equal(variant,'Variant prose');assert.equal(JSON.stringify(f.source),before);
+ const relation=await readItem({item_uuid:f.item.uuid,sections:['relationships']});assert.equal(relation.sections[0].status,'unsupported');assert.equal(relation.records.length,0);
+ const first=await readItem({item_uuid:f.item.uuid,sections:['source'],limit:1});f.source.system.spell.system.damage.component.formula='3d6';await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source'],limit:1,cursor:first.pagination.next_cursor}),e=>e.rpcError.code==='ContentChanged');
 });

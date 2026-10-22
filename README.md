@@ -292,7 +292,7 @@ held is not raised, and source values do not establish blocking or class benefit
 Equipment preserves usage, investment, traits and exact prose abilities;
 uninvested mundane uses remain readable and magical benefits are not applied.
 Consumable source separates stock, uses and healing/damage formulas; contained-spell
-metadata retains source-path identity, with full spell interpretation still pending.
+definitions and exact prose retain source-path identity without separate spell UUIDs.
 Spell definitions preserve base rank, textual casting time, damage/healing and
 variant source; entry links retain owner context without assuming castability.
 

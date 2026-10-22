@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -598,7 +598,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
-            identity['type'] == 'consumable' and path in CONSUMABLE_ARRAYS or
+            identity['type'] == 'consumable' and (path in CONSUMABLE_ARRAYS or _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1] == 'array') or
             identity['type'] == 'spell' and _spell_spec(path) is not None and _spell_spec(path)[1] == 'array')
 
 
@@ -1018,13 +1018,52 @@ CONSUMABLE_ARRAYS = {'/system/'+p:'consumable_'+c for p,c in (
 def _consumable_spec(path):
     """PF2e-specific consumable8.6.1 source schema above; arrays retain exact codes.
 
-    Damage formulas are source text; contained spells have selected metadata only.
+    Damage formulas and contained spell definitions remain authored source only.
     """
     if path in CONSUMABLE_SOURCE: return CONSUMABLE_SOURCE[path]
     for base,concept in CONSUMABLE_ARRAYS.items():
         if path == base: return (concept,'array',False)
         if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
     return None
+
+
+def _contained_spell_spec(path):
+    """PF2e-specific8.6.1 contained SpellSystemSource paths; no new identity.
+
+    ConsumableSystemSource.spell embeds the pinned SpellSource schema above.
+    Existing consumable local metadata/base-rank paths retain their own mapping.
+    Definition and layered prose selection reuse the spell allowlist; local
+    casting-entry claims are source data and never relationships to an owner.
+    """
+    prefix='/system/spell'
+    if not path.startswith(prefix+'/system/') or _consumable_spec(path) is not None:
+        return None
+    return _spell_spec(path[len(prefix):])
+
+
+def _contained_spell_record(row, identity):
+    """PF2e-specific8.6.1 contained spell DTO, preserving consumable provenance.
+
+    Normalize only prefixed field paths for the shared spell schema validator;
+    document_uuid remains the actual consumable UUID throughout. Relationships
+    are excluded because embedded SpellSource is no independent document.
+    """
+    if row['section'] == 'relationships' or len(row['raw']) != 1:
+        return False
+    prefix='/system/spell'
+    raw=row['raw'][0]
+    if _contained_spell_spec(raw['path']) is None:
+        return False
+    # Paths are already admitted by _source_path; leave the original DTO intact.
+    normalized=dict(row)
+    normalized['raw']=[dict(raw,path=raw['path'][len(prefix):])]
+    normalized['provenance']=dict(row['provenance'],contributors=[
+        dict(c,path=c['path'][len(prefix):]) for c in row['provenance']['contributors']])
+    if row['section'] == 'source':
+        if row['key'] != 'source:'+raw['path']:
+            return False
+        normalized['key']='source:'+normalized['raw'][0]['path']
+    return _spell_record(normalized,identity)
 
 
 def _consumable_record(row,identity):
@@ -1035,6 +1074,8 @@ def _consumable_record(row,identity):
     """
     if len(row['raw']) != 1: return False
     raw=row['raw'][0];path=raw['path'];spec=_consumable_spec(path)
+    if _contained_spell_spec(path) is not None:
+        return _contained_spell_record(row,identity)
     if spec is None:
         if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
             return row['provenance']['mapping'] != 'pf2e.consumable.source.v1'
@@ -1185,7 +1226,7 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
     # PF2e-specific NPC attack source excludes gear flags and prepared bonuses.
     if identity['type'] == 'melee':
         return path in MELEE_PATHS or DAMAGE_LEAF.fullmatch(path) is not None or MELEE_ARRAY_INDEX.fullmatch(path) is not None
-    if identity['type'] == 'consumable' and _consumable_spec(path) is not None:
+    if identity['type'] == 'consumable' and (_consumable_spec(path) is not None or _contained_spell_spec(path) is not None):
         return True
     if identity['type'] == 'equipment' and _equipment_spec(path) is not None:
         return True
@@ -1660,15 +1701,19 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     returned) without assuming castability, prepared status, slots or resources.
     Effective/rules remain unsupported; no casting or spontaneous heightening is
     inferred from a higher configured rank.
-    consumable Items expose a source checkpoint: category, uses.value/max/autoDestroy,
+    consumable Items expose selected source: category, uses.value/max/autoDestroy,
     nullable damage formula/type/kind, traits/tags, slug and publication. Quantity
     and uses remain separate persisted values; no consumption, damage or healing
     is applied. Contained spell source is null or selected local _id/name/type/rank
-    metadata (rank is stored base rank, not heightened casting rank), never an
-    independently resolvable Item UUID. Full contained-spell
-    mapping awaits the spell reader. Request description for exact activation prose
-    and follow returned continuation. Source remains partial; relationships,
-    effective and rules remain unsupported.
+    metadata plus spell-definition fields under /system/spell/system/... using
+    pf2e.spell.source.v1 and spell concepts (rank is stored base rank, not heightened casting rank).
+    Contributors retain the consumable UUID; a contained
+    SpellSource has no independently resolvable Item UUID. location.value remains
+    a stored claim with no actor-entry resolution. Request description for exact
+    activation prose and contained spell root/fixed-layer/overlay prose; text.path
+    retains the full nested source path. Follow returned continuation for all
+    fragments. No heightening/overlay application or casting is performed;
+    relationships, effective and rules remain unsupported.
     ammo Items additionally expose persisted uses.value/max/autoDestroy, nullable
     craftableAs codes, traits/tags, source slug and publication. Uses are authored
     values, not a calculation of shots remaining or consumption. craftableAs codes
