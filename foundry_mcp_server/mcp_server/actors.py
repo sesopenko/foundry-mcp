@@ -1394,6 +1394,80 @@ def _contributor(value: Any, identity: dict[str, Any] | None = None) -> bool:
     return type(value) is dict and set(value) == {'document_uuid', 'path', 'basis'} and type(value['document_uuid']) is str and 1 <= len(value['document_uuid']) <= 512 and _source_path(value['path'], identity) and value['basis'] == 'source'
 
 
+CASTING_LIMIT = ['source_configuration_only', 'availability_not_evaluated']
+
+
+def _casting_owned(uuid, identity):
+    """PF2e-specific immediate owned spell/entry UUID; generated UUIDs excluded."""
+    prefix=identity['uuid']+'.Item.'
+    return type(uuid) is str and len(uuid)<=512 and uuid.startswith(prefix) and re.fullmatch(r'[^.\s#]+',uuid[len(prefix):]) is not None
+
+
+def _actor_casting_record(row, identity):
+    """PF2e-specific8.6.1 Actor source casting joins; no current castability.
+
+    Same-owner spell/entry source fields reuse their strict pinned validators.
+    Focus value/max use Actor schemas; character max is derived and excluded.
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'}:return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    for r in raw:
+        if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
+        if r['basis']!='source' or type(r['path']) is not str or type(r['present']) is not bool or r['present']!=('value' in r):return False
+    if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    mapping=provenance['mapping']
+    if mapping in ('pf2e.spell.source.v1','pf2e.spellcasting-entry.source.v1'):
+        if len(raw)!=1 or row['kind']!='field':return False
+        r=raw[0];uuid=r['document_uuid'];path=r['path']
+        if not _casting_owned(uuid,identity) or row['key']!='spellcasting:source:'+uuid+':'+path:return False
+        typ='spell' if mapping=='pf2e.spell.source.v1' else 'spellcastingEntry'
+        if typ=='spell' and not (path in ('/system/level','/system/traits','/system/level/value','/system/traits/value','/system/location') or re.fullmatch(r'/system/traits/value/(0|[1-9][0-9]*)',path) or path.startswith('/system/location/')):return False
+        return _record(dict(row,section='source',key='source:'+path),['source'],dict(identity,document_name='Item',uuid=uuid,type=typ))
+    if mapping!='pf2e.actor.casting-source.v1' or provenance['limitations']!=CASTING_LIMIT:return False
+    if row['kind']=='field':
+        if len(raw)!=1:return False
+        r=raw[0]
+        for leaf in ('value','max'):
+            if row['key']=='spellcasting:focus:'+leaf:
+                value=r.get('value')
+                return (leaf!='max' or identity['type'] in ('npc','familiar')) and r['document_uuid']==identity['uuid'] and r['path']=='/system/resources/focus/'+leaf and mapped==dict(concept='casting_focus_'+leaf,value=value,unit=None) and (not r['present'] or type(value) in (int,float) and math.isfinite(value))
+        return False
+    if row['kind']!='relationship':return False
+    if row['key']=='spellcasting:denied':return raw==[] and mapped==dict(concept='casting_item',value=dict(status='denied',target_uuid=None),unit=None)
+    concept=mapped['concept'];value=mapped['value']
+    if type(value) is not dict:return False
+    def target(expected_type, local_id=None):
+        """PF2e-specific actual Item join identity; no inferred cast availability."""
+        status=value.get('status')
+        if status!='resolved':return value==dict(status=status,target_uuid=None) and status in ('missing','denied','unsupported','unverified','mismatched_assignment')
+        expected={'status','target_uuid','type','name','name_truncated'}
+        if identity['instance'] is not None:expected.add('token_uuid')
+        if set(value)!=expected or value['type']!=expected_type or type(value['name']) is not str or len(value['name'])>256 or type(value['name_truncated']) is not bool or not _casting_owned(value['target_uuid'],identity):return False
+        if local_id is not None and value['target_uuid']!=identity['uuid']+'.Item.'+local_id:return False
+        return identity['instance'] is None or value['token_uuid']==identity['instance']['token_uuid']
+    if concept in ('casting_entry','casting_spell'):
+        typ='spellcastingEntry' if concept=='casting_entry' else 'spell';label='entry' if typ=='spellcastingEntry' else 'spell'
+        if len(raw)!=2 or [r['path'] for r in raw]!=['/name','/type']:return False
+        uuid=raw[0]['document_uuid']
+        return _casting_owned(uuid,identity) and row['key']=='spellcasting:'+label+':'+uuid and all(r['document_uuid']==uuid and r['present'] for r in raw) and type(raw[0]['value']) is str and raw[1]['value']==typ and value.get('target_uuid')==uuid and value.get('name')==raw[0]['value'][:256] and value.get('name_truncated')==(len(raw[0]['value'])>256) and target(typ)
+    if len(raw)!=1:return False
+    r=raw[0];uuid=r['document_uuid'];path=r['path'];local_id=r.get('value')
+    if not _casting_owned(uuid,identity) or r['present'] and local_id is not None and type(local_id) is not str:return False
+    if concept=='casting_spell_assignment':
+        if row['key']!='spellcasting:assignment:'+uuid or path!='/system/location/value':return False
+        typ='spellcastingEntry'
+    elif concept=='casting_preparation':
+        match=re.fullmatch(r'/system/slots/(slot(?:[0-9]|10|11))/prepared/(0|[1-9][0-9]*)/id',path)
+        if not match or row['key']!='spellcasting:preparation:'+uuid+':'+match[1][4:]+':'+match[2]:return False
+        typ='spell'
+    else:return False
+    if (not r['present'] or not local_id) and value.get('status')!='missing':return False
+    return target(typ,local_id if value.get('status')=='resolved' else None)
+
+
 def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     """Validate records including PF2e-specific persisted physical source fields.
 
@@ -1406,6 +1480,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Actor' and row['section']=='spellcasting':
+        return _actor_casting_record(row,identity)
     for raw in row['raw']:
         if type(raw) is not dict or not {'document_uuid', 'path', 'present', 'basis'} <= set(raw) or not set(raw) <= {'document_uuid', 'path', 'present', 'basis', 'value'}:
             return False
@@ -1503,6 +1579,9 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                 if valid:
                     rows = result['sections']
                     valid = [row.get('name') for row in rows if type(row) is dict] == sections and all(set(row) == {'name', 'status', 'reasons'} and row['status'] in ('complete', 'partial', 'unsupported', 'not_applicable') and _strings(row['reasons']) for row in rows)
+                    # PF2e-specific casting configuration excludes current availability.
+                    if result['identity']['document_name']=='Actor':
+                        valid = valid and all(row['status']=='partial' and 'availability_not_evaluated' in row['reasons'] for row in rows if row['name']=='spellcasting')
                     # PF2e-specific NPC8.6.1 Item references never claim full sections.
                     if result['identity']['document_name']=='Actor' and result['identity']['type']=='npc':
                         pending={'strikes':'other_attacks_pending','abilities':'other_abilities_pending'}
@@ -1672,6 +1751,20 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     with other_attacks_pending/other_abilities_pending. Permission-denied related
     Items produce a generic denied marker with null target_uuid and no selectors;
     related_items_denied is reported without exposing their names or identities.
+    Spellcasting exposes owned spell/casting-entry identities, selected stored
+    configuration, owner-local assignment/preparation joins and focus resources.
+    casting_entry/casting_spell values resolve target_uuid and token_uuid when
+    applicable; follow read_item. casting_spell_assignment/casting_preparation
+    statuses resolved/missing/denied/unsupported/unverified/mismatched_assignment
+    distinguish stored membership from invalid or inaccessible links. Repeated
+    preparations retain independent slot/index keys and expended source fields.
+    Denied markers expose no related identity. The section remains partial with
+    availability_not_evaluated: source slots/uses are not current castability,
+    generated groups, adjusted ranks or attack/DC totals. Character focus maximum
+    is derived and excluded; stored zero differs from missing. Casting selection
+    rejects over 12000 owned Items or 24000 selected records with ReadFailed; these
+    source-complexity guards are separate from page count/byte limits. Request
+    identity or selected Item readers separately if the casting view is too large.
     limit defaults 50 (integer 1–100 records); max_bytes defaults 48000 (8000–48000
     UTF-8 JSON bytes). Exact text fragments use UTF-16 text.start/end/total offsets,
     at most 6000 units; concatenate same-path/revision raw values without enrichment.

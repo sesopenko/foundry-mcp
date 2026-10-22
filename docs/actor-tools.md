@@ -566,3 +566,25 @@ Explicit description preserves authored exceptions without enrichment. Preparati
 IDs remain local source claims; CORE-casting will join actual spells. Relationships,
 effective and rules remain unsupported. See [field contract](actor-item-story-map/spellcasting-entry-fields.md)
 and [evidence](actor-item-story-map/spellcasting-entry-verification.md).
+
+## Actor casting source checkpoint
+
+Explicit Actor `spellcasting` returns actual owned `casting_entry` and
+`casting_spell` references, typed Item source fields, `casting_spell_assignment`
+and per-position `casting_preparation` joins, plus persisted Actor focus fields.
+New join/focus records use `pf2e.actor.casting-source.v1`; typed fields retain
+spell/entry mappings and source paths on the actual contributing Item UUID.
+Resolved values include target_uuid, type, name, name_truncated and token_uuid
+when selected. Follow `read_item` with those selectors. Unresolved statuses retain
+null target_uuid, and denied markers expose no Item metadata. Prepared repeats
+keep their slot/index keys; target spells must claim the same casting entry.
+
+Character focus includes only persisted value; creature source may include max.
+Absent, zero, configured ranks, signature/cantrip facts and stored use records stay
+independent. No source counter establishes usable casts or an effective cast rank.
+All results remain partial with `availability_not_evaluated`; specialized modes,
+malformed legacy preparations and denied Items add explicit reasons. This does
+not complete CORE-casting. Selection rejects over 12,000 owned Items or 24,000
+selected records with ReadFailed, independently of response pagination bounds.
+See [fields](actor-item-story-map/casting-fields.md) and
+[evidence](actor-item-story-map/casting-verification.md).

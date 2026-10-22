@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 3 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [ITEM-spell](ITEM-spell.md), [ITEM-spellcastingEntry](ITEM-spellcastingEntry.md) |
 | Dependency reason | Needs spell definitions and casting group/resource source records. |
 
@@ -24,3 +24,20 @@ Acceptance: repeated preparations, zero generic slot counter, legacy string/obje
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Implemented source checkpoint — October 22, 2026
+
+The explicit Actor `spellcasting` section now returns actual group/spell references,
+selected stored resources, same-owner assignment and per-index preparation joins,
+and persisted focus fields. See [field contract](../casting-fields.md) and
+[rulebook/runtime verification](../casting-verification.md). Repeated preparations,
+zero counters, legacy malformed partial data, signature flags, separate ranks,
+innate cantrip traits, unknown focus and absent/mismatched entries have deterministic
+coverage. Live source reads cover four contexts across the four common modes and
+a scene token; exact identities, joins, focus values and source fingerprints match.
+
+This does not complete CORE-casting. Availability remains `not_evaluated` and the
+section remains partial; source declarations do not establish effective casting
+options. Supported current availability, signature/heightening options, ritual,
+flexible/item-casting semantics and representative resource-use verification remain
+required before closing the story. No casts, preparation, rolls or writes occur.

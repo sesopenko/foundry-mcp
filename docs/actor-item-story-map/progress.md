@@ -185,3 +185,10 @@ Each implementation increment must record focused/full results and a local commi
 - Malformed/legacy preparation portions remain explicit partial source with safe sibling records retained and exact issue paths; no object-to-array coercion or fabricated source defaults occurs. Actor spell joins, focus/innate resources, effective statistics and usable cast availability remain CORE-casting work.
 - Focused/full suites passed (235 Python, one skipped; 262 JavaScript). Actual MCP read four modes plus a token-context entry, matching source fields/absence and unchanged source fingerprints. Discovery contracts match limits and unsupported sections.
 - ITEM-spellcastingEntry Complete for selected resource-source scope. Completed stories: 18/39 (46.2%).
+
+### 26. Actor casting source joins and focus provenance — October 22, 2026
+
+- CORE-casting now joins actual owned spell/group identities, per-index preparations and selected mode-specific resource source in the explicit Actor spellcasting section. Same-owner, denied, missing, unsupported and mismatched claims remain distinct, with canonical linked/synthetic follow-up selectors.
+- Character persisted focus value excludes derived maximum; creature optional source value/max is retained. Source base/configured/slot ranks and signature/cantrip flags remain independent; no availability or effective option is inferred.
+- Focused/full checks and live source reads verify four Actor contexts covering all four common modes plus a scene token. Exact references, preparations, focus source and unchanged fingerprints passed. Full regression testing caught an accidentally removed pre-existing effect-name bound; the exact guard was restored and its regression test passed before further verification.
+- CORE-casting remains In progress: availability, effective contextual options and specialized casting semantics are unverified. Completed stories remain 18/39 (46.2%).

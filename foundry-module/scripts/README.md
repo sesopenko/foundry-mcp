@@ -126,3 +126,8 @@ slot evaluation or target entry source is read.
 records. Legacy/malformed preparations remain explicit partial source with safe
 siblings retained; no exhaustion, focus pool, innate uses or effective castability
 is inferred from slot counters. Template slot11 has no spell-rank semantics.
+
+`actorCasting.js` builds Actor source-only casting joins from actual readable
+Items, preserving individual preparations and focus-source provenance. Every
+casting section remains partial with availability_not_evaluated; character focus
+max, effective options, casting and resource use are not inferred.

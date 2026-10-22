@@ -297,6 +297,8 @@ Spell definitions preserve base rank, textual casting time, damage/healing and
 variant source; entry links retain owner context without assuming castability.
 Casting entries preserve mode-specific resource source and individual preparations;
 zero slot counters do not prove exhaustion, and missing expenditure flags stay absent.
+Actor casting joins owned spells, entries and individual preparations with focus
+source; availability remains explicitly unevaluated in a partial section.
 
 
 

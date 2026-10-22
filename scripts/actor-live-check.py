@@ -53,6 +53,8 @@ async def main():
         assert 'spellcastingEntry Items expose stored tradition' in available['read_item'].description
         assert 'slot11 is retained without spell-rank semantics' in available['read_item'].description
         assert 'Missing id/expended fields stay absent' in available['read_item'].description
+        assert 'Spellcasting exposes owned spell/casting-entry identities' in available['read_actor'].description
+        assert 'availability_not_evaluated' in available['read_actor'].description
         selector_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const actor=game.actors.find(a=>a.type==='npc'&&a.items.size);
@@ -199,6 +201,47 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
         assert familiar['identity']['source_kind']=='compendium'
         assert any(record['raw'][0]['path']=='/system/category' and record['raw'][0].get('value')=='familiar' for record in familiar['records'])
         # Compare persisted source fingerprints after reads; no gameplay mutation.
+        actor_casting_probe="""
+const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
+const actors=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type));
+const selected=[...new Map(['prepared','spontaneous','innate','focus'].map(mode=>actors.find(a=>a.items.some(i=>i.type==='spellcastingEntry'&&i.toObject(true).system.prepared.value===mode))).filter(Boolean).map(a=>[a.uuid,{actor:a,selector:{actor_uuid:a.uuid}}])).values()];
+const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>['character','npc','familiar'].includes(t.actor?.type)&&t.actor.items.some(i=>i.type==='spellcastingEntry'));
+if(token)selected.push({actor:token.actor,selector:{token_uuid:token.uuid}});
+const report=[];for(const {actor,selector}of selected){const spells=actor.items.filter(i=>i.type==='spell'),entries=actor.items.filter(i=>i.type==='spellcastingEntry');const assignments=spells.map(i=>{const id=i.toObject(true).system.location.value;const target=actor.items.get(id);return {uuid:i.uuid,target_uuid:target?.type==='spellcastingEntry'?target.uuid:null};});let preparations=0;for(const entry of entries)for(const slot of Object.values(entry.toObject(true).system.slots))if(Array.isArray(slot.prepared))preparations+=slot.prepared.filter(p=>p&&typeof p==='object'&&!Array.isArray(p)).length;const source=actor.toObject(true);report.push({selector,uuid:actor.uuid,spell_uuids:spells.map(i=>i.uuid),entry_uuids:entries.map(i=>i.uuid),assignments,preparations,focus:source.system.resources?.focus??null,revision:await digest(source)});}
+const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.length/800)},(_,i)=>json.slice(i*800,(i+1)*800));
+"""
+        actor_casting_samples=probe(payload(await client.call_tool('execute_javascript',{'code':actor_casting_probe})))
+        assert len(actor_casting_samples)>=3
+        for sample in actor_casting_samples:
+            rows=[];actor_casting_cursor=None
+            for _ in range(200):
+                args=dict(sample['selector'],sections=['spellcasting','effective'],limit=100)
+                if actor_casting_cursor:args['cursor']=actor_casting_cursor
+                page=payload(await client.call_tool('read_actor',args));rows.extend(page['records'])
+                assert page['sections'][0]['status']=='partial' and 'availability_not_evaluated' in page['sections'][0]['reasons']
+                assert page['sections'][1]['status']=='unsupported'
+                actor_casting_cursor=page['pagination']['next_cursor']
+                if not actor_casting_cursor:break
+            assert actor_casting_cursor is None and len({row['key'] for row in rows})==len(rows)
+            for concept,expected in [('casting_entry',sample['entry_uuids']),('casting_spell',sample['spell_uuids'])]:
+                references=[row['mapped']['value'] for row in rows if row['mapped']['concept']==concept]
+                assert {v['target_uuid'] for v in references}==set(expected)
+                if sample['selector'].get('token_uuid'):assert all(v['token_uuid']==sample['selector']['token_uuid'] for v in references)
+                if references:
+                    reference=references[0];follow_args={'item_uuid':reference['target_uuid'],'sections':['identity']}
+                    if reference.get('token_uuid'):follow_args['token_uuid']=reference['token_uuid']
+                    assert payload(await client.call_tool('read_item',follow_args))['identity']['uuid']==reference['target_uuid']
+            assignment_rows={r['raw'][0]['document_uuid']:r['mapped']['value'] for r in rows if r['mapped']['concept']=='casting_spell_assignment'}
+            for expected in sample['assignments']:
+                actual=assignment_rows[expected['uuid']];assert actual['target_uuid']==expected['target_uuid']
+                assert actual['status']==('resolved' if expected['target_uuid'] else 'missing')
+            assert len([r for r in rows if r['mapped']['concept']=='casting_preparation'])==sample['preparations']
+            for key in ('value','max'):
+                raw=next(r for r in rows if r['key']=='spellcasting:focus:'+key)['raw'][0]
+                assert raw['present']==(sample['focus'] is not None and key in sample['focus'])
+                if raw['present']:assert raw['value']==sample['focus'][key]
+            fingerprint_code="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const doc=await foundry.utils.fromUuid("+json.dumps(sample['uuid'])+");return JSON.stringify({revision:await digest(doc.toObject(true))});"
+            assert probe(payload(await client.call_tool('execute_javascript',{'code':fingerprint_code})))['revision']==sample['revision']
         casting_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const entries=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type)).flatMap(a=>a.items.contents).filter(i=>i.type==='spellcastingEntry');
@@ -578,6 +621,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         action_support=next(entry for entry in registry.data['item_types'] if entry['type']=='action')
         assert action_support['mapped_supported'] and not action_support['effective_supported']
         assert action_support['verification']['live']['status']=='passed'
+        actor_casting_support=next(entry for entry in registry.data['actor_sections'] if entry['name']=='spellcasting')
+        assert actor_casting_support['source_supported'] and actor_casting_support['mapped_supported'] and not actor_casting_support['effective_supported']
+        assert actor_casting_support['verification']['live']['status']=='passed'
         casting_support=next(entry for entry in registry.data['item_types'] if entry['type']=='spellcastingEntry')
         assert casting_support['mapped_supported'] and not casting_support['effective_supported']
         assert casting_support['verification']['live']['status']=='passed'
@@ -615,7 +661,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'actor_casting_source_samples_verified':len(actor_casting_samples),'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent
