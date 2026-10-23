@@ -1,5 +1,17 @@
 # Repository guidance for Codex
 
+## Editing files
+
+Use the standard code-editing functionality, such as `apply_patch`, for ordinary
+code and documentation changes. Do not use Python, shell scripts, heredocs or
+other command-driven file writes as a substitute, or prompt the user to approve
+such commands for routine edits.
+
+Use a script only when a complex deterministic operation warrants it, such as
+a large search-and-replace or structured bulk transformation. Keep that operation
+focused and reviewable. Run tests and other commands separately from file edits
+so approval requests do not bundle unrelated actions.
+
 ## MCP server lifecycle
 
 At the start of work in this repository, check the server with
