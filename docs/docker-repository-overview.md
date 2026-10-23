@@ -77,6 +77,8 @@ Background readers preserve boost choices, training/Lore labels and definition
 links; acquired contributor joins remain pending in the character Build view.
 Heritage readers preserve nullable ancestry associations and named links without
 inferring owner ancestry, exclusivity or effective benefits.
+Class readers preserve key-attribute choices, labelled starting ranks and
+progression definitions without advancement, HP totals or acquired-feature claims.
 
 
 

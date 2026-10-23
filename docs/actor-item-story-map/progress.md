@@ -253,3 +253,11 @@ Each implementation increment must record focused/full results and a local commi
 - Focused/full suites pass:288 Python tests (one skipped),351 JavaScript tests. Actual MCP consumed three heritage definitions and exact prose, verified one Elf identity follow-up and two unassociated results, and preserved source fingerprints. World/pack/token, independent synthetic target, denied/stale and non-PF2e boundaries have deterministic coverage.
 - Corrected stale generic limitation text on delivered definition readers; regression coverage verifies accurate source limitations while retaining pending effective/acquisition capabilities.
 - ITEM-heritage Complete. Completed stories:24/39 (61.5%). Background acquired-item integration and remaining class/deity/feat readers still gate the character Build view.
+
+
+### 35. Class definitions, labelled starting ranks and progression — October 22, 2026
+
+- ITEM-class preserves key-attribute offers/null selections, HP contribution, labelled raw starting proficiency ranks, training and all five progression lists. Named features retain source levels and keyed occurrence identity without advancement or acquisition.
+- Focused/full suites pass:294 Python tests (one skipped),360 JavaScript tests. Actual MCP consumed Fighter/Rogue/Wizard, exact prose and51 immediate feature links with unchanged source fingerprints. World/pack/token and malformed/denied/stale cases have deterministic coverage.
+- Optional other-attack name handling follows audited public field semantics; no private defaults or prepared values are used. The original Player Core boost discrepancy remains documented with no arithmetic from it.
+- ITEM-class Complete. Completed stories:25/39 (64.1%). Deity/feat readers and acquired background integration remain before character Build completion.

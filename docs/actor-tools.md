@@ -782,3 +782,29 @@ associations with exact prose and unchanged source fingerprints. World/owned/
 synthetic context and malformed/denied/stale cases have deterministic coverage.
 See [fields](actor-item-story-map/heritage-fields.md) and
 [evidence](actor-item-story-map/heritage-verification.md).
+
+
+## Class definitions and progression
+
+`class` source separates key-attribute offers from nullable selection and
+preserves HP contribution, starting proficiencies, training, progression and
+named feature definitions. Raw ranks0–4 map to Untrained/Trained/Expert/Master/
+Legendary while remaining source ranks, never bonuses or current Actor totals.
+All five progression lists retain their order and values without performing
+advancement. Class schema has otherTags/rarity and no traits.value array.
+Optional attacks.other.name can be absent; null is not a valid stored name.
+
+Explicit `class_feature_reference` relationships name immediate canonical
+Items, preserving source occurrence and synthetic target context for read_item.
+Future levels and referenced definitions do not establish acquisition. Missing/
+denied/unsupported/unverified targets withhold metadata. No target source,
+recursive feature expansion, HP arithmetic or automatic grant occurs. Each
+source map/list admits12000 entries and explicit links admit200 references;
+shared page/byte/revision constraints apply independently.
+
+Actual MCP reads verified three compendium classes and51 feature references
+with exact prose and unchanged source fingerprints. World/owned/token and
+malformed/denied/stale cases retain deterministic coverage. The recorded Player
+Core boost-text discrepancy remains evidence, with no arithmetic implemented
+from it. See [fields](actor-item-story-map/class-fields.md) and
+[evidence](actor-item-story-map/class-verification.md).

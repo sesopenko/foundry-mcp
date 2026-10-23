@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='class' and _class_spec(path) is not None and _class_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -602,6 +602,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='array' or
             identity['type'] == 'heritage' and path in HERITAGE_ARRAYS or
             identity['type'] == 'background' and _background_spec(path) is not None and _background_spec(path)[1]=='array' or
+            identity['type'] == 'class' and _class_spec(path) is not None and _class_spec(path)[1]=='array' or
             identity['type'] == 'kit' and path in KIT_ARRAYS or
             identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
             identity['type'] == 'backpack' and path in CONTAINER_ARRAYS or
@@ -1385,6 +1386,103 @@ def _background_relationship(row,identity):
     return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
 
 
+# PF2e-specific ClassSystemSchema8.6.1; definition contributions, not character totals.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/class/data.ts
+# Same revision: src/module/model.ts (ranks), src/module/item/abc/data.ts (features).
+CLASS_SOURCE={'/system/'+p:('class_'+c,k,n) for p,c,k,n in (
+ ('keyAbility/selected','key_attribute_selected_code','string',True),
+ ('hp','hp_contribution','hp',False),('attacks/other/name','other_attack_name','string',False),
+ ('trainedSkills/additional','additional_trained_skills','nonnegative_integer',False),
+ ('items','feature_entries','object',False),('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+ ('perception','starting_perception_rank','rank',False),('spellcasting','starting_spellcasting_rank','rank',False),
+ *((f'savingThrows/{n}',f'starting_{n}_rank','rank',False) for n in ('fortitude','reflex','will')),
+ *((f'attacks/{n}',f'starting_{n}_attack_rank','rank',False) for n in ('simple','martial','advanced','unarmed')),
+ ('attacks/other/rank','starting_other_attack_rank','rank',False),
+ *((f'defenses/{n}',f'starting_{n}_defense_rank','rank',False) for n in ('unarmored','light','medium','heavy')),
+)}
+CLASS_ARRAYS={'/system/'+p:('class_'+c,k) for p,c,k in (
+ ('keyAbility/value','key_attribute_offer_code','string'),('trainedSkills/value','trained_skill_code','string'),
+ ('traits/otherTags','other_tag_code','string'),
+ *((n+'/value',re.sub(r'([A-Z])',lambda m:'_'+m[1].lower(),n),'progression') for n in ('ancestryFeatLevels','classFeatLevels','generalFeatLevels','skillFeatLevels','skillIncreaseLevels')),
+)}
+
+
+def _class_spec(path):
+    """PF2e-specific class8.6.1 source paths from pinned schemas above.
+
+    Starting ranks and HP are contributions, progression is definition source;
+    no acquired features, effective rank, modifier or total HP is inferred.
+    """
+    if path in CLASS_SOURCE:return CLASS_SOURCE[path]
+    for base,(concept,kind) in CLASS_ARRAYS.items():
+        if path==base:return concept,'array',False
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path):return concept,kind,False
+    match=re.fullmatch(r'/system/items/([^/]+)/(uuid|img|name|level)',path)
+    if not match or re.search(r'~(?![01])',match[1]):return None
+    leaf=match[2]
+    return 'class_feature_'+('image' if leaf=='img' else leaf),('nonnegative_integer' if leaf=='level' else 'string'),False
+
+
+def _class_record(row,identity):
+    """PF2e-specific class8.6.1 exact source DTO; schemas pinned above.
+
+    Only starting rank leaves map to {rank,label}; all other values preserve
+    source exactly. Rank labels are never effective character proficiency.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];spec=_class_spec(path)
+    if path in SOURCE_PATHS:return row['provenance']['mapping']!='pf2e.class.source.v1'
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    if raw['document_uuid']!=identity['uuid']:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.class.source.v1',limitations=['class_source_not_effective_character']):return False
+    concept,kind,nullable=spec;value=raw.get('value');expected=value
+    numeric=type(value) in (int,float) and math.isfinite(value)
+    if raw['present'] and kind=='rank':
+        if not numeric or value%1 or not 0<=value<=4:return False
+        expected=dict(rank=value,label=('Untrained','Trained','Expert','Master','Legendary')[int(value)])
+        if type(row['mapped']['value']) is not dict or type(row['mapped']['value'].get('rank')) is not type(value):return False
+    elif type(row['mapped']['value']) is not type(value):return False
+    if row['mapped']!=dict(concept=concept,value=expected,unit=None):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    return {'string':type(value) is str,'boolean':type(value) is bool,
+            'hp':numeric and 4<=value<=12,'rank':numeric and value%1==0 and 0<=value<=4,
+            'progression':numeric and value>=1,
+            'nonnegative_integer':numeric and value%1==0 and value>=0,
+            'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
+
+
+def _class_relationship(row,identity):
+    """PF2e-specific class8.6.1 immediate ABC feature UUID definition claims.
+
+    Pinned schemas above. Resolution establishes no acquired character feature.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='source' or type(raw['present']) is not bool or raw['present']!=('value'in raw):return False
+    path=raw['path']
+    if type(path) is not str or row['key']!='relationships:class:'+path:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.class.feature-reference.v1',limitations=['definition_reference_not_acquired_feature']):return False
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='class_feature_reference' or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if path=='/system/items':return (not raw['present'] and value==dict(status='missing',target_uuid=None)) or (raw['present'] and type(raw['value']) is dict and not raw['value'] and value==dict(status='empty',target_uuid=None))
+    spec=_class_spec(path)
+    if spec is None or spec[0]!='class_feature_uuid':return False
+    if not raw['present']:return value==dict(status='missing',target_uuid=None)
+    if type(raw['value']) is not str:return False
+    if value.get('status')!='resolved':return value in [dict(status=status,target_uuid=None) for status in ('missing','denied','unsupported','unverified')]
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}
+    synthetic=re.fullmatch(r'Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+\.Item\.[^.\s#]+',raw['value'])
+    if synthetic:keys.add('token_uuid')
+    return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
+
+
 # PF2e-specific KitSystemSchema8.6.1 definitions; never owned inventory.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/kit/data.ts
 KIT_SOURCE = {'/system/'+p:('kit_'+c,k,n) for p,c,k,n in (
@@ -1833,6 +1931,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'class':
+        return _class_spec(path) is not None
     if identity['type'] == 'heritage':
         return _heritage_spec(path) is not None
     if identity['type'] == 'background':
@@ -2194,6 +2294,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='class' and row['section']=='relationships':
+        return _class_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='heritage' and row['section']=='relationships':
         return _heritage_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='background' and row['section']=='relationships':
@@ -2246,6 +2348,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'class' and not _class_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'heritage' and not _heritage_record(row, identity):
         return False
@@ -2642,6 +2746,26 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     unsupported/unverified targets disclose no identity. Absent/empty items maps
     return missing/empty scope markers. No recursive hydration, acquired joins,
     physical fields, benefit application or effective calculations are supplied.
+    class Items expose PF2e8.6.1 definition source: keyAbility offers/nullable
+    selected key attribute, hp contribution (not total HP), starting proficiency
+    ranks, trainedSkills.value/additional, and five advancement value lists
+    (ancestryFeatLevels, classFeatLevels, generalFeatLevels, skillFeatLevels,
+    skillIncreaseLevels). Starting rank mapped.value is {rank,label}, with rank
+    0..4 and label Untrained/Trained/Expert/Master/Legendary, never a check total.
+    Absent other attack name stays absent. Progression numbers >=1 remain
+    exact source;
+    no current level filtering or advancement occurs. Keyed ABC uuid/img/name/
+    level, otherTags/rarity, slug and publication retain source provenance.
+    Class maps/lists admit 12000 entries; malformed/oversized source fails
+    ReadFailed. Explicit relationships returns class_feature_reference for at
+    most 200 immediate definition claims, keyed relationships:class:<exact
+    escaped /system/items/<key>/uuid path>. Duplicate claims remain distinct.
+    Resolved values expose status/target_uuid/document_name/type/name/
+    name_truncated and token_uuid for synthetic targets; follow read_item with
+    returned selectors. Missing/denied/unsupported/unverified disclose no target
+    identity. Absent/empty items maps return missing/empty scope markers. No
+    acquisition claims, recursive hydration, effective character
+    statistics, advancement, physical fields or rule application are supplied.
     kit Items expose authored bundle component definitions, own price denominations,
     price.per and sizeSensitive, traits, slug and publication. Kits are not physical
     possessions: no quantity, carry, investment or container state is inferred.

@@ -187,3 +187,10 @@ UUID to ancestry identity only. Null source remains unassociated; no owner
 ancestry, eligibility or effective benefits are inferred. Delivered definition
 reader limitations describe their actual source coverage rather than stale
 pending-type text.
+
+
+`actorClass.js` selects PF2e-specific8.6.1 key-attribute choices, HP contribution,
+labelled starting ranks, training and five progression lists. `actorClassRelationships.js`
+resolves explicit immediate feature definitions without reading target source.
+Rank labels are not bonuses and progression is not advancement or acquisition;
+no Actor totals or HP arithmetic are calculated.
