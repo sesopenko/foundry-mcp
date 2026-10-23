@@ -395,3 +395,6 @@ active character benefits. See the [deity field audit](https://github.com/sesope
 PF2e feat source reading distinguishes feats from features and nominal levels from
 recorded taken levels, retaining prerequisites and description prose. Explicit grant claims resolve only within the actual Actor owner; reciprocal
 acquisition and selection joins remain pending. Source rules never execute.
+
+Recorded feat selections expose stored string/finite-number values only; unsupported
+selection values make source partial, without acquisition or eligibility inference.

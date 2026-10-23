@@ -74,3 +74,8 @@ owned/synthetic contexts and identity/permission staleness. The earlier source
 checkpoint's unsupported relationships statement is superseded by this limited
 reference implementation. Selection and acquired multi-contributor joins remain
 unfinished; the story remains In progress.
+
+Recorded scalar selections are now covered by the
+[selection contract](../feat-selection-contract.md). Unsupported values explicitly
+make source partial; no selected value is interpreted as acquisition or eligibility.
+The acquired multi-contributor integration and populated live fixture gaps remain.

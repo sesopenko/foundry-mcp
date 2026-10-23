@@ -215,3 +215,8 @@ and self-effect/suppressed-feature UUIDs without reading targets' source or
 executing rules. Each occurrence retains source provenance; reciprocal causality,
 active benefits and selected choices are not inferred. Shared snapshots detect
 source/identity/permission changes across continuations.
+
+`actorFeatSelections.js` selects PF2e8.6.1 recorded-selection string/finite-number
+leaves. Unsupported values are withheld with partial-source diagnostics rather
+than copied recursively or relabelled absent. Recorded values do not establish
+acquisition, eligibility or UUID identity.

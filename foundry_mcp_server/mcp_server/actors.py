@@ -1418,6 +1418,9 @@ def _feat_spec(path):
 
     Opaque subfeature keys retain escaped source provenance, never document IDs.
     """
+    if path=='/flags/pf2e/rulesSelections':return 'feat_selection_entries','object',False
+    match=re.fullmatch(r'/flags/pf2e/rulesSelections/([^/]*)',path)
+    if match and re.search(r'~(?![01])',match[1]) is None:return 'feat_recorded_selection','selection',False
     if path=='/flags/pf2e/itemGrants':return 'feat_grant_entries','object',False
     if path=='/flags/pf2e/grantedBy':return 'feat_granted_by_source','null',True
     match=re.fullmatch(r'/flags/pf2e/itemGrants/([^/]*)/(id|onDelete|nested)',path)
@@ -1463,6 +1466,7 @@ def _feat_record(row,identity):
             'level':integer and 1<=value<=30,'actions':integer and 1<=value<=3,
             'rank':integer and 1<=value<=4,'range':numeric and 5<=value<=300,
             'positive_integer':integer and value>=1,'nonnegative_integer':integer and value>=0,
+            'selection':type(value) is str or numeric,
             'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
 
 
@@ -2652,6 +2656,9 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                 if valid:
                     rows = result['sections']
                     valid = [row.get('name') for row in rows if type(row) is dict] == sections and all(set(row) == {'name', 'status', 'reasons'} and row['status'] in ('complete', 'partial', 'unsupported', 'not_applicable') and _strings(row['reasons']) for row in rows)
+                    # PF2e-specific feat recorded selections may omit unsupported values.
+                    if result['identity']['document_name']=='Item' and result['identity']['type']=='feat':
+                        valid = valid and all(row['name']=='source' and row['status']=='partial' for row in rows if 'unsupported_selection_values' in row['reasons'])
                     # PF2e-specific casting configuration excludes current availability.
                     if result['identity']['document_name']=='Actor':
                         valid = valid and all(row['status']=='partial' and 'availability_not_evaluated' in row['reasons'] for row in rows if row['name']=='spellcasting')
@@ -2945,6 +2952,12 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     synthetic targets; missing/denied/unsupported/unverified disclose no target.
     Absent or empty items maps return missing/empty markers. No recursive feature
     hydration, granted/acquired claim, physical fields or effective benefit math.
+    Recorded feat flags.pf2e.rulesSelections expose only stored string/finite-number
+    leaves (maximum12000 keys), never UUID guesses, acquisitions or eligibility.
+    Missing/undefined and empty maps stay distinct. Unsupported object/array/null/
+    boolean values are withheld and source is partial with reason
+    unsupported_selection_values; partial results are not an exhaustive selection
+    list. Malformed root maps return ReadFailed. No rule execution occurs.
     feat Items expose PF2e8.6.1 authored category as {code,kind}, where kind is
     feature (ancestryfeature/calling/classfeature/curse/deityboon/pfsboon), feat
     (ancestry/bonus/class/general/skill), or unknown. Source mapping is

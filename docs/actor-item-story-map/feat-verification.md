@@ -123,3 +123,11 @@ passed. Owned/synthetic resolution, type restrictions, permission boundaries,
 source/target changes and aggregate bounds are verified deterministically,
 including actual paginated JavaScript DTOs through the Python validator.
 This does not close the existing populated-grant live gap or the full feat story.
+
+## Recorded-selection checkpoint
+
+The recorded scalar allowlist passes316 Python tests (one skipped) and390
+JavaScript tests. The fresh-client live check passes four existing definitions
+across21 source pages and136 records, including actual missing selection maps,
+exact prose and unchanged source fingerprints. Populated selections and partial
+unsupported values have deterministic coverage; no populated live claim is made.

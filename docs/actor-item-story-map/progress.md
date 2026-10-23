@@ -294,3 +294,10 @@ synthetic ownership, exact target identity, permission/staleness and bounded
 continuations. Live reads verify actual missing/empty states on four definitions,
 21 source pages and132 records. Populated runtime grants, selections and integrated
 acquired-document joins remain open. ITEM-feat stays In progress;26/39 complete.
+
+### Recorded feat selection checkpoint
+
+Added a narrow recorded-selection source allowlist: exact strings and finite
+numbers, distinct absent/empty maps, no UUID or acquisition inference. Unsupported
+values are withheld and make source partial. Acquired joins and populated owned
+runtime verification remain open; ITEM-feat stays In progress,26/39 complete.

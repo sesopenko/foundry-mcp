@@ -321,7 +321,7 @@ const prerequisites=s.system.prerequisites.value;if(!prerequisites.length)pick('
 for(const key of ['frequency','selfEffect']){if(s.system[key]==null)pick('/system/'+key);else for(const leaf of key==='frequency'?['value','max','per']:['uuid','name'])pick('/system/'+key+'/'+leaf);}
 const sub=s.system.subfeatures;for(const key of ['proficiencies','senses']){const entries=sub[key];if(!Object.keys(entries).length)pick('/system/subfeatures/'+key);else for(const name of Object.keys(entries))for(const leaf of key==='proficiencies'?['rank','attribute']:['acuity','range'])pick('/system/subfeatures/'+key+'/'+esc(name)+'/'+leaf);}
 if(sub.languages===undefined)pick('/system/subfeatures/languages');else{pick('/system/subfeatures/languages/slots');array('/system/subfeatures/languages/granted');}
-pick('/system/traits/toggles');
+pick('/system/traits/toggles');pick('/flags/pf2e/rulesSelections');
 return JSON.stringify({uuid:doc.uuid,expected,category:s.system.category,revision:await digest(s),description_sha256:await digest(s.system.description.value)}).match(/[\\s\\S]{1,800}/g);
 """.replace('FEAT_UUID',json.dumps(selector['uuid']))
             sample=probe(payload(await client.call_tool('execute_javascript',{'code':feat_probe})))

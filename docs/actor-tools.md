@@ -861,4 +861,11 @@ identity. Resolved values contain actual Item identity and synthetic `token_uuid
 where needed. Resolution never reads target source or asserts reciprocal grants,
 suppression, causality or active benefits. Source-only reading never hydrates
 these references. Continuations revalidate claims, target identities and permissions.
-Arbitrary flags and `rulesSelections` remain excluded pending a separate allowlist.
+Arbitrary flags remain excluded. Recorded `rulesSelections` scalar source is now
+selected under the separate [selection allowlist](actor-item-story-map/feat-selection-contract.md); unsupported values make source partial.
+
+Recorded feat selections retain exact string/finite-number source values only.
+Object and other unsupported selection values are withheld with source status
+`partial` and reason `unsupported_selection_values`; callers must not treat the
+returned scalar rows as an exhaustive selection list. No UUID, acquired benefit
+or eligibility meaning is inferred. Missing maps and empty maps stay distinct.

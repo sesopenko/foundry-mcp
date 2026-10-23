@@ -7,7 +7,7 @@ function fixture(scope='owned') {
  const owner={documentName:'Actor',id:'owner',uuid:scope==='token'?'Scene.s.Token.t.Actor.owner':'Actor.owner',name:'Owner',type:'character',items:new Map(),testUserPermission:()=>true};
  const pack=scope==='pack'?{collection:'test.feats',title:'Feat definitions',testUserPermission:()=>true}:null;
  const owned=['owned','token'].includes(scope);
- const source={name:'Feature',type:'feat',flags:{pf2e:{itemGrants:{'first/~':{id:'benefit',onDelete:'cascade',nested:null},repeat:{id:'benefit'}},grantedBy:{id:'granter'},rulesSelections:{private:'private_selection_sentinel'},private:'private_flag_sentinel'}},system:{category:'classfeature',level:{value:1},actionType:{value:'passive'},actions:{value:null},prerequisites:{value:[]},selfEffect:{uuid:'Item.effect'},subfeatures:{suppressedFeatures:['Item.suppressed','Item.suppressed']},rules:[{key:'GrantItem',uuid:'Item.future',private:'private_rule_sentinel'}]}};
+ const source={name:'Feature',type:'feat',flags:{pf2e:{itemGrants:{'first/~':{id:'benefit',onDelete:'cascade',nested:null},repeat:{id:'benefit'}},grantedBy:{id:'granter'},rulesSelections:{choice:'recorded-choice'},private:'private_flag_sentinel'}},system:{category:'classfeature',level:{value:1},actionType:{value:'passive'},actions:{value:null},prerequisites:{value:[]},selfEffect:{uuid:'Item.effect'},subfeatures:{suppressedFeatures:['Item.suppressed','Item.suppressed']},rules:[{key:'GrantItem',uuid:'Item.future',private:'private_rule_sentinel'}]}};
  function make(id,type,parent=owner,uuid=parent?`${parent.uuid}.Item.${id}`:`Item.${id}`){const item={documentName:'Item',id,uuid,name:'Duplicate',type,parent,folder:null,compendium:null,testUserPermission:()=>true,toObject(){throw Error('related target source must not be expanded');}};docs.set(uuid,item);if(parent)parent.items.set(id,item);return item;}
  const selected=make('selected','feat',owned?owner:null,owned?`${owner.uuid}.Item.selected`:pack?'Compendium.test.feats.Item.selected':'Item.selected');selected.compendium=pack;selected.toObject=basis=>{assert.equal(basis,true);return structuredClone(source);};
  const benefit=make('benefit','feat'),granter=make('granter','feat'),effect=make('effect','effect',null),suppressed=make('suppressed','feat',null);
@@ -63,7 +63,7 @@ test('missing null and empty roots remain distinct without exposing other PF2e f
 });
 
 test('source-only feat reads never resolve target documents or inspect owner Items',async()=>{
- const f=fixture();f.owner.items={values(){throw Error('owner collection forbidden for source');},get(){throw Error('owner collection forbidden for source');}};const records=await rows(f,['source']);assert.ok(records.every(r=>r.section==='source'));assert.ok(f.lookups.every(uuid=>uuid===f.selected.uuid));assert.ok(!JSON.stringify(records).includes('sentinel'));
+ const f=fixture();f.owner.items={values(){throw Error('owner collection forbidden for source');},get(){throw Error('owner collection forbidden for source');}};const records=await rows(f,['source']);assert.ok(records.every(r=>r.section==='source'));assert.ok(f.lookups.every(uuid=>uuid===f.selected.uuid));assert.ok(!JSON.stringify(records).includes('sentinel'));assert.equal(records.find(r=>r.raw[0].path==='/flags/pf2e/rulesSelections/choice').raw[0].value,'recorded-choice');
 });
 
 test('relationship continuations revalidate source, target names, permissions and exact owner identity',async()=>{

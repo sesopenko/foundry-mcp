@@ -36,7 +36,7 @@ class ActorFeatGrantTests(unittest.IsolatedAsyncioTestCase):
     async def test_selected_flag_source_and_empty_markers(self):
         for path,value in [('/flags/pf2e/itemGrants',{}),('/flags/pf2e/itemGrants/a~1b~0c/id','local'),('/flags/pf2e/itemGrants/a/onDelete','future'),('/flags/pf2e/itemGrants/a/nested',False),('/flags/pf2e/itemGrants/a/nested',None),('/flags/pf2e/grantedBy',None),('/flags/pf2e/grantedBy/id','local'),('/flags/pf2e/grantedBy/onDelete','cascade')]:
             await self.read(feat_source(path,value),'source')
-        for path,value in [('/flags/pf2e/itemGrants',None),('/flags/pf2e/itemGrants',{'a':{}}),('/flags/pf2e/itemGrants/a~2/id','local'),('/flags/pf2e/itemGrants/a/id',None),('/flags/pf2e/itemGrants/a/nested','false'),('/flags/pf2e/rulesSelections',{}),('/flags/pf2e/grantedBy',{})]:
+        for path,value in [('/flags/pf2e/itemGrants',None),('/flags/pf2e/itemGrants',{'a':{}}),('/flags/pf2e/itemGrants/a~2/id','local'),('/flags/pf2e/itemGrants/a/id',None),('/flags/pf2e/itemGrants/a/nested','false'),('/flags/pf2e/privateSelection',{}),('/flags/pf2e/grantedBy',{})]:
             with self.subTest(path=path),self.assertRaises(ToolError):await self.read(feat_source(path,value),'source')
 
     async def test_relationship_markers_and_unowned_claims(self):
