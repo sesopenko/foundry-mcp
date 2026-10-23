@@ -229,3 +229,11 @@ Each implementation increment must record focused/full results and a local commi
 - Explicit component links share the audited book Item resolver, preserving canonical owner/token context and denied privacy without reading target source or recursively expanding kits. Source-only reads remain independent of resolution bounds.
 - Focused/full tests pass:270 Python tests (one skipped),323 JavaScript tests. Actual MCP source/prose and all14 immediate references passed on both existing compendium kits with unchanged source fingerprints. World/owned/token/max-depth cases retain deterministic coverage; no game writes occurred.
 - ITEM-kit Complete. Completed stories:22/39 (56.4%). Book and advanced Actor/casting/state gates remain open.
+
+
+### 32. Ancestry choices, contributions and feature definitions — October 22, 2026
+
+- ITEM-ancestry separates offered/selected/default/alternate and modern/legacy voluntary configuration, preserving source HP, size, movement, vision, language and schema-defined hands/reach contributions. Persisted null singleton selections are never replaced by prepared choices.
+- Explicit immediate feature definitions retain keyed provenance, future levels and canonical/token follow-ups without acquisition, target-source hydration, grants or character totals. Missing/denied/unsupported/stale cases remain explicit.
+- Focused/full suites pass:275 Python tests (one skipped),332 JavaScript tests. Actual MCP consumed three ancestry definitions and exact prose, followed two feat identities and preserved complete source fingerprints. Owned/token/alternate/voluntary cases have deterministic coverage.
+- ITEM-ancestry Complete. Completed stories:23/39 (59.0%). Remaining build Item stories still gate CORE-build and integrated character support.

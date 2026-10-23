@@ -165,3 +165,10 @@ explicit immediate component links, never generated possessions or target source
 between book and kit claims. No import, inventory generation or recursive target
 kit expansion is performed. Kits have live compendium verification; book
 representative-fixture verification remains not_run.
+
+
+`actorAncestry.js` selects PF2e-specific8.6.1 offers/selections, alternate and
+voluntary choices, source ancestry contributions and keyed feature definitions.
+`actorAncestryRelationships.js` uses the audited immediate Item resolver for
+explicit feature links. Persisted null selections are not replaced by prepared
+singleton choices; no feature is acquired and no character totals are computed.

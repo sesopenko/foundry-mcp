@@ -708,3 +708,30 @@ through actual MCP source, prose and14 immediate links with unchanged source
 fingerprints. World/owned/token kit and terminal-null/max-depth scenarios have
 deterministic coverage. See [fields](actor-item-story-map/kit-fields.md) and
 [evidence](actor-item-story-map/kit-verification.md).
+
+
+## Ancestry choices and contributions
+
+`ancestry` source separates offered boost/flaw lists from nullable selections,
+nullable alternate boosts and voluntary legacy configuration. A null stored
+singleton selection is preserved even when PF2e prepares an automatic choice.
+Modern voluntary flaws do not grant the legacy-mode boost. Raw legacy fields
+remain visible without automatic application. Source ancestry HP, size, base
+Speed, vision, languages, hands and reach stay separate from effective character
+statistics or known-language totals. No schema defaults replace absent source.
+
+Keyed feature UUID/image/name/level definitions retain escaped paths and repeated
+occurrences. Explicit relationships return immediate named canonical targets,
+with synthetic token context, under `ancestry_feature_reference`; follow
+`read_item`. Source levels and referenced definitions do not prove acquisition.
+Missing/denied/unsupported/unverified targets remain explicit and disclose no
+resolved metadata. No target source, recursive feature hydration or automatic
+grant is read. Each source map/list admits12000 entries; explicit relationships
+admit200 references independently. Shared count/byte paging and stale-source/
+permission/target-identity checks apply.
+
+Actual MCP source, exact prose and two feature links passed for three existing
+compendium ancestries. World/owned/token ancestry and populated alternate/
+voluntary choices retain deterministic coverage. See
+[fields](actor-item-story-map/ancestry-fields.md) and
+[evidence](actor-item-story-map/ancestry-verification.md).

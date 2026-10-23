@@ -71,6 +71,8 @@ Formula/spell book source and explicit immediate content links have deterministi
 coverage; representative live book fixtures remain unavailable.
 Kit readers preserve nested bundle definitions and explicit immediate component
 links without importing inventory or recursively expanding referenced kits.
+Ancestry readers separate offered/selected/alternate choices and source benefits
+from character totals; named feature definitions do not imply acquisition.
 
 
 
