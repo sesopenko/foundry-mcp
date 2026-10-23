@@ -540,6 +540,95 @@ def _character_record(row,identity):
     return False
 
 
+FAMILIAR_LIMIT = ['familiar_source_not_master_derived_statistics']
+
+
+def _familiar_spec(path):
+    """PF2e-specific familiar8.6.1 persisted source, never master-derived totals.
+
+    https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/familiar/data.ts
+    master.id is a nullable Character foreign-document local ID; ability codes
+    remain uninterpreted. HP value/temp are nonnegative integer source fields.
+    """
+    return {
+        '/system/master/id': ('recorded_master_character_id','string',True),
+        '/system/master/ability': ('recorded_master_attribute_code','string',True),
+        '/system/attributes/hp/value': ('recorded_hit_points','integer',False),
+        '/system/attributes/hp/temp': ('recorded_temporary_hit_points','integer',False),
+        '/system/attributes/hp/tempSource': ('temporary_hit_point_source_item_id','nonblank',False),
+    }.get(path)
+
+
+def _familiar_record(row,identity):
+    """PF2e-specific familiar8.6.1 source/explicit creature prose DTO validation.
+
+    Uses the pinned familiar/data.ts schema linked by _familiar_spec, excludes
+    all prepared/master statistics and preserves unknown stored ability codes.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];value=raw.get('value')
+    if path in ('/name','/type'):return row['section']=='source'
+    if raw['document_uuid']!=identity['uuid'] or row['provenance']['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')}]:return False
+    if row['provenance']['limitations']!=FAMILIAR_LIMIT:return False
+    if path=='/system/details/creature/value':
+        if row['section']!='description' or row['provenance']['mapping']!='pf2e.familiar.notes.v1' or row['mapped']!=dict(concept='familiar_creature_description_source',value=None,unit=None):return False
+        if not raw['present']:return row['kind']=='field' and row['key']=='description:'+path
+        return row['kind']=='text' and type(value) is str and re.fullmatch(re.escape('description:'+path)+r':(?:0|[1-9][0-9]*)',row['key']) is not None
+    spec=_familiar_spec(path)
+    if spec is None:return False
+    concept,kind,nullable=spec
+    if row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path or row['provenance']['mapping']!='pf2e.familiar.source.v1':return False
+    if type(row['mapped']['value']) is not type(value) or row['mapped']!=dict(concept=concept,value=value,unit=None):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    if kind=='integer':return type(value) in (int,float) and math.isfinite(value) and value>=0 and value==int(value)
+    return type(value) is str and (kind!='nonblank' or bool(value.strip()))
+
+
+def _familiar_relationship(row,identity):
+    """PF2e-specific familiar8.6.1 master ID and owned action source evidence.
+
+    Pinned familiar/data.ts and item/ability/data.ts (revision linked above).
+    No derived master state or activation is inferred. Action traits are retained
+    but have no supported familiar/master classification in this pinned schema.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship':return False
+    raw=row['raw'];mapped=row['mapped'];p=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(p) is not dict or set(p)!={'contributors','mapping','limitations'}:return False
+    for r in raw:
+        if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'} or r['basis']!='source' or type(r['present']) is not bool or r['present']!=('value' in r):return False
+    if p['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if row['section']=='identity':
+        if row['key']!='identity:familiar_master' or mapped['concept']!='familiar_master' or p['mapping']!='pf2e.familiar.master.v1' or p['limitations']!=['stored_master_reference_not_current_statistics']:return False
+        if len(raw)!=1 or raw[0]['document_uuid']!=identity['uuid'] or raw[0]['path']!='/system/master/id':return False
+        r=raw[0];claim=r.get('value')
+        if r['present'] and claim is not None and type(claim) is not str:return False
+        status=value.get('status')
+        if status!='resolved':
+            if value!={'status':status,'target_uuid':None}:return False
+            if not r['present'] or claim=='':return status=='missing'
+            if claim is None:return status=='unassociated'
+            return status in ('missing','denied','unsupported','unverified')
+        uuid='Actor.'+claim if type(claim) is str else None
+        return (r['present'] and type(claim) is str and re.fullmatch(r'[^.\s#]+',claim) is not None and len(uuid)<=512 and set(value)=={'status','target_uuid','document_name','type','name','name_truncated','next_call'} and value['target_uuid']==uuid and value['document_name']=='Actor' and value['type']=='character' and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and value['next_call']=={'tool':'read_actor','arguments':{'actor_uuid':uuid}})
+    if row['section']!='abilities' or mapped['concept']!='familiar_ability' or p['mapping']!='pf2e.familiar.ability.v1' or p['limitations']!=['owned_action_reference_not_complete_or_active_ability','ability_scope_requires_description']:return False
+    if row['key']=='abilities:familiar:denied':return raw==[] and value==dict(status='denied',target_uuid=None)
+    if not 3<=len(raw)<=202:return False
+    uuid=raw[0]['document_uuid']
+    if not _casting_owned(uuid,identity) or row['key']!='abilities:familiar:'+uuid or any(r['document_uuid']!=uuid for r in raw):return False
+    if [r['path'] for r in raw[:2]]!=['/name','/type'] or not all(r['present'] for r in raw[:2]) or type(raw[0]['value']) is not str or raw[1]['value']!='action':return False
+    traits=raw[2:]
+    if len(traits)==1 and traits[0]['path']=='/system/traits/value':
+        if traits[0]['present'] and (type(traits[0]['value']) is not list or traits[0]['value']!=[]):return False
+    elif any(r['path']!='/system/traits/value/'+str(i) or not r['present'] or type(r['value']) is not str for i,r in enumerate(traits)):return False
+    expected=dict(status='resolved',target_uuid=uuid,document_name='Item',type='action',name=raw[0]['value'][:256],name_truncated=len(raw[0]['value'])>256,ability_kind='unclassified')
+    if identity['instance'] is not None:expected['token_uuid']=identity['instance']['token_uuid']
+    return value==expected and type(value.get('name_truncated')) is bool
+
+
 def _lore_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     """PF2e-specific Lore8.6.1 source semantics depend on actual owner type.
 
@@ -2261,6 +2350,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return False
     if path in SOURCE_PATHS:
         return True
+    if identity is not None and identity['document_name']=='Actor' and identity['type']=='familiar':
+        return _familiar_spec(path) is not None or path=='/system/details/creature/value'
     if identity is not None and identity['document_name']=='Actor' and identity['type']=='character':
         return _character_spec(path) is not None or _character_note_spec(path) is not None
     if identity is not None and identity['document_name']=='Actor' and identity['type']=='npc':
@@ -2836,6 +2927,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Actor' and identity['type']=='familiar' and row['section'] in ('identity','abilities') and row['key']!='identity':
+        return _familiar_relationship(row,identity)
     # PF2e-specific transformed statistics are admitted only at this narrow gate.
     if identity['document_name']=='Actor' and row['section']=='statistics':
         return _actor_current_record(row,identity)
@@ -2938,7 +3031,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if identity['document_name']=='Actor' and identity['type']=='character' and row['section'] in ('source','description') and not _character_record(row,identity):
         return False
-    if identity['document_name']=='Actor' and row['section']=='description' and identity['type'] not in ('npc','character'):
+    if identity['document_name']=='Actor' and identity['type']=='familiar' and row['section'] in ('source','description') and not _familiar_record(row,identity):
+        return False
+    if identity['document_name']=='Actor' and row['section']=='description' and identity['type'] not in ('npc','character','familiar'):
         return False
     if identity['document_name'] == 'Actor' and row['section'] == 'skills' and not _lore_specialty(row, identity):
         return False
@@ -2992,6 +3087,20 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     if result['identity']['document_name']=='Actor' and result['identity']['type']=='npc':
                         pending={'strikes':'other_attacks_pending','abilities':'other_abilities_pending'}
                         valid = valid and all(row['status']=='partial' and pending[row['name']] in row['reasons'] for row in rows if row['name'] in pending)
+                    if result['identity']['document_name']=='Actor' and result['identity']['type']=='familiar':
+                        # PF2e-specific source relationships never prove active abilities.
+                        for section in rows:
+                            relevant=[r for r in result['records'] if r.get('section')==section['name']]
+                            if section['name']=='abilities':
+                                valid = valid and section['status']=='partial' and 'other_abilities_pending' in section['reasons'] and set(section['reasons'])<={'other_abilities_pending','related_items_denied','pagination'}
+                                if any(r.get('key')=='abilities:familiar:denied' for r in relevant):valid = valid and 'related_items_denied' in section['reasons']
+                            if section['name']=='identity':
+                                reasons=[reason for reason in section['reasons'] if reason!='pagination']
+                                valid = valid and (section['status']=='complete' and section['reasons']==[] or section['status']=='partial' and (reasons==[] and 'pagination' in section['reasons'] or len(reasons)==1 and reasons[0] in ['familiar_master_'+s for s in ('missing','unassociated','denied','unsupported','unverified')]))
+                                for r in relevant:
+                                    if r.get('key')=='identity:familiar_master':
+                                        status=r['mapped']['value']['status']
+                                        valid = valid and reasons==([] if status=='resolved' else ['familiar_master_'+status])
                     valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
                     if valid and result['identity']['document_name']=='Actor':
                         valid = all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
@@ -3139,7 +3248,7 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     names/paths/local IDs are invalid. Copy UUIDs from discovery/reference identity
     records. A token reads token.actor current state, never silently its base.
     Synthetic actor UUIDs require token_uuid instead. Default sections identity,
-    source expose common selected metadata; type-specific full mapping is staged.
+    source expose common metadata and selected type-specific persisted fields.
     Known sections description/build/statistics/skills/strikes/abilities/spellcasting/inventory/
     state/effective can be unsupported; get_actor_types reports delivered support.
     Sections must be unique/nonempty (at most 12). PF2e character/npc/familiar only;
@@ -3170,7 +3279,29 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     state or target-context calculations are supplied by this section.
     Explicit description returns NPC
     stored blurb, publicNotes and privateNotes only, including GM-private biography;
-    default source never includes them. Familiar description is unsupported.
+    default source never includes them. Familiar source preserves nullable stored
+    master Character local ID/attribute code, integer nonnegative HP/temporary HP
+    and optional temporary-HP source ID; these are not master-derived statistics.
+    Explicit familiar description returns exact /system/details/creature/value
+    text in fragments of at most6000 UTF-16 units, with ordinary absent markers.
+    Familiar identity record identity:familiar_master maps concept familiar_master
+    with mapping pf2e.familiar.master.v1 and limitation
+    stored_master_reference_not_current_statistics. Resolved values contain status,
+    target_uuid, document_name Actor, type character, name, name_truncated and
+    next_call for read_actor of the actual world Character. Missing, unassociated,
+    denied, unsupported and unverified references withhold target_uuid and make
+    identity partial with familiar_master_<status>; no master totals are supplied.
+    Familiar abilities records abilities:familiar:<owned Item UUID> map concept
+    familiar_ability with mapping pf2e.familiar.ability.v1 and limitations
+    owned_action_reference_not_complete_or_active_ability and
+    ability_scope_requires_description. They list actual owned action Items with bounded
+    source trait evidence (at most200 strings), ability_kind unclassified and
+    optional token_uuid. Follow target_uuid with read_item for category/prose;
+    traits and names do not establish familiar/master scope or active benefits.
+    Abilities is always partial with other_abilities_pending; related_items_denied
+    adds an anonymous denied marker. Familiar statistics remains unsupported
+    with master_current_contract_pending. Neither empty references nor source
+    HP establishes complete current familiar mechanics.
     Character source exposes PF2e8.6.1 recorded level, nullable manual attribute
     modifiers, identity/language codes, XP, source HP/temporary HP/stamina, skill
     ranks, selected resources and persisted build choices. Null abilities remain

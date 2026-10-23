@@ -49,8 +49,10 @@ test('biography missing malformed unsupported and permission boundaries remain d
  f.source.system.details.publicNotes={secret:'no disclosure'};
  await assert.rejects(readActor({actor_uuid:f.actor.uuid,sections:['description']}),e=>e.rpcError.code==='ReadFailed'&&!e.message.includes('disclosure'));
  f.actor.type='familiar';f.source.type='familiar';
- const unsupported=await readActor({actor_uuid:f.actor.uuid,sections:['description']});
- assert.equal(unsupported.sections[0].status,'unsupported');assert.deepEqual(unsupported.records,[]);
+ const familiar=await readActor({actor_uuid:f.actor.uuid,sections:['description']});
+ assert.equal(familiar.sections[0].status,'complete');
+ assert.equal(familiar.records.length,1);assert.equal(familiar.records[0].raw[0].path,'/system/details/creature/value');
+ assert.equal(familiar.records[0].raw[0].present,false);
  game.user.isGM=false;
  await assert.rejects(readActor({actor_uuid:f.actor.uuid,sections:['description']}),e=>e.rpcError.code==='PermissionDenied');
 });

@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; effective views gated |
-| Implementation status | Not started |
+| Implementation status | Source implemented |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -20,9 +20,16 @@ As a GM-trusted LLM, I can read a `familiar` Actor in book terminology while pre
 
 ## Source checkpoint: ACT-familiar
 
-- [ ] Extract identity/name/type/UUID and version/source/parent context through CORE-extract. Selected `system` fields: `master.id`, `master.ability`, `attributes.hp.value`, `attributes.hp.temp`, `details.creature.value`; source schema explicitly omits ordinary independent attributes/saves/skills.
-- [ ] Retain bounded original notes/descriptions and unknown codes. Label every statistic's source/effective basis; do not fill omissions with zeroes. Keep assignment/control separate from subtype.
-- [ ] Return embedded Item summaries and next-reader links; basic reading must work before individual Item readers and joins are complete.
+- [x] Extract identity/name/type/UUID and version/source/parent context through CORE-extract. Selected `system` fields: `master.id`, `master.ability`, `attributes.hp.value`, `attributes.hp.temp`, `details.creature.value`; source schema explicitly omits ordinary independent attributes/saves/skills.
+- [x] Retain bounded original notes/descriptions and unknown codes. Label every statistic's source/effective basis; do not fill omissions with zeroes. Keep assignment/control separate from subtype.
+- [x] Return embedded Item summaries and next-reader links; basic reading must work before individual Item readers and joins are complete.
+
+Source checkpoint verified on Foundry14.369/PF2e8.6.1; see
+[field contracts](../familiar-fields.md) and [verification](../familiar-verification.md).
+Identity resolves the stored world-character master claim without the system's
+master getter. Owned action references remain unclassified: this schema does
+not encode familiar/master benefit scope; read their exact Item descriptions.
+Integrated casting/state and master-derived statistics remain open below.
 
 ## Integrated checkpoint: M-FAMILIAR
 

@@ -42,6 +42,8 @@ import { loreFields } from './actorLore.js';
 import { npcFields, npcNoteFields } from './actorNpc.js';
 import { characterFields, characterNoteFields } from './actorCharacter.js';
 import { currentStatisticFields } from './actorCurrent.js';
+import { familiarFields, familiarNoteFields, familiarMasterField } from './actorFamiliar.js';
+import { familiarMasterRelationship, familiarAbilityRecords } from './actorFamiliarRelationships.js';
 import { effectFields } from './actorEffect.js';
 import { conditionFields } from './actorCondition.js';
 import { conditionReferenceFields,conditionRelationships } from './actorConditionRelationships.js';
@@ -84,6 +86,8 @@ function selection(target, sections) {
   let lore=[];
   let npc=[];
   let character=[];let characterNotes=[];
+  let familiar=[];let familiarNotes=[];let familiarMaster=null;
+  let familiarAbilities={records:[],reasons:[]};
   let currentStatistics={fields:[],reasons:[]};
   let effect=[];
   let condition=[];
@@ -270,6 +274,16 @@ function selection(target, sections) {
       currentStatistics=currentStatisticFields(transformed);
     }catch{fail('ReadFailed','Selected transformed statistics do not match the verified schema or cannot be serialized.','Inspect this Actor in the supported Foundry/PF2e runtime; missing current fields are not replaced with source values or runtime getters.');}
   }
+  // PF2e-specific FamiliarSystemSource8.6.1: source master ID/attribute and HP,
+  // never the mutating master getter or independent creature statistics.
+  if(target.document.documentName==='Actor'&&source.type==='familiar'){
+    try{
+      if(sections.includes('source'))familiar=familiarFields(source);
+      if(sections.includes('description'))familiarNotes=familiarNoteFields(source);
+      if(sections.includes('identity'))familiarMaster=familiarMasterField(source);
+      if(sections.includes('abilities'))familiarAbilities=familiarAbilityRecords(target);
+    }catch{fail('ReadFailed','Selected familiar source or owned ability references do not match the verified schema or bounds.','Inspect stored master/HP/creature source; use list_actor_items and read_item for selected actions. No master-derived values or ability activation are substituted.');}
+  }
   // PF2e-specific CharacterSystemSource8.6.1 persisted fields, not prepared
   // modifiers or resource maxima; actorCharacter.js pins the schema contract.
   if(target.document.documentName==='Actor'&&source.type==='character'){
@@ -414,7 +428,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, currentStatistics, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, familiar, familiarNotes, familiarMaster, familiarAbilities, currentStatistics, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -453,6 +467,12 @@ async function actionRelationship(target,selected) {
 /** PF2e-specific detached source+immediate action relationship snapshot. */
 async function snapshot(target,sections) {
   const selected=selection(target,sections);
+  // PF2e-specific familiar8.6.1 nullable world-character master claim, resolved
+  // through the same public permission-aware Actor boundary, never .master.
+  if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('identity')){
+    try{selected.familiarMaster=await familiarMasterRelationship(target,selected.familiarMaster);}
+    catch{fail('ReadFailed','The stored familiar master reference could not be inspected safely.','Inspect the familiar master setting and retry identity; no master getter or derived statistics are read.');}
+  }
   if (target.document.type==='action'&&sections.includes('relationships')) selected.relationship=await actionRelationship(target,selected);
   if(target.document.type==='effect'&&sections.includes('relationships'))selected.effectRelationships=await effectRelationships(selected.effectReferences);
   if(target.document.type==='condition'&&sections.includes('relationships'))selected.conditionRelationships=conditionRelationships(target,selected.conditionReferences);
@@ -661,7 +681,13 @@ export async function getActorTypes(params = {}) {
       section.limitations=['NPC actual owned melee/action Item references only; sections remain partial. Other Actor types and effective attack/ability lists remain unsupported.'];
     }
     const description=result.actor_sections.find(entry=>entry.name==='description');
-    description.limitations=['Explicit selection only: NPC blurb/publicNotes/GM-private privateNotes, or character biography/language details with exact bounded prose and edict/anathema list markers. Familiar biography remains unsupported.'];
+    description.limitations=['Explicit selection only: NPC blurb/publicNotes/GM-private privateNotes, character biography/language details with edict/anathema list markers, or familiar creature description. Exact bounded prose is retained without enrichment or execution.'];
+    // PF2e-specific familiar8.6.1 source and world-character master identity;
+    // these schema contracts do not establish master-derived current values.
+    const familiar=result.actor_types.find(entry=>entry.type==='familiar');
+    familiar.limitations=['Selected persisted master ID/attribute and HP plus explicit creature description are delivered. Identity resolves the nullable world-character master claim with explicit unresolved statuses. Abilities lists actual owned action Items as unclassified references; read_item supplies their prose. Current master-derived statistics, benefit activation and full integrated views remain unsupported.'];
+    familiar.verification={deterministic:{status:'passed',evidence:['tests/js/actor-familiar.test.js','tests/js/actor-familiar-relationships.test.js','tests/js/actor-familiar-readers.test.js','tests/test_actor_familiar.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/familiar-verification.md','scripts/actor-familiar-live-check.py']}};
+    result.actor_sections.find(entry=>entry.name==='abilities').limitations=['NPC actual owned action Item references and familiar owned action references are delivered; familiar/master benefit scope requires reading Item prose. Sections remain partial; active benefits and other Actor ability lists remain unsupported.'];
     const npc=result.actor_types.find(entry=>entry.type==='npc');
     npc.effective_supported=true;
     npc.limitations=['Authored NPC source statistics and Lore references are delivered. Explicit statistics selects bounded transformed attributes, defenses, Perception/vision and movement; live elite adjustments reflect Foundry data, not local arithmetic. This section remains partial, and full integrated/current views and target-context calculations are unfinished. Explicit description retains bounded biography notes.'];
@@ -693,14 +719,15 @@ export async function getActorTypes(params = {}) {
 async function read(target,params,sections,tool) {
   const selected = await snapshot(target,sections); const revision = await digest(selected);
   const records = [];
+  if(selected.familiarMaster?.record)records.push(selected.familiarMaster.record);
   if (sections.includes('source')) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific character8.6.1 source keeps nullable manual attributes and
     // recorded ranks/resources separate from transformed statistics.
-    for(const field of selected.character){
+    for(const [fields,mapping] of [[selected.character,'pf2e.character.source.v1'],[selected.familiar,'pf2e.familiar.source.v1']])for(const field of fields){
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       if(Object.hasOwn(field,'mapped_value'))entry.mapped.value=field.mapped_value;
-      entry.provenance.mapping='pf2e.character.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+      entry.provenance.mapping=mapping;entry.provenance.limitations=[...field.limitations];records.push(entry);
     }
     // PF2e-specific descriptors retain persisted fields. Source mappings never
     // substitute carried gear, prepared statistics, effective usage or Bulk.
@@ -713,6 +740,7 @@ async function read(target,params,sections,tool) {
     }
   }
   if(target.document.documentName==='Actor'&&sections.includes('spellcasting'))records.push(...selected.castingView.records);
+  if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('abilities'))records.push(...selected.familiarAbilities.records);
   // PF2e-specific8.6.1 current document-data leaves retain transformed basis;
   // source fields at the same path remain separate source-section records.
   for(const field of selected.currentStatistics.fields){
@@ -800,7 +828,7 @@ async function read(target,params,sections,tool) {
       provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.action.self_effect.v1',limitations:selected.relationship.reason?[selected.relationship.reason]:[]}});
   }
   if (sections.includes('description')) {
-    let fields=target.document.documentName==='Actor'?(target.document.type==='character'?selected.characterNotes:selected.npcNotes):target.document.type==='spell'?selected.spellDescriptions:
+    let fields=target.document.documentName==='Actor'?(target.document.type==='character'?selected.characterNotes:target.document.type==='familiar'?selected.familiarNotes:selected.npcNotes):target.document.type==='spell'?selected.spellDescriptions:
       ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])].map(path=>({path,present:Object.hasOwn(selected.selected,path),value:selected.selected[path],concept:path==='/system/description/value'?'description':'unidentified_description'}));
     if(target.document.documentName==='Item'&&target.document.type==='consumable')fields.push(...selected.containedDescriptions);
     for (const field of fields) {
@@ -813,8 +841,8 @@ async function read(target,params,sections,tool) {
         const entry=record(target.identity.uuid,path,present,value,'description',concept);
         if(target.document.documentName==='Item'&&(target.document.type==='spell'||(target.document.type==='consumable'&&path.startsWith('/system/spell/system/')))){entry.provenance.mapping='pf2e.spell.source.v1';entry.provenance.limitations=['source_only_no_spell_casting_or_variant_application'];}
         if(target.document.documentName==='Actor') {
-          entry.provenance.mapping=target.document.type==='character'?'pf2e.character.notes.v1':'pf2e.npc.notes.v1';
-          entry.provenance.limitations=target.document.type==='character'?[...field.limitations]:['Exact stored NPC biography; public and GM-private notes remain separate source paths. No enrichment is executed.'];
+          entry.provenance.mapping=target.document.type==='character'?'pf2e.character.notes.v1':target.document.type==='familiar'?'pf2e.familiar.notes.v1':'pf2e.npc.notes.v1';
+          entry.provenance.limitations=['character','familiar'].includes(target.document.type)?[...field.limitations]:['Exact stored NPC biography; public and GM-private notes remain separate source paths. No enrichment is executed.'];
         }
         return entry;
       };
@@ -856,6 +884,15 @@ async function read(target,params,sections,tool) {
     sections:sections.map(name=>({name,status:complete(name)?'complete':(isContainer&&name==='relationships')||name==='source'||(castingSection&&name==='spellcasting')||(inventorySection&&name==='inventory')||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
       reasons:complete(name)?[]:isFeat&&name==='source'&&selected.featSelectionIssues.length?['unsupported_selection_values']:inventorySection&&name==='inventory'?selected.inventoryView.reasons:isContainer&&name==='relationships'?selected.containment.reasons:castingSection&&name==='spellcasting'?selected.castingView.reasons:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?(isCastingEntry?[...new Set(selected.castingIssues.map(issue=>issue.reason))]:[PENDING]):['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':(isFeat||isDeity||isClass||isHeritage||isBackground||isAncestry||isKit||isBook)?'Selected source and explicit immediate definition links only; effective Actor statistics, acquired contributions and gameplay execution remain unsupported.':isTreasure?'Stored treasure category, quantity and denomination price/per basis only. Valuables on supported Actors remain readable despite loot-Actor exclusion. No coin conversion, doubled stack value, sale proceeds, usage or investment state is inferred.':isContainer?'Stored container Bulk and containment claims only; capacity is not current contents Bulk, ignored Bulk is conditional and no Actor total is calculated. Explicit relationships use actual owner scope, retain each descendant once and report cycles or unresolved parents.':isCastingEntry?'Stored casting mode, proficiency, attack/DC and per-slot/preparation source only. Prepared slot value zero does not establish exhaustion; repeated preparations stay separate. Focus pools and innate uses are not inferred from slot counters. No final PC statistics, usable casts or resource expenditure is calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable stock, uses and damage/healing plus contained spell definitions only. Nested spells retain source-path identity on this Item; no independent spell UUID, consumption, frequency expenditure, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   if(isFeat&&selected.featSelectionIssues.length)base.limitations.push('Unsupported recorded selection values are withheld; source is partial. Only stored strings and finite numbers are selected; no acquisition, eligibility or UUID meaning is inferred.');
+  if(target.document.documentName==='Actor'&&target.document.type==='familiar'){
+    for(const section of base.sections){
+      if(['source','description'].includes(section.name)){section.status='complete';section.reasons=[];}
+      if(section.name==='identity'){section.reasons=[...selected.familiarMaster.reasons];section.status=section.reasons.length?'partial':'complete';}
+      if(section.name==='abilities'){section.status='partial';section.reasons=[...selected.familiarAbilities.reasons];}
+    }
+    base.limitations=base.limitations.filter(message=>message!=='Type-specific system fields and effective mappings are pending their stories.');
+    base.limitations.push('Familiar selected source includes nullable world-character master ID/attribute and stored HP, never independent attributes or master-derived statistics. Identity resolves the stored master claim with explicit missing/unassociated/denied/unsupported/unverified states and a canonical read_actor follow-up. Creature prose requires description. Abilities lists actual owned action Items only, always unclassified: this schema has no verified machine-readable familiar/master benefit discriminator; follow read_item for exact prose. These references do not establish active benefits, ordinary Strikes, or pet/animal-companion roles.');
+  }
   if(target.document.documentName==='Actor'&&sections.includes('statistics')){
     const section=base.sections.find(row=>row.name==='statistics');
     if(['character','npc'].includes(target.document.type)){

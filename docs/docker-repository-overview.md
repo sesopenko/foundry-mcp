@@ -92,6 +92,11 @@ language notes require explicit description reads. Explicit statistics adds sele
 transformed attributes, AC/HP, saves, Perception/vision and movement for characters
 and NPCs, retaining a separate basis from source. The section remains partial;
 full current views, skill totals, generated Strikes and familiar derivation remain gated.
+Familiar readers preserve stored master linkage and HP; creature prose requires
+explicit description. Identity resolves the world-character master or reports
+an explicit unresolved status. Owned action references retain exact Item
+identities without inferring familiar/master benefit scope; follow `read_item`
+for prose. See the [familiar verification](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/familiar-verification.md).
 
 
 

@@ -371,3 +371,18 @@ inherited fields/getters remain excluded. Full suites pass:341 Python tests
 
 ACT-character and ACT-npc remain Source implemented; the original full integrated
 acceptance is preserved. Completed progress remains30/39 (76.9%).
+
+## Familiar source and master identity checkpoint
+
+ACT-familiar is Source implemented. Selected stored master/HP and explicit
+creature prose retain raw provenance; identity resolves the world-character
+master without the PF2e master getter. Owned action Items retain identities and
+exact traits, always unclassified until their descriptions are read. Integrated
+casting/state and master-derived statistics remain open.
+
+Actual MCP verified 11 familiar records over six pages and 16 owned action
+source/prose pages, canonical master follow-up, nullable unassociated master,
+default prose privacy and unchanged source fingerprints. Both marked temporary
+Actors were removed. See [verification](familiar-verification.md).
+Full suites:347 Python tests (one skipped),460 JavaScript tests. Completed
+progress remains30/39 (76.9%); source checkpoints do not close Actor stories.

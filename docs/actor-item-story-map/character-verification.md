@@ -4,7 +4,8 @@ Evidence date: October 23, 2026. Tested Foundry 14.369 / PF2e 8.6.1. This is the
 ACT-character source checkpoint, not completion of the integrated/current views.
 The [field audit](character-fields.md) records pinned upstream source and reused
 canonical rulebook readings. The [current-statistics proposal](current-statistics-contract.md)
-remains separately unimplemented and unverified.
+has a separately verified partial implementation; see
+[current-statistics verification](current-statistics-verification.md).
 
 `characterFields` admits selected detached `toObject(true)` leaves with mapping
 `pf2e.character.source.v1` and limitation
