@@ -208,3 +208,10 @@ activation, prerequisites, frequency and documented subfeature source fields.
 Category maps preserve the source code and distinguish feats from features.
 Optional schema-defined undefined values remain absent, never defaulted.
 Source-only reads do not execute grants or resolve offered progression.
+
+`actorFeatGrants.js` selects audited persisted grant flags only.
+`actorFeatRelationships.js` resolves explicit grant IDs within the current owner
+and self-effect/suppressed-feature UUIDs without reading targets' source or
+executing rules. Each occurrence retains source provenance; reciprocal causality,
+active benefits and selected choices are not inferred. Shared snapshots detect
+source/identity/permission changes across continuations.

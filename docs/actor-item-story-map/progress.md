@@ -285,3 +285,12 @@ subfeature options without applying them. Four actual compendium definitions
 passed source/prose/fingerprint verification across19 pages and124 records.
 A separate persisted grant schema audit establishes a proposed narrow allowlist;
 acquired grant/selection joins remain to implement. Progress remains26/39 (66.7%).
+
+### Feat persisted reference checkpoint — October 22, 2026
+
+Implemented selected persisted grant flags and explicit same-owner grant-ID,
+self-effect and suppressed-feature references. Deterministic coverage includes
+synthetic ownership, exact target identity, permission/staleness and bounded
+continuations. Live reads verify actual missing/empty states on four definitions,
+21 source pages and132 records. Populated runtime grants, selections and integrated
+acquired-document joins remain open. ITEM-feat stays In progress;26/39 complete.

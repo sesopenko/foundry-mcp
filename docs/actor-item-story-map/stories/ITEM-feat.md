@@ -63,3 +63,14 @@ with exact prose and unchanged source fingerprints. Optional undefined source
 fields remain absent and explicit null stays distinct. Regression suites pass:
 307 Python tests (one skipped),377 JavaScript tests. Relationships remain
 unsupported pending the original persisted-grant and selection evidence gates.
+
+## Persisted reference checkpoint
+
+The audited grant fields are now selected source. Explicit relationships resolve
+actual same-owner IDs and immediate self-effect/suppressed-feature UUIDs, with
+missing/null/empty/unowned and inaccessible targets kept distinct. No reciprocal
+causality, suppression or active benefit is inferred. Deterministic tests cover
+owned/synthetic contexts and identity/permission staleness. The earlier source
+checkpoint's unsupported relationships statement is superseded by this limited
+reference implementation. Selection and acquired multi-contributor joins remain
+unfinished; the story remains In progress.

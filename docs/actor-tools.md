@@ -837,9 +837,28 @@ retain toolkit, immunity and other prose requirements without evaluating eligibi
 Optional undefined source values remain absent; explicit nullable values remain null.
 
 Source-only reading does not resolve or execute GrantItem rules, acquire future
-features, apply subfeatures or infer current benefits. Relationships and effective
-sections remain unsupported at this checkpoint. The
+features, apply subfeatures or infer current benefits. Effective sections remain unsupported. Explicit relationships now resolve
+selected persisted references as described below. The
 [grant audit](actor-item-story-map/feat-grant-contract.md) is a proposed contract,
 separate from implemented behavior. See the
 [field audit](actor-item-story-map/feat-fields.md) and
 [evidence](actor-item-story-map/feat-verification.md).
+
+### Explicit feat references
+
+`source` also exposes only the audited `flags.pf2e.itemGrants` and `grantedBy`
+fields, preserving optional deletion/nesting metadata without executing it.
+`relationships` admits200 aggregate source claims and returns `feat_grant_reference`,
+`feat_granted_by_reference`, `feat_self_effect_reference` or
+`feat_suppressed_feature_reference`, keyed `relationships:feat:<source path>`.
+Grant IDs resolve only within the exact current Actor owner's Items. Unowned
+claims return `unowned`; no base Actor, name or compendium fallback occurs.
+UUID claims require actual effect or feat targets respectively.
+
+Missing fields return `missing`, empty collections `empty`, explicit nullable
+roots `unassociated`. Denied, missing, unsupported and unverified targets withhold
+identity. Resolved values contain actual Item identity and synthetic `token_uuid`
+where needed. Resolution never reads target source or asserts reciprocal grants,
+suppression, causality or active benefits. Source-only reading never hydrates
+these references. Continuations revalidate claims, target identities and permissions.
+Arbitrary flags and `rulesSelections` remain excluded pending a separate allowlist.

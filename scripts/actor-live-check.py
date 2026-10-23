@@ -347,6 +347,16 @@ return JSON.stringify({uuid:doc.uuid,expected,category:s.system.category,revisio
             prose=[r for r in rows if r['section']=='description' and r['raw'][0]['path']=='/system/description/value']
             text=''.join(r['raw'][0]['value'] for r in sorted(prose,key=lambda r:r.get('text',{}).get('start',0)))
             assert hashlib.sha256(json.dumps(text,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()==sample['description_sha256']
+            # Existing compendium fixtures have no acquired grant records. Verify
+            # their explicit absent/empty reference states without manufacturing any.
+            references=payload(await client.call_tool('read_item',dict(item_uuid=sample['uuid'],sections=['relationships'],limit=100)))
+            assert references['pagination']['next_cursor'] is None
+            assert references['sections'][0]['status']=='complete'
+            assert len(references['records'])==4
+            expected_states={'/flags/pf2e/itemGrants':'missing','/flags/pf2e/grantedBy':'missing','/system/selfEffect':'missing','/system/subfeatures/suppressedFeatures':'empty'}
+            for row in references['records']:
+                assert row['mapped']['value']==dict(status=expected_states[row['raw'][0]['path']],target_uuid=None)
+                assert row['provenance']['mapping']=='pf2e.feat.reference.v1'
             after=probe(payload(await client.call_tool('execute_javascript',{'code':feat_probe})))
             assert after['revision']==sample['revision']
             feat_source_records+=len(rows)

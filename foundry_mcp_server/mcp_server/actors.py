@@ -1418,6 +1418,14 @@ def _feat_spec(path):
 
     Opaque subfeature keys retain escaped source provenance, never document IDs.
     """
+    if path=='/flags/pf2e/itemGrants':return 'feat_grant_entries','object',False
+    if path=='/flags/pf2e/grantedBy':return 'feat_granted_by_source','null',True
+    match=re.fullmatch(r'/flags/pf2e/itemGrants/([^/]*)/(id|onDelete|nested)',path)
+    if match:
+        if re.search(r'~(?![01])',match[1]):return None
+        return {'id':('feat_grant_item_id','string',False),'onDelete':('feat_grant_delete_policy','string',False),'nested':('feat_grant_nested','boolean',True)}[match[2]]
+    if path=='/flags/pf2e/grantedBy/id':return 'feat_granted_by_item_id','string',False
+    if path=='/flags/pf2e/grantedBy/onDelete':return 'feat_granted_by_delete_policy','string',False
     if path in FEAT_SOURCE:return FEAT_SOURCE[path]
     for base,concept in FEAT_ARRAYS.items():
         if path==base:return concept,'array',False
@@ -1456,6 +1464,61 @@ def _feat_record(row,identity):
             'rank':integer and 1<=value<=4,'range':numeric and 5<=value<=300,
             'positive_integer':integer and value>=1,'nonnegative_integer':integer and value>=0,
             'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
+
+
+def _feat_relationship(row, identity):
+    """PF2e-specific feat8.6.1 persisted grants/selfEffect/suppressedFeatures.
+
+    Pinned feat/data.ts and item/base/data/system.ts at revision
+    28d9d156f252d084371d994dc359509b49eadf18 define source claims.
+    Local grant IDs resolve only within the actual Actor owner; UUID claims
+    retain exact identity. Resolution establishes no acquisition or active benefit.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='source' or type(raw['present']) is not bool or raw['present']!=('value'in raw):return False
+    path=raw['path']
+    if type(path) is not str or row['key']!='relationships:feat:'+path:return False
+    local=False;marker=False
+    if path=='/flags/pf2e/itemGrants':concept='feat_grant_reference';marker=True;empty={}
+    elif re.fullmatch(r'/flags/pf2e/itemGrants/([^/]*)/id',path):
+        key=path.split('/')[4]
+        if re.search(r'~(?![01])',key):return False
+        concept='feat_grant_reference';local=True
+    elif path in ('/flags/pf2e/grantedBy','/flags/pf2e/grantedBy/id'):
+        concept='feat_granted_by_reference';marker=path.endswith('/grantedBy');empty=None;local=not marker
+    elif path in ('/system/selfEffect','/system/selfEffect/uuid'):
+        concept='feat_self_effect_reference';marker=path.endswith('/selfEffect');empty=None
+    elif re.fullmatch(r'/system/subfeatures/suppressedFeatures(?:/(0|[1-9][0-9]*))?',path):
+        concept='feat_suppressed_feature_reference';marker=path=='/system/subfeatures/suppressedFeatures';empty=[]
+    else:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.feat.reference.v1',limitations=['persisted_reference_not_active_benefit']):return False
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!=concept or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if not raw['present']:return value==dict(status='missing',target_uuid=None)
+    claim=raw['value']
+    if marker:
+        if type(claim) is not type(empty) or claim!=empty:return False
+        return value==dict(status='unassociated' if empty is None else 'empty',target_uuid=None)
+    if type(claim) is not str:return False
+    valid_claim=(len(claim)<=512 and re.fullmatch(r'[^.\s/#]+',claim) is not None) if local else _effect_reference_uuid(claim,'Item')
+    if not valid_claim:return value==dict(status='unsupported',target_uuid=None)
+    owner=identity['actor']
+    if local and owner is None:return value==dict(status='unowned',target_uuid=None)
+    if value.get('status')!='resolved':return value in [dict(status=status,target_uuid=None) for status in ('missing','denied','unsupported','unverified')]
+    if local:
+        if re.fullmatch(r'[^.\s#]+',claim) is None:return False
+        target=owner['uuid']+'.Item.'+claim
+    else:target=claim
+    if not _effect_reference_uuid(target,'Item'):return False
+    synthetic=re.fullmatch(r'Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+\.Item\.[^.\s#]+',target)
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}|({'token_uuid'} if synthetic else set())
+    if set(value)!=keys or value['target_uuid']!=target or value['document_name']!='Item' or type(value['type']) is not str or value['type'] not in ITEM_TYPES-{'affliction'}:return False
+    if concept=='feat_self_effect_reference' and value['type']!='effect' or concept=='feat_suppressed_feature_reference' and value['type']!='feat':return False
+    return type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(target.split('.')[:4]))
 
 
 # PF2e-specific DeitySystemSchema8.6.1; authored options, no active benefits.
@@ -2450,6 +2513,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='feat' and row['section']=='relationships':
+        return _feat_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='deity' and row['section']=='relationships':
         return _deity_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='class' and row['section']=='relationships':
@@ -2892,7 +2957,23 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     eligibility, acquired grants, active toggles, effective benefits or resources.
     Lists/maps are bounded to 12000 entries each; absent/null/empty remain
     distinct, malformed/oversized source fails ReadFailed. No rule elements,
-    arbitrary flags, physical fields or prepared values are read.
+    arbitrary flags, physical fields or prepared values are read. Selected
+    flags.pf2e.itemGrants opaque-key id/onDelete/nested and grantedBy id/onDelete
+    retain persisted source claims; onDelete codes are never executed. Source-only
+    reads perform no relationship hydration. Explicit relationships resolves up
+    to 200 immediate feat_grant_reference, feat_granted_by_reference,
+    feat_self_effect_reference and feat_suppressed_feature_reference claims at
+    relationships:feat:<escaped source path>. Mapping pf2e.feat.reference.v1
+    has limitation persisted_reference_not_active_benefit. Every row has one
+    exact source contributor. Grant IDs resolve only within the actual Actor
+    owner, retaining synthetic token identity; unowned definitions return unowned.
+    UUID claims retain exact canonical identity; self-effects require effect
+    Items and suppression claims require feat Items. Missing/empty/unassociated/
+    unowned/denied/unsupported/unverified outcomes retain target_uuid=null.
+    Resolved values contain status, target_uuid, document_name, type, name,
+    name_truncated and token_uuid only for synthetic targets. Follow read_item
+    with those selectors. No recursive expansion, target source reading,
+    reciprocal/causality claim, acquisition inference or active benefit assertion.
     deity Items expose PF2e8.6.1 authored category, nullable sanctification
     modal/what, primary/alternate domains, font, attributes, nullable skill,
     weapons, keyed spell UUIDs, otherTags, slug and publication. Missing fields

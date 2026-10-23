@@ -111,3 +111,15 @@ fingerprints. The full existing live regression check passed, and the dedicated
 GM browser had zero console errors. No grant or selection relationship was read
 or inferred. Full offline suites passed:307 Python tests (one skipped),377
 JavaScript tests. This establishes selected-source support, not story completion.
+
+## Persisted reference checkpoint
+
+The reusable fresh-client live check passed four actual definitions with selected
+grant-source markers:21 source pages and132 records. Each definition's explicit
+relationships returned the four actual missing/empty grant, granting-parent,
+self-effect and suppressed-feature states; no gameplay data was created to force
+a populated case. Source/prose/fingerprint comparisons and existing regressions
+passed. Owned/synthetic resolution, type restrictions, permission boundaries,
+source/target changes and aggregate bounds are verified deterministically,
+including actual paginated JavaScript DTOs through the Python validator.
+This does not close the existing populated-grant live gap or the full feat story.
