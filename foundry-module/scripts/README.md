@@ -156,3 +156,12 @@ content claims with the public document boundary. Duplicate indexes remain
 separate; no target source or recursive contents are read. Book contents do not
 establish formula ownership or spell preparation. Live book fixtures are absent;
 discovery retains deterministic support with live verification not_run.
+
+
+`actorKit.js` selects the PF2e-specific8.6.1 nonphysical bundle schema, including
+keyed nesting and own price fields. `actorKitRelationships.js` returns bounded
+explicit immediate component links, never generated possessions or target source.
+`actorItemReferences.js` shares the public Item/owner/token identity boundary
+between book and kit claims. No import, inventory generation or recursive target
+kit expansion is performed. Kits have live compendium verification; book
+representative-fixture verification remains not_run.

@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readItem,getActorTypes} from '../../foundry-module/scripts/actors.js';
+function fixture(context='world'){
+ const source={name:'Kit',type:'kit',system:{items:{'bag/~':{uuid:'Item.bag',img:'bag.webp',name:'Container definition',quantity:1,isContainer:true,items:{rope:{uuid:'Item.rope',img:'rope.webp',name:'Rope',quantity:2,isContainer:false,items:{}},repeat:{uuid:'Item.rope',img:'rope.webp',name:'Other occurrence',quantity:5,isContainer:false,items:{}}}}},price:{value:{gp:1,sp:0},per:10,sizeSensitive:undefined},traits:{value:[],otherTags:[]},description:{value:'Exact kit prose'}}};
+ const owner=context==='token'?{documentName:'Actor',uuid:'Scene.s.Token.t.Actor.a',id:'a',name:'Owner',type:'npc',items:new Map(),testUserPermission:()=>true}:null;
+ const pack=context==='pack'?{collection:'test.kits',title:'Kit pack',testUserPermission:()=>true}:null;
+ const kit={documentName:'Item',id:'kit',uuid:owner?owner.uuid+'.Item.kit':pack?'Compendium.test.kits.Item.kit':'Item.kit',name:'Kit',type:'kit',parent:owner,compendium:pack,folder:null,testUserPermission:()=>true,toObject:basis=>{assert.equal(basis,true);return structuredClone(source);}};
+ const target={documentName:'Item',id:'rope',uuid:'Item.rope',name:'Rope definition',type:'equipment',parent:null,compendium:null,folder:null,testUserPermission:()=>true,toObject:()=>{throw Error('target source must not be recursively expanded');}};
+ const bag={...target,id:'bag',uuid:'Item.bag',name:'Bag',type:'backpack'};const docs=new Map([[kit.uuid,kit],[target.uuid,target],[bag.uuid,bag]]),lookups=[];
+ let token=null;if(owner){const scene={documentName:'Scene',uuid:'Scene.s',name:'Scene',testUserPermission:()=>true};token={documentName:'Token',uuid:'Scene.s.Token.t',name:'Token',parent:scene,actor:owner,baseActor:null,isLinked:false,testUserPermission:()=>true};owner.token=token;owner.items.set('kit',kit);docs.set(token.uuid,token);}
+ globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map(),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>{lookups.push(uuid);return docs.get(uuid);}}};
+ return {source,kit,target,bag,docs,lookups,token,args:{item_uuid:kit.uuid,...(token?{token_uuid:token.uuid}:{})}};
+}
+async function all(f,sections,limit=7){let cursor,rows=[],last;do{last=await readItem({...f.args,sections,limit,max_bytes:8000,...(cursor?{cursor}:{})});rows.push(...last.records);cursor=last.pagination.next_cursor;}while(cursor);return {rows,last};}
+test('kit source preserves nested occurrences, keyed paths, quantities and independent price basis in world pack and token scope',async()=>{
+ for(const scope of ['world','pack','token']){const f=fixture(scope),before=JSON.stringify(f.source),{rows,last}=await all(f,['source','description','effective']);assert.equal(last.sections[0].status,'complete');assert.equal(last.sections[2].status,'unsupported');assert.equal(new Set(rows.map(r=>r.key)).size,rows.length);assert.equal(rows.find(r=>r.raw[0]?.path==='/system/items/bag~1~0/items/rope/quantity').raw[0].value,2);assert.equal(rows.find(r=>r.raw[0]?.path==='/system/items/bag~1~0/items/repeat/quantity').raw[0].value,5);assert.equal(rows.find(r=>r.raw[0]?.path==='/system/price/per').raw[0].value,10);assert.equal(rows.find(r=>r.raw[0]?.path==='/system/price/sizeSensitive').raw[0].present,false);assert.equal(rows.filter(r=>r.mapped.concept==='kit_component_uuid').length,3);assert.ok(!rows.some(r=>r.raw[0]?.path==='/system/equipped/invested'));assert.ok(!f.lookups.includes('Item.rope'));assert.equal(JSON.stringify(f.source),before);}
+});
+test('explicit kit links retain distinct duplicate occurrences but resolve only immediate named targets',async()=>{
+ const f=fixture(),{rows}=await all(f,['relationships'],100);assert.equal(rows.length,3);assert.equal(new Set(rows.map(r=>r.key)).size,3);assert.ok(rows.every(r=>r.mapped.value.status==='resolved'));assert.equal(rows.filter(r=>r.mapped.value.target_uuid==='Item.rope').length,2);assert.equal(f.lookups.filter(uuid=>uuid==='Item.rope').length,2);assert.equal(f.lookups.filter(uuid=>uuid==='Item.bag').length,2);
+ // A referenced kit may point back to this kit; no recursive source read occurs.
+ f.target.type='kit';assert.equal((await all(f,['relationships'],100)).rows.filter(r=>r.mapped.value.type==='kit').length,2);
+});
+test('kit source and target changes invalidate continuations; source-only requests ignore target permission',async()=>{
+ for(const change of ['source','name','permission']){const f=fixture(),first=await readItem({...f.args,sections:['relationships'],limit:1});if(change==='source')f.source.system.items['bag/~'].items.rope.quantity=3;if(change==='name')f.target.name='Renamed';if(change==='permission')f.target.testUserPermission=()=>false;await assert.rejects(readItem({...f.args,sections:['relationships'],limit:1,cursor:first.pagination.next_cursor}),e=>e.rpcError.code==='ContentChanged');}
+ const f=fixture();f.target.testUserPermission=()=>false;assert.equal((await all(f,['source'],100)).last.sections[0].status,'complete');const {rows}=await all(f,['relationships']);assert.equal(rows.filter(r=>r.mapped.value.status==='denied').length,2);assert.ok(!JSON.stringify(rows).includes('Rope definition'));
+});
+test('kit empty/missing maps and unsupported references stay distinct; oversized resolution and malformed source fail clearly',async()=>{
+ const f=fixture();for(const present of [false,true]){if(present)f.source.system.items={};else delete f.source.system.items;const {rows}=await all(f,['relationships']);assert.equal(rows.length,1);assert.equal(rows[0].raw[0].present,present);assert.equal(rows[0].mapped.value.status,present?'empty':'missing');}
+ f.source.system.items={entry:{uuid:'relative name',quantity:1,isContainer:false,name:'Claim',img:'x.webp',items:{}}};assert.equal((await all(f,['relationships'])).rows[0].mapped.value.status,'unsupported');f.source.system.items.entry.uuid='Item.gone';assert.equal((await all(f,['relationships'])).rows[0].mapped.value.status,'missing');f.source.system.items.entry.quantity=0;await assert.rejects(readItem({...f.args,sections:['source']}),e=>e.rpcError.code==='ReadFailed');
+ f.source.system.items=Object.fromEntries(Array.from({length:201},(_,i)=>[String(i),{uuid:'Item.rope',name:'Entry',quantity:1,img:'x.webp',isContainer:false,items:{}}]));await assert.rejects(readItem({...f.args,sections:['relationships']}),e=>e.rpcError.code==='ReadFailed');assert.ok((await readItem({...f.args,sections:['source'],limit:1})).pagination.next_cursor);
+});
+test('kit discovery distinguishes bundle definitions and non-PF2e rejects before interpretation',async()=>{
+ const f=fixture();const row=(await getActorTypes()).item_types.find(r=>r.type==='kit');assert.equal(row.mapped_supported,true);assert.equal(row.effective_supported,false);game.system.id='other';await assert.rejects(readItem({...f.args,sections:['source']}),e=>e.rpcError.code==='UnsupportedSystem');
+});

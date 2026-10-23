@@ -7,7 +7,7 @@
  * Uses the shared public document boundary; no target source, recursive
  * contents, preparation, acquisition, casting, imports or mutations.
  */
-import {itemTarget,permitted} from './actorDocuments.js';
+import {resolveItemReference} from './actorItemReferences.js';
 const LIMIT=['stored_book_contents_not_ownership_or_preparation'];
 /** PF2e-specific detached book reference source and identity record. */
 function record(target,field,result){
@@ -27,35 +27,12 @@ export async function bookRelationships(target,fields){
  const contents=fields.filter(field=>field.path==='/system/contents'||/^\/system\/contents\/\d+$/.test(field.path));
  if(contents.length>200)throw new TypeError('Book relationships exceed200 source references.');
  const cache=new Map();
- /** PF2e-specific canonical content selector lookup; no source hydration. */
- const resolve=async uuid=>{
-  if(typeof uuid!=='string'||!uuid||uuid.length>512||/\s|#/.test(uuid)||!/^(Item\.|Actor\.|Compendium\.|Scene\.)/.test(uuid))return {status:'unsupported',target_uuid:null};
-  try{
-   const params={item_uuid:uuid};
-   if(uuid.startsWith('Scene.')){
-    const item=await foundry.utils.fromUuid(uuid);
-    if(!item)return {status:'missing',target_uuid:null};
-    if(!permitted(item))return {status:'denied',target_uuid:null};
-    const actor=item.parent;
-    if(item.documentName!=='Item'||actor?.documentName!=='Actor')return {status:'unsupported',target_uuid:null};
-    if(!permitted(actor))return {status:'denied',target_uuid:null};
-    const token=actor.token;
-    if(!token?.uuid)return {status:'unverified',target_uuid:null};
-    params.token_uuid=token.uuid;
-   }
-   const resolved=await itemTarget(params),identity=resolved.identity;
-   if(identity.uuid!==uuid)return {status:'unsupported',target_uuid:null};
-   return {status:'resolved',target_uuid:identity.uuid,document_name:'Item',type:identity.type,name:identity.name,name_truncated:identity.name_truncated,...(resolved.token?{token_uuid:resolved.token.uuid}:{})};
-  }catch(error){
-   const code=error?.rpcError?.code;
-   return {status:code==='PermissionDenied'?'denied':code==='DocumentNotFound'?'missing':['UnsupportedType','InvalidRequest'].includes(code)?'unsupported':'unverified',target_uuid:null};
-  }
- };
+
  const records=[];
  for(const field of contents){
   let result;
   if(field.path==='/system/contents')result={status:field.present?'empty':'missing',target_uuid:null};
-  else{if(!cache.has(field.value))cache.set(field.value,await resolve(field.value));result=cache.get(field.value);}
+  else{if(!cache.has(field.value))cache.set(field.value,await resolveItemReference(field.value));result=cache.get(field.value);}
   records.push(record(target,field,result));
  }
  return records;

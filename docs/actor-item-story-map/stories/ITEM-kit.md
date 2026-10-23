@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -47,3 +47,15 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 A kit is not a PhysicalSystemSource subtype; use shared document extraction and its own items/price schema, not the physical allowlist.
 
 No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+
+
+Selected bundle source and explicit immediate component references are delivered;
+see [field contract](../kit-fields.md) and [verification](../kit-verification.md).
+Actual MCP reads consumed two existing compendium kits, preserved nested
+quantities/names and all14 immediate references, reconstructed exact prose and
+retained source fingerprints. Deterministic tests cover world/owned/token scope,
+maximum nesting, duplicate UUIDs, escaped keys, absent/null/empty maps, strict
+price fields, permission failures and stale continuations. Source-only reads
+never resolve components; explicit links never read target source or recursively
+expand referenced kits. Actor inventory keeps definition references separate
+from actual possessions. No import, activation, game write or release occurred.

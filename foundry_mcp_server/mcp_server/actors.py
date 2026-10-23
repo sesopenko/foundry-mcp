@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -599,6 +599,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
             identity['type'] == 'book' and path in BOOK_ARRAYS or
+            identity['type'] == 'kit' and path in KIT_ARRAYS or
             identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
             identity['type'] == 'backpack' and path in CONTAINER_ARRAYS or
             identity['type'] == 'consumable' and (path in CONSUMABLE_ARRAYS or _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1] == 'array') or
@@ -1128,6 +1129,98 @@ def _book_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific KitSystemSchema8.6.1 definitions; never owned inventory.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/kit/data.ts
+KIT_SOURCE = {'/system/'+p:('kit_'+c,k,n) for p,c,k,n in (
+ ('items','items','object',False),('price/per','price_per','positive_integer',False),
+ ('price/sizeSensitive','price_size_sensitive','boolean',False),
+ *((f'price/value/{c}',f'price_{c}','nonnegative_integer',False) for c in ('pp','gp','sp','cp')),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+KIT_ARRAYS={'/system/traits/value':'kit_trait_code','/system/traits/otherTags':'kit_other_tag_code'}
+
+
+def _kit_spec(path):
+    """PF2e-specific pinned KitSystemSchema finite source paths and escaped keys.
+
+    KitEntriesField permits four entry levels; last-level items is null only.
+    Keys identify bundle definitions, never owned Item IDs or expanded contents.
+    """
+    if path in KIT_SOURCE:return KIT_SOURCE[path]
+    for base,concept in KIT_ARRAYS.items():
+        if path==base:return concept,'array',False
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path):return concept,'string',False
+    parts=path.split('/')
+    if parts[:3]!=['','system','items']:return None
+    tail=parts[3:];level=0
+    while len(tail)>=2:
+        key,leaf=tail[:2]
+        if not key or re.search(r'~(?![01])',key):return None
+        if len(tail)==2:
+            specs={'uuid':('component_uuid','string',False),'img':('component_image','string',False),
+                   'quantity':('component_quantity','positive_integer',False),'name':('component_name','string',False),
+                   'isContainer':('component_is_container','boolean',False),
+                   'items':('component_items','null' if level==3 else 'object',True)}
+            spec=specs.get(leaf)
+            return ('kit_'+spec[0],*spec[1:]) if spec else None
+        if leaf!='items' or level>=3:return None
+        level+=1;tail=tail[2:]
+    return None
+
+
+def _kit_relationship(row,identity):
+    """PF2e-specific kit8.6.1 explicit component UUID claims, never inventory.
+
+    Pinned KitSystemSchema above. Resolving an immediate definition establishes
+    no generated ownership, quantity multiplication or recursive target expansion.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='source' or type(raw['present']) is not bool or raw['present']!=('value'in raw):return False
+    path=raw['path']
+    if type(path) is not str or row['key']!='relationships:kit:'+path:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.kit.component-reference.v1',limitations=['bundle_definition_not_owned_inventory']):return False
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='kit_component_reference' or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if path=='/system/items':return (not raw['present'] and value==dict(status='missing',target_uuid=None)) or (raw['present'] and type(raw['value']) is dict and not raw['value'] and value==dict(status='empty',target_uuid=None))
+    spec=_kit_spec(path)
+    if spec is None or spec[0]!='kit_component_uuid':return False
+    if not raw['present']:return value==dict(status='missing',target_uuid=None)
+    if type(raw['value']) is not str:return False
+    if value.get('status')!='resolved':return value in [dict(status=status,target_uuid=None) for status in ('missing','denied','unsupported','unverified')]
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}
+    synthetic=re.fullmatch(r'Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+\.Item\.[^.\s#]+',raw['value'])
+    if synthetic:keys.add('token_uuid')
+    return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
+
+
+def _kit_record(row,identity):
+    """PF2e-specific kit8.6.1 authored bundle validation; no owned expansion.
+
+    Pinned schema above. Kit price is its own schema, never shared physical
+    quantity, carry state, container membership or effective valuation.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];spec=_kit_spec(path)
+    if path in SOURCE_PATHS:return row['provenance']['mapping']!='pf2e.kit.source.v1'
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    if raw['document_uuid']!=identity['uuid']:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.kit.source.v1',limitations=['bundle_definition_not_owned_inventory']):return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):return False
+    if not raw['present']:return True
+    if value is None:return nullable or kind=='null'
+    return {'string':type(value) is str,'boolean':type(value) is bool,
+            'positive_integer':type(value) in (int,float) and math.isfinite(value) and value%1==0 and value>0,
+            'nonnegative_integer':type(value) in (int,float) and math.isfinite(value) and value%1==0 and value>=0,
+            'array':type(value) is list and not value,'object':type(value) is dict and not value,'null':False}[kind]
+
+
 # PF2e-specific TreasureSystemSchema8.6.1 authored metadata; no derived valuation or sale.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/treasure/data.ts
 TREASURE_SOURCE = {'/system/'+p:('treasure_'+c,k,n) for p,c,k,n in (
@@ -1484,6 +1577,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'kit':
+        return _kit_spec(path) is not None
     if identity['type'] == 'spellcastingEntry':
         return _casting_entry_spec(path) is not None
     if identity['type'] == 'spell':
@@ -1837,6 +1932,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='kit' and row['section']=='relationships':
+        return _kit_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='book' and row['section']=='relationships':
         return _book_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='backpack' and row['section']=='relationships':
@@ -1881,6 +1978,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'kit' and not _kit_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'book' and not _book_record(row, identity):
         return False
@@ -2227,6 +2326,21 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     are resolved per read; oversized selections fail ReadFailed. No recursive
     expansion occurs and duplicate references remain distinct. Book support has
     deterministic coverage only; representative live book fixtures are unavailable.
+    kit Items expose authored bundle component definitions, own price denominations,
+    price.per and sizeSensitive, traits, slug and publication. Kits are not physical
+    possessions: no quantity, carry, investment or container state is inferred.
+    Nested system.items map keys use JSON-pointer escaping (~0 for ~, ~1 for /),
+    retain duplicate UUID claims and have at most four entry levels. Entry uuid,
+    img, quantity, name and isContainer remain source; terminal items is null.
+    relationships exposes kit_component_reference per explicit component uuid
+    with raw source path and status resolved/missing/denied/unsupported/unverified;
+    target_uuid is null unless resolved. Resolved definitions include document_name,
+    type, name, name_truncated and token_uuid for synthetic targets. Follow read_item
+    with target_uuid and returned token_uuid. Root absent/empty items markers have
+    missing/empty status. Resolution reads no target source and never expands kits,
+    creates inventory, multiplies quantities or establishes ownership. At most 200
+    component references and 12000 definition entries are admitted; narrow oversized
+    source reads rather than treating failure as complete inventory evidence.
     treasure Items expose nullable category and authored traits/tags, rarity, slug
     and publication alongside shared physical quantity and price coin denominations
     and price.per. Quantity and price.per are independent stored values; no total

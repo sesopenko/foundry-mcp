@@ -308,6 +308,8 @@ selected-ammunition links. Quantity, price/per and carrying source remain
 independent; attachments and kit definitions do not create extra possessions.
 Formula/spell book source and explicit immediate content links have deterministic
 coverage; representative live book fixtures remain unavailable.
+Kit readers preserve nested bundle definitions and explicit immediate component
+links without importing inventory or recursively expanding referenced kits.
 
 
 

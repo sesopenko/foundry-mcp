@@ -680,3 +680,31 @@ discovery therefore reports `live=not_run`, and the story remains In progress.
 Standard blank spellbooks/formula books are `equipment` in the pinned data;
 they must not be silently retyped. See [fields](actor-item-story-map/book-fields.md)
 and [evidence](actor-item-story-map/book-verification.md).
+
+
+## Kit bundle definitions
+
+`kit` source exposes its own price and keyed nested component definitions,
+traits, publication and exact description. A kit is not a physical Item subtype:
+no carrying state, owned quantity, Bulk or investment is inferred. Component
+UUID, image, name, quantity and container flags retain escaped JSON Pointer
+paths. Repeated UUIDs stay separate occurrences. Entry depth0–3 follows the
+actual pinned schema; deepest child fields are null. Empty, absent and null
+source markers remain distinct. Price denominations/per are independent source
+facts, not a sum or multiplied inventory value.
+
+Explicit relationships return `kit_component_reference` records for immediate
+named targets. Canonical identity and synthetic token selectors support
+`read_item` follow-up without source hydration or recursive target expansion.
+Missing/denied/unsupported/unverified targets expose no resolved identity.
+At most200 references resolve per read; source extraction independently accepts
+up to12000 entry definitions. Shared byte/count paging and source/relationship/
+permission revision checks apply. Reading a kit never imports it or creates
+possessions. Actor inventory keeps actual owned kit definition references
+separate from physical possessions and generated contents.
+
+Two existing compendium kits, including nested container contents, are verified
+through actual MCP source, prose and14 immediate links with unchanged source
+fingerprints. World/owned/token kit and terminal-null/max-depth scenarios have
+deterministic coverage. See [fields](actor-item-story-map/kit-fields.md) and
+[evidence](actor-item-story-map/kit-verification.md).

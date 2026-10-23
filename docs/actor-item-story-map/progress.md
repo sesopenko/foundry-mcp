@@ -221,3 +221,11 @@ Each implementation increment must record focused/full results and a local commi
 - ITEM-book now preserves category, capacity, ordered duplicate UUID claims and metadata alongside shared physical source and exact prose. Explicit relationships name immediate world/pack/owned/token targets without target-source or recursive content expansion; ownership/preparation/castability remain separate.
 - Deterministic helper, paginated reader and actual Python DTO tests cover empty/missing/denied/unsupported/stale states and resolution bounds. Full suites pass:264 Python tests (one skipped),314 JavaScript tests. Actual MCP discovery/regression checks retain book live verification as not_run.
 - The existing world,894 distinct Actor instances and26 Item compendiums contain no book Items. Standard blank formula/spell books are equipment and remain that type. ITEM-book stays In progress at its original representative-live-fixture gate; completed stories remain21/39 (53.8%).
+
+
+### 31. Kit bundle source and immediate component references — October 22, 2026
+
+- ITEM-kit preserves keyed nested UUID/name/quantity/container definitions and its own price, separate from physical owned stock. Escaped paths and duplicate target occurrences retain identity without quantity multiplication or generated possession UUIDs.
+- Explicit component links share the audited book Item resolver, preserving canonical owner/token context and denied privacy without reading target source or recursively expanding kits. Source-only reads remain independent of resolution bounds.
+- Focused/full tests pass:270 Python tests (one skipped),323 JavaScript tests. Actual MCP source/prose and all14 immediate references passed on both existing compendium kits with unchanged source fingerprints. World/owned/token/max-depth cases retain deterministic coverage; no game writes occurred.
+- ITEM-kit Complete. Completed stories:22/39 (56.4%). Book and advanced Actor/casting/state gates remain open.
