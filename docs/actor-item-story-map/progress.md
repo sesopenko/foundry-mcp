@@ -261,3 +261,10 @@ Each implementation increment must record focused/full results and a local commi
 - Focused/full suites pass:294 Python tests (one skipped),360 JavaScript tests. Actual MCP consumed Fighter/Rogue/Wizard, exact prose and51 immediate feature links with unchanged source fingerprints. World/pack/token and malformed/denied/stale cases have deterministic coverage.
 - Optional other-attack name handling follows audited public field semantics; no private defaults or prepared values are used. The original Player Core boost discrepancy remains documented with no arithmetic from it.
 - ITEM-class Complete. Completed stories:25/39 (64.1%). Deity/feat readers and acquired background integration remain before character Build completion.
+
+### Deity source implementation checkpoint — October 22, 2026
+
+Deity source options and explicit spell identity links are wired into selected Item
+reading, with strict Python validation of actual paginated JavaScript output.
+The story remains In progress pending rulebook/live verification and integration
+review. Completed progress remains 25/39 (64.1%).

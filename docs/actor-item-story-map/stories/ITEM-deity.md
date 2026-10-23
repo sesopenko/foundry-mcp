@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Ready for source milestone |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -47,3 +47,14 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 The source mapping is ready to implement. Effective actor statistics, target-dependent calculations and automatic application of rule elements are excluded; prove supported interfaces and focused live behavior before adding them.
 
 No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+
+## Implementation checkpoint — October 22, 2026
+
+The selected-source reader now implements the [field audit](../deity-fields.md),
+including nullable sanctification/skill, opaque spell-map keys, options and metadata.
+Explicit relationships resolve at most 200 immediate claims and accept only actual
+spell Items. Offered spells are never added to an Actor casting view.
+Focused tests validate actual JavaScript descriptors and paginated reader DTOs
+through the Python boundary, including non-PF2e rejection. Live runtime and
+rulebook verification, additional context/staleness coverage, discovery registry
+updates and final integration review remain; this checkpoint does not close the story.

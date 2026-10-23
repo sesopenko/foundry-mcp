@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='class' and _class_spec(path) is not None and _class_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='deity' and _deity_spec(path) is not None and _deity_spec(path)[1]=='object') or (identity['type']=='class' and _class_spec(path) is not None and _class_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -602,6 +602,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='array' or
             identity['type'] == 'heritage' and path in HERITAGE_ARRAYS or
             identity['type'] == 'background' and _background_spec(path) is not None and _background_spec(path)[1]=='array' or
+            identity['type'] == 'deity' and _deity_spec(path) is not None and _deity_spec(path)[1]=='array' or
             identity['type'] == 'class' and _class_spec(path) is not None and _class_spec(path)[1]=='array' or
             identity['type'] == 'kit' and path in KIT_ARRAYS or
             identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
@@ -1386,6 +1387,86 @@ def _background_relationship(row,identity):
     return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
 
 
+# PF2e-specific DeitySystemSchema8.6.1; authored options, no active benefits.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/deity/data.ts
+DEITY_SOURCE={'/system/'+p:('deity_'+c,k,n) for p,c,k,n in (
+ ('category','category_code','string',False),('sanctification','sanctification','null',True),
+ ('sanctification/modal','sanctification_modal_code','string',False),
+ ('spells','spell_entries','object',False),('slug','source_slug','string',True),
+ ('publication/title','publication_title','string',False),('publication/authors','publication_authors','string',False),
+ ('publication/license','publication_license','string',False),('publication/remaster','publication_remaster','boolean',False),
+)}
+DEITY_ARRAYS={'/system/'+p:'deity_'+c for p,c in (
+ ('sanctification/what','sanctification_what_code'),('domains/primary','primary_domain_code'),
+ ('domains/alternate','alternate_domain_code'),('font','font_code'),('attribute','attribute_code'),
+ ('skill','skill_code'),('weapons','weapon_code'),('traits/otherTags','other_tag_code'))}
+
+
+def _deity_spec(path):
+    """PF2e-specific deity8.6.1 source paths; pinned schema above.
+
+    Nullable skill and sanctification and listed options are source definitions,
+    never learned spells, owned weapons or active devotee benefits.
+    """
+    if path in DEITY_SOURCE:return DEITY_SOURCE[path]
+    for base,concept in DEITY_ARRAYS.items():
+        if path==base:return concept,'array',base=='/system/skill'
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path):return concept,'string',False
+    match=re.fullmatch(r'/system/spells/([^/]+)',path)
+    if match and not re.search(r'~(?![01])',match[1]):return 'deity_spell_uuid','string',False
+    return None
+
+
+def _deity_record(row,identity):
+    """PF2e-specific deity8.6.1 exact source DTO; no effective character math.
+
+    Pinned deity/data.ts link above establishes source-only
+    contracts. No physical, character level or acquired feature fields admitted.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];spec=_deity_spec(path)
+    if path in SOURCE_PATHS:return row['provenance']['mapping']!='pf2e.deity.source.v1'
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    if raw['document_uuid']!=identity['uuid']:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.deity.source.v1',limitations=['deity_options_not_active_benefits']):return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    return {'null':False,'string':type(value) is str,'boolean':type(value) is bool,
+            'number':type(value) in (int,float) and math.isfinite(value),
+            'nonnegative_integer':type(value) in (int,float) and math.isfinite(value) and value%1==0 and value>=0,
+            'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
+
+
+def _deity_relationship(row,identity):
+    """PF2e-specific deity8.6.1 immediate listed spell UUID claims.
+
+    Pinned schemas above. Resolution establishes no acquired character feature.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='source' or type(raw['present']) is not bool or raw['present']!=('value'in raw):return False
+    path=raw['path']
+    if type(path) is not str or row['key']!='relationships:deity:'+path:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.deity.spell-reference.v1',limitations=['listed_spell_not_learned_or_prepared']):return False
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='deity_spell_reference' or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if path=='/system/spells':return (not raw['present'] and value==dict(status='missing',target_uuid=None)) or (raw['present'] and type(raw['value']) is dict and not raw['value'] and value==dict(status='empty',target_uuid=None))
+    spec=_deity_spec(path)
+    if spec is None or spec[0]!='deity_spell_uuid':return False
+    if not raw['present']:return value==dict(status='missing',target_uuid=None)
+    if type(raw['value']) is not str:return False
+    if value.get('status')!='resolved':return value in [dict(status=status,target_uuid=None) for status in ('missing','denied','unsupported','unverified')]
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}
+    synthetic=re.fullmatch(r'Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+\.Item\.[^.\s#]+',raw['value'])
+    if synthetic:keys.add('token_uuid')
+    return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and value['type']=='spell' and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
+
+
 # PF2e-specific ClassSystemSchema8.6.1; definition contributions, not character totals.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/class/data.ts
 # Same revision: src/module/model.ts (ranks), src/module/item/abc/data.ts (features).
@@ -1931,6 +2012,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'deity':
+        return _deity_spec(path) is not None
     if identity['type'] == 'class':
         return _class_spec(path) is not None
     if identity['type'] == 'heritage':
@@ -2294,6 +2377,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='deity' and row['section']=='relationships':
+        return _deity_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='class' and row['section']=='relationships':
         return _class_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='heritage' and row['section']=='relationships':
@@ -2348,6 +2433,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'deity' and not _deity_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'class' and not _class_record(row, identity):
         return False
@@ -2718,6 +2805,20 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     synthetic targets; missing/denied/unsupported/unverified disclose no target.
     Absent or empty items maps return missing/empty markers. No recursive feature
     hydration, granted/acquired claim, physical fields or effective benefit math.
+    deity Items expose PF2e8.6.1 authored category, nullable sanctification
+    modal/what, primary/alternate domains, font, attributes, nullable skill,
+    weapons, keyed spell UUIDs, otherTags, slug and publication. Missing fields
+    remain absent; these options establish no active devotee benefits. No stock,
+    trait rarity/value, effective benefits or automatic spell acquisition is read.
+    relationships explicitly resolves at most 200 immediate deity_spell_reference
+    claims at relationships:deity:<escaped /system/spells/key path>. One exact
+    source UUID descriptor contributes to each; no font-name UUID guessing or
+    target source reading. Missing spells map is missing; an empty map is empty.
+    Missing/denied/unsupported/unverified outcomes have target_uuid=null and no
+    target identity. Resolved canonical spell Items contain target_uuid (the exact
+    claim), document_name, type, name, name_truncated and token_uuid only for
+    synthetic targets. Follow read_item with those selectors. Source maps/lists
+    are bounded to 12000 entries each; returned continuation preserves paging.
     heritage Items expose authored nullable ancestry association, separate stored
     ancestry name/slug/uuid leaves, traits/tags, rarity, slug and publication.
     Null association means unassociated, not proof of versatile eligibility or
