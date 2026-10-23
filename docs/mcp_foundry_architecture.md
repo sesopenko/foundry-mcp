@@ -263,3 +263,13 @@ participate in revision checks. The snapshot rejects more than 12,000 owner
 Items or 24,000 records before shared record/byte pagination. Offered definitions
 and options never establish acquisitions; NPC/familiar Build and effective
 benefits are unsupported. See the [Build contract](actor-item-story-map/build-contract.md).
+
+Character source extraction uses the separate `actorCharacter.js` allowlist on
+detached `toObject(true)` data. It preserves nullable manual attributes, stored
+ranks/resources and recorded choices without filling prepared fields. Biography
+and language prose require explicit description selection and shared exact-text
+fragmentation; empty biography arrays retain field markers. Python validates
+source/notes mappings, primitive types, rank labels and exclusions independently.
+The [current-statistics proposal](actor-item-story-map/current-statistics-contract.md)
+describes a separate public transformed-serialization candidate boundary; it is
+not implemented or verified by the source checkpoint.

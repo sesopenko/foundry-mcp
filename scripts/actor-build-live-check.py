@@ -57,6 +57,10 @@ async def verify_discovery(client):
     registry = payload(await client.call_tool('get_actor_types', {}))
     build = next(section for section in registry['actor_sections'] if section['name'] == 'build')
     assert build['source_supported'] and build['mapped_supported'] and not build['effective_supported']
+    character = next(actor for actor in registry['actor_types'] if actor['type'] == 'character')
+    assert character['source_supported'] and character['mapped_supported'] and not character['effective_supported']
+    for contract in ('Null abilities remain', 'one root marker, never six zero modifiers', 'Character HP maximum and focus maximum/capacity are derived and excluded', 'Default source excludes biography prose', 'empty arrays stay field markers'):
+        assert contract in actor_tool.description
 
 
 async def main(world_id, discovery_only=False):
@@ -111,7 +115,7 @@ const report=JSON.stringify({future:future.uuid,spell:spell.uuid});
             # Create first and retain identity before any embedded fixture writes.
             stage = 'actor_creation'
             created = await js(guard + """
-const actor=await Actor.implementation.create({name:'MCP temporary Build verification',type:'character',system:{details:{level:{value:1}}},flags:{'foundry-mcp':{buildVerificationRun:RUN}}});
+const actor=await Actor.implementation.create({name:'MCP temporary Build verification',type:'character',system:{abilities:null,details:{level:{value:1},age:{value:'Adult'},biography:{appearance:'<p>Character source verification.</p>',edicts:['Keep the record.'],anathema:[]},languages:{value:['common'],details:'Authored language note.'}},skills:{nature:{rank:1}},resources:{heroPoints:{value:1,max:3},focus:{value:0}},build:{attributes:{manual:false,boosts:{1:[]},apex:null}}},flags:{'foundry-mcp':{buildVerificationRun:RUN}}});
 if(!actor||actor.getFlag('foundry-mcp','buildVerificationRun')!==RUN)throw Error('Fixture marker mismatch');
 const report=JSON.stringify({uuid:actor.uuid});
 """.replace('RUN', marker))
@@ -152,6 +156,52 @@ const report=JSON.stringify({hash,count:actor.items.size});
 """
             stage = 'source_fingerprint_before'
             before = await js(fingerprint_code)
+            stage = 'character_stored_source'
+            stored = await js(owned_guard + """
+const s=actor.toObject(true).system;
+const report=JSON.stringify({abilities:s.abilities,level:s.details.level.value,age:s.details.age.value,appearance:s.details.biography.appearance,edicts:s.details.biography.edicts,anathema:s.details.biography.anathema,languages:s.details.languages,nature:s.skills.nature.rank,hero:s.resources.heroPoints,focus:s.resources.focus.value,manual:s.build.attributes.manual,boosts:s.build.attributes.boosts['1'],apex:s.build.attributes.apex});
+""")
+            assert stored == {'abilities': None, 'level': 1, 'age': 'Adult', 'appearance': '<p>Character source verification.</p>', 'edicts': ['Keep the record.'], 'anathema': [], 'languages': {'value': ['common'], 'details': 'Authored language note.'}, 'nature': 1, 'hero': {'value': 1, 'max': 3}, 'focus': 0, 'manual': False, 'boosts': [], 'apex': None}
+            stage = 'character_source_description'
+            character_rows, character_cursor, character_pages = [], None, 0
+            while True:
+                assert character_pages < 100
+                arguments = {'actor_uuid': actor_uuid, 'sections': ['source', 'description'], 'limit': 7, 'max_bytes': 8000}
+                if character_cursor:
+                    arguments['cursor'] = character_cursor
+                character_page = payload(await client.call_tool('read_actor', arguments))
+                assert character_page['identity']['uuid'] == actor_uuid
+                assert all(section['status'] in ('complete', 'partial') and set(section['reasons']) <= {'pagination'} for section in character_page['sections'])
+                character_rows.extend(character_page['records'])
+                character_pages += 1
+                character_cursor = character_page['pagination']['next_cursor']
+                if not character_cursor:
+                    break
+            assert all(section['status'] == 'complete' for section in character_page['sections'])
+            def character_field(path):
+                return next(row for row in character_rows if row['raw'][0]['path'] == path)
+            expected_source = {'/system/abilities': stored['abilities'], '/system/details/level/value': stored['level'], '/system/details/age/value': stored['age'], '/system/skills/nature/rank': stored['nature'], '/system/resources/heroPoints/value': stored['hero']['value'], '/system/resources/heroPoints/max': stored['hero']['max'], '/system/resources/focus/value': stored['focus'], '/system/build/attributes/manual': stored['manual'], '/system/build/attributes/boosts/1': stored['boosts'], '/system/build/attributes/apex': stored['apex'], '/system/details/languages/value/0': stored['languages']['value'][0]}
+            expected_notes = {'/system/details/biography/appearance': stored['appearance'], '/system/details/biography/edicts/0': stored['edicts'][0], '/system/details/biography/anathema': stored['anathema'], '/system/details/languages/details': stored['languages']['details']}
+            for path, value in {**expected_source, **expected_notes}.items():
+                row = character_field(path)
+                assert row['raw'][0]['document_uuid'] == actor_uuid and row['raw'][0]['present'] and row['raw'][0]['value'] == value
+                assert row['section'] == ('description' if path in expected_notes else 'source')
+            assert character_field('/system/skills/nature/rank')['mapped']['value'] == {'rank': 1, 'label': 'Trained'}
+            assert not any(raw['path'].startswith('/system/abilities/') or raw['path'] in ('/system/attributes/hp/max', '/system/resources/focus/max', '/system/resources/focus/cap') for row in character_rows for raw in row['raw'])
+            stage = 'character_default_source_privacy'
+            default_rows, default_cursor = [], None
+            for _ in range(100):
+                arguments = {'actor_uuid': actor_uuid, 'limit': 7, 'max_bytes': 8000}
+                if default_cursor:
+                    arguments['cursor'] = default_cursor
+                default_page = payload(await client.call_tool('read_actor', arguments))
+                default_rows.extend(default_page['records'])
+                default_cursor = default_page['pagination']['next_cursor']
+                if not default_cursor:
+                    break
+            assert default_cursor is None
+            assert not any(row['section'] == 'description' for row in default_rows)
+            assert not any(text in json.dumps(default_rows) for text in (stored['appearance'], stored['edicts'][0], stored['languages']['details']))
             stage = 'build_pagination'
             rows, cursor, pages = [], None, 0
             while True:
@@ -217,7 +267,7 @@ const report=JSON.stringify({hash,count:actor.items.size});
             stage = 'source_fingerprint_after'
             after = await js(fingerprint_code)
             assert before == after and after['count'] == 7
-            summary.update(passed=True, build_pages=pages, build_records=len(rows), owned_items=7, outgoing_claims=4, item_pages=item_pages, fingerprint_unchanged=True)
+            summary.update(passed=True, build_pages=pages, build_records=len(rows), owned_items=7, outgoing_claims=4, item_pages=item_pages, character_pages=character_pages, character_records=len(character_rows), description_verified=True, fingerprint_unchanged=True)
         except Exception as error:
             # Do not print tool exceptions, credentials, document IDs or prose.
             summary['failure'] = 'Build live verification failed; inspect the fixed harness checks.'

@@ -69,6 +69,15 @@ retaining duplicate identities, permissions and selected token context.
 notes without applying elite/weak math. Biography requires explicit `description` selection with separate blurb/public/private paths;
 source responses remain partial and effective sections unsupported.
 
+`actorCharacter.js` selects PF2e8.6.1 persisted character identity, nullable
+manual attributes, level/languages/XP, HP, skill ranks, selected resources and
+recorded build choices. Source HP/focus maxima are excluded; rank labels are not
+check totals. Explicit `description` retains exact biography/language text and
+ordered edict/anathema strings, including empty-list markers, through the shared
+text/count/byte continuations. See the
+[field audit](../../docs/actor-item-story-map/character-fields.md) and
+[verification](../../docs/actor-item-story-map/character-verification.md).
+
 NPC explicit `strikes`/`abilities` select actual owned melee/action references,
 with source-name/type provenance and preserved linked/synthetic token selectors.
 Denied Items are not read or named; effective completeness remains unsupported.

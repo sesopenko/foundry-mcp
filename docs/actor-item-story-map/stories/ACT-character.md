@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; effective views gated |
-| Implementation status | Not started |
+| Implementation status | Source implemented |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -20,9 +20,9 @@ As a GM-trusted LLM, I can read a `character` Actor in book terminology while pr
 
 ## Source checkpoint: ACT-character
 
-- [ ] Extract identity/name/type/UUID and version/source/parent context through CORE-extract. Selected `system` fields: `abilities` (nullable source modifiers), `details.level`, selected identity/biography/languages, `attributes.hp`, `skills.*.rank`, selected `resources`, build choices only where explicitly persisted.
-- [ ] Retain bounded original notes/descriptions and unknown codes. Label every statistic's source/effective basis; do not fill omissions with zeroes. Keep assignment/control separate from subtype.
-- [ ] Return embedded Item summaries and next-reader links; basic reading must work before individual Item readers and joins are complete.
+- [x] Extract identity/name/type/UUID and version/source/parent context through CORE-extract. Selected `system` fields: `abilities` (nullable source modifiers), `details.level`, selected identity/biography/languages, `attributes.hp`, `skills.*.rank`, selected `resources`, build choices only where explicitly persisted.
+- [x] Retain bounded original notes/descriptions and unknown codes. Label every statistic's source/effective basis; do not fill omissions with zeroes. Keep assignment/control separate from subtype.
+- [x] Return embedded Item summaries and next-reader links; basic reading must work before individual Item readers and joins are complete.
 
 ## Integrated checkpoint: M-PC
 
@@ -48,3 +48,20 @@ Prerequisites beyond the source checkpoint: [CORE-build](CORE-build.md), [CORE-c
 Source checkpoint is ready after shared contracts/extraction. Integrated source joins are specified; effective statistics remain gated by supported-interface evidence and representative live fixtures. No populated character/familiar was live-verified in the original research, and no browser is connected in this audit. v13 PF2e support is unverified. See [evidence](../evidence.md#open-verification-gates).
 
 This is one story with two checkpoints, not separate source/effective actor stories. Close it only when the declared delivered sections pass and every remaining advanced limitation is explicitly recorded; never mark an unsupported effective capability verified.
+
+## Source checkpoint delivered — October 23, 2026
+
+The [field contract](../character-fields.md) and
+[verification](../character-verification.md) record selected source, opt-in
+bounded biography, strict mappings and world/pack/token identity tests.
+`list_actor_items` supplies bounded owned summaries and canonical `read_item`
+follow-ups independently of concrete readers. Build, inventory, source casting
+and Lore sections retain their separate completeness contracts.
+
+Actual MCP verified a marked temporary character in the existing development
+world: 51 source/description records across eight pages, default biography
+privacy, null attributes, source rank/resource/choice distinctions and unchanged
+source fingerprints. Cleanup was confirmed. This closes the source checkpoint,
+not M-PC or the story. Current statistics, generated Strikes and state remain
+open; the [transformed-document proposal](../current-statistics-contract.md)
+identifies the next public extraction candidate without claiming implementation.

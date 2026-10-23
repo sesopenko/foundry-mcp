@@ -40,6 +40,7 @@ import { actionFields, actionReferenceFields } from './actorAction.js';
 import { meleeFields, meleeEffectFields } from './actorMelee.js';
 import { loreFields } from './actorLore.js';
 import { npcFields, npcNoteFields } from './actorNpc.js';
+import { characterFields, characterNoteFields } from './actorCharacter.js';
 import { effectFields } from './actorEffect.js';
 import { conditionFields } from './actorCondition.js';
 import { conditionReferenceFields,conditionRelationships } from './actorConditionRelationships.js';
@@ -80,6 +81,7 @@ function selection(target, sections) {
   let melee=[];
   let lore=[];
   let npc=[];
+  let character=[];let characterNotes=[];
   let effect=[];
   let condition=[];
   let conditionReferences=[];
@@ -252,6 +254,14 @@ function selection(target, sections) {
     try{conditionReferences=conditionReferenceFields(source);}
     catch{fail('ReadFailed','Stored condition reference fields do not match the verified schema.','Inspect the condition source; no origin or suppression is inferred.');}
   }
+  // PF2e-specific CharacterSystemSource8.6.1 persisted fields, not prepared
+  // modifiers or resource maxima; actorCharacter.js pins the schema contract.
+  if(target.document.documentName==='Actor'&&source.type==='character'){
+    try{
+      if(sections.includes('source'))character=characterFields(source);
+      if(sections.includes('description'))characterNotes=characterNoteFields(source);
+    }catch{fail('ReadFailed','Selected character source does not match the verified schema or bounds.','Inspect selected character fields and biography source; no prepared statistics, resource maxima or defaults are substituted.');}
+  }
   // PF2e-specific NPC8.6.1 authored stat-block source; no elite/weak math.
   // The pinned schema contract is documented in actorNpc.js.
   if (target.document.documentName==='Actor' && source.type==='npc' && sections.includes('source')) {
@@ -388,7 +398,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -629,10 +639,14 @@ export async function getActorTypes(params = {}) {
       section.limitations=['NPC actual owned melee/action Item references only; sections remain partial. Other Actor types and effective attack/ability lists remain unsupported.'];
     }
     const description=result.actor_sections.find(entry=>entry.name==='description');
-    description.limitations=['NPC biography only: blurb, publicNotes and GM-private privateNotes; explicit selection required. Character/familiar biography remains unsupported.'];
+    description.limitations=['Explicit selection only: NPC blurb/publicNotes/GM-private privateNotes, or character biography/language details with exact bounded prose and edict/anathema list markers. Familiar biography remains unsupported.'];
     const npc=result.actor_types.find(entry=>entry.type==='npc');
     npc.limitations=['Authored NPC source statistics and Lore references are delivered. Explicit description exposes separate bounded biography notes; integrated sections and effective/current statistics remain pending; elite/weak math is not applied.'];
     npc.verification={deterministic:{status:'passed',evidence:['tests/js/actor-npc.test.js','tests/js/actor-npc-readers.test.js','tests/test_actor_npc.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/npc-fields.md','scripts/actor-live-check.py']}};
+    // PF2e-specific CharacterSystemSource8.6.1 checkpoint, not current-stat support.
+    const character=result.actor_types.find(entry=>entry.type==='character');
+    character.limitations=['Selected persisted character attributes/identity/level/languages/HP/skill ranks/resources/build choices and explicit biography are delivered, alongside separately supported Build/inventory/source-casting/Lore joins. Null attributes are not zeroes; ranks are not total modifiers; HP/focus maxima and complete effective/current views remain unsupported.'];
+    character.verification={deterministic:{status:'passed',evidence:['tests/js/actor-character.test.js','tests/js/actor-character-readers.test.js','tests/test_actor_character.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/character-verification.md','scripts/actor-build-live-check.py']}};
     for (const section of result.item_sections.filter(entry=>['source','relationships'].includes(entry.name))) {
       section.source_supported=true;section.mapped_supported=true;
       section.limitations=['Action, NPC attack and Lore Items have delivered source mappings; relationships currently cover action self-effects and named attack effects. Inspect individual type entries.'];
@@ -652,6 +666,13 @@ async function read(target,params,sections,tool) {
   const records = [];
   if (sections.includes('source')) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
+    // PF2e-specific character8.6.1 source keeps nullable manual attributes and
+    // recorded ranks/resources separate from transformed statistics.
+    for(const field of selected.character){
+      const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
+      if(Object.hasOwn(field,'mapped_value'))entry.mapped.value=field.mapped_value;
+      entry.provenance.mapping='pf2e.character.source.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+    }
     // PF2e-specific descriptors retain persisted fields. Source mappings never
     // substitute carried gear, prepared statistics, effective usage or Bulk.
     for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.book,'pf2e.book.source.v1'],[selected.kit,'pf2e.kit.source.v1'],[selected.ancestry,'pf2e.ancestry.source.v1'],[selected.background,'pf2e.background.source.v1'],[selected.heritage,'pf2e.heritage.source.v1'],[selected.classSource,'pf2e.class.source.v1'],[selected.deity,'pf2e.deity.source.v1'],[selected.feat,'pf2e.feat.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.ammo,'pf2e.ammo.source.v1'],[selected.armor,'pf2e.armor.source.v1'],[selected.container,'pf2e.container.source.v1'],[selected.treasure,'pf2e.treasure.source.v1'],[selected.shield,'pf2e.shield.source.v1'],[selected.equipment,'pf2e.equipment.source.v1'],[selected.consumable,'pf2e.consumable.source.v1'],[selected.spell,'pf2e.spell.source.v1'],[selected.castingEntry,'pf2e.spellcasting-entry.source.v1'],[selected.containedSpell,'pf2e.spell.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
@@ -742,26 +763,29 @@ async function read(target,params,sections,tool) {
       provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping:'pf2e.action.self_effect.v1',limitations:selected.relationship.reason?[selected.relationship.reason]:[]}});
   }
   if (sections.includes('description')) {
-    let fields=target.document.documentName==='Actor'?selected.npcNotes:target.document.type==='spell'?selected.spellDescriptions:
+    let fields=target.document.documentName==='Actor'?(target.document.type==='character'?selected.characterNotes:selected.npcNotes):target.document.type==='spell'?selected.spellDescriptions:
       ['/system/description/value',...(PHYSICAL_TYPES.includes(target.document.type)?['/system/identification/unidentified/data/description/value']:[])].map(path=>({path,present:Object.hasOwn(selected.selected,path),value:selected.selected[path],concept:path==='/system/description/value'?'description':'unidentified_description'}));
     if(target.document.documentName==='Item'&&target.document.type==='consumable')fields.push(...selected.containedDescriptions);
     for (const field of fields) {
       const {path,present,value,concept}=field;
-      if (present && typeof value!=='string') fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected document source in Foundry.');
+      // PF2e-specific character8.6.1 biography lists retain exact empty markers;
+      // nonempty entries were selected as individual strings by the helper.
+      const emptyCharacterList=target.document.documentName==='Actor'&&target.document.type==='character'&&Array.isArray(value)&&value.length===0;
+      if (present && typeof value!=='string'&&!emptyCharacterList) fail('ReadFailed','Stored description has an unexpected type.','Inspect the selected document source in Foundry.');
       const make=(present,value)=>{
         const entry=record(target.identity.uuid,path,present,value,'description',concept);
         if(target.document.documentName==='Item'&&(target.document.type==='spell'||(target.document.type==='consumable'&&path.startsWith('/system/spell/system/')))){entry.provenance.mapping='pf2e.spell.source.v1';entry.provenance.limitations=['source_only_no_spell_casting_or_variant_application'];}
         if(target.document.documentName==='Actor') {
-          entry.provenance.mapping='pf2e.npc.notes.v1';
-          entry.provenance.limitations=['Exact stored NPC biography; public and GM-private notes remain separate source paths. No enrichment is executed.'];
+          entry.provenance.mapping=target.document.type==='character'?'pf2e.character.notes.v1':'pf2e.npc.notes.v1';
+          entry.provenance.limitations=target.document.type==='character'?[...field.limitations]:['Exact stored NPC biography; public and GM-private notes remain separate source paths. No enrichment is executed.'];
         }
         return entry;
       };
-      if (present) for (const [index,fragment] of textFragments(value).entries()) {
+      if (present&&!emptyCharacterList) for (const [index,fragment] of textFragments(value).entries()) {
         const entry=make(true,fragment.value);
         entry.kind='text';entry.key+=`:${index}`;entry.mapped.value=null;entry.text={path,...fragment.text};records.push(entry);
       }
-      else records.push(make(false,null));
+      else records.push(make(present,present?value:null));
     }
   }
   const isAction=target.document.documentName==='Item'&&target.document.type==='action';
@@ -795,6 +819,11 @@ async function read(target,params,sections,tool) {
     sections:sections.map(name=>({name,status:complete(name)?'complete':(isContainer&&name==='relationships')||name==='source'||(castingSection&&name==='spellcasting')||(inventorySection&&name==='inventory')||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
       reasons:complete(name)?[]:isFeat&&name==='source'&&selected.featSelectionIssues.length?['unsupported_selection_values']:inventorySection&&name==='inventory'?selected.inventoryView.reasons:isContainer&&name==='relationships'?selected.containment.reasons:castingSection&&name==='spellcasting'?selected.castingView.reasons:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?(isCastingEntry?[...new Set(selected.castingIssues.map(issue=>issue.reason))]:[PENDING]):['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':(isFeat||isDeity||isClass||isHeritage||isBackground||isAncestry||isKit||isBook)?'Selected source and explicit immediate definition links only; effective Actor statistics, acquired contributions and gameplay execution remain unsupported.':isTreasure?'Stored treasure category, quantity and denomination price/per basis only. Valuables on supported Actors remain readable despite loot-Actor exclusion. No coin conversion, doubled stack value, sale proceeds, usage or investment state is inferred.':isContainer?'Stored container Bulk and containment claims only; capacity is not current contents Bulk, ignored Bulk is conditional and no Actor total is calculated. Explicit relationships use actual owner scope, retain each descendant once and report cycles or unresolved parents.':isCastingEntry?'Stored casting mode, proficiency, attack/DC and per-slot/preparation source only. Prepared slot value zero does not establish exhaustion; repeated preparations stay separate. Focus pools and innate uses are not inferred from slot counters. No final PC statistics, usable casts or resource expenditure is calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable stock, uses and damage/healing plus contained spell definitions only. Nested spells retain source-path identity on this Item; no independent spell UUID, consumption, frequency expenditure, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   if(isFeat&&selected.featSelectionIssues.length)base.limitations.push('Unsupported recorded selection values are withheld; source is partial. Only stored strings and finite numbers are selected; no acquisition, eligibility or UUID meaning is inferred.');
+  if(target.document.documentName==='Actor'&&target.document.type==='character'){
+    for(const section of base.sections)if(['source','description'].includes(section.name)){section.status='complete';section.reasons=[];}
+    base.limitations=base.limitations.filter(message=>message!=='Type-specific system fields and effective mappings are pending their stories.');
+    base.limitations.push('Character selected persisted source only: nullable manual attributes, identity/level/languages, HP, skill ranks, selected resources and recorded build choices. Rank is not a check modifier; no source HP/focus maximum or effective statistic is inferred. Biography requires explicit description. Other source fields, effective defenses/movement/Strikes and full integrated current views remain unsupported or partial. Use list_actor_items and read_item for owned contents, and build for persisted contributor claims.');
+  }
   if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build')){
     const section=base.sections.find(row=>row.name==='build');
     section.status=selected.buildView.reasons.length?'partial':'complete';

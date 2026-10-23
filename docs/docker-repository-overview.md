@@ -86,6 +86,9 @@ Heritage readers preserve nullable ancestry associations and named links without
 inferring owner ancestry, exclusivity or effective benefits.
 Class readers preserve key-attribute choices, labelled starting ranks and
 progression definitions without advancement, HP totals or acquired-feature claims.
+Character readers preserve selected persisted identity, nullable manual attributes,
+HP, labelled skill ranks, resources and recorded build choices. Biography and
+language notes require explicit description reads; current statistics remain gated.
 
 
 

@@ -430,6 +430,116 @@ def _npc_record(row,identity):
             'predicate':value is None or type(value) in (str,bool,int) or type(value) is float and math.isfinite(value) or type(value) in (dict,list) and not value}[kind]
 
 
+CHARACTER_SOURCE = {}
+CHARACTER_NOTES = {'/system/details/languages/details': 'language_exception_notes'}
+CHARACTER_LIMIT = ['character_source_not_effective_statistics']
+
+
+def _character_specs():
+    """PF2e-specific CharacterSystemSource8.6.1 allowlist, never prepared totals.
+
+    https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/character/data.ts
+    Numeric source declarations impose no bounds except integer skill ranks0..4.
+    """
+    def add(path, concept, kind, nullable=False, limits=()):
+        CHARACTER_SOURCE['/system/'+path] = (concept, kind, nullable, CHARACTER_LIMIT+list(limits))
+    add('abilities','recorded_attribute_modifiers','null',True,['null_not_zero_attributes'])
+    for key in ('str','dex','con','int','wis','cha'):
+        add('abilities/'+key+'/mod','attribute_modifier_'+key,'number',limits=['source_manual_modifier_not_effective_attribute'])
+    add('details/level/value','character_level','number')
+    for key in ('age','height','weight','gender','ethnicity','nationality'):
+        add('details/'+key+'/value','character_'+key+'_source','string')
+    add('details/keyability/value','recorded_key_attribute_code','string')
+    for key in ('value','min','max'):add('details/xp/'+key,'recorded_experience_'+key,'number')
+    for key in ('appearance','backstory','personality','campaign'):
+        add('details/biography/visibility/'+key,'biography_'+key+'_visibility_source','boolean',limits=['visibility_not_caller_authorization'])
+    add('attributes/hp/value','recorded_hit_points','number')
+    add('attributes/hp/temp','recorded_temporary_hit_points','number')
+    add('attributes/hp/tempSource','temporary_hit_point_source_item_id','string',limits=['local_item_id_not_verified_uuid'])
+    add('attributes/hp/sp/value','recorded_stamina_points','number',limits=['stamina_variant_source_only'])
+    add('skills','recorded_skill_ranks','object')
+    for key in ('value','max'):add('resources/heroPoints/'+key,'recorded_hero_points_'+key,'number')
+    add('resources/focus/value','recorded_focus_value','number',limits=['focus_pool_maximum_not_source'])
+    add('resources/crafting/infusedReagents/value','recorded_infused_reagents_value','number',limits=['crafting_availability_not_evaluated'])
+    add('resources/resolve/value','recorded_resolve_value','number',limits=['stamina_variant_source_only'])
+    add('build/attributes/manual','recorded_manual_attributes','boolean')
+    add('build/attributes/apex','recorded_apex_attribute_code','string',True)
+    for key in ('appearance','backstory','campaignNotes','allies','enemies','organizations','birthPlace','attitude','beliefs','likes','dislikes','catchphrases','edicts','anathema'):
+        CHARACTER_NOTES['/system/details/biography/'+key] = 'character_biography_'+key+'_source'
+_character_specs()
+
+
+def _character_spec(path):
+    """PF2e-specific character8.6.1 exact source leaves/empty markers only.
+
+    Nullable abilities are a root marker; standard and unknown stored skill codes
+    retain escaped keys and ranks, never arbitrary member fields or check totals.
+    """
+    if path in CHARACTER_SOURCE:return CHARACTER_SOURCE[path]
+    index=r'(?:0|[1-9][0-9]*)'
+    arrays={'/system/details/languages/value':'recorded_language_code'}
+    arrays.update({'/system/build/attributes/boosts/'+key:'recorded_attribute_boost_code' for key in ('1','5','10','15','20')})
+    for base,concept in arrays.items():
+        if path==base:return concept,'array',False,CHARACTER_LIMIT
+        if re.fullmatch(re.escape(base)+'/'+index,path):return concept,'string',False,CHARACTER_LIMIT
+    if re.fullmatch(r'/system/skills/(?:[^~/]|~[01])*/rank',path):
+        return 'recorded_skill_proficiency_rank','rank',False,CHARACTER_LIMIT+['rank_not_total_check_modifier']
+    return None
+
+
+def _character_note_spec(path):
+    """PF2e-specific character biography/language prose, explicitly requested.
+
+    Ordered edict/anathema strings fragment separately; empty array markers stay
+    arrays, not fabricated prose. No enrichment or prepared notes are admitted.
+    """
+    arrays=('/system/details/biography/edicts','/system/details/biography/anathema')
+    if path in CHARACTER_NOTES:return CHARACTER_NOTES[path], 'array' if path in arrays else 'string'
+    for base in arrays:
+        if re.fullmatch(re.escape(base)+r'/(?:0|[1-9][0-9]*)',path):return CHARACTER_NOTES[base],'string'
+    return None
+
+
+def _character_record(row,identity):
+    """PF2e-specific character8.6.1 strict detached source/description DTO.
+
+    Enforces exact concepts, raw primitive types, ranks and source limitations;
+    HP/focus maxima and prepared build/statistic properties remain excluded.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];value=raw.get('value')
+    if path in ('/name','/type'):return row['section']=='source'
+    if raw['document_uuid']!=identity['uuid'] or row['provenance']['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')}]:return False
+    note=_character_note_spec(path)
+    if note is not None:
+        concept,kind=note
+        if row['section']!='description' or row['provenance']['mapping']!='pf2e.character.notes.v1' or row['provenance']['limitations']!=CHARACTER_LIMIT:return False
+        expected=[] if raw['present'] and kind=='array' else None
+        if row['mapped']!=dict(concept=concept,value=expected,unit=None):return False
+        if not raw['present']:return row['kind']=='field' and row['key']=='description:'+path
+        if kind=='array':return row['kind']=='field' and row['key']=='description:'+path and type(value) is list and not value
+        return row['kind']=='text' and type(value) is str and re.fullmatch(re.escape('description:'+path)+r':(?:0|[1-9][0-9]*)',row['key']) is not None
+    spec=_character_spec(path)
+    if spec is None:return False
+    concept,kind,nullable,limits=spec
+    if row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path or row['provenance']['mapping']!='pf2e.character.source.v1' or row['provenance']['limitations']!=limits:return False
+    expected=value
+    if raw['present'] and kind=='rank':
+        if type(value) is not int or not 0<=value<=4:return False
+        expected=dict(rank=value,label=LORE_RANKS[value])
+        if type(row['mapped']['value']) is not dict or type(row['mapped']['value'].get('rank')) is not int:return False
+    elif type(row['mapped']['value']) is not type(expected):return False
+    if row['mapped']!=dict(concept=concept,value=expected,unit=None):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    if kind in ('number','rank'):return type(value) in (int,float) and math.isfinite(value)
+    if kind=='string':return type(value) is str
+    if kind=='boolean':return type(value) is bool
+    if kind=='array':return type(value) is list and not value
+    if kind=='object':return type(value) is dict and not value
+    return False
+
+
 def _lore_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     """PF2e-specific Lore8.6.1 source semantics depend on actual owner type.
 
@@ -520,6 +630,8 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
+    if identity['document_name']=='Actor' and identity['type']=='character':
+        return path=='/system/skills'
     return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='feat' and _feat_spec(path) is not None and _feat_spec(path)[1]=='object') or (identity['type']=='deity' and _deity_spec(path) is not None and _deity_spec(path)[1]=='object') or (identity['type']=='class' and _class_spec(path) is not None and _class_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
@@ -586,6 +698,9 @@ def _melee_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific8.6.1 empty attachment, ability/attack traits and Lore tags."""
+    if identity['document_name']=='Actor' and identity['type']=='character':
+        spec=_character_spec(path);note=_character_note_spec(path)
+        return spec is not None and spec[1]=='array' or note is not None and note[1]=='array'
     return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('array','predicate') or
             identity['type'] in ATTACHMENT_TYPES and path == '/system/subitems' or
             identity['type'] == 'action' and path in {'/system/traits/value','/system/traits/otherTags'} or
@@ -2146,6 +2261,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return False
     if path in SOURCE_PATHS:
         return True
+    if identity is not None and identity['document_name']=='Actor' and identity['type']=='character':
+        return _character_spec(path) is not None or _character_note_spec(path) is not None
     if identity is not None and identity['document_name']=='Actor' and identity['type']=='npc':
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
@@ -2727,7 +2844,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if identity['document_name']=='Actor' and identity['type']=='npc' and row['section'] in ('source','description') and not _npc_record(row,identity):
         return False
-    if identity['document_name']=='Actor' and row['section']=='description' and identity['type']!='npc':
+    if identity['document_name']=='Actor' and identity['type']=='character' and row['section'] in ('source','description') and not _character_record(row,identity):
+        return False
+    if identity['document_name']=='Actor' and row['section']=='description' and identity['type'] not in ('npc','character'):
         return False
     if identity['document_name'] == 'Actor' and row['section'] == 'skills' and not _lore_specialty(row, identity):
         return False
@@ -2938,7 +3057,22 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     senses/languages/movement, IWR and publication. Elite/weak arithmetic is not
     applied; integrated statistics remain pending. Explicit description returns NPC
     stored blurb, publicNotes and privateNotes only, including GM-private biography;
-    default source never includes them. Character/familiar description is unsupported.
+    default source never includes them. Familiar description is unsupported.
+    Character source exposes PF2e8.6.1 recorded level, nullable manual attribute
+    modifiers, identity/language codes, XP, source HP/temporary HP/stamina, skill
+    ranks, selected resources and persisted build choices. Null abilities remain
+    one root marker, never six zero modifiers. Skill mapped.value is {rank,label},
+    with integer rank0..4 and label Untrained/Trained/Expert/Master/Legendary;
+    unknown stored skill codes remain source keys, never effective check totals.
+    Character HP maximum and focus maximum/capacity are derived and excluded.
+    Default source excludes biography prose. Explicit description returns bounded
+    exact character biography and language-details text, including ordered edicts
+    and anathema; empty arrays stay field markers and absent source stays absent.
+    Lists/maps admit at most12000 entries. Malformed admitted source or excessive
+    complexity fails ReadFailed; inspect the selected document source in Foundry
+    or request identity separately. Excluded prepared properties are ignored.
+    These selected-source sections do not establish full current statistics;
+    integrated/effective sections remain explicitly partial or unsupported.
     Character build lists actual readable owned ancestry/heritage/background/class/
     deity/feat/Lore Items once as build_item identities, with independently paged
     typed source fields and build_grant_claim/build_granted_by_claim records.

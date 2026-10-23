@@ -339,3 +339,17 @@ A reproduced donor-type inconsistency regression was fixed before completion.
 Full suites pass:331 Python tests (one skipped),412 JavaScript tests. The story
 graph remains acyclic and consistent. Completed progress is30/39 (76.9%);
 effective character views, casting, state and remaining live gates stay open.
+
+### Character source checkpoint — October 23, 2026
+
+Selected persisted character fields and explicit bounded biography are delivered.
+Null manual attributes remain null, ranks remain distinct from check modifiers,
+and source HP/focus maxima and prepared fields are excluded. Actual MCP verified
+51 source/description records over eight pages, default prose privacy and
+unchanged source fingerprints with confirmed marked-fixture cleanup. Full suites
+pass:335 Python tests (one skipped),425 JavaScript tests. See
+[verification](character-verification.md).
+
+ACT-character is Source implemented, not Complete. Its integrated/current views
+remain open; the public transformed-document candidate is recorded separately.
+Completed progress remains30/39 (76.9%).
