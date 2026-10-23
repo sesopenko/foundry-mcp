@@ -735,3 +735,27 @@ compendium ancestries. World/owned/token ancestry and populated alternate/
 voluntary choices retain deterministic coverage. See
 [fields](actor-item-story-map/ancestry-fields.md) and
 [evidence](actor-item-story-map/ancestry-verification.md).
+
+
+## Background source checkpoint
+
+`background` source preserves offered boosts, explicit null/absent selections,
+trained skill codes, Lore labels and keyed feature definitions with source
+levels. Empty structured Lore/training/feature entries do not establish absence
+of a book benefit; read exact description for choices and exceptions. Ordinary
+packages and rare-background exceptions are not forced into one template.
+Lore labels remain labels, with no fabricated skill Item or automatic rank.
+
+Explicit `background_feature_reference` relationships resolve immediate named
+canonical targets, retaining synthetic token context and each source occurrence.
+No target source is read and no acquired feat/Lore is inferred. Missing/denied/
+unsupported/unverified targets stay explicit without resolved metadata.
+Maps/lists admit12000 entries; explicit resolution admits200 references.
+Shared paging, byte bounds and stale-source/permission/identity checks apply.
+
+Three existing compendium backgrounds, exact prose and two feat links are
+verified with unchanged source fingerprints. Acquired multi-contributor
+feat/Lore joins and duplicate-training handling remain CORE-build work; the
+background story stays In progress for that acceptance. See
+[fields](actor-item-story-map/background-fields.md) and
+[evidence](actor-item-story-map/background-verification.md).

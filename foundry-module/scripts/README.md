@@ -172,3 +172,10 @@ voluntary choices, source ancestry contributions and keyed feature definitions.
 `actorAncestryRelationships.js` uses the audited immediate Item resolver for
 explicit feature links. Persisted null selections are not replaced by prepared
 singleton choices; no feature is acquired and no character totals are computed.
+
+
+`actorBackground.js` selects PF2e-specific8.6.1 background offers/selections,
+training/Lore source and keyed feature definitions. `actorBackgroundRelationships.js`
+resolves only explicit immediate definition links. Empty structured fields do
+not prove no prose benefit; no skill rank, Lore Item or missing grant is created.
+The acquired contributor join remains pending in CORE-build.

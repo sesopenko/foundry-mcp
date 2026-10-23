@@ -237,3 +237,11 @@ Each implementation increment must record focused/full results and a local commi
 - Explicit immediate feature definitions retain keyed provenance, future levels and canonical/token follow-ups without acquisition, target-source hydration, grants or character totals. Missing/denied/unsupported/stale cases remain explicit.
 - Focused/full suites pass:275 Python tests (one skipped),332 JavaScript tests. Actual MCP consumed three ancestry definitions and exact prose, followed two feat identities and preserved complete source fingerprints. Owned/token/alternate/voluntary cases have deterministic coverage.
 - ITEM-ancestry Complete. Completed stories:23/39 (59.0%). Remaining build Item stories still gate CORE-build and integrated character support.
+
+
+### 33. Background source and definition checkpoint — October 22, 2026
+
+- ITEM-background preserves offered/null/absent boost choices, skill codes, Lore labels and keyed feature definitions. Empty structured fields do not prove no benefit; exact prose retains terrain-Lore choices and rare-background exceptions.
+- Explicit immediate feat definitions retain source occurrence identity without acquired claims, Lore construction, grant execution or duplicate-training replacement. Actual MCP passed three background sources/prose and two feat follow-ups with unchanged source fingerprints.
+- Focused/full suites pass:281 Python tests (one skipped),341 JavaScript tests. Actual paginated JavaScript DTOs cross strict Python validation; world/pack/token, malformed/denied/stale/bounded cases have deterministic coverage.
+- ITEM-background remains In progress for its acquired same-Lore/feat multi-contributor acceptance in CORE-build. Completed stories remain23/39 (59.0%). Independent remaining build readers can proceed before this integration closes.

@@ -1,11 +1,11 @@
 /**
- * PF2e-specific immediate Item UUID lookup for book/kit/ancestry definition claims.
+ * PF2e-specific immediate Item UUID lookup for book/kit/ancestry/background definition claims.
  * Tested public document boundary: Foundry14.369/PF2e8.6.1.
  * https://foundryvtt.com/api/v14/functions/foundry.utils.fromUuid.html
  * https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html#token
  * Uses canonical public Item identity, Actor.token and supported owner types;
  * no target source, recursive definition expansion or inventory acquisition.
- * Persisted claim schemas: book/data.ts, kit/data.ts and ancestry/data.ts at
+ * Persisted claim schemas: book/data.ts, kit/data.ts, ancestry/data.ts and background/data.ts at
  * https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
  */
 import {itemTarget,permitted} from './actorDocuments.js';

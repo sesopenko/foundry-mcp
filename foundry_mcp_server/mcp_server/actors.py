@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -600,6 +600,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
             identity['type'] == 'book' and path in BOOK_ARRAYS or
             identity['type'] == 'ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='array' or
+            identity['type'] == 'background' and _background_spec(path) is not None and _background_spec(path)[1]=='array' or
             identity['type'] == 'kit' and path in KIT_ARRAYS or
             identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
             identity['type'] == 'backpack' and path in CONTAINER_ARRAYS or
@@ -1223,6 +1224,94 @@ def _ancestry_relationship(row,identity):
     return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
 
 
+# PF2e-specific BackgroundSystemSchema8.6.1 and ABCFeatureEntryField; source definitions only.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/background/data.ts
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/abc/data.ts
+BACKGROUND_SOURCE={'/system/'+p:('background_'+c,k,n) for p,c,k,n in (
+ ('boosts','boost_slots','object',False),('items','feature_entries','object',False),
+ ('traits/rarity','rarity_code','string',False),('slug','source_slug','string',True),
+ ('publication/title','publication_title','string',False),('publication/authors','publication_authors','string',False),
+ ('publication/license','publication_license','string',False),('publication/remaster','publication_remaster','boolean',False),
+)}
+BACKGROUND_ARRAYS={'/system/'+p:'background_'+c for p,c in (
+ ('traits/value','trait_code'),('traits/otherTags','other_tag_code'),
+ ('trainedSkills/value','trained_skill_code'),('trainedSkills/lore','lore'))}
+
+
+def _background_spec(path):
+    """PF2e-specific BackgroundSystemSchema8.6.1 paths, escaped slot/feature keys.
+
+    Authored boosts, trainedSkills.value/lore and ABC definitions establish no
+    character acquisition or effective ability scores, training or skill totals.
+    """
+    if path in BACKGROUND_SOURCE:return BACKGROUND_SOURCE[path]
+    for base,concept in BACKGROUND_ARRAYS.items():
+        if path==base:return concept,'array',False
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path):return concept,'string',False
+    match=re.fullmatch(r'/system/(boosts|items)/([^/]+)/(.*)',path)
+    if not match or re.search(r'~(?![01])',match[2]):return None
+    group,_,leaf=match.groups()
+    if group=='items':
+        spec={'uuid':('feature_uuid','string',False),'img':('feature_image','string',False),
+              'name':('feature_name','string',False),'level':('feature_level','nonnegative_integer',False)}.get(leaf)
+        return ('background_'+spec[0],*spec[1:]) if spec else None
+    prefix='background_boost'
+    if leaf=='selected':return prefix+'_selected_code','string',True
+    if leaf=='value':return prefix+'_offer_code','array',False
+    if re.fullmatch(r'value/(0|[1-9][0-9]*)',leaf):return prefix+'_offer_code','string',False
+    return None
+
+
+def _background_record(row,identity):
+    """PF2e-specific background8.6.1 exact source DTO; no effective character math.
+
+    Pinned background/data.ts and abc/data.ts links above establish source-only
+    contracts. No physical, character level or acquired feature fields admitted.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];spec=_background_spec(path)
+    if path in SOURCE_PATHS:return row['provenance']['mapping']!='pf2e.background.source.v1'
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    if raw['document_uuid']!=identity['uuid']:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.background.source.v1',limitations=['background_source_not_effective_character']):return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    return {'string':type(value) is str,'boolean':type(value) is bool,
+            'number':type(value) in (int,float) and math.isfinite(value),
+            'nonnegative_integer':type(value) in (int,float) and math.isfinite(value) and value%1==0 and value>=0,
+            'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
+
+
+def _background_relationship(row,identity):
+    """PF2e-specific background8.6.1 immediate ABC feature UUID definition claims.
+
+    Pinned schemas above. Resolution establishes no acquired character feature.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='source' or type(raw['present']) is not bool or raw['present']!=('value'in raw):return False
+    path=raw['path']
+    if type(path) is not str or row['key']!='relationships:background:'+path:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.background.feature-reference.v1',limitations=['definition_reference_not_acquired_feature']):return False
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='background_feature_reference' or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if path=='/system/items':return (not raw['present'] and value==dict(status='missing',target_uuid=None)) or (raw['present'] and type(raw['value']) is dict and not raw['value'] and value==dict(status='empty',target_uuid=None))
+    spec=_background_spec(path)
+    if spec is None or spec[0]!='background_feature_uuid':return False
+    if not raw['present']:return value==dict(status='missing',target_uuid=None)
+    if type(raw['value']) is not str:return False
+    if value.get('status')!='resolved':return value in [dict(status=status,target_uuid=None) for status in ('missing','denied','unsupported','unverified')]
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}
+    synthetic=re.fullmatch(r'Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+\.Item\.[^.\s#]+',raw['value'])
+    if synthetic:keys.add('token_uuid')
+    return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
+
+
 # PF2e-specific KitSystemSchema8.6.1 definitions; never owned inventory.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/kit/data.ts
 KIT_SOURCE = {'/system/'+p:('kit_'+c,k,n) for p,c,k,n in (
@@ -1671,6 +1760,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'background':
+        return _background_spec(path) is not None
     if identity['type'] == 'ancestry':
         return _ancestry_spec(path) is not None
     if identity['type'] == 'kit':
@@ -2028,6 +2119,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='background' and row['section']=='relationships':
+        return _background_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='ancestry' and row['section']=='relationships':
         return _ancestry_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='kit' and row['section']=='relationships':
@@ -2076,6 +2169,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'background' and not _background_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'ancestry' and not _ancestry_record(row, identity):
         return False
@@ -2440,6 +2535,22 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     synthetic targets; missing/denied/unsupported/unverified disclose no target.
     Absent or empty items maps return missing/empty markers. No recursive feature
     hydration, granted/acquired claim, physical fields or effective benefit math.
+    background Items expose authored keyed boost offers and nullable stored
+    selections, trainedSkills.value skill codes and trainedSkills.lore text,
+    keyed ABC feature uuid/img/name/level, traits/tags, slug and publication.
+    These definitions establish no effective character scores, training, acquired
+    feat/Lore or duplicate-training replacement. Null selections stay null;
+    prepared choices may differ. Empty structured Lore/training/feature entries
+    do not prove no benefit; read description for prose choices and exceptions.
+    Maps/lists admit up to 12000 entries; malformed
+    or oversized source fails ReadFailed. Explicit relationships returns
+    background_feature_reference for up to 200 immediate ABC definitions, keyed
+    by exact escaped /system/items/<key>/uuid paths; duplicates stay distinct.
+    Resolved targets provide target_uuid/document_name/type/name/name_truncated
+    and token_uuid for synthetic targets; follow read_item. Missing/denied/
+    unsupported/unverified targets disclose no identity. Absent/empty items maps
+    return missing/empty scope markers. No recursive hydration, acquired joins,
+    physical fields, benefit application or effective calculations are supplied.
     kit Items expose authored bundle component definitions, own price denominations,
     price.per and sizeSensitive, traits, slug and publication. Kits are not physical
     possessions: no quantity, carry, investment or container state is inferred.
