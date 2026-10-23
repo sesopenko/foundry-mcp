@@ -310,3 +310,11 @@ Existing-world live checks follow journal → Actor → owned Item and a compend
 Item while preserving journal source/revision. Deterministic tests cover relative
 links, anchors, duplicates, bounds, permissions and asynchronous source changes.
 Completed progress is27/39 (69.2%).
+
+### Shared grant-source dependency for build joins
+
+The common PF2e Item grant selector now accepts build contributors without
+pretending they are feats. The feat-only wrapper preserves its existing output.
+Focused source and paginated cross-language regression tests pass. CORE-build is
+In progress; its integrated view and donor-validation contract remain unfinished.
+Completed progress remains27/39 (69.2%).

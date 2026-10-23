@@ -216,6 +216,10 @@ Optional schema-defined undefined values remain absent, never defaulted.
 Source-only reads do not execute grants or resolve offered progression.
 
 `actorFeatGrants.js` selects audited persisted grant flags only.
+Its common `itemGrantFields` export accepts Item source type codes and returns
+neutral stored-claim descriptors for later build integration. The feat-only
+wrapper retains the existing tool output; common extraction does not establish
+ownership, reciprocal agreement or active benefits.
 `actorFeatRelationships.js` resolves explicit grant IDs within the current owner
 and self-effect/suppressed-feature UUIDs without reading targets' source or
 executing rules. Each occurrence retains source provenance; reciprocal causality,
