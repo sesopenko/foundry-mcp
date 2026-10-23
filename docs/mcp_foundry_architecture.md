@@ -270,6 +270,11 @@ ranks/resources and recorded choices without filling prepared fields. Biography
 and language prose require explicit description selection and shared exact-text
 fragmentation; empty biography arrays retain field markers. Python validates
 source/notes mappings, primitive types, rank labels and exclusions independently.
-The [current-statistics proposal](actor-item-story-map/current-statistics-contract.md)
-describes a separate public transformed-serialization candidate boundary; it is
-not implemented or verified by the source checkpoint.
+The [current-statistics contract](actor-item-story-map/current-statistics-contract.md)
+uses a separate public `toObject(false)` boundary for selected character/NPC
+statistics. Raw values and contributors explicitly use transformed basis; Python
+admits it only for the exact statistics allowlist, leaving every source contract
+unchanged. Own data properties are selected without inherited/getter access.
+Current values participate in snapshot revisions, including when persisted
+source remains unchanged. Missing serialized fields stay unavailable and the
+section remains partial; no private calculation or source fallback occurs.

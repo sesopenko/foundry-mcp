@@ -65,3 +65,16 @@ source fingerprints. Cleanup was confirmed. This closes the source checkpoint,
 not M-PC or the story. Current statistics, generated Strikes and state remain
 open; the [transformed-document proposal](../current-statistics-contract.md)
 identifies the next public extraction candidate without claiming implementation.
+
+## Selected current-statistics checkpoint — October 23, 2026
+
+Explicit statistics now selects verified transformed attributes, AC/HP, saves,
+Perception/vision and movement through the public serializer, alongside separate
+source records. The [contract](../current-statistics-contract.md) and
+[verification](../current-statistics-verification.md) supersede the earlier
+proposal-only status for this subset. A populated marked character supplied
+47 actual MCP records over seven pages with unchanged source and confirmed cleanup.
+
+The section remains partial. Skills/Lore totals, senses/languages, IWR, generated
+Strikes, state and complete integrated current views remain open; this checkpoint
+does not close M-PC or mark the story Complete.

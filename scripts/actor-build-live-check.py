@@ -58,12 +58,12 @@ async def verify_discovery(client):
     build = next(section for section in registry['actor_sections'] if section['name'] == 'build')
     assert build['source_supported'] and build['mapped_supported'] and not build['effective_supported']
     character = next(actor for actor in registry['actor_types'] if actor['type'] == 'character')
-    assert character['source_supported'] and character['mapped_supported'] and not character['effective_supported']
-    for contract in ('Null abilities remain', 'one root marker, never six zero modifiers', 'Character HP maximum and focus maximum/capacity are derived and excluded', 'Default source excludes biography prose', 'empty arrays stay field markers'):
+    assert character['source_supported'] and character['mapped_supported'] and character['effective_supported']
+    for contract in ('Null abilities remain', 'one root marker, never six zero modifiers', 'Character source excludes derived HP maximum and focus maximum/capacity', 'Default source excludes biography prose', 'empty arrays stay field markers'):
         assert contract in actor_tool.description
 
 
-async def main(world_id, discovery_only=False):
+async def main(world_id, discovery_only=False, check_statistics=False):
     root = Path(__file__).resolve().parent.parent
     credentials = {}
     for line in (root / '.env.mcp').read_text().splitlines():
@@ -77,6 +77,7 @@ async def main(world_id, discovery_only=False):
     run_id, actor_uuid = str(uuid4()), None
     summary = {'passed': False, 'cleanup_confirmed': False}
     stage = 'client_discovery'
+    container_shapes = None
     async with Client(transport) as client:
         if discovery_only:
             result = {'passed': False, 'discovery_verified': False}
@@ -202,6 +203,61 @@ const report=JSON.stringify({abilities:s.abilities,level:s.details.level.value,a
             assert default_cursor is None
             assert not any(row['section'] == 'description' for row in default_rows)
             assert not any(text in json.dumps(default_rows) for text in (stored['appearance'], stored['edicts'][0], stored['languages']['details']))
+            if check_statistics:
+                stage = 'statistics_discovery'
+                registry = payload(await client.call_tool('get_actor_types', {}))
+                support = next(section for section in registry['actor_sections'] if section['name'] == 'statistics')
+                assert not support['source_supported'] and support['mapped_supported'] and support['effective_supported']
+                stage = 'statistics_serialized_preflight'
+                current = await js(owned_guard + """
+const serialized=actor.toObject(false);
+// Independent fixture expectation: inspect own data properties only. Never
+// call a statistic getter/method or substitute persisted source values.
+function own(keys){let value=serialized;for(const key of keys){if(value===null||typeof value!=='object')return {present:false};const d=Object.getOwnPropertyDescriptor(value,key);if(!d||!Object.hasOwn(d,'value')||d.value===undefined)return {present:false};value=d.value;}return {present:true,value};}
+const paths=[];
+for(const ability of ['str','dex','con','int','wis','cha'])for(const leaf of ['mod','base'])paths.push(['abilities',ability,leaf]);
+for(const leaf of ['value','breakdown','details'])paths.push(['attributes','ac',leaf]);
+for(const leaf of ['value','max','temp'])paths.push(['attributes','hp',leaf]);
+for(const save of ['fortitude','reflex','will'])for(const leaf of ['value','totalModifier','breakdown','rank'])paths.push(['saves',save,leaf]);
+for(const leaf of ['value','totalModifier','breakdown','vision','rank'])paths.push(['perception',leaf]);
+for(const mode of ['land','burrow','climb','fly','swim','travel']){const root=['movement','speeds',mode],row=own(['system',...root]);if(!['land','travel'].includes(mode)&&row.present&&row.value===null)paths.push(root);else for(const leaf of ['value','base','type','source'])paths.push([...root,leaf]);}
+const fields=paths.map(keys=>({path:'/system/'+keys.join('/'),...own(['system',...keys])}));
+const shapePaths=[['attributes','hp'],['attributes','ac'],['abilities'],['perception'],['saves','fortitude'],['movement','speeds','land']];
+const shapes=shapePaths.map(keys=>{const row=own(['system',...keys]),value=row.value;return {path:'/system/'+keys.join('/'),present:row.present,type:!row.present?'absent':value===null?'null':Array.isArray(value)?'array':typeof value,plain:row.present&&value!==null&&typeof value==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(value))};});
+const report=JSON.stringify({fields,shapes});
+""")
+                container_shapes = current['shapes']
+                stage = 'statistics_pagination'
+                statistics_rows, statistics_cursor, statistics_pages = [], None, 0
+                while True:
+                    assert statistics_pages < 100
+                    arguments = {'actor_uuid': actor_uuid, 'sections': ['statistics'], 'limit': 7, 'max_bytes': 8000}
+                    if statistics_cursor:
+                        arguments['cursor'] = statistics_cursor
+                    statistics_page = payload(await client.call_tool('read_actor', arguments))
+                    assert statistics_page['identity']['uuid'] == actor_uuid
+                    section = statistics_page['sections'][0]
+                    assert section['status'] == 'partial' and 'other_statistics_pending' in section['reasons']
+                    assert set(section['reasons']) <= {'other_statistics_pending', 'current_fields_unavailable', 'pagination'}
+                    statistics_rows.extend(statistics_page['records'])
+                    statistics_pages += 1
+                    statistics_cursor = statistics_page['pagination']['next_cursor']
+                    if not statistics_cursor:
+                        break
+                stage = 'statistics_assertions'
+                assert len(statistics_rows) == len(current['fields'])
+                actual = {}
+                for row in statistics_rows:
+                    assert row['section'] == 'statistics' and len(row['raw']) == 1
+                    raw = row['raw'][0]
+                    assert raw['document_uuid'] == actor_uuid and raw['basis'] == 'transformed'
+                    assert row['provenance']['mapping'] == 'pf2e.actor.current.v1'
+                    assert row['provenance']['contributors'] == [{'document_uuid': actor_uuid, 'path': raw['path'], 'basis': 'transformed'}]
+                    assert raw['path'] not in actual
+                    actual[raw['path']] = {key: raw[key] for key in ('path', 'present', 'value') if key in raw}
+                assert actual == {field['path']: field for field in current['fields']}
+                assert ('current_fields_unavailable' in statistics_page['sections'][0]['reasons']) == any(not field['present'] for field in current['fields'])
+                summary.update(statistics_pages=statistics_pages, statistics_records=len(statistics_rows))
             stage = 'build_pagination'
             rows, cursor, pages = [], None, 0
             while True:
@@ -272,6 +328,8 @@ const report=JSON.stringify({abilities:s.abilities,level:s.details.level.value,a
             # Do not print tool exceptions, credentials, document IDs or prose.
             summary['failure'] = 'Build live verification failed; inspect the fixed harness checks.'
             summary.update(failure_stage=stage, exception_type=type(error).__name__)
+            if container_shapes is not None:
+                summary['container_shapes'] = container_shapes
         finally:
             # Exact UUID plus exact per-run marker authorizes removal. If create's
             # response was lost, discover only this unpredictable marker, never names.
@@ -303,7 +361,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--world-id', help='Exact existing development world ID; required before fixture writes.')
     parser.add_argument('--discovery-only', action='store_true', help='Read MCP discovery and support only; create no fixture and perform no cleanup writes.')
+    parser.add_argument('--statistics', action='store_true', help='Also verify transformed current-statistics fields on the same marked fixture.')
     args = parser.parse_args()
     if not args.discovery_only and not args.world_id:
         parser.error('--world-id is required for fixture verification')
-    raise SystemExit(asyncio.run(main(args.world_id, args.discovery_only)))
+    raise SystemExit(asyncio.run(main(args.world_id, args.discovery_only, args.statistics)))

@@ -54,3 +54,18 @@ Prerequisites beyond the source checkpoint: [CORE-casting](CORE-casting.md), [CO
 Source checkpoint is ready after shared contracts/extraction. Integrated source joins are specified; effective statistics remain gated by supported-interface evidence and representative live fixtures. No populated character/familiar was live-verified in the original research, and no browser is connected in this audit. v13 PF2e support is unverified. See [evidence](../evidence.md#open-verification-gates).
 
 This is one story with two checkpoints, not separate source/effective actor stories. Close it only when the declared delivered sections pass and every remaining advanced limitation is explicitly recorded; never mark an unsupported effective capability verified.
+
+## Selected current-statistics checkpoint — October 23, 2026
+
+Explicit statistics now selects transformed attributes, AC/HP, saves,
+Perception/vision and movement with a separate raw/provenance basis from source.
+Actual MCP verified an existing elite world NPC and an unlinked synthetic NPC,
+82 records over 13 pages, with unchanged source/current snapshots. The elite
+sample preserved source AC 22 separately from current 24 and source maximum HP
+65 separately from current 85; no local elite arithmetic was implemented.
+See [contract](../current-statistics-contract.md) and
+[verification](../current-statistics-verification.md).
+
+The section remains partial; remaining skill/sense/language/IWR views, state,
+casting and full integrated current acceptance remain open. This checkpoint does
+not close M-NPC or mark the story Complete.

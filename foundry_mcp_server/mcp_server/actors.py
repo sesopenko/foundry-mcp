@@ -2735,6 +2735,95 @@ def _inventory_section(records, section):
     return required<=set(reasons)
 
 
+def _actor_current_spec(path, actor_type):
+    """PF2e-specific character/NPC8.6.1 transformed document-data primitives.
+
+    Uses CreatureSystemData/CharacterSystemData, never sheet/getter state:
+    https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/creature/data.ts
+    Public toObject(false) extraction is distinct from persisted source and
+    does not establish target-context modifiers. Tested boundary: core14.369.
+    """
+    if actor_type not in ('character','npc') or type(path) is not str:return None
+    match=re.fullmatch(r'/system/abilities/(str|dex|con|int|wis|cha)/(mod|base)',path)
+    if match:return 'number' if match[2]=='mod' or actor_type=='character' else None
+    if path in ('/system/attributes/ac/value',*(f'/system/attributes/hp/{key}' for key in ('value','max','temp'))):return 'number'
+    if path in ('/system/attributes/ac/breakdown','/system/attributes/ac/details'):return 'string'
+    match=re.fullmatch(r'/system/(saves/(fortitude|reflex|will)|perception)/(value|totalModifier|breakdown|rank|vision)',path)
+    if match:
+        leaf=match[3]
+        if leaf=='vision':return 'boolean' if match[1]=='perception' else None
+        if leaf=='rank':return 'rank' if match[1]=='perception' or actor_type=='character' else None
+        return 'string' if leaf=='breakdown' else 'number'
+    match=re.fullmatch(r'/system/movement/speeds/(land|burrow|climb|fly|swim|travel)(?:/(value|base|type|source))?',path)
+    if match:
+        mode,leaf=match.groups()
+        if leaf is None:return 'null' if mode in ('burrow','climb','fly','swim') else None
+        return {'value':'number','base':'number','type':mode,'source':'nullable_string'}[leaf]
+    return None
+
+
+def _actor_current_concept(path):
+    """PF2e-specific book concepts for _actor_current_spec's transformed leaves."""
+    keys=path.removeprefix('/system/').split('/')
+    group,key,*rest=keys
+    leaf=rest[0] if rest else None
+    if group=='abilities':return f"current_attribute_{'base_' if leaf=='base' else ''}modifier_{key}"
+    if group=='attributes':
+        return ({'value':'current_armor_class','breakdown':'current_armor_class_breakdown','details':'current_armor_class_exception_notes'} if key=='ac' else {'value':'current_hit_points','max':'current_maximum_hit_points','temp':'current_temporary_hit_points'})[leaf]
+    if group=='saves':return 'current_'+key+'_save_'+{'value':'modifier','totalModifier':'total_modifier','breakdown':'breakdown','rank':'proficiency_rank'}[leaf]
+    if group=='perception':return {'value':'current_perception_modifier','totalModifier':'current_perception_total_modifier','breakdown':'current_perception_breakdown','vision':'current_standard_vision','rank':'current_perception_proficiency_rank'}[key]
+    return 'current_'+leaf+'_'+('movement' if len(rest)==1 else {'value':'speed','base':'base_speed','type':'movement_type','source':'movement_source_label'}[rest[1]])
+
+
+def _actor_current_record(row, identity):
+    """PF2e-specific current character/NPC leaves; exact transformed provenance.
+
+    Schema/version and source-versus-derived restrictions: _actor_current_spec.
+    Familiar master-derived values remain unsupported pending their own contract.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='field' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='transformed' or type(raw['present']) is not bool or raw['present']!=('value' in raw):return False
+    path=raw['path'];kind=_actor_current_spec(path,identity['type'])
+    if kind is None or row['key']!='statistics:'+path:return False
+    value=raw.get('value')
+    if raw['present']:
+        valid={'number':type(value) in (int,float) and math.isfinite(value),
+               'string':type(value) is str,'boolean':type(value) is bool,
+               'rank':type(value) is int and 0<=value<=4,'null':value is None,
+               'nullable_string':value is None or type(value) is str}
+        if not valid.get(kind,type(value) is str and value==kind):return False
+    expected={'rank':value,'label':LORE_RANKS[value]} if raw['present'] and kind=='rank' else value
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'}:return False
+    if mapped!=dict(concept=_actor_current_concept(path),value=expected,unit=None):return False
+    if type(mapped['value']) is not type(expected):return False
+    if kind=='rank' and raw['present'] and type(mapped['value']['rank']) is not int:return False
+    return row['provenance']==dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.actor.current.v1',limitations=['serialized_current_value_not_target_context'])
+
+
+def _current_section(records, section, identity):
+    """PF2e-specific character/NPC partial current-statistics diagnostics.
+
+    Compare only transformed statistics on the current page: persisted source
+    at the same path may legitimately differ. A missing/null movement mode
+    cannot simultaneously provide a present descendant in this snapshot.
+    """
+    rows=[row for row in records if row['section']=='statistics']
+    if identity['type'] not in ('character','npc'):
+        return not rows and section['status']=='unsupported' and section['reasons']==['master_current_contract_pending']
+    raw=[row['raw'][0] for row in rows]
+    for mode in ('burrow','climb','fly','swim'):
+        path='/system/movement/speeds/'+mode
+        if any(field['path']==path and (not field['present'] or field['value'] is None) for field in raw):
+            if any(field['path'].startswith(path+'/') and field['present'] for field in raw):return False
+    reasons=set(section['reasons'])
+    return (section['status']=='partial' and 'other_statistics_pending' in reasons
+            and reasons<={'other_statistics_pending','current_fields_unavailable','pagination'}
+            and (not any(not row['raw'][0]['present'] for row in rows) or 'current_fields_unavailable' in reasons))
+
+
 def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     """Validate records including PF2e-specific persisted physical source fields.
 
@@ -2747,6 +2836,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    # PF2e-specific transformed statistics are admitted only at this narrow gate.
+    if identity['document_name']=='Actor' and row['section']=='statistics':
+        return _actor_current_record(row,identity)
     if identity['document_name']=='Item' and identity['type']=='feat' and row['section']=='relationships':
         return _feat_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='deity' and row['section']=='relationships':
@@ -2904,6 +2996,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     if valid and result['identity']['document_name']=='Actor':
                         valid = all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
                         valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
+                        valid = valid and all(_current_section(result['records'], row, result['identity']) for row in rows if row['name']=='statistics')
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -3022,7 +3115,10 @@ async def get_actor_types() -> dict[str, Any]:
     actor_sections, item_sections, limits and limitations. allowed/in_scope differ
     from source_supported/mapped_supported/effective_supported; each registry entry
     includes deterministic/live verification status and evidence. No support for
-    complete effective statistics is implied by an allowed type. PF2e 8.6.1/core
+    complete effective statistics is implied by an allowed type. A true effective
+    flag can describe a partial delivered section: character/NPC statistics
+    selects transformed primitives while other current views remain unfinished.
+    Inspect entry limitations and returned section reasons. PF2e 8.6.1/core
     14.369 is the verified baseline; other systems/versions report unavailable.
     Next use read_actor with a canonical Actor UUID, read_item with an Item UUID,
     or list_actor_items with an actor/token selector. No writes, rolls or imports.
@@ -3055,7 +3151,24 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     fields differ from null/zero; source is not complete effective statistics.
     NPC source includes authored attributes, AC/saves/Perception/skills, stored HP,
     senses/languages/movement, IWR and publication. Elite/weak arithmetic is not
-    applied; integrated statistics remain pending. Explicit description returns NPC
+    applied to source. Explicit statistics reads selected transformed character/NPC
+    ability modifiers (character base separately), AC, current/max/temporary HP,
+    saves, Perception and six movement modes from public toObject(false).
+    Each field has key statistics:<exact /system/... path>, kind field, one own
+    Actor raw contributor with basis transformed, mapping pf2e.actor.current.v1,
+    and limitations exactly [serialized_current_value_not_target_context].
+    Mapped concepts name book concepts with current_ prefix, e.g.
+    current_armor_class, current_hit_points, current_fortitude_save_modifier,
+    current_perception_proficiency_rank and current_land_speed;
+    unit is null and value retains the serialized primitive, except rank maps
+    to {rank,label}. Missing raw values have present:false and mapped null;
+    nullable movement modes preserve null rather than inventing zero speed.
+    Statistics is always partial with other_statistics_pending, plus
+    current_fields_unavailable when selected leaves are missing and pagination
+    while more records remain. Familiar statistics is unsupported pending a
+    master contract. No skills, senses/languages/IWR, Strikes, condition/effect
+    state or target-context calculations are supplied by this section.
+    Explicit description returns NPC
     stored blurb, publicNotes and privateNotes only, including GM-private biography;
     default source never includes them. Familiar description is unsupported.
     Character source exposes PF2e8.6.1 recorded level, nullable manual attribute
@@ -3064,7 +3177,7 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     one root marker, never six zero modifiers. Skill mapped.value is {rank,label},
     with integer rank0..4 and label Untrained/Trained/Expert/Master/Legendary;
     unknown stored skill codes remain source keys, never effective check totals.
-    Character HP maximum and focus maximum/capacity are derived and excluded.
+    Character source excludes derived HP maximum and focus maximum/capacity.
     Default source excludes biography prose. Explicit description returns bounded
     exact character biography and language-details text, including ordered edicts
     and anathema; empty arrays stay field markers and absent source stays absent.

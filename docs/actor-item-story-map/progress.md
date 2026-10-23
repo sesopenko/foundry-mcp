@@ -353,3 +353,21 @@ pass:335 Python tests (one skipped),425 JavaScript tests. See
 ACT-character is Source implemented, not Complete. Its integrated/current views
 remain open; the public transformed-document candidate is recorded separately.
 Completed progress remains30/39 (76.9%).
+
+### Selected transformed statistics — October 23, 2026
+
+Character/NPC statistics now reads bounded declared current document-data fields
+through public `toObject(false)`, retaining transformed basis separately from
+source. The section remains partial; missing serialized leaves stay unavailable.
+Actual MCP verified an elite world NPC, synthetic NPC and marked character:
+129 statistics records across 20 pages in total, exact independent serializer
+matches and unchanged source snapshots. The character fixture was removed.
+
+A failing live HP-container case was reproduced and fixed with a regression:
+nonplain serialized containers are accepted for own declared data fields, while
+inherited fields/getters remain excluded. Full suites pass:341 Python tests
+(one skipped),440 JavaScript tests. See
+[verification](current-statistics-verification.md).
+
+ACT-character and ACT-npc remain Source implemented; the original full integrated
+acceptance is preserved. Completed progress remains30/39 (76.9%).

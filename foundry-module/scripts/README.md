@@ -78,6 +78,16 @@ text/count/byte continuations. See the
 [field audit](../../docs/actor-item-story-map/character-fields.md) and
 [verification](../../docs/actor-item-story-map/character-verification.md).
 
+`actorCurrent.js` selects declared PF2e8.6.1 character/NPC document-data primitives
+from public `toObject(false)` output for explicit `statistics` reads. Records use
+`pf2e.actor.current.v1` and `basis: "transformed"`, never relabelled source.
+Own declared data properties remain readable on nonplain serialized containers;
+inherited fields and getters are excluded. Missing fields stay unavailable.
+Statistics remains partial for unimplemented views; familiar current statistics
+requires its separate master contract. See the
+[contract](../../docs/actor-item-story-map/current-statistics-contract.md) and
+[verification](../../docs/actor-item-story-map/current-statistics-verification.md).
+
 NPC explicit `strikes`/`abilities` select actual owned melee/action references,
 with source-name/type provenance and preserved linked/synthetic token selectors.
 Denied Items are not read or named; effective completeness remains unsupported.

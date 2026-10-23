@@ -326,7 +326,10 @@ Class readers preserve key-attribute choices, labelled starting ranks and
 progression definitions without advancement, HP totals or acquired-feature claims.
 Character readers preserve selected persisted identity, nullable manual attributes,
 HP, labelled skill ranks, resources and recorded build choices. Biography and
-language notes require explicit description reads; current statistics remain gated.
+language notes require explicit description reads. Explicit statistics adds selected
+transformed attributes, AC/HP, saves, Perception/vision and movement for characters
+and NPCs, retaining a separate basis from source. The section remains partial;
+full current views, skill totals, generated Strikes and familiar derivation remain gated.
 
 
 
