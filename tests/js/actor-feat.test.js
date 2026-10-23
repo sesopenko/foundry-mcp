@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {featFields} from '../../foundry-module/scripts/actorFeat.js';
+const rows=system=>new Map(featFields({type:'feat',system}).map(row=>[row.path,row]));
+test('feat source preserves levels, activation, ordered prose and category distinction',()=>{
+ for(const category of ['ancestryfeature','calling','classfeature','curse','deityboon','pfsboon','ancestry','bonus','class','general','skill','future']){const row=rows({category}).get('/system/category');assert.deepEqual(row.mapped_value,{code:category,kind:['ancestryfeature','calling','classfeature','curse','deityboon','pfsboon'].includes(category)?'feature':category==='future'?'unknown':'feat'});}
+ const source={category:'skill',level:{value:2,taken:4},onlyLevel1:false,maxTakable:null,actionType:{value:'reaction'},actions:{value:null},prerequisites:{value:[{value:'trained in Medicine'},{value:'healer’s toolkit'}]},location:'class-4',frequency:{value:0,max:1,per:'day'},traits:{value:['skill'],otherTags:['homebrew'],rarity:'common',toggles:{mindshift:{selected:false}}},slug:null,publication:{title:'Book',authors:'A',license:'ORC',remaster:false},rules:[{secret:'excluded'}]};const before=structuredClone(source),result=rows(source);
+ for(const [path,value]of [['level/value',2],['level/taken',4],['actions/value',null],['maxTakable',null],['prerequisites/value/1/value','healer’s toolkit'],['frequency/value',0],['traits/toggles/mindshift/selected',false],['publication/remaster',false]])assert.deepEqual(result.get('/system/'+path).value,value);
+ assert.equal(result.get('/system/actionType/value').value,'reaction');assert.deepEqual(source,before);assert.ok([...result.values()].every(row=>JSON.stringify(row.limitations)==='["feat_source_not_effective_benefit"]'));assert.ok(!JSON.stringify([...result.values()]).includes('excluded'));assert.equal(featFields({type:'action'}),null);
+});
+test('feat subfeatures are selected source contributions with escaped opaque keys',()=>{
+ const result=rows({subfeatures:{keyOptions:['str','dex'],languages:{slots:2,granted:['common']},proficiencies:{'home/~brew':{rank:4,attribute:null}},senses:{'dark/~vision':{acuity:'precise',range:null,special:{ancestry:false,llv:true,second:false}}},suppressedFeatures:['Compendium.p.feat.Item.a']},selfEffect:{uuid:'Item.e',name:'Named'}});
+ assert.equal(result.get('/system/subfeatures/proficiencies/home~1~0brew/rank').value,4);assert.equal(result.get('/system/subfeatures/senses/dark~1~0vision/special/llv').value,true);assert.equal(result.get('/system/subfeatures/senses/dark~1~0vision/range').value,null);assert.equal(result.get('/system/selfEffect/name').value,'Named');
+});
+test('feat absence null empties and optional undefined remain distinct without defaults',()=>{
+ const absent=rows({});for(const path of ['category','level/value','level/taken','frequency','selfEffect','traits/toggles','subfeatures/languages']){assert.equal(absent.get('/system/'+path).present,false);assert.ok(!Object.hasOwn(absent.get('/system/'+path),'value'));}
+ const result=rows({level:{taken:null},location:null,frequency:null,selfEffect:null,prerequisites:{value:[]},traits:{value:[],otherTags:[],toggles:undefined},subfeatures:{keyOptions:undefined,languages:undefined,proficiencies:{},senses:{x:{acuity:undefined,range:5,special:undefined}},suppressedFeatures:[]}});
+ assert.equal(result.get('/system/traits/toggles').present,false);assert.equal(result.get('/system/subfeatures/keyOptions').present,false);assert.equal(result.get('/system/subfeatures/senses/x/acuity').present,false);assert.equal(result.get('/system/subfeatures/senses/x/special').present,false);assert.deepEqual(result.get('/system/prerequisites/value').value,[]);assert.deepEqual(result.get('/system/subfeatures/proficiencies').value,{});assert.equal(result.get('/system/frequency').value,null);
+ assert.equal(rows({frequency:{value:undefined,max:2,per:'day'}}).get('/system/frequency/value').present,false);
+ const optional=rows({level:{taken:undefined},frequency:undefined,selfEffect:undefined,traits:{toggles:{mindshift:undefined}}});for(const path of ['level/taken','frequency','selfEffect','traits/toggles/mindshift'])assert.equal(optional.get('/system/'+path).present,false);
+});
+test('feat rejects invalid source types, required undefined, integer ranges and oversized lists/maps',()=>{
+ for(const system of [{category:null},{level:{value:0}},{level:{taken:31}},{level:{value:1.5}},{onlyLevel1:0},{maxTakable:Infinity},{maxTakable:0},{actions:{value:0}},{actions:{value:4}},{location:false},{frequency:{value:null}},{frequency:{max:0}},{frequency:{value:1.5}},{selfEffect:[]},{traits:{toggles:null}},{traits:{toggles:{mindshift:{selected:null}}}},{prerequisites:{value:['prose']}},{subfeatures:{languages:null}},{subfeatures:{proficiencies:{x:{rank:0}}}},{subfeatures:{proficiencies:{x:{rank:2.5}}}},{subfeatures:{senses:{x:{range:Infinity}}}},{subfeatures:{senses:{x:{range:301}}}},{subfeatures:{senses:{x:{special:{llv:0}}}}},{traits:{value:Array(12001).fill('skill')}},{subfeatures:{proficiencies:Object.fromEntries(Array.from({length:12001},(_,i)=>[i,{}]))}}])assert.throws(()=>rows(system),TypeError);
+ assert.equal([...rows({traits:{value:Array(12000).fill('skill')}}).values()].filter(row=>row.concept==='feat_trait_code').length,12000);
+});
+test('feat ignores inherited values, arbitrary flags and preparation state',()=>{
+ const result=rows({level:Object.create({value:30}),flags:{secret:true},get prepared(){throw Error('unrelated');}});assert.equal(result.get('/system/level/value').present,false);assert.ok(!JSON.stringify([...result.values()]).includes('secret'));
+});

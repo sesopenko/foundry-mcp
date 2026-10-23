@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readItem} from '../../foundry-module/scripts/actors.js';
+function fixture(){
+ const source={name:'Feature',type:'feat',system:{category:'classfeature',level:{value:19,taken:undefined},actionType:{value:'passive'},actions:{value:null},location:null,frequency:undefined,selfEffect:undefined,prerequisites:{value:[{value:'trained in Medicine'}]},subfeatures:{keyOptions:undefined,languages:undefined,proficiencies:{martial:{rank:4,attribute:null}},senses:{},suppressedFeatures:[]},traits:{value:[],otherTags:[],rarity:'common',toggles:undefined},description:{value:'Exact toolkit requirements, Treat Wounds restrictions and temporary immunity.'},rules:[{key:'GrantItem',uuid:'Item.future',private:'feat_private_sentinel'}]}};
+ const item={documentName:'Item',id:'feature',uuid:'Item.feature',name:'Feature',type:'feat',parent:null,compendium:null,folder:null,testUserPermission:()=>true,toObject:()=>structuredClone(source)};
+ globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map(),items:new Map()};const lookups=[];globalThis.foundry={utils:{fromUuid:async uuid=>{lookups.push(uuid);return uuid===item.uuid?item:null;}}};return {source,item,lookups};
+}
+test('feat source pagination separates feature category and nominal level from unrecorded acquisition',async()=>{
+ const f=fixture(),before=JSON.stringify(f.source);let cursor,rows=[],page;do{page=await readItem({item_uuid:f.item.uuid,sections:['source','description','relationships','effective'],limit:3,...(cursor?{cursor}:{})});rows.push(...page.records);cursor=page.pagination.next_cursor;}while(cursor);
+ const at=path=>rows.find(r=>r.raw[0]?.path===path);assert.deepEqual(at('/system/category').mapped.value,{code:'classfeature',kind:'feature'});assert.equal(at('/system/level/value').raw[0].value,19);assert.equal(at('/system/level/taken').raw[0].present,false);assert.equal(at('/system/frequency').raw[0].present,false);assert.equal(at('/system/location').raw[0].value,null);assert.equal(at('/system/description/value').raw[0].value,f.source.system.description.value);assert.equal(page.sections[0].status,'complete');assert.equal(page.sections[2].status,'unsupported');assert.equal(page.sections[3].status,'unsupported');assert.ok(!JSON.stringify(rows).includes('feat_private_sentinel'));assert.ok(!f.lookups.includes('Item.future'));assert.equal(JSON.stringify(f.source),before);
+});
+test('feat malformed source and changed continuations fail explicitly',async()=>{
+ const f=fixture(),page=await readItem({item_uuid:f.item.uuid,sections:['source'],limit:1});f.source.system.category='ancestryfeature';await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source'],limit:1,cursor:page.pagination.next_cursor}),e=>e.rpcError.code==='ContentChanged');f.source.system.actions.value=0;await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source']}),e=>e.rpcError.code==='ReadFailed');game.system.id='other';await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='UnsupportedSystem');
+});

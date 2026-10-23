@@ -391,3 +391,7 @@ PDF upload password and is available only through the browser manager protocol.
 PF2e deity reading preserves offered devotee options and explicit immediate spell
 identity links. Listed spells do not establish learned or prepared spells or
 active character benefits. See the [deity field audit](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/deity-fields.md).
+
+PF2e feat source reading distinguishes feats from features and nominal levels from
+recorded taken levels, retaining prerequisites and description prose. Acquired
+grant relationships remain pending; source rules never execute during reading.

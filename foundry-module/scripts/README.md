@@ -202,3 +202,9 @@ target types. Categories, sanctification, domains, font, attributes, skills and
 favored weapons are source options; none establish active benefits or acquired
 spells. Source-only reads never hydrate spell targets. Reader snapshots revalidate
 claims, target identities and permissions for continuation safety.
+
+`actorFeat.js` selects PF2e8.6.1 feat/feature category, nominal/taken levels,
+activation, prerequisites, frequency and documented subfeature source fields.
+Category maps preserve the source code and distinguish feats from features.
+Optional schema-defined undefined values remain absent, never defaulted.
+Source-only reads do not execute grants or resolve offered progression.

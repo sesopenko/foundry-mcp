@@ -276,3 +276,12 @@ and fresh authenticated MCP reads establish offered options and immediate spell
 identity references. Three actual definitions and nine spell targets passed exact
 source/prose comparisons and unchanged source fingerprints. No acquisition or
 active benefits are inferred. Completed progress is26/39 (66.7%).
+
+### Feat source checkpoint — October 22, 2026
+
+ITEM-feat remains In progress. Typed source extraction and strict Python
+validation distinguish feat/feature categories, nominal/taken levels and
+subfeature options without applying them. Four actual compendium definitions
+passed source/prose/fingerprint verification across19 pages and124 records.
+A separate persisted grant schema audit establishes a proposed narrow allowlist;
+acquired grant/selection joins remain to implement. Progress remains26/39 (66.7%).

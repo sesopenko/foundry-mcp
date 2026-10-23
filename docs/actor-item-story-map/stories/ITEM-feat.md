@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -47,4 +47,19 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 Persisted grant/selection relationships require a separately documented allowlist before use; arbitrary flags and rule-element execution are excluded.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Selected source reads have now been live verified; persisted grant/selection joins remain pending. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+
+## Source checkpoint in progress — October 22, 2026
+
+The source reader is implemented independently from acquired-document
+joins. The [persisted grant audit](../feat-grant-contract.md) records the selected
+flag schema and a proposed resolution contract; it does not advertise implemented
+or live-verified grants. Preserve source-only usefulness while completing the
+original grant/selection evidence gates. The story remains In progress.
+
+The [field audit](../feat-fields.md) and [verification](../feat-verification.md)
+record four actual definitions,19 pages and124 source/description/identity records,
+with exact prose and unchanged source fingerprints. Optional undefined source
+fields remain absent and explicit null stays distinct. Regression suites pass:
+307 Python tests (one skipped),377 JavaScript tests. Relationships remain
+unsupported pending the original persisted-grant and selection evidence gates.

@@ -520,7 +520,7 @@ def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
 
 def _empty_source_object(path: str, identity: dict[str, Any]) -> bool:
     """PF2e-specific empty NPC damageRolls/Lore variants source markers8.6.1; no map dumps."""
-    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='deity' and _deity_spec(path) is not None and _deity_spec(path)[1]=='object') or (identity['type']=='class' and _class_spec(path) is not None and _class_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
+    return (identity['document_name']=='Actor' and identity['type']=='npc' and _npc_spec(path) is not None and _npc_spec(path)[1] in ('object','predicate')) or identity['document_name']=='Item' and ((identity['type']=='melee' and path=='/system/damageRolls') or (identity['type']=='lore' and path=='/system/variants') or (identity['type']=='weapon' and _weapon_spec(path) is not None and _weapon_spec(path)[1]=='object') or (identity['type']=='armor' and _armor_spec(path) is not None and _armor_spec(path)[1]=='object') or (identity['type']=='shield' and _shield_spec(path) is not None and _shield_spec(path)[1]=='object') or (identity['type']=='spell' and _spell_spec(path) is not None and _spell_spec(path)[1]=='object') or (identity['type']=='ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='object') or (identity['type']=='background' and _background_spec(path) is not None and _background_spec(path)[1]=='object') or (identity['type']=='feat' and _feat_spec(path) is not None and _feat_spec(path)[1]=='object') or (identity['type']=='deity' and _deity_spec(path) is not None and _deity_spec(path)[1]=='object') or (identity['type']=='class' and _class_spec(path) is not None and _class_spec(path)[1]=='object') or (identity['type']=='kit' and _kit_spec(path) is not None and _kit_spec(path)[1]=='object') or (identity['type']=='consumable' and _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1]=='object'))
 
 
 def _melee_value(raw: dict[str, Any]) -> bool:
@@ -602,6 +602,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='array' or
             identity['type'] == 'heritage' and path in HERITAGE_ARRAYS or
             identity['type'] == 'background' and _background_spec(path) is not None and _background_spec(path)[1]=='array' or
+            identity['type'] == 'feat' and _feat_spec(path) is not None and _feat_spec(path)[1]=='array' or
             identity['type'] == 'deity' and _deity_spec(path) is not None and _deity_spec(path)[1]=='array' or
             identity['type'] == 'class' and _class_spec(path) is not None and _class_spec(path)[1]=='array' or
             identity['type'] == 'kit' and path in KIT_ARRAYS or
@@ -1387,6 +1388,76 @@ def _background_relationship(row,identity):
     return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
 
 
+# PF2e-specific feat8.6.1 source contract, never effective benefits.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/feat/data.ts
+# Same revision item/feat/values.ts and item/ability/{data.ts,trait-toggles.ts}.
+FEAT_SOURCE={'/system/'+p:('feat_'+c,k,n) for p,c,k,n in (
+ ('category','category_code','string',False),('level/value','nominal_level','level',False),
+ ('level/taken','taken_level','level',True),('onlyLevel1','only_level_one','boolean',False),
+ ('maxTakable','maximum_takable','positive_integer',True),('actionType/value','activation_kind','string',False),
+ ('actions/value','action_count','actions',True),('location','location','string',True),
+ ('frequency','frequency_source','null',True),('frequency/value','recorded_frequency_remaining','nonnegative_integer',False),
+ ('frequency/max','frequency_maximum','positive_integer',False),('frequency/per','frequency_interval_code','string',False),
+ ('traits/rarity','rarity_code','string',False),('traits/toggles','trait_toggles','absent',False),
+ ('traits/toggles/mindshift','mindshift_toggle','null',True),('traits/toggles/mindshift/selected','mindshift_selected','boolean',False),
+ ('subfeatures/languages','language_options','absent',False),('subfeatures/languages/slots','language_slots','nonnegative_integer',False),
+ ('subfeatures/proficiencies','proficiency_entries','object',False),('subfeatures/senses','sense_entries','object',False),
+ ('selfEffect','self_effect_source','null',True),('selfEffect/uuid','self_effect_uuid','string',False),
+ ('selfEffect/name','self_effect_name','string',False),('slug','source_slug','string',True),
+ ('publication/title','publication_title','string',False),('publication/authors','publication_authors','string',False),
+ ('publication/license','publication_license','string',False),('publication/remaster','publication_remaster','boolean',False),
+)}
+FEAT_ARRAYS={'/system/'+p:'feat_'+c for p,c in (
+ ('prerequisites/value','prerequisite_entries'),('traits/value','trait_code'),('traits/otherTags','other_tag_code'),
+ ('subfeatures/keyOptions','key_option_code'),('subfeatures/languages/granted','granted_language_code'),
+ ('subfeatures/suppressedFeatures','suppressed_feature_uuid'))}
+
+
+def _feat_spec(path):
+    """PF2e-specific feat8.6.1 pinned source paths; no effective benefit math.
+
+    Opaque subfeature keys retain escaped source provenance, never document IDs.
+    """
+    if path in FEAT_SOURCE:return FEAT_SOURCE[path]
+    for base,concept in FEAT_ARRAYS.items():
+        if path==base:return concept,'array',False
+        suffix=r'/(0|[1-9][0-9]*)'+('/value' if base=='/system/prerequisites/value' else '')
+        if re.fullmatch(re.escape(base)+suffix,path):return ('feat_prerequisite_text' if base=='/system/prerequisites/value' else concept),'string',False
+    match=re.fullmatch(r'/system/subfeatures/(proficiencies|senses)/([^/]+)(?:/(rank|attribute|acuity|range|special(?:/(?:ancestry|llv|second))?))?',path)
+    if not match or re.search(r'~(?![01])',match[2]):return None
+    group,_,leaf=match.groups()
+    if leaf is None:return ('feat_proficiency_entries' if group=='proficiencies' else 'feat_sense_entries'),'absent',False
+    if group=='proficiencies':return {'rank':('feat_proficiency_rank','rank',False),'attribute':('feat_proficiency_attribute_code','string',True)}.get(leaf)
+    return {'acuity':('feat_sense_acuity_code','string',False),'range':('feat_sense_range','range',True),'special':('feat_sense_special','absent',False),**{'special/'+k:('feat_sense_special_'+k,'boolean',False) for k in ('ancestry','llv','second')}}.get(leaf)
+
+
+def _feat_record(row,identity):
+    """PF2e-specific feat8.6.1 exact source DTO; pinned schema above.
+
+    Category alone maps to {code,kind}; activation codes, proficiency ranks and
+    every other source value remain unchanged. No eligibility or effective value.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];spec=_feat_spec(path)
+    if path in SOURCE_PATHS:return row['provenance']['mapping']!='pf2e.feat.source.v1'
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    if raw['document_uuid']!=identity['uuid']:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.feat.source.v1',limitations=['feat_source_not_effective_benefit']):return False
+    concept,kind,nullable=spec;value=raw.get('value');expected=value
+    if path=='/system/category' and raw['present']:
+        expected=dict(code=value,kind='feature' if value in ('ancestryfeature','calling','classfeature','curse','deityboon','pfsboon') else 'feat' if value in ('ancestry','bonus','class','general','skill') else 'unknown')
+    if row['mapped']!=dict(concept=concept,value=expected,unit=None) or type(row['mapped']['value']) is not type(expected):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    numeric=type(value) in (int,float) and math.isfinite(value)
+    integer=numeric and value%1==0
+    return {'null':False,'absent':False,'string':type(value) is str,'boolean':type(value) is bool,
+            'level':integer and 1<=value<=30,'actions':integer and 1<=value<=3,
+            'rank':integer and 1<=value<=4,'range':numeric and 5<=value<=300,
+            'positive_integer':integer and value>=1,'nonnegative_integer':integer and value>=0,
+            'array':type(value) is list and not value,'object':type(value) is dict and not value}[kind]
+
+
 # PF2e-specific DeitySystemSchema8.6.1; authored options, no active benefits.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/deity/data.ts
 DEITY_SOURCE={'/system/'+p:('deity_'+c,k,n) for p,c,k,n in (
@@ -2012,6 +2083,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'feat':
+        return _feat_spec(path) is not None
     if identity['type'] == 'deity':
         return _deity_spec(path) is not None
     if identity['type'] == 'class':
@@ -2434,6 +2507,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
         return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'feat' and not _feat_record(row, identity):
+        return False
     if identity['document_name'] == 'Item' and identity['type'] == 'deity' and not _deity_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'class' and not _class_record(row, identity):
@@ -2805,6 +2880,19 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     synthetic targets; missing/denied/unsupported/unverified disclose no target.
     Absent or empty items maps return missing/empty markers. No recursive feature
     hydration, granted/acquired claim, physical fields or effective benefit math.
+    feat Items expose PF2e8.6.1 authored category as {code,kind}, where kind is
+    feature (ancestryfeature/calling/classfeature/curse/deityboon/pfsboon), feat
+    (ancestry/bonus/class/general/skill), or unknown. Source mapping is
+    pf2e.feat.source.v1 with limitation feat_source_not_effective_benefit.
+    Nominal level and nullable taken level are separate; activation codes stay
+    unchanged and null action count does not imply free action. Prerequisites
+    remain text, location remains a stored string, and selected frequency,
+    traits/toggles, language/key options, proficiency ranks, senses, suppression
+    UUIDs and self-effect leaves are authored source. These do not establish
+    eligibility, acquired grants, active toggles, effective benefits or resources.
+    Lists/maps are bounded to 12000 entries each; absent/null/empty remain
+    distinct, malformed/oversized source fails ReadFailed. No rule elements,
+    arbitrary flags, physical fields or prepared values are read.
     deity Items expose PF2e8.6.1 authored category, nullable sanctification
     modal/what, primary/alternate domains, font, attributes, nullable skill,
     weapons, keyed spell UUIDs, otherTags, slug and publication. Missing fields

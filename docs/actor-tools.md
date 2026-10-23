@@ -826,3 +826,20 @@ Actual MCP verification covers three compendium definitions and nine resolved sp
 See the [field audit](actor-item-story-map/deity-fields.md).
 
 See the [deity verification](actor-item-story-map/deity-verification.md) for rulebook and runtime evidence.
+
+## Feat source checkpoint
+
+PF2e8.6.1 feat reading preserves nominal and recorded taken levels separately.
+Categories map to `{code, kind}`, where kind distinguishes the upstream feat and
+feature categories and retains unknown categories as unknown. Activation counts,
+frequency, prerequisites and subfeatures remain source values. Description reads
+retain toolkit, immunity and other prose requirements without evaluating eligibility.
+Optional undefined source values remain absent; explicit nullable values remain null.
+
+Source-only reading does not resolve or execute GrantItem rules, acquire future
+features, apply subfeatures or infer current benefits. Relationships and effective
+sections remain unsupported at this checkpoint. The
+[grant audit](actor-item-story-map/feat-grant-contract.md) is a proposed contract,
+separate from implemented behavior. See the
+[field audit](actor-item-story-map/feat-fields.md) and
+[evidence](actor-item-story-map/feat-verification.md).

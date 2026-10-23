@@ -339,3 +339,7 @@ Do not share a PDF-enabled endpoint's MCP credentials with players.
 PF2e deity reading preserves offered devotee options and explicit immediate spell
 identity links. It does not infer acquired spells, prepared spells or active
 character benefits. See the [deity field audit](docs/actor-item-story-map/deity-fields.md).
+
+PF2e feat source reading distinguishes feats from features and nominal levels from
+recorded taken levels, retaining prerequisites and description prose. Acquired
+grant relationships remain pending; source rules never execute during reading.
