@@ -20,6 +20,7 @@ SAFE_ARGUMENTS = {
     "get_journal_contents": {"journal_id", "page_id", "categories_only", "limit", "cursor"},
     "search_journals": {"query", "folder_id", "journal_id", "limit", "cursor"},
     "read_journal_page": {"page_uuid", "source", "max_chars", "cursor"},
+    "resolve_journal_reference": {"page_uuid", "source", "target"},
 }
 
 

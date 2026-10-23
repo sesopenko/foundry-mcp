@@ -1,5 +1,9 @@
 # Foundry MCP
 
+Selected journal UUID references can be followed lazily to supported PF2e Actors
+and Items with `resolve_journal_reference`, preserving anchors and token context
+without importing documents or executing rules.
+
 Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance through the Model Context Protocol (MCP).
 
 **[Source code and issues](https://github.com/sesopenko/foundry-mcp)** · **[Releases](https://github.com/sesopenko/foundry-mcp/releases)** · **[Operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/operations.md)** · **[License](https://github.com/sesopenko/foundry-mcp/blob/main/LICENSE.txt)**

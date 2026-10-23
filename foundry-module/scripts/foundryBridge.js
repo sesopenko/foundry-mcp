@@ -2,7 +2,7 @@ import { setPdfSocket, handlePdfMessage } from "./pdfChannel.js";
 import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
-import { getJournalTree, getJournalContents, searchJournals, readJournalPage } from "./journals.js";
+import { getJournalTree, getJournalContents, searchJournals, readJournalPage, resolveJournalReference } from "./journals.js";
 import { getActorTypes, readActor, readItem, listActorItems } from "./actors.js";
 import { getActorTree, searchActors } from "./actorWorld.js";
 import { listSceneActors } from "./actorScenes.js";
@@ -57,6 +57,7 @@ const rpcHandlers = {
   getJournalContents,
   searchJournals,
   readJournalPage,
+  resolveJournalReference,
   getActorTypes,
   getActorTree,
   searchActors,

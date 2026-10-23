@@ -3,6 +3,8 @@
  * docs/journal-tools.md (v13/v14). Never use sheet internals or game.journal.tree.
  * Source HTML/Markdown is sliced, never parsed and reserialized for reading.
  */
+import { actorTarget, itemTarget, permitted, ready as actorReady } from "./actorDocuments.js";
+import { validateParams } from "./actorReadUtils.js";
 const MAX_BYTES = 48000; // Leave room for RPC framing below the 64 KiB transport cap.
 const encoder = new TextEncoder();
 
@@ -359,7 +361,7 @@ export async function searchJournals(params = {}) {
     "matches", "search", scope, rev);
 }
 
-function references(content, sourcePage) {
+function references(content, sourcePage, source) {
   const result = []; let count = 0;
   for (const match of content.matchAll(/@UUID\[([^\]]+)\](?:\{([^}]+)\})?/g)) {
     count++;
@@ -370,6 +372,8 @@ function references(content, sourcePage) {
       anchor: scalarSlice(parts.join("#"), 0, 512) || null, anchor_truncated: parts.join("#").length > 512,
       journal_id: null, page_uuid: null,
       resolution: "outside_world_journals" };
+    ref.resolve_next_call = !ref.target_truncated && /^(Actor\.|Item\.|Compendium\.|Scene\.|\.)/.test(uuid)
+      ? { tool: "resolve_journal_reference", arguments: { page_uuid: sourcePage.uuid, target: match[1], source } } : null;
     if (uuid.startsWith("JournalEntry.") || uuid.startsWith(".")) {
       ref.resolution = "unresolved";
       try {
@@ -385,6 +389,98 @@ function references(content, sourcePage) {
   }
   return { references: result, references_complete: count <= 20,
     references_scope: "complete UUID notation within this source fragment" };
+}
+
+/** Check the current world text-page source and authorization, never a cached
+ * fragment. Public JournalEntryPage.text/parent and Document.testUserPermission:
+ * https://foundryvtt.com/api/v14/classes/foundry.documents.JournalEntryPage.html
+ */
+function referenceOrigin(pageUuid, source, target) {
+  ready();
+  const { entry, page } = pageFromUuid(pageUuid);
+  if (!permitted(entry) || !permitted(page)) fail("PermissionDenied", "The originating journal or page is not readable; refresh journal navigation with an authorized GM.");
+  if (page.type !== "text") fail("UnsupportedPageType", "Only world text pages can supply references.");
+  const content = source === "html" ? page.text.content : page.text.markdown;
+  if (typeof content !== "string") fail("SourceUnavailable", "The selected source is not stored; reread the page and use an available source.");
+  let present = false;
+  for (const match of content.matchAll(/@UUID\[([^\]]+)\]/g)) {
+    if (match[1] === target) { present = true; break; }
+  }
+  if (!present) {
+    fail("ReferenceChanged", "The exact reference is absent from this source; reread the page and reuse its current target.");
+  }
+  return page;
+}
+
+/** Resolve exactly one authored journal reference without importing or reading
+ * target source. Public core14 fromUuid(uuid,{relative:Document}):
+ * https://foundryvtt.com/api/v14/functions/foundry.utils.fromUuid.html
+ * PF2e-specific Actor/Item branch delegates supported type/source/instance
+ * identity to actorDocuments (tested core14.369/PF2e8.6.1); other systems are
+ * unsupported for these readers. Actor.token supplies synthetic context:
+ * https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html#token
+ * No preparation state, private APIs, name matching or recursive hydration.
+ */
+export async function resolveJournalReference(params = {}) {
+  validateParams(params, ["page_uuid", "target", "source"]);
+  selector(params.page_uuid, "page_uuid");
+  selector(params.target, "target");
+  const source = params.source ?? "html";
+  if (!["html", "markdown"].includes(source)) fail("InvalidParameters", "source must be html or markdown.");
+  const page = referenceOrigin(params.page_uuid, source, params.target);
+  const [uuid, ...anchors] = params.target.split("#");
+  const result = status => bounded({ foundry_version: game.version, page_uuid: page.uuid,
+    source, target: params.target, anchor: anchors.join("#") || null, status, identity: null, next_call: null });
+  const recheck = () => {
+    if (referenceOrigin(params.page_uuid, source, params.target) !== page) {
+      fail("ReferenceChanged", "The originating page changed; reread its source before resolving references.");
+    }
+  };
+  if (!/^(Actor\.|Item\.|Compendium\.|Scene\.|\.)/.test(uuid)) return result("outside_scope");
+  let document;
+  try { document = await foundry.utils.fromUuid(uuid, { relative: page }); }
+  catch { recheck(); return result("unverified"); }
+  recheck();
+  if (!document) return result("missing");
+  const owner = document.parent?.documentName === "Actor" ? document.parent : null;
+  const pack = document.compendium ?? owner?.compendium ?? null;
+  if (!permitted(document) || (owner && !permitted(owner)) || (pack && !permitted(pack))) return result("denied");
+  if (!["Actor", "Item", "Token"].includes(document.documentName)) return result("outside_scope");
+  let selected; let nextCall;
+  try {
+    // PF2e-specific reader admission checks supported runtime and document types.
+    actorReady();
+    if (document.documentName === "Token") {
+      selected = await actorTarget({ token_uuid: document.uuid });
+      nextCall = { tool: "read_actor", arguments: { token_uuid: document.uuid } };
+    } else {
+      const actor = document.documentName === "Actor" ? document : owner;
+      let tokenUuid = null;
+      if (document.uuid?.startsWith("Scene.")) {
+        tokenUuid = actor?.token?.uuid;
+        if (!tokenUuid) { recheck(); return result("unverified"); }
+        const instance = await actorTarget({ token_uuid: tokenUuid });
+        if (instance.document.uuid !== actor.uuid) { recheck(); return result("unverified"); }
+      }
+      const arguments_ = document.documentName === "Actor"
+        ? (tokenUuid ? { token_uuid: tokenUuid } : { actor_uuid: document.uuid })
+        : { item_uuid: document.uuid, ...(tokenUuid ? { token_uuid: tokenUuid } : {}) };
+      selected = document.documentName === "Actor" ? await actorTarget(arguments_) : await itemTarget(arguments_);
+      nextCall = { tool: document.documentName === "Actor" ? "read_actor" : "read_item", arguments: arguments_ };
+      if (selected.document.uuid !== document.uuid) { recheck(); return result("unverified"); }
+    }
+  } catch (error) {
+    recheck();
+    const code = error?.rpcError?.type;
+    return result(code === "PermissionDenied" ? "denied" : code === "DocumentNotFound" || code === "ActorUnavailable" ? "missing"
+      : ["UnsupportedSystem", "UnsupportedVersion", "UnsupportedType", "InvalidRequest"].includes(code) ? "unsupported" : "unverified");
+  }
+  recheck();
+  // Recheck related records after all asynchronous reads before disclosing identity.
+  const currentPack = selected.document.compendium ?? selected.actor?.compendium ?? null;
+  if (!permitted(selected.document) || (selected.actor && !permitted(selected.actor))
+      || (currentPack && !permitted(currentPack)) || (selected.token && (!permitted(selected.token) || !permitted(selected.token.parent)))) return result("denied");
+  return bounded({ ...result("resolved"), identity: selected.identity, next_call: nextCall });
 }
 
 export async function readJournalPage(params = {}) {
@@ -415,7 +511,7 @@ export async function readJournalPage(params = {}) {
     content: content.slice(start, end), source_present: typeof (source === "html" ? page.text.content : page.text.markdown) === "string",
     offset: start, end_offset: end, total_chars: content.length, offset_units: "UTF-16 code units",
     fragment: start > 0 || end < content.length, complete: end === content.length,
-    ...references(content.slice(start, end), page),
+    ...references(content.slice(start, end), page, source),
     next_cursor: end === content.length ? null : cursor("read", scope, rev, end) });
   let result = make();
   while (bytes(result) > MAX_BYTES && end > start) {

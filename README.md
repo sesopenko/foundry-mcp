@@ -20,6 +20,9 @@ Journal preparation tools provide hierarchical navigation, page outlines,
 literal text search, and exact HTML/Markdown reading through the GM browser.
 See [journal tool contracts and compatibility](docs/journal-tools.md).
 
+Selected journal UUID references can be followed lazily to supported PF2e Actors
+and Items with `resolve_journal_reference`, preserving anchors and token context.
+
 Use `get_bridge_versions` to compare the packaged server and loaded browser
 module releases, including when the GM is disconnected. Foundry warns about
 tagged mismatches without blocking tools. See [version diagnostics](docs/bridge-version-diagnostics.md).

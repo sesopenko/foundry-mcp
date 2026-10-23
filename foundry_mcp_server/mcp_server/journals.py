@@ -210,6 +210,10 @@ async def read_journal_page(
     that page, not part of the read selector. Relative links resolve against
     this source page. Unresolved and non-journal targets are marked explicitly;
     split notation may only be visible after concatenating adjacent chunks.
+    Actor/Item references may supply resolve_next_call with tool and arguments:
+    call resolve_journal_reference lazily for selected targets only. Pass its
+    exact untruncated target, originating page_uuid and selected source; this
+    metadata does not establish that the target exists or is supported.
     max_chars defaults to 12000 (1..20000 UTF-16 units); Unicode pairs stay
     intact, so a one-unit limit may yield two units. Output also stops at 48,000
     UTF-8 JSON bytes. Fragments may contain incomplete HTML elements; nothing
@@ -223,3 +227,110 @@ async def read_journal_page(
     Cite journal_name/page_name when answering; IDs support subsequent calls.
     """
     return await _call("readJournalPage", dict(page_uuid=page_uuid, source=source, max_chars=max_chars, cursor=cursor), "content")
+
+
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
+async def resolve_journal_reference(
+    page_uuid: Identifier,
+    target: Identifier,
+    source: Literal["html", "markdown"] = "html",
+) -> dict[str, Any]:
+    """Resolve one selected journal UUID reference to an Actor/Item identity.
+
+    Requires a connected ready GM browser and readable origin/target documents
+    and packs. Use after read_journal_page: page_uuid is the full world text-page
+    UUID from get_journal_contents/search_journals, never a bare ID/name/path or
+    compendium page. target is the exact untruncated contents of @UUID[target],
+    including any #anchor, from that page's selected source. source defaults to
+    html; markdown selects stored original Markdown. Both selectors are 1..512
+    characters. No plain-name guessing, target source reading, enrichment,
+    imports, writes, recursive expansion or eager pack hydration occurs.
+    For plain-name mentions use bounded search_actors or discover Item packs
+    with list_actor_compendiums and search_compendium_actors; inspect candidates
+    before selecting a canonical UUID. A name match never proves identity.
+
+    The origin source must still contain this exact complete notation. Relative
+    targets resolve against that page; anchors are retained separately and never
+    added to reader selectors. ReferenceChanged means the origin disappeared or
+    changed: reread read_journal_page before retrying. SourceUnavailable: select
+    html; invalid page selectors: refresh get_journal_contents/search_journals.
+
+    Returns exactly foundry_version, page_uuid, source, target, anchor, status,
+    identity and next_call in one response, bounded to 48,000 UTF-8 JSON bytes;
+    there is no pagination. anchor is everything after the first #, or null
+    when the anchor is empty or absent.
+    status=resolved provides canonical named Actor/Item identity (document_name,
+    id, uuid, type, source_kind, folder, pack, actor, instance) and next_call
+    {tool, arguments}. Call read_actor with actor_uuid for world/pack Actors or
+    token_uuid for token context; call read_item with item_uuid and, when
+    instance is present, token_uuid. Use returned arguments unchanged.
+
+    Other statuses have identity=null and next_call=null: missing means no
+    current target (reread origin/check navigation); denied means permission
+    prevents resolution (ask the GM to check access); unsupported means system,
+    version or type lacks reader support (use journal source); outside_scope
+    means a non-Actor/Item destination (use journal navigation for journal links);
+    unverified means resolution could not establish identity (retry selected
+    target later). None proves the prose claim false. Errors NoConnectedGM,
+    FoundryDisconnected/FoundryTimeout require reconnecting/waiting and retrying.
+
+    PF2e-specific target admission uses existing Actor/Item reader contracts,
+    tested on Foundry14.369/PF2e8.6.1: character/npc/familiar Actors and supported
+    Item types only. Other systems return unsupported; ordinary journal reading
+    remains available. Identity has no source/effective-value interpretation.
+    Schema boundary: https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module
+    """
+    from . import tools
+    from .actors import ITEM_TYPES, _identity
+
+    try:
+        result = await tools._foundry_manager.call(
+            "gm", "resolveJournalReference",
+            dict(page_uuid=page_uuid, source=source, target=target), timeout=15.0,
+        )
+    except RpcError as exc:
+        raise ToolError(f"{exc.error.get('type', 'FoundryError')}: {exc.error.get('message', 'Foundry call failed')}") from exc
+    except asyncio.TimeoutError as exc:
+        raise ToolError("FoundryTimeout: retry after the GM browser is responsive.") from exc
+    except ConnectionError as exc:
+        raise ToolError("FoundryDisconnected: reconnect the GM browser and retry.") from exc
+    except RuntimeError as exc:
+        raise ToolError("NoConnectedGM: open the world in the connected GM browser and retry.") from exc
+
+    keys = {"foundry_version", "page_uuid", "source", "target", "anchor", "status", "identity", "next_call"}
+    valid = type(result) is dict and set(result) == keys
+    if valid:
+        valid = (type(result["foundry_version"]) is str
+                 and all(type(result[k]) is str and 1 <= len(result[k]) <= 512
+                         for k in ("page_uuid", "source", "target"))
+                 and result["page_uuid"] == page_uuid and result["source"] == source
+                 and result["target"] == target
+                 and result["anchor"] == (target.partition("#")[2] or None)
+                 and result["status"] in ("resolved", "missing", "denied", "unsupported", "outside_scope", "unverified"))
+    if valid and result["status"] == "resolved":
+        identity = result["identity"]
+        valid = _identity(identity) and identity["document_name"] in ("Actor", "Item")
+        if valid:
+            valid = (identity["type"] in ("character", "npc", "familiar")
+                     if identity["document_name"] == "Actor"
+                     else identity["type"] in ITEM_TYPES - {"affliction"})
+        if valid:
+            if identity["document_name"] == "Actor":
+                arguments = ({"token_uuid": identity["instance"]["token_uuid"]}
+                             if identity["instance"] else {"actor_uuid": identity["uuid"]})
+                expected = {"tool": "read_actor", "arguments": arguments}
+            else:
+                arguments = {"item_uuid": identity["uuid"]}
+                if identity["instance"]:
+                    arguments["token_uuid"] = identity["instance"]["token_uuid"]
+                expected = {"tool": "read_item", "arguments": arguments}
+            valid = result["next_call"] == expected
+    elif valid:
+        valid = result["identity"] is None and result["next_call"] is None
+    try:
+        valid = valid and len(json.dumps(result, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")) <= 48000
+    except (TypeError, UnicodeError, ValueError):
+        valid = False
+    if not valid:
+        raise ToolError("InvalidFoundryResponse: malformed or oversized journal reference result.")
+    return result

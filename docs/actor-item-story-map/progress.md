@@ -301,3 +301,12 @@ Added a narrow recorded-selection source allowlist: exact strings and finite
 numbers, distinct absent/empty maps, no UUID or acquisition inference. Unsupported
 values are withheld and make source partial. Acquired joins and populated owned
 runtime verification remain open; ITEM-feat stays In progress,26/39 complete.
+
+### Journal Actor/Item references complete — October 22, 2026
+
+CORE-journal delivers lazy selected-reference resolution with canonical named
+identities and complete reader selectors, including synthetic token context.
+Existing-world live checks follow journal → Actor → owned Item and a compendium
+Item while preserving journal source/revision. Deterministic tests cover relative
+links, anchors, duplicates, bounds, permissions and asynchronous source changes.
+Completed progress is27/39 (69.2%).

@@ -242,3 +242,12 @@ World settings are readable by players; possession of this password permits
 manual PDF management requests even though the interface is GM-only.
 They never enter generic RPC response correlation. See [PDF library](pdf-library.md)
 for protocol, persistent data, resource limits and recovery.
+
+Journal source reading and Actor/Item reference resolution are separate RPCs.
+`readJournalPage` supplies lazy follow-up metadata without hydrating every target.
+`resolveJournalReference` checks one exact current source notation, resolves it
+asynchronously relative to its originating page, and delegates PF2e identity and
+permission admission to the existing Actor/Item document boundary. Python
+validates the singleton result and canonical next-reader arguments before MCP
+delivery. Failures stay local to that selected reference; no target source or
+gameplay operation is executed.

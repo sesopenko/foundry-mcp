@@ -1,6 +1,6 @@
 # Journal preparation tools
 
-Four read-only MCP tools let a fresh LLM navigate and investigate world journals
+Five read-only MCP tools let a fresh LLM navigate and investigate world journals
 through the connected GM browser. They include GM-only text. Compendium journals
 and reading images, maps, PDFs, or video are outside this version's scope.
 
@@ -10,10 +10,37 @@ and reading images, maps, PDFs, or video are outside this version's scope.
 | `get_journal_contents` | You want an entry's pages and heading outline | Read a text page's returned UUID |
 | `search_journals` | You have a name, phrase, or area code | Read candidate pages in full context |
 | `read_journal_page` | You have a page UUID | Continue source chunks, then cite entry/page names |
+| `resolve_journal_reference` | You want one Actor/Item reference | Follow its returned reader call |
 
 Tool descriptions and input schemas provide the precise parameters, defaults,
 response fields, and recovery instructions. They are available in ordinary MCP
 discovery, independently of the development-only JavaScript console.
+
+## Selected Actor and Item references
+
+Complete, untruncated Actor/Item-capable UUID references supply `resolve_next_call`
+with originating `page_uuid`, exact `target` including anchor, and selected
+`source`. Ordinary fragment reads never eagerly hydrate Actor/Item references.
+Legacy journal fields and source/revision/continuation behavior remain unchanged.
+
+Resolution verifies current source membership, then uses public asynchronous
+`fromUuid(uuid,{relative:page})`. Results contain `foundry_version`, `page_uuid`,
+`source`, `target`, `anchor`, `status`, `identity` and `next_call`. Resolved named
+canonical identities supply complete `read_actor` or `read_item` arguments;
+synthetic targets retain actual token context. Anchors are not reader selectors.
+Names/labels are never implicitly resolved; search yields bounded candidates.
+
+Missing, denied, unsupported, outside-scope and unverified outcomes withhold
+identity and selectors. `ReferenceChanged` requires rereading source. Reference
+failures stay local. No target source, imports, writes, rolls, enrichment or
+recursive expansion occurs. PF2e-specific target admission is verified on
+Foundry14.369/PF2e8.6.1; ordinary journals remain available on other systems.
+
+Metadata completeness remains fragment-scoped, with at most20 references.
+Reconstruct adjacent source fragments before following split notation; truncated
+targets have no resolver call. Resolution is one selected reference, no pagination,
+bounded to48000 UTF-8 JSON bytes. Source membership and permissions are rechecked
+after awaits. See the tool description for exact errors and recovery.
 
 ## Navigation and completion
 

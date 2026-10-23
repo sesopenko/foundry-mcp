@@ -42,6 +42,32 @@ async def main():
         needed={'get_actor_types','read_actor','read_item','list_actor_items','get_actor_tree','search_actors','list_scene_actors','list_actor_compendiums','search_compendium_actors'}
         assert needed<=available.keys()
         for name in needed:assert available[name].annotations.readOnlyHint
+        assert 'resolve_journal_reference' in available
+        assert available['resolve_journal_reference'].annotations.readOnlyHint
+        assert 'target' in available['resolve_journal_reference'].inputSchema['required']
+        assert 'untruncated' in available['resolve_journal_reference'].description
+        journal_candidates=payload(await client.call_tool('search_journals',dict(query='Zantus',limit=2)))
+        journal_page=next(row for row in journal_candidates['matches'] if row['page_name']=='The Violated Grave')
+        journal_source=payload(await client.call_tool('read_journal_page',dict(page_uuid=journal_page['page_uuid'],max_chars=20000)))
+        assert journal_source['complete'] and journal_source['references_complete']
+        source_refs=journal_source['references']
+        actor_ref=next(row for row in source_refs if row['target'].startswith('Actor.'))
+        item_ref=next(row for row in source_refs if row['target'].startswith('Compendium.') and '.Item.' in row['target'])
+        for reference in (actor_ref,item_ref):
+            follow=reference['resolve_next_call']
+            resolved=payload(await client.call_tool(follow['tool'],follow['arguments']))
+            assert resolved['status']=='resolved' and resolved['identity']['uuid']==reference['target']
+            assert resolved['anchor'] is None
+            target=resolved['next_call']
+            identity=payload(await client.call_tool(target['tool'],dict(**target['arguments'],sections=['identity'],limit=1)))
+            assert identity['identity']['uuid']==resolved['identity']['uuid']
+            if resolved['identity']['document_name']=='Actor':
+                owned=payload(await client.call_tool('list_actor_items',dict(**target['arguments'],limit=1)))
+                item=owned['nodes'][0]['next_call']
+                child=payload(await client.call_tool(item['tool'],dict(**item['arguments'],sections=['identity'],limit=1)))
+                assert child['identity']['actor']['uuid']==resolved['identity']['uuid']
+        journal_again=payload(await client.call_tool('read_journal_page',dict(page_uuid=journal_page['page_uuid'],max_chars=20000)))
+        assert journal_again['content']==journal_source['content'] and journal_again['revision']==journal_source['revision']
         assert 'description' in available['read_actor'].inputSchema['properties']['sections']['items']['enum']
         assert 'GM-private biography' in available['read_actor'].description
         assert 'Missing structured activation fields do not mean no ability' in available['read_item'].description

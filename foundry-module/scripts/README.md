@@ -1,5 +1,11 @@
 # foundry-module/scripts
 
+`readJournalPage` supplies lazy `resolve_next_call` metadata.
+`resolveJournalReference` resolves selected notation through public async
+`fromUuid` relative to the source page. PF2e Actor/Item admission reuses
+`actorDocuments.js`, including synthetic context. Source membership and
+permissions are checked again after awaits; no target source is expanded.
+
 Foundry loads `main.js` as an ES module. Its `init` hook registers client
 settings; its `ready` hook starts the WebSocket bridge only for GM users.
 `foundryBridge.js` dispatches RPC, while `exploration.js` implements the opt-in

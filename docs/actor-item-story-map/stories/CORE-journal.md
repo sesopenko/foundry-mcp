@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [CORE-world](CORE-world.md), [CORE-packs](CORE-packs.md) |
 | Dependency reason | World and pack discovery/read paths supply valid follow-up targets. |
 
@@ -24,3 +24,11 @@ Acceptance: relative/absolute/compendium/embedded references, duplicates, broken
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+Delivered selected-reference resolution and lazy follow-up metadata preserve
+legacy world-journal fields, exact source and continuation semantics. See
+[verification](../journal-reference-verification.md) for deterministic relative,
+absolute, compendium, embedded and token cases, strict MCP discovery/DTO checks,
+and existing-world journal → Actor → owned Item plus compendium Item follow-up.
+No eager target hydration or implicit name resolution occurs. Ordinary journal
+reading remains available outside the pinned PF2e target-reader pairing.
