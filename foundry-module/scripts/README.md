@@ -194,3 +194,11 @@ labelled starting ranks, training and five progression lists. `actorClassRelatio
 resolves explicit immediate feature definitions without reading target source.
 Rank labels are not bonuses and progression is not advancement or acquisition;
 no Actor totals or HP arithmetic are calculated.
+
+`actorDeity.js` selects PF2e8.6.1 deity source options and metadata with explicit
+missing/null/empty distinctions. `actorDeityRelationships.js` resolves at most200
+immediate spell claims through the shared public Item boundary, rejecting other
+target types. Categories, sanctification, domains, font, attributes, skills and
+favored weapons are source options; none establish active benefits or acquired
+spells. Source-only reads never hydrate spell targets. Reader snapshots revalidate
+claims, target identities and permissions for continuation safety.

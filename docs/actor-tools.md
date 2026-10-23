@@ -808,3 +808,21 @@ malformed/denied/stale cases retain deterministic coverage. The recorded Player
 Core boost-text discrepancy remains evidence, with no arithmetic implemented
 from it. See [fields](actor-item-story-map/class-fields.md) and
 [evidence](actor-item-story-map/class-verification.md).
+
+## Deity source options
+
+PF2e8.6.1 `deity` Items expose category, nullable sanctification, primary/alternate
+domains, font, attribute, nullable skill, favored weapon codes and keyed spell UUIDs.
+Unknown code strings remain source values. Categories include philosophies and
+pantheons without treating them as creatures. Missing values are not reconstructed
+from system defaults; null, empty and absent remain distinct.
+
+Explicit `relationships` resolve at most200 immediate spell claims. Only actual
+spell Items resolve; other target types are unsupported. Repeated UUID occurrences
+retain separate source-path provenance. No target source is expanded and listed
+spells never enter an Actor repertoire or prepared view. Source map/list limits
+are12000, separate from page/byte bounds. Effective benefits remain unsupported.
+Actual MCP verification covers three compendium definitions and nine resolved spell links, with exact prose and unchanged source fingerprints. Other contexts and unresolved/stale cases have deterministic coverage.
+See the [field audit](actor-item-story-map/deity-fields.md).
+
+See the [deity verification](actor-item-story-map/deity-verification.md) for rulebook and runtime evidence.

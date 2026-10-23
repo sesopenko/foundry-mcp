@@ -268,3 +268,11 @@ Deity source options and explicit spell identity links are wired into selected I
 reading, with strict Python validation of actual paginated JavaScript output.
 The story remains In progress pending rulebook/live verification and integration
 review. Completed progress remains 25/39 (64.1%).
+
+### Deity source and spell references complete — October 22, 2026
+
+ITEM-deity is Complete: rulebook prose, pinned schema, deterministic contexts
+and fresh authenticated MCP reads establish offered options and immediate spell
+identity references. Three actual definitions and nine spell targets passed exact
+source/prose comparisons and unchanged source fingerprints. No acquisition or
+active benefits are inferred. Completed progress is26/39 (66.7%).

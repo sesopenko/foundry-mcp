@@ -1,13 +1,13 @@
 /**
  * PF2e-specific deity8.6.1 spell definition UUID claims, Foundry14.369.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/deity/data.ts
- * Public immediate Item lookup is shared with book references. Keyed feature
+ * Public immediate Item lookup is shared with book references. Keyed spell
  * entries remain source paths, not acquired or generated owned Items.
  */
 import {resolveItemReference} from './actorItemReferences.js';
 /**
  * PF2e-specific explicit immediate deity spell identity links (maximum200).
- * No target source or linked target feature is read, imported or recursively expanded.
+ * No target source or linked target spell is read, imported or recursively expanded.
  * Each keyed occurrence retains its source path, including repeated UUIDs;
  * duplicate targets share a lookup only within this snapshot. No local entry key
  * is used as a document UUID. Shared reader snapshots revalidate the results.

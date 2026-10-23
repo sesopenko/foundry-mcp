@@ -387,3 +387,7 @@ to finish before deleting. You can also upload the same filename directly to rep
 processing, without deleting first. Keep your original file or backup. Imported host originals remain on disk but are excluded from
 future automatic scans until explicitly uploaded again. Deletion uses the same
 PDF upload password and is available only through the browser manager protocol.
+
+PF2e deity reading preserves offered devotee options and explicit immediate spell
+identity links. Listed spells do not establish learned or prepared spells or
+active character benefits. See the [deity field audit](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/deity-fields.md).

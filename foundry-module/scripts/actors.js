@@ -496,6 +496,11 @@ export async function getActorTypes(params = {}) {
     container.mapped_supported=true;
     container.limitations=['Container source and explicitly requested same-owner containment graph only; nested contents appear once, cycles/missing/denied/unsupported parents remain explicit. Capacity/ignored Bulk do not establish current contents or Actor Bulk. Unowned containers have unverified contents scope. Live verification covers compendium containers only; owned/token graphs have deterministic coverage.'];
     container.verification={deterministic:{status:'passed',evidence:['tests/js/actor-container.test.js','tests/js/actor-container-readers.test.js','tests/test_actor_container.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/container-verification.md','scripts/actor-live-check.py']}};
+    // PF2e-specific deity8.6.1 source options, verified on the recorded runtime.
+    const deity=result.item_types.find(entry=>entry.type==='deity');
+    deity.mapped_supported=true;
+    deity.limitations=['Deity source options and immediate spell identity links only; no acquired spells, ownership, worship benefits or current casting options are inferred.'];
+    deity.verification={deterministic:{status:'passed',evidence:['tests/js/actor-deity.test.js','tests/js/actor-deity-readers.test.js','tests/test_actor_deity.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/deity-verification.md','scripts/actor-live-check.py']}};
     const classType=result.item_types.find(entry=>entry.type==='class');
     classType.mapped_supported=true;
     classType.limitations=['Class source key-attribute choices, HP contribution, labelled starting ranks, training and progression with explicit immediate feature definitions. No current Actor totals, acquired future features or advancement are inferred.'];

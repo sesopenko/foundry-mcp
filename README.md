@@ -335,3 +335,7 @@ An opt-in GM-private PDF library provides lexical lookup and source-page reading
 plus acknowledged uploads through the existing Foundry bridge. See
 [PDF library setup, access policy and recovery](docs/pdf-library.md).
 Do not share a PDF-enabled endpoint's MCP credentials with players.
+
+PF2e deity reading preserves offered devotee options and explicit immediate spell
+identity links. It does not infer acquired spells, prepared spells or active
+character benefits. See the [deity field audit](docs/actor-item-story-map/deity-fields.md).

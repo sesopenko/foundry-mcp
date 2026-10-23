@@ -300,6 +300,64 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         assert 'background Items expose' in available['read_item'].description
         assert 'heritage Items expose' in available['read_item'].description
         assert 'class Items expose' in available['read_item'].description
+        assert 'deity Items expose' in available['read_item'].description
+        deity_selectors_probe="""
+const pack=game.packs.get('pf2e.deities'),index=await pack.getIndex({fields:['type']});return JSON.stringify(['Abadar','Asmodeus','Green Faith'].map(name=>{const row=[...index].find(r=>r.type==='deity'&&r.name===name);if(!row)throw Error('Missing existing deity fixture');return {uuid:pack.getUuid(row._id)};})).match(/[\\s\\S]{1,800}/g);
+"""
+        deity_samples=probe(payload(await client.call_tool('execute_javascript',{'code':deity_selectors_probe})))
+        assert len(deity_samples)==3
+        deity_reference_count=0
+        for selector in deity_samples:
+            deity_probe="""
+const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
+const doc=await foundry.utils.fromUuid(DEITY_UUID),s=doc.toObject(true),expected={},references=[];
+const esc=s=>s.replaceAll('~','~0').replaceAll('/','~1');
+const pick=path=>{let value=s,present=true;for(const k of path.slice(1).split('/').map(k=>k.replaceAll('~1','/').replaceAll('~0','~'))){if(value===null||typeof value!=='object'||!Object.hasOwn(value,k)){present=false;break;}value=value[k];}if(value===undefined)present=false;expected[path]={present,...(present?{value}:{})};};
+const array=path=>{pick(path);const selected=expected[path];if(selected.present&&Array.isArray(selected.value)&&selected.value.length){delete expected[path];selected.value.forEach((value,i)=>expected[path+'/'+i]={present:true,value});}};
+for(const path of ['category','slug','publication/title','publication/authors','publication/license','publication/remaster'])pick('/system/'+path);
+if(s.system.sanctification===null)pick('/system/sanctification');else{pick('/system/sanctification/modal');array('/system/sanctification/what');}
+for(const path of ['domains/primary','domains/alternate','font','attribute','skill','weapons','traits/otherTags'])array('/system/'+path);
+const spells=s.system.spells;if(!Object.keys(spells).length)expected['/system/spells']={present:true,value:{}};for(const [key,claim]of Object.entries(spells)){const path='/system/spells/'+esc(key);pick(path);references.push({path,claim});}
+return JSON.stringify({uuid:doc.uuid,expected,references,revision:await digest(s),description_sha256:await digest(s.system.description.value)}).match(/[\\s\\S]{1,800}/g);
+""".replace('DEITY_UUID',json.dumps(selector['uuid']))
+            sample=probe(payload(await client.call_tool('execute_javascript',{'code':deity_probe})))
+            rows=[];deity_cursor=None
+            for _ in range(100):
+                args=dict(item_uuid=sample['uuid'],sections=['source','description','effective'],limit=100)
+                if deity_cursor:args['cursor']=deity_cursor
+                page=payload(await client.call_tool('read_item',args))
+                assert page['identity']['uuid']==sample['uuid'] and page['identity']['type']=='deity'
+                assert page['sections'][2]['status']=='unsupported'
+                rows.extend(page['records']);deity_cursor=page['pagination']['next_cursor']
+                if not deity_cursor:break
+            assert deity_cursor is None and page['sections'][0]['status']=='complete'
+            assert len({r['key'] for r in rows})==len(rows)
+            for path,expected in sample['expected'].items():
+                row=next(r for r in rows if r['section']=='source' and r['raw'][0]['path']==path)
+                assert {k:v for k,v in row['raw'][0].items() if k in ('present','value')}==expected
+                assert row['provenance']['mapping']=='pf2e.deity.source.v1'
+            assert not any(r['raw'][0]['path'].startswith('/system/traits/value') for r in rows)
+            prose=[r for r in rows if r['section']=='description' and r['raw'][0]['path']=='/system/description/value']
+            text=''.join(r['raw'][0]['value'] for r in sorted(prose,key=lambda r:r.get('text',{}).get('start',0)))
+            assert hashlib.sha256(json.dumps(text,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()==sample['description_sha256']
+            links=[];deity_cursor=None
+            for _ in range(100):
+                args=dict(item_uuid=sample['uuid'],sections=['relationships'],limit=100)
+                if deity_cursor:args['cursor']=deity_cursor
+                page=payload(await client.call_tool('read_item',args));links.extend(page['records']);deity_cursor=page['pagination']['next_cursor']
+                if not deity_cursor:break
+            assert deity_cursor is None and len(links)==len(sample['references'])
+            by_path={r['raw'][0]['path']:r for r in links}
+            for expected in sample['references']:
+                row=by_path[expected['path']]
+                assert row['raw'][0]['value']==expected['claim'] and row['mapped']['value']['target_uuid']==expected['claim']
+                assert row['mapped']['value']['status']=='resolved' and 'acquired' not in row['mapped']['value']
+                deity_reference_count+=1
+            first=links[0]['mapped']['value']
+            follow=payload(await client.call_tool('read_item',dict(item_uuid=first['target_uuid'],sections=['identity'],limit=1)))
+            assert follow['identity']['uuid']==first['target_uuid'] and follow['identity']['type']=='spell'
+            check="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const doc=await foundry.utils.fromUuid("+json.dumps(sample['uuid'])+");return JSON.stringify({revision:await digest(doc.toObject(true))});"
+            assert probe(payload(await client.call_tool('execute_javascript',{'code':check})))['revision']==sample['revision']
         class_selectors_probe="""
 const pack=game.packs.get('pf2e.classes'),index=await pack.getIndex({fields:['type']});return JSON.stringify(['Fighter','Rogue','Wizard'].map(name=>{const row=[...index].find(r=>r.type==='class'&&r.name===name);if(!row)throw Error('Missing existing class fixture');return {uuid:pack.getUuid(row._id)};})).match(/[\\s\\S]{1,800}/g);
 """
@@ -1053,6 +1111,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         container_support=next(entry for entry in registry.data['item_types'] if entry['type']=='backpack')
         assert container_support['mapped_supported'] and not container_support['effective_supported']
         assert container_support['verification']['live']['status']=='passed'
+        deity_support=next(entry for entry in registry.data['item_types'] if entry['type']=='deity')
+        assert deity_support['mapped_supported'] and not deity_support['effective_supported']
+        assert deity_support['verification']['live']['status']=='passed'
         class_support=next(entry for entry in registry.data['item_types'] if entry['type']=='class')
         assert class_support['source_supported'] and class_support['mapped_supported'] and not class_support['effective_supported']
         assert class_support['verification']['live']['status']=='passed'
@@ -1117,7 +1178,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'class_source_samples_verified':len(class_samples),'class_feature_references_verified':class_reference_count,'heritage_source_samples_verified':len(heritage_samples),'heritage_ancestry_references_verified':heritage_reference_count,'background_source_samples_verified':len(background_samples),'background_feature_references_verified':background_reference_count,'ancestry_source_samples_verified':len(ancestry_samples),'ancestry_feature_references_verified':ancestry_reference_count,'kit_source_samples_verified':len(kit_samples),'kit_component_references_verified':kit_reference_count,'inventory_actor_samples_verified':len(inventory_samples),'inventory_physical_types_verified':len(inventory_types),'treasure_source_samples_verified':len(treasure_samples),'container_source_samples_verified':len(container_samples),'container_owned_samples_verified':container_owned_samples,'actor_casting_source_samples_verified':len(actor_casting_samples),'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'deity_source_samples_verified':len(deity_samples),'deity_spell_references_verified':deity_reference_count,'class_source_samples_verified':len(class_samples),'class_feature_references_verified':class_reference_count,'heritage_source_samples_verified':len(heritage_samples),'heritage_ancestry_references_verified':heritage_reference_count,'background_source_samples_verified':len(background_samples),'background_feature_references_verified':background_reference_count,'ancestry_source_samples_verified':len(ancestry_samples),'ancestry_feature_references_verified':ancestry_reference_count,'kit_source_samples_verified':len(kit_samples),'kit_component_references_verified':kit_reference_count,'inventory_actor_samples_verified':len(inventory_samples),'inventory_physical_types_verified':len(inventory_types),'treasure_source_samples_verified':len(treasure_samples),'container_source_samples_verified':len(container_samples),'container_owned_samples_verified':container_owned_samples,'actor_casting_source_samples_verified':len(actor_casting_samples),'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent
