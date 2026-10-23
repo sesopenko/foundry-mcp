@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 3 |
 | Planning readiness | Planned |
-| Implementation status | In progress |
+| Implementation status | Complete |
 | Prerequisites | [ITEM-ancestry](ITEM-ancestry.md), [ITEM-heritage](ITEM-heritage.md), [ITEM-background](ITEM-background.md), [ITEM-class](ITEM-class.md), [ITEM-deity](ITEM-deity.md), [ITEM-feat](ITEM-feat.md), [ITEM-lore](ITEM-lore.md) |
 | Dependency reason | Needs each build contributor plus owned feat/feature and Lore interpretation. |
 
@@ -25,8 +25,15 @@ Acceptance: versatile heritage, duplicate skill grants, class-feature category, 
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
 
-The shared Item grant-source selector is implemented with neutral concepts and
-tested for ancestry/background/class contributors, preserving the existing feat
-wrapper. The [build contract proposal](../build-contract.md) records the remaining
-record, donor-validation and pagination decisions. The integrated Actor build
-section remains unsupported; no acquired-join completion is claimed by this unit.
+The implemented character `build` section lists actual owned contributor Items
+once, preserves typed choices/options/contributions, and emits separate persisted
+grant claims with exact donor and inverse-source evidence. It never infers
+acquisition from definitions or labels, chooses replacement training, imports
+grants or calculates effective benefits. NPC/familiar Build remains unsupported.
+
+The [contract](../build-contract.md) and [verification](../build-verification.md)
+cover every acceptance case, same-owner/synthetic identities, strict per-page
+donor consistency, privacy, stale continuations and bounds. Actual MCP verified
+seven owned Items, shared Lore/feature contributors, disagreeing inverse claims,
+future/deity definitions and null selections across 217 records / 32 pages.
+Original source fingerprints matched and the marked temporary fixture was removed.

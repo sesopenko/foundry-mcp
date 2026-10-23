@@ -78,7 +78,10 @@ links without importing inventory or recursively expanding referenced kits.
 Ancestry readers separate offered/selected/alternate choices and source benefits
 from character totals; named feature definitions do not imply acquisition.
 Background readers preserve boost choices, training/Lore labels and definition
-links; acquired contributor joins remain pending in the character Build view.
+links. Character Build lists actual owned build Items once, typed source fields
+and separate owner-local grant claims with exact reciprocal source evidence.
+Options and future definitions do not establish acquisition; NPC/familiar Build
+and effective benefits remain unsupported. See the [Build contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/build-contract.md).
 Heritage readers preserve nullable ancestry associations and named links without
 inferring owner ancestry, exclusivity or effective benefits.
 Class readers preserve key-attribute choices, labelled starting ranks and

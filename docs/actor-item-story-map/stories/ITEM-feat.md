@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | In progress |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -30,10 +30,10 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -79,3 +79,16 @@ Recorded scalar selections are now covered by the
 [selection contract](../feat-selection-contract.md). Unsupported values explicitly
 make source partial; no selected value is interpreted as acquisition or eligibility.
 The acquired multi-contributor integration and populated live fixture gaps remain.
+
+## Acquired integration complete — October 23, 2026
+
+The checkpoint gaps above are now closed for the original source/reference scope.
+The character Build section lists each actual owned feature once and preserves
+separate grant claims, recorded scalar selections and exact reciprocal evidence.
+Future definitions, null selections and deity spell options never become owned
+documents. Actual MCP consumed the marked populated fixture and embedded
+source/description pages with unchanged source fingerprints, followed by
+confirmed cleanup. See [Build contract](../build-contract.md) and
+[verification](../build-verification.md). Battle Medicine's earlier exact prose
+and compendium checks remain authoritative; no eligibility or effective benefit
+is inferred, and unsupported selection objects remain explicitly partial.

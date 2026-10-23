@@ -184,7 +184,8 @@ singleton choices; no feature is acquired and no character totals are computed.
 training/Lore source and keyed feature definitions. `actorBackgroundRelationships.js`
 resolves only explicit immediate definition links. Empty structured fields do
 not prove no prose benefit; no skill rank, Lore Item or missing grant is created.
-The acquired contributor join remains pending in CORE-build.
+The character Build section joins actual owned identities and separate persisted
+contributor claims; background definitions and Lore labels do not create Items.
 
 
 `actorHeritage.js` selects PF2e-specific8.6.1 nullable ancestry association and
@@ -217,7 +218,7 @@ Source-only reads do not execute grants or resolve offered progression.
 
 `actorFeatGrants.js` selects audited persisted grant flags only.
 Its common `itemGrantFields` export accepts Item source type codes and returns
-neutral stored-claim descriptors for later build integration. The feat-only
+neutral stored-claim descriptors for character Build integration. The feat-only
 wrapper retains the existing tool output; common extraction does not establish
 ownership, reciprocal agreement or active benefits.
 `actorFeatRelationships.js` resolves explicit grant IDs within the current owner
@@ -230,3 +231,14 @@ source/identity/permission changes across continuations.
 leaves. Unsupported values are withheld with partial-source diagnostics rather
 than copied recursively or relabelled absent. Recorded values do not establish
 acquisition, eligibility or UUID identity.
+
+`actorBuild.js` implements the PF2e-specific character Build source snapshot on
+Foundry14.369/PF2e8.6.1. Actual owned ancestry/heritage/background/class/deity/feat/
+Lore identities appear once; every source row carries its persisted donor `/type`
+for independent Python validation across pages. Separate owner-local grant claims
+retain each contributor and exact inverse evidence for agree/disagree/absent;
+incoming and unresolved claims remain not_evaluated. Definitions/options never
+establish acquisition. Denied Items expose aggregate scope only. Snapshot bounds
+are 12,000 owner Items and 24,000 records, alongside shared count/byte pagination
+and revision checks. NPC/familiar Build and effective benefits are unsupported.
+See the [Build contract](../../docs/actor-item-story-map/build-contract.md).

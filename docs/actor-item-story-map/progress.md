@@ -318,3 +318,24 @@ pretending they are feats. The feat-only wrapper preserves its existing output.
 Focused source and paginated cross-language regression tests pass. CORE-build is
 In progress; its integrated view and donor-validation contract remain unfinished.
 Completed progress remains27/39 (69.2%).
+
+### Character Build joins complete — October 23, 2026
+
+CORE-build, ITEM-background and ITEM-feat now meet their original selected-source,
+reference and acquired-document integration acceptance. The character Build
+section lists each actual owned Item once while preserving separate persisted
+contributor claims and reciprocal source evidence. Options, future definitions,
+null choices and deity spell options never establish acquisitions.
+
+Actual MCP verified seven owned Items, shared Lore/feature claims, scalar
+selections and unchanged source fingerprints over 217 Build records / 32 pages
+plus eight embedded source/description pages. The marked temporary character in
+the existing development world was removed. Initial console inspection found zero
+errors; final refresh showed only the core minimum-window-dimensions notification.
+Actual discovery checks passed. The [verification record](build-verification.md)
+states the runtime, fixture boundaries and deterministic cases.
+
+A reproduced donor-type inconsistency regression was fixed before completion.
+Full suites pass:331 Python tests (one skipped),412 JavaScript tests. The story
+graph remains acyclic and consistent. Completed progress is30/39 (76.9%);
+effective character views, casting, state and remaining live gates stay open.

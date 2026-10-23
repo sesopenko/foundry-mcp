@@ -141,6 +141,14 @@ Source inspection and Code Graph overview identified the existing world-journal 
 
 No newly tested live Actor/Item support is claimed. Do not request another installation/world/reset to close these gaps. Continue independent source work, keep partial sections visible, and close each gate only with its stated evidence.
 
+Subsequent Build verification (October 23, 2026): the source/acquired-document
+portion of G-PC and persisted grant-join portion of G-LINKS are verified for
+CORE-build, ITEM-background and ITEM-feat. A marked temporary character in the
+existing development world supplied populated source, selections and shared
+grant claims, followed by confirmed cleanup. See
+[Build verification](build-verification.md). Effective PC statistics/Strikes and
+other gates above remain separate; this does not claim ACT-character complete.
+
 ## Documentation validation
 
 The October 20 checks passed for all 39 story files and both navigation/evidence documents, plus links from the two updated research/handoff documents:

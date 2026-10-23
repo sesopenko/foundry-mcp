@@ -16,7 +16,9 @@ The root missing/empty marker uses `feat_selection_entries`.
 
 Recorded values never establish acquisition, eligibility, selected active benefits
 or UUID identity. No arbitrary flags or rule execution are authorized by this
-allowlist. Integrated acquired-document joins remain a separate unfinished task.
+allowlist. Integrated acquired-document joins are provided separately by the
+[character Build view](build-contract.md).
 Deterministic tests cover malformed/unsupported values, provenance, escaped keys,
 source pagination and privacy. Existing compendium fixtures cover missing maps;
-populated owned selections remain a live verification gap.
+populated owned scalar selections were subsequently checked through actual MCP
+in the [Build verification](build-verification.md).

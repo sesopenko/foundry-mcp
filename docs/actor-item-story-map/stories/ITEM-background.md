@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Ready for source milestone |
-| Implementation status | In progress |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -31,9 +31,9 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 ## Implementation checklist
 
 - [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
 - [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
 
@@ -57,11 +57,12 @@ source fingerprints. Null/absent choices and configured missing grants remain
 explicit without modifying Actors. Source/world/pack/token and stale/denied
 cases have deterministic coverage.
 
-The acquired same-Lore/feat multi-contributor acceptance is still open. CORE-build
-must join actual owned Items once and preserve every proven contributor;
-resolving a definition does not close that requirement. No populated character
-fixture exists in the current world. This story remains In progress; its source
-checkpoint is usable while other independent build readers proceed. Empty
-structured Lore can coexist with descriptive choices, and rare backgrounds can
-intentionally lack the ordinary training/grant package. No generic missing-grant
-or duplicate-training replacement is inferred from those empty fields.
+The acquired same-Lore/feat multi-contributor acceptance is now verified through
+the character Build section. Actual owned Items appear once while background
+and class retain separate persisted claims, including disagreeing inverse
+evidence. A temporary marked fixture in the existing development world supplied
+the populated live check and was removed afterward; see
+[Build verification](../build-verification.md). Earlier source-only checkpoints
+remain valid history. Empty structured Lore can coexist with descriptive
+choices, and rare backgrounds can intentionally lack the ordinary package.
+No missing grant or duplicate-training replacement is inferred or created.

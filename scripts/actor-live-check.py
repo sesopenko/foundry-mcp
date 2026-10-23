@@ -1283,9 +1283,19 @@ async def browser_status(refresh=False):
                     print(json.dumps({'refresh_requested':True}));return
         await ws.send(json.dumps({'id':1,'method':'Runtime.enable'}))
         console_errors=0
+        error_locations=[]
         while True:
             r=json.loads(await asyncio.wait_for(ws.recv(),5))
-            if r.get('method')=='Runtime.exceptionThrown' or (r.get('method')=='Runtime.consoleAPICalled' and r.get('params',{}).get('type')=='error'):console_errors+=1
+            if r.get('method')=='Runtime.exceptionThrown' or (r.get('method')=='Runtime.consoleAPICalled' and r.get('params',{}).get('type')=='error'):
+                console_errors+=1
+                details=r.get('params',{}).get('exceptionDetails',r.get('params',{}))
+                # Report code locations, never console arguments or exception
+                # values, which can contain world content or credentials.
+                frames=details.get('stackTrace',{}).get('callFrames',[])[:3]
+                if len(error_locations)<8:
+                    texts=[argument.get('value',argument.get('description','')) for argument in r.get('params',{}).get('args',[])]
+                    window_size=any(isinstance(text,str) and ('resolution' in text.lower() or 'window' in text.lower() and any(word in text.lower() for word in ('small','width','dimensions'))) for text in texts)
+                    error_locations.append({'category':'window_size_notification' if window_size else 'unclassified','frames':[{'url':frame.get('url','').split('?',1)[0],'line':frame.get('lineNumber'),'function':frame.get('functionName','')} for frame in frames]})
             if r.get('id')==1:break
         expression="JSON.stringify({ready:!!globalThis.game?.ready,isGM:!!globalThis.game?.user?.isGM,version:globalThis.game?.version,url:location.pathname})"
         await ws.send(json.dumps({'id':2,'method':'Runtime.evaluate','params':{'expression':expression,'returnByValue':True}}))
@@ -1294,6 +1304,7 @@ async def browser_status(refresh=False):
             if r.get('id')==2:
                 value=json.loads(r.get('result',{}).get('result',{}).get('value','{}'))
                 value['console_errors']=console_errors
+                if error_locations:value['console_error_locations']=error_locations
                 print(json.dumps(value));break
 
 if __name__=='__main__':

@@ -2480,6 +2480,119 @@ def _actor_inventory_record(row, identity):
 
 
 
+BUILD_TYPES = {'ancestry','heritage','background','class','deity','feat','lore'}
+
+
+def _actor_build_record(row, identity):
+    """PF2e-specific character Build, tested against PF2e8.6.1 persisted Items.
+
+    Reuse pinned typed source contracts above, never prepared benefits. Every
+    transferred leaf carries its own persisted donor type for independent pages.
+    Grant flags follow item/base/data/system.ts at pinned revision
+    28d9d156f252d084371d994dc359509b49eadf18; agreement is stored evidence only.
+    """
+    if identity['type']!='character' or set(row)!={'key','section','kind','raw','mapped','provenance'}:return False
+    raw=row['raw'];mapped=row['mapped'];p=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(p) is not dict or set(p)!={'contributors','mapping','limitations'}:return False
+    for r in raw:
+        if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
+        if r['basis']!='source' or type(r['path']) is not str or type(r['present']) is not bool or r['present']!=('value' in r) or not _casting_owned(r['document_uuid'],identity):return False
+    contributors=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]
+    if p['contributors']!=contributors:return False
+    value=mapped['value']
+    def target(v, uuid=None):
+        fields={'status','target_uuid','document_name','type','name','name_truncated'}
+        if identity['instance'] is not None:fields.add('token_uuid')
+        return (type(v) is dict and set(v)==fields and v['status']=='resolved' and v['document_name']=='Item'
+                and v['type'] in ITEM_TYPES-{'affliction'} and _casting_owned(v['target_uuid'],identity)
+                and (uuid is None or v['target_uuid']==uuid) and type(v['name']) is str and len(v['name'])<=256
+                and type(v['name_truncated']) is bool and (identity['instance'] is None or v['token_uuid']==identity['instance']['token_uuid']))
+    if row['key']=='build:scope':
+        return row['kind']=='relationship' and raw==[] and mapped['concept']=='build_scope' and value in [dict(status=s,target_uuid=None) for s in ('empty','denied')] and p['mapping']=='pf2e.build.identity.v1' and p['limitations']==['owned_document_not_effective_benefit']
+    if len(raw)<2:return False
+    uuid=raw[0]['document_uuid']
+    if mapped['concept']=='build_item':
+        return (row['kind']=='relationship' and row['key']=='build:item:'+uuid and len(raw)==2
+                and [r['path'] for r in raw]==['/name','/type'] and all(r['present'] and r['document_uuid']==uuid for r in raw)
+                and type(raw[0]['value']) is str and raw[1]['value'] in ITEM_TYPES-{'affliction'} and target(value,uuid)
+                and value['type']==raw[1]['value'] and value['name']==raw[0]['value'][:256] and value['name_truncated']==(len(raw[0]['value'])>256)
+                and p['mapping']=='pf2e.build.identity.v1' and p['limitations']==['owned_document_not_effective_benefit'])
+    context,r=raw[:2];typ=context.get('value');path=r['path']
+    if context['path']!='/type' or not context['present'] or typ not in BUILD_TYPES or r['document_uuid']!=uuid:return False
+    donor=dict(identity,document_name='Item',uuid=uuid,type=typ,actor=dict(uuid=identity['uuid'],type='character'))
+    if row['kind']=='field':
+        if len(raw)!=2 or row['key']!='build:source:'+uuid+':'+path or path in SOURCE_PATHS:return False
+        source=dict(row,section='source',key='source:'+path,raw=[r],provenance=dict(p,contributors=contributors[1:]))
+        if path.startswith(('/flags/pf2e/itemGrants','/flags/pf2e/grantedBy')):
+            if p['mapping']!='pf2e.build.grants.v1' or p['limitations']!=['stored_grant_claim_not_active_benefit'] or not path.startswith(('/flags/pf2e/itemGrants','/flags/pf2e/grantedBy')):return False
+            source['mapped']=dict(mapped,concept='feat_'+mapped['concept'])
+            source['provenance']=dict(source['provenance'],mapping='pf2e.feat.source.v1',limitations=['feat_source_not_effective_benefit'])
+            return _feat_record(source,donor)
+        validators={'ancestry':_ancestry_record,'heritage':_heritage_record,'background':_background_record,'class':_class_record,'deity':_deity_record,'feat':_feat_record,'lore':_lore_record}
+        return _record(source,['source'],donor) and validators[typ](source,donor)
+    if row['kind']!='relationship' or row['key']!='build:claim:'+uuid+':'+path or p['mapping']!='pf2e.build.claim.v1' or p['limitations']!=['persisted_claim_not_causality_or_active_benefit'] or type(value) is not dict:return False
+    outgoing=re.fullmatch(r'/flags/pf2e/itemGrants/([^/]*)/id',path)
+    incoming=path=='/flags/pf2e/grantedBy/id'
+    if not (outgoing and re.search(r'~(?![01])',outgoing[1]) is None or incoming):return False
+    if mapped['concept']!=('build_granted_by_claim' if incoming else 'build_grant_claim'):return False
+    local=r.get('value')
+    if r['present'] and type(local) is not str:return False
+    reciprocity=value.get('reciprocity');v={k:v for k,v in value.items() if k!='reciprocity'}
+    if v.get('status')!='resolved':
+        return len(raw)==2 and reciprocity=='not_evaluated' and v in [dict(status=s,target_uuid=None) for s in ('missing','denied','unsupported','unverified')] and (bool(local) or v['status']=='missing')
+    if not local or not target(v,identity['uuid']+'.Item.'+local):return False
+    if incoming:return len(raw)==2 and reciprocity=='not_evaluated'
+    if len(raw)!=3:return False
+    witness=raw[2]
+    if witness['document_uuid']!=v['target_uuid']:return False
+    if witness['path']=='/flags/pf2e/grantedBy/id':
+        if not witness['present']:expected='absent'
+        elif type(witness['value']) is str:expected='agree' if witness['value']==uuid.rsplit('.Item.',1)[1] else 'disagree'
+        else:return False
+    elif witness['path']=='/flags/pf2e/grantedBy' and (not witness['present'] or witness['value'] is None):expected='absent'
+    else:return False
+    return reciprocity==expected
+
+
+def _build_section(records, section, identity):
+    """PF2e-specific character8.6.1 stored Build diagnostics and page consistency.
+
+    Repeated persisted donor/path witnesses and resolved identity metadata must
+    agree within a page. Independently paged donors remain valid; the browser's
+    revalidated snapshot revision establishes consistency between pages.
+    """
+    rows=[r for r in records if r['section']=='build']
+    if identity['type']!='character':return not rows and section['status']=='unsupported'
+    allowed={'pagination','build_items_denied','unsupported_selection_values'}|{'build_grant_target_'+s for s in ('missing','denied','unsupported','unverified')}
+    reasons=set(section['reasons'])
+    if not reasons<=allowed or section['status']!=('partial' if reasons else 'complete'):return False
+    required=set();witnesses={};identities={}
+    def agrees(table, key, value):
+        """PF2e-specific Build evidence comparison preserves JSON scalar types."""
+        signature=json.dumps(value,sort_keys=True,ensure_ascii=False,separators=(',', ':'),allow_nan=False)
+        if key in table:return table[key]==signature
+        table[key]=signature
+        return True
+    for row in rows:
+        concept=row['mapped']['concept'];v=row['mapped']['value']
+        for raw in row['raw']:
+            uuid=raw['document_uuid'];path=raw['path']
+            if not agrees(witnesses,(uuid,path),[raw['present'],raw.get('value')]):return False
+            if raw['present'] and path=='/type':
+                if not agrees(identities,(uuid,'type'),raw['value']):return False
+            if raw['present'] and path=='/name':
+                name=raw['value']
+                if not agrees(identities,(uuid,'name'),[name[:256],len(name)>256]):return False
+        if concept in ('build_item','build_grant_claim','build_granted_by_claim') and v['status']=='resolved':
+            uuid=v['target_uuid']
+            if not agrees(identities,(uuid,'type'),v['type']):return False
+            if not agrees(identities,(uuid,'name'),[v['name'],v['name_truncated']]):return False
+        if concept=='build_scope' and v['status']=='denied':required.add('build_items_denied')
+        if concept in ('build_grant_claim','build_granted_by_claim') and row['raw'][1].get('value') and v['status']!='resolved':required.add('build_grant_target_'+v['status'])
+    return required<=reasons
+
+
 def _inventory_section(records, section):
     """PF2e-specific8.6.1 inventory diagnostics cannot claim complete benefits.
 
@@ -2539,6 +2652,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return _actor_casting_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='inventory':
         return _actor_inventory_record(row,identity)
+    if identity['document_name']=='Actor' and row['section']=='build':
+        return _actor_build_record(row,identity)
     for raw in row['raw']:
         if type(raw) is not dict or not {'document_uuid', 'path', 'present', 'basis'} <= set(raw) or not set(raw) <= {'document_uuid', 'path', 'present', 'basis', 'value'}:
             return False
@@ -2669,6 +2784,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
                     if valid and result['identity']['document_name']=='Actor':
                         valid = all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
+                        valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -2823,6 +2939,23 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     applied; integrated statistics remain pending. Explicit description returns NPC
     stored blurb, publicNotes and privateNotes only, including GM-private biography;
     default source never includes them. Character/familiar description is unsupported.
+    Character build lists actual readable owned ancestry/heritage/background/class/
+    deity/feat/Lore Items once as build_item identities, with independently paged
+    typed source fields and build_grant_claim/build_granted_by_claim records.
+    Each transferred field includes the donor's persisted /type and exact source
+    path. Offered options and future feature definitions do not imply acquisition;
+    missing linkage stays unknown, with no joins by name. Claims resolve exact
+    owner-local IDs only. Resolved values include target_uuid, document_name,
+    type, name, name_truncated and token_uuid in token context; follow read_item.
+    Reciprocity agree/disagree/absent compares outgoing stored claims with exact
+    inverse evidence; incoming and unresolved claims remain not_evaluated. This
+    does not establish causality, eligibility or active benefits. Missing/denied/
+    unsupported/unverified claim targets withhold target_uuid; build_scope empty
+    or denied distinguishes absence from inaccessible Items. Denied Items expose
+    no identities. Build is partial for denied Items, unsupported recorded selection
+    values or unresolved claims; NPC/familiar Build is unsupported. Build rejects
+    over 12000 owned Items or 24000 selected records with ReadFailed; narrow with
+    list_actor_items/read_item. Multiple claims retain one owned benefit identity.
     Skills currently contains owned Lore specialty references only, with partial
     other_skills_pending. Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate

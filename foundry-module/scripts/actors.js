@@ -15,6 +15,7 @@ import { spellFields,spellDescriptionFields } from './actorSpell.js';
 import { spellcastingEntryFields,spellcastingEntryIssues } from './actorSpellcastingEntry.js';
 import { actorCastingRecords } from './actorCasting.js';
 import { actorInventoryRecords } from './actorInventory.js';
+import { actorBuildRecords } from './actorBuild.js';
 import { bookFields } from './actorBook.js';
 import { bookRelationships } from './actorBookRelationships.js';
 import { kitFields } from './actorKit.js';
@@ -72,6 +73,7 @@ function selection(target, sections) {
   let castingEntry=[];let castingIssues=[];
   let castingView={records:[],reasons:[]};
   let inventoryView={records:[],reasons:[]};
+  let buildView={records:[],reasons:[]};
   let book=[];let kit=[];let ancestry=[];let background=[];let heritage=[];let classSource=[];let deity=[];let feat=[];let featSelectionIssues=[];
   let weaponReference=null;
   let action=[];
@@ -341,6 +343,12 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected Actor inventory source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect owned Item source and stored container/ammunition links; no inventory mutation or effective calculation is performed.');
     }
   }
+  // PF2e-specific character8.6.1 build source and persisted owner-local claims.
+  // Definitions/options remain separate from actual owned documents and totals.
+  if(target.document.documentName==='Actor'&&source.type==='character'&&sections.includes('build')){
+    try{buildView=actorBuildRecords(target);}
+    catch{fail('ReadFailed','Selected character build source exceeds its bounds or does not match the verified schema.','Inspect owned build Items and persisted grant claims; no grants, choices or effective benefits are applied.');}
+  }
   // PF2e-specific Lore specialties are actual owned Item references only.
   // Source contract: src/module/item/lore.ts at the actorLore.js pinned revision.
   if (target.document.documentName==='Actor' && sections.includes('skills')) {
@@ -380,7 +388,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -494,6 +502,12 @@ export async function getActorTypes(params = {}) {
   // PF2e-specific action8.6.1 source milestone; section flags are conditional on
   // this per-type registry, never a promise for every other Item type.
   if (supported) {
+    // PF2e-specific character8.6.1 build source joins; other Actor types unsupported.
+    const build=result.actor_sections.find(entry=>entry.name==='build');
+    build.source_supported=true;
+    build.mapped_supported=true;
+    build.limitations=['Character-only owned build identities, typed source choices/options and persisted owner-local grant claims. Multiple contributors retain separate provenance; no active benefits, automatic grants or effective totals. NPC/familiar build unsupported.'];
+    build.verification={deterministic:{status:'passed',evidence:['tests/js/actor-build.test.js','tests/js/actor-build-readers.test.js','tests/test_actor_build.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/build-verification.md','scripts/actor-build-live-check.py']}};
     const action=result.item_types.find(entry=>entry.type==='action');
     action.mapped_supported=true;
     action.limitations=['Selected action activation/frequency/traits/publication source and explicit self-effect references; no effective usability or automatic application.'];
@@ -510,10 +524,10 @@ export async function getActorTypes(params = {}) {
     container.mapped_supported=true;
     container.limitations=['Container source and explicitly requested same-owner containment graph only; nested contents appear once, cycles/missing/denied/unsupported parents remain explicit. Capacity/ignored Bulk do not establish current contents or Actor Bulk. Unowned containers have unverified contents scope. Live verification covers compendium containers only; owned/token graphs have deterministic coverage.'];
     container.verification={deterministic:{status:'passed',evidence:['tests/js/actor-container.test.js','tests/js/actor-container-readers.test.js','tests/test_actor_container.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/container-verification.md','scripts/actor-live-check.py']}};
-    // PF2e-specific feat8.6.1 source milestone; persisted-grant joins remain pending.
+    // PF2e-specific feat8.6.1 source and explicit references; Actor Build joins separately.
     const feat=result.item_types.find(entry=>entry.type==='feat');
     feat.mapped_supported=true;
-    feat.limitations=['Selected feat/feature category, nominal/taken level, activation, prerequisite prose, frequency and subfeature source only; no eligibility, reciprocal grant causality or effective benefits. Explicit references resolve actual same-owner grant IDs and immediate self-effect/suppressed-feature UUIDs only.'];
+    feat.limitations=['Selected feat/feature category, nominal/taken level, activation, prerequisite prose, frequency, subfeature and recorded scalar selection source; no eligibility, reciprocal grant causality or effective benefits. Explicit references resolve actual same-owner grant IDs and immediate self-effect/suppressed-feature UUIDs only. Use read_actor build for character-owned identities and separate contributor claims with reciprocal stored evidence.'];
     feat.verification={deterministic:{status:'passed',evidence:['tests/js/actor-feat.test.js','tests/js/actor-feat-readers.test.js','tests/js/actor-feat-grants.test.js','tests/js/actor-feat-relationships.test.js','tests/test_actor_feat.py','tests/test_actor_feat_grants.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/feat-verification.md','scripts/actor-live-check.py']}};
     // PF2e-specific deity8.6.1 source options, verified on the recorded runtime.
     const deity=result.item_types.find(entry=>entry.type==='deity');
@@ -530,7 +544,7 @@ export async function getActorTypes(params = {}) {
     heritage.verification={deterministic:{status:'passed',evidence:['tests/js/actor-heritage.test.js','tests/js/actor-heritage-readers.test.js','tests/test_actor_heritage.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/heritage-verification.md','scripts/actor-live-check.py']}};
     const background=result.item_types.find(entry=>entry.type==='background');
     background.mapped_supported=true;
-    background.limitations=['Background source choices, training/Lore labels and explicit immediate feature definition identities only; no duplicate-training resolution or acquired feat/Lore joins. CORE-build owns acquired multi-contributor integration.'];
+    background.limitations=['Background source choices, training/Lore labels and explicit immediate feature definition identities only; no duplicate-training replacement or effective totals. Use read_actor build for actual character-owned feat/Lore identities and separate persisted contributor claims; definition references alone never establish acquisition.'];
     background.verification={deterministic:{status:'passed',evidence:['tests/js/actor-background.test.js','tests/js/actor-background-readers.test.js','tests/test_actor_background.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/background-verification.md','scripts/actor-live-check.py']}};
     const ancestry=result.item_types.find(entry=>entry.type==='ancestry');
     ancestry.mapped_supported=true;
@@ -650,6 +664,7 @@ async function read(target,params,sections,tool) {
   }
   if(target.document.documentName==='Actor'&&sections.includes('spellcasting'))records.push(...selected.castingView.records);
   if(target.document.documentName==='Actor'&&sections.includes('inventory'))records.push(...selected.inventoryView.records);
+  if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build'))records.push(...selected.buildView.records);
   if (target.document.documentName==='Actor'&&sections.includes('skills')) {
     for (const specialty of selected.specialties) {
       const raw=[['/name',specialty.name],['/type',specialty.type]].map(([path,value])=>({document_uuid:specialty.identity.uuid,path,present:true,value,basis:'source'}));
@@ -780,9 +795,15 @@ async function read(target,params,sections,tool) {
     sections:sections.map(name=>({name,status:complete(name)?'complete':(isContainer&&name==='relationships')||name==='source'||(castingSection&&name==='spellcasting')||(inventorySection&&name==='inventory')||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
       reasons:complete(name)?[]:isFeat&&name==='source'&&selected.featSelectionIssues.length?['unsupported_selection_values']:inventorySection&&name==='inventory'?selected.inventoryView.reasons:isContainer&&name==='relationships'?selected.containment.reasons:castingSection&&name==='spellcasting'?selected.castingView.reasons:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?(isCastingEntry?[...new Set(selected.castingIssues.map(issue=>issue.reason))]:[PENDING]):['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':(isFeat||isDeity||isClass||isHeritage||isBackground||isAncestry||isKit||isBook)?'Selected source and explicit immediate definition links only; effective Actor statistics, acquired contributions and gameplay execution remain unsupported.':isTreasure?'Stored treasure category, quantity and denomination price/per basis only. Valuables on supported Actors remain readable despite loot-Actor exclusion. No coin conversion, doubled stack value, sale proceeds, usage or investment state is inferred.':isContainer?'Stored container Bulk and containment claims only; capacity is not current contents Bulk, ignored Bulk is conditional and no Actor total is calculated. Explicit relationships use actual owner scope, retain each descendant once and report cycles or unresolved parents.':isCastingEntry?'Stored casting mode, proficiency, attack/DC and per-slot/preparation source only. Prepared slot value zero does not establish exhaustion; repeated preparations stay separate. Focus pools and innate uses are not inferred from slot counters. No final PC statistics, usable casts or resource expenditure is calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable stock, uses and damage/healing plus contained spell definitions only. Nested spells retain source-path identity on this Item; no independent spell UUID, consumption, frequency expenditure, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   if(isFeat&&selected.featSelectionIssues.length)base.limitations.push('Unsupported recorded selection values are withheld; source is partial. Only stored strings and finite numbers are selected; no acquisition, eligibility or UUID meaning is inferred.');
+  if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build')){
+    const section=base.sections.find(row=>row.name==='build');
+    section.status=selected.buildView.reasons.length?'partial':'complete';
+    section.reasons=[...selected.buildView.reasons];
+    base.limitations.push('Build lists actual owned documents once, typed source choices/options and separate persisted grant claims. Definition UUIDs, future features and deity spell offers are not acquisitions. Reciprocal source agreement is not causality, eligibility or an active benefit; no grants or effective totals are applied.');
+  }
   if(isClass)base.limitations.push('Stored class key-attribute options/selections, HP contribution, starting proficiency ranks and progression only. Ranks are not bonuses or totals; future feature references are not acquired abilities. No advancement, HP recomputation or automatic grants occur.');
   if(isHeritage)base.limitations.push('Stored heritage identity and nullable ancestry association only. Null association does not establish exclusivity or owner membership; named ancestry links are definitions, not proof of current ancestry. Read exact description for benefits; no eligibility or effective benefits are evaluated.');
-  if(isBackground)base.limitations.push('Stored background offers/selections, skill codes, Lore labels and feature definitions only. Definition references are not acquired grants; Lore labels are not Item UUIDs. Empty structured training or feature entries do not prove no benefit; read description for choices and exceptions. No duplicate-training resolution, missing feat/Lore creation or effective Actor totals occur. Acquired multi-contributor joins remain CORE-build work.');
+  if(isBackground)base.limitations.push('Stored background offers/selections, skill codes, Lore labels and feature definitions only. Definition references are not acquired grants; Lore labels are not Item UUIDs. Empty structured training or feature entries do not prove no benefit; read description for choices and exceptions. No duplicate-training replacement, missing feat/Lore creation or effective Actor totals occur. Use read_actor build for actual character-owned identities and persisted multi-contributor claims.');
   if(isAncestry)base.limitations.push('Stored ancestry offers, selected/alternate/voluntary choices and source HP, size, movement, senses, language and feature contributions only. A null stored selection is not an unused fixed boost. Feature references do not prove acquisition; no final character statistics or automatic grants are evaluated.');
   if(isKit)base.limitations.push('Serialized bundle definition and explicit immediate component links only. Nested entry keys remain source paths, not document identities or additional owned possessions. No kit import, component multiplication, recursive target expansion or inventory mutation occurs.');
   if(isBook)base.limitations.push('Book category, capacity and stored content UUIDs only. Explicit relationships resolve immediate identities, preserving duplicate indexes. Referenced content is not formula ownership, a prepared spell or castability. No recursive expansion; representative live book fixtures are unavailable.');

@@ -1,0 +1,259 @@
+"""PF2e-specific Build integration check in the existing development world.
+
+Creates exactly one marked temporary character and seven inert owned Items, then
+removes only that run's Actor in finally. Requires the visible development GM
+tab and an explicit --world-id; never provisions a world or Foundry instance.
+Tested contract: Foundry 14.369 / PF2e 8.6.1 persisted source, not effective
+benefits. Official public document APIs used by the fixture:
+https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html
+https://foundryvtt.com/api/v14/classes/foundry.abstract.Document.html
+PF2e schema: https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
+Fixture inputs were checked against that exact local research revision:
+ancestry/heritage/class/feat data.ts models, background/deity data.ts contracts,
+and static/template.json background/Lore/deity defaults. Numeric boost key 0,
+nullable selected/ancestry, trainedSkills arrays, class additional count, feat
+category/taken level, Lore proficient.value and deity spell UUID map are source
+fields. Omitted fields are hydrated by the installed system's document defaults.
+"""
+
+import argparse
+import asyncio
+import json
+from pathlib import Path
+from uuid import uuid4
+
+from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
+
+
+def payload(result):
+    if result.structured_content is not None:
+        return result.structured_content
+    return json.loads(next(block.text for block in result.content if block.type == 'text'))
+
+
+def probe(value):
+    if isinstance(value, dict) and 'value' in value:
+        value = value['value']
+    if isinstance(value, dict) and value.get('$type') == 'Array':
+        assert value.get('truncated') is False
+        assert all(isinstance(part, str) for part in value.get('values', []))
+        value = ''.join(value['values'])
+    assert isinstance(value, str), 'Unexpected bounded development response.'
+    return json.loads(value)
+
+
+async def verify_discovery(client):
+    """Inspect actual MCP schemas/descriptions and source support, read only."""
+    available = {tool.name: tool for tool in await client.list_tools()}
+    assert {'execute_javascript', 'read_actor', 'read_item', 'get_actor_types'} <= available.keys()
+    actor_tool = available['read_actor']
+    properties = actor_tool.inputSchema['properties']
+    assert {'actor_uuid', 'token_uuid', 'sections', 'limit', 'max_bytes', 'cursor'} <= properties.keys()
+    assert 'build' in properties['sections']['items']['enum']
+    for contract in ('build_item', 'build_grant_claim', 'build_granted_by_claim', 'owner-local IDs', 'Reciprocity agree/disagree/absent', 'incoming and unresolved claims remain not_evaluated', 'future feature definitions do not imply acquisition', 'NPC/familiar Build is unsupported', '12000 owned Items', '24000 selected records'):
+        assert contract in actor_tool.description
+    assert actor_tool.annotations.readOnlyHint
+    registry = payload(await client.call_tool('get_actor_types', {}))
+    build = next(section for section in registry['actor_sections'] if section['name'] == 'build')
+    assert build['source_supported'] and build['mapped_supported'] and not build['effective_supported']
+
+
+async def main(world_id, discovery_only=False):
+    root = Path(__file__).resolve().parent.parent
+    credentials = {}
+    for line in (root / '.env.mcp').read_text().splitlines():
+        key, sep, value = line.partition('=')
+        if sep and key.strip() == 'FOUNDRY_MCP_CALLER_TOKEN':
+            credentials[key.strip()] = value.strip()
+    transport = StreamableHttpTransport(
+        'http://127.0.0.1:8000/mcp/mcp',
+        headers={'Authorization': 'Bearer ' + credentials['FOUNDRY_MCP_CALLER_TOKEN']},
+    )
+    run_id, actor_uuid = str(uuid4()), None
+    summary = {'passed': False, 'cleanup_confirmed': False}
+    stage = 'client_discovery'
+    async with Client(transport) as client:
+        if discovery_only:
+            result = {'passed': False, 'discovery_verified': False}
+            try:
+                await verify_discovery(client)
+                result.update(passed=True, discovery_verified=True)
+            except Exception as error:
+                result.update(failure_stage='client_discovery', exception_type=type(error).__name__)
+            print(json.dumps(result))
+            return 0 if result['passed'] else 1
+
+        async def js(code):
+            wrapped = code + "\nreturn Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));"
+            return probe(payload(await client.call_tool('execute_javascript', {'code': wrapped})))
+
+        # Every mutating request repeats the same fixed runtime/world guard.
+        guard = """
+if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
+if(location.origin!=='http://localhost:30000'||game.world.id!==WORLD)throw Error('Wrong development world');
+""".replace('WORLD', json.dumps(world_id))
+        marker = json.dumps(run_id)
+        try:
+            await verify_discovery(client)
+            summary['discovery_verified'] = True
+            # Select definitions through existing pack indexes; never hydrate or import.
+            stage = 'definition_indexes'
+            selected = await js(guard + """
+const featPack=game.packs.get('pf2e.feats-srd'),spellPack=game.packs.get('pf2e.spells-srd');
+if(!featPack||!spellPack)throw Error('Expected existing PF2e packs');
+const featIndex=await featPack.getIndex(),spellIndex=await spellPack.getIndex();
+const future=featIndex.find(row=>row.name==='Battle Medicine'),spell=spellIndex.find(row=>row.name==='Heal');
+if(!future||!spell)throw Error('Required definition index rows unavailable');
+const report=JSON.stringify({future:future.uuid,spell:spell.uuid});
+""")
+            assert selected['future'].startswith('Compendium.') and selected['spell'].startswith('Compendium.')
+            # Create first and retain identity before any embedded fixture writes.
+            stage = 'actor_creation'
+            created = await js(guard + """
+const actor=await Actor.implementation.create({name:'MCP temporary Build verification',type:'character',system:{details:{level:{value:1}}},flags:{'foundry-mcp':{buildVerificationRun:RUN}}});
+if(!actor||actor.getFlag('foundry-mcp','buildVerificationRun')!==RUN)throw Error('Fixture marker mismatch');
+const report=JSON.stringify({uuid:actor.uuid});
+""".replace('RUN', marker))
+            actor_uuid = created['uuid']
+            selector = json.dumps(actor_uuid)
+            owned_guard = guard + """
+const actor=game.actors.find(a=>a.uuid===UUID);
+if(!actor||actor.getFlag('foundry-mcp','buildVerificationRun')!==RUN)throw Error('Fixture identity mismatch');
+""".replace('UUID', selector).replace('RUN', marker)
+            stage = 'owned_item_setup'
+            setup = await js(owned_guard + """
+const inputs=[
+ {name:'Build ancestry',type:'ancestry',system:{rules:[],items:{},boosts:{'0':{value:['str','wis'],selected:null}}}},
+ {name:'Build heritage',type:'heritage',system:{rules:[],ancestry:null}},
+ {name:'Build background',type:'background',system:{rules:[],items:{},boosts:{'0':{value:['str','wis'],selected:null}},trainedSkills:{value:['nature'],lore:['Terrain Lore']},description:{value:'Build verification background source.'}}},
+ {name:'Build class',type:'class',system:{rules:[],items:{},trainedSkills:{value:['nature'],additional:1}}},
+ {name:'Build deity',type:'deity',system:{rules:[],spells:{'1':SPELL}}},
+ {name:'Build feature',type:'feat',system:{rules:[],category:'classfeature',level:{value:1,taken:1},description:{value:'Build verification feature source.'}},flags:{pf2e:{rulesSelections:{choice:'recorded choice'}}}},
+ {name:'Terrain Lore',type:'lore',system:{rules:[],proficient:{value:1}}}
+];
+const items=await actor.createEmbeddedDocuments('Item',inputs);
+if(items.length!==7||actor.items.size!==7)throw Error('Unexpected fixture membership');
+const byType=Object.fromEntries(items.map(item=>[item.type,item]));
+const grants={lore:{id:byType.lore.id,onDelete:'detach'},feature:{id:byType.feat.id,onDelete:'detach'}};
+await actor.updateEmbeddedDocuments('Item',[
+ {_id:byType.background.id,'flags.pf2e.itemGrants':grants},
+ {_id:byType.class.id,'flags.pf2e.itemGrants':grants,'system.items':{future:{uuid:FUTURE,name:'Battle Medicine',img:'icons/svg/item-bag.svg',level:19}}},
+ {_id:byType.lore.id,'flags.pf2e.grantedBy':{id:byType.background.id,onDelete:'detach'}},
+ {_id:byType.feat.id,'flags.pf2e.grantedBy':{id:byType.background.id,onDelete:'detach'}}
+]);
+if(actor.items.size!==7||actor.items.some(item=>item.type==='spell'))throw Error('Unexpected automatic acquisition');
+const report=JSON.stringify({items:Object.fromEntries(items.map(item=>[item.type,item.uuid]))});
+""".replace('SPELL', json.dumps(selected['spell'])).replace('FUTURE', json.dumps(selected['future'])))
+            fingerprint_code = owned_guard + """
+const data=JSON.stringify(actor.toObject(true));
+const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(data))),v=>v.toString(16).padStart(2,'0')).join('');
+const report=JSON.stringify({hash,count:actor.items.size});
+"""
+            stage = 'source_fingerprint_before'
+            before = await js(fingerprint_code)
+            stage = 'build_pagination'
+            rows, cursor, pages = [], None, 0
+            while True:
+                assert pages < 150, 'Build verification page bound exceeded.'
+                arguments = {'actor_uuid': actor_uuid, 'sections': ['build'], 'limit': 7, 'max_bytes': 8000}
+                if cursor:
+                    arguments['cursor'] = cursor
+                page = payload(await client.call_tool('read_actor', arguments))
+                assert page['identity']['uuid'] == actor_uuid
+                section = page['sections'][0]
+                assert section['status'] in ('complete', 'partial')
+                assert set(section['reasons']) <= {'pagination'}
+                assert (section['status'] == 'partial') == bool(page['pagination']['next_cursor'])
+                rows.extend(page['records'])
+                pages += 1
+                cursor = page['pagination']['next_cursor']
+                if not cursor:
+                    break
+            stage = 'build_assertions'
+            assert len({row['key'] for row in rows}) == len(rows)
+            identities = [row for row in rows if row['mapped']['concept'] == 'build_item']
+            assert len(identities) == 7
+            assert {row['mapped']['value']['target_uuid'] for row in identities} == set(setup['items'].values())
+            claims = [row for row in rows if row['mapped']['concept'] == 'build_grant_claim']
+            assert len(claims) == 4
+            for kind in ('lore', 'feat'):
+                matching = [row for row in claims if row['mapped']['value']['target_uuid'] == setup['items'][kind]]
+                assert len(matching) == 2
+                assert {row['mapped']['value']['reciprocity'] for row in matching} == {'agree', 'disagree'}
+                assert all(len(row['raw']) == 3 for row in matching)
+
+            def source(kind, path):
+                return next(row for row in rows if row['kind'] == 'field' and row['raw'][0]['document_uuid'] == setup['items'][kind] and row['raw'][1]['path'] == path)
+
+            assert source('heritage', '/system/ancestry')['raw'][1]['value'] is None
+            assert source('background', '/system/boosts/0/selected')['raw'][1]['value'] is None
+            assert source('feat', '/system/category')['mapped']['value'] == {'code': 'classfeature', 'kind': 'feature'}
+            assert source('feat', '/flags/pf2e/rulesSelections/choice')['raw'][1]['value'] == 'recorded choice'
+            assert source('class', '/system/items/future/uuid')['raw'][1]['value'] == selected['future']
+            assert source('class', '/system/items/future/level')['raw'][1]['value'] == 19
+            assert source('deity', '/system/spells/1')['raw'][1]['value'] == selected['spell']
+            assert all(source(kind, '/system/trainedSkills/value/0')['raw'][1]['value'] == 'nature' for kind in ('background', 'class'))
+            item_pages = 0
+            for kind in ('background', 'feat'):
+                stage = 'background_source_pagination' if kind == 'background' else 'feat_source_pagination'
+                item_cursor, item_rows = None, []
+                while True:
+                    assert item_pages < 100, 'Item verification page bound exceeded.'
+                    arguments = {'item_uuid': setup['items'][kind], 'sections': ['source', 'description'], 'limit': 7, 'max_bytes': 8000}
+                    if item_cursor:
+                        arguments['cursor'] = item_cursor
+                    item_page = payload(await client.call_tool('read_item', arguments))
+                    assert item_page['identity']['uuid'] == setup['items'][kind]
+                    assert item_page['identity']['actor']['uuid'] == actor_uuid
+                    assert all(section['status'] in ('complete', 'partial') and set(section['reasons']) <= {'pagination'} for section in item_page['sections'])
+                    item_rows.extend(item_page['records'])
+                    item_pages += 1
+                    item_cursor = item_page['pagination']['next_cursor']
+                    if not item_cursor:
+                        break
+                assert all(section['status'] == 'complete' and not section['reasons'] for section in item_page['sections'])
+                assert any(raw['path'] == '/system/description/value' and raw.get('value') for row in item_rows for raw in row['raw'])
+            stage = 'source_fingerprint_after'
+            after = await js(fingerprint_code)
+            assert before == after and after['count'] == 7
+            summary.update(passed=True, build_pages=pages, build_records=len(rows), owned_items=7, outgoing_claims=4, item_pages=item_pages, fingerprint_unchanged=True)
+        except Exception as error:
+            # Do not print tool exceptions, credentials, document IDs or prose.
+            summary['failure'] = 'Build live verification failed; inspect the fixed harness checks.'
+            summary.update(failure_stage=stage, exception_type=type(error).__name__)
+        finally:
+            # Exact UUID plus exact per-run marker authorizes removal. If create's
+            # response was lost, discover only this unpredictable marker, never names.
+            for attempt in range(3):
+                try:
+                    cleaned = await js(guard + """
+const matches=game.actors.filter(a=>a.getFlag('foundry-mcp','buildVerificationRun')===RUN);
+if(matches.length>1)throw Error('Ambiguous verification marker');
+const expected=UUID;
+if(expected&&matches.some(a=>a.uuid!==expected))throw Error('Verification UUID mismatch');
+if(matches.length){const actor=matches[0];if(actor.uuid!==(expected??actor.uuid)||actor.getFlag('foundry-mcp','buildVerificationRun')!==RUN)throw Error('Cleanup identity mismatch');await actor.delete();}
+const report=JSON.stringify({clean:!game.actors.some(a=>a.getFlag('foundry-mcp','buildVerificationRun')===RUN)});
+""".replace('RUN', marker).replace('UUID', json.dumps(actor_uuid)))
+                    if cleaned['clean']:
+                        summary['cleanup_confirmed'] = True
+                        if actor_uuid is not None:
+                            break
+                except Exception as error:
+                    summary['cleanup_confirmed'] = False
+                    summary['cleanup_exception_type'] = type(error).__name__
+                if attempt < 2:
+                    await asyncio.sleep(1)
+            summary['passed'] = summary['passed'] and summary['cleanup_confirmed']
+    print(json.dumps(summary))
+    return 0 if summary['passed'] else 1
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--world-id', help='Exact existing development world ID; required before fixture writes.')
+    parser.add_argument('--discovery-only', action='store_true', help='Read MCP discovery and support only; create no fixture and perform no cleanup writes.')
+    args = parser.parse_args()
+    if not args.discovery_only and not args.world_id:
+        parser.error('--world-id is required for fixture verification')
+    raise SystemExit(asyncio.run(main(args.world_id, args.discovery_only)))

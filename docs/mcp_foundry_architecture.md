@@ -251,3 +251,15 @@ permission admission to the existing Actor/Item document boundary. Python
 validates the singleton result and canonical next-reader arguments before MCP
 delivery. Failures stay local to that selected reference; no target source or
 gameplay operation is executed.
+
+PF2e character Build is a selected-source join implemented by `actorBuild.js`,
+not a second character model in Python. The browser snapshots actual readable
+owned build Items once, typed source and separate persisted grant claims within
+the selected world/token owner. Python validates every paged source row using
+its own persisted `/type` witness, exact donor/path/mapping and contributors;
+outgoing reciprocal claims include exact inverse source evidence. There is no
+top-level donor manifest. Membership, permissions, source and inverse evidence
+participate in revision checks. The snapshot rejects more than 12,000 owner
+Items or 24,000 records before shared record/byte pagination. Offered definitions
+and options never establish acquisitions; NPC/familiar Build and effective
+benefits are unsupported. See the [Build contract](actor-item-story-map/build-contract.md).
