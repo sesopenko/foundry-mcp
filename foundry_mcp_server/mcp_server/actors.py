@@ -600,6 +600,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
             identity['type'] == 'book' and path in BOOK_ARRAYS or
             identity['type'] == 'ancestry' and _ancestry_spec(path) is not None and _ancestry_spec(path)[1]=='array' or
+            identity['type'] == 'heritage' and path in HERITAGE_ARRAYS or
             identity['type'] == 'background' and _background_spec(path) is not None and _background_spec(path)[1]=='array' or
             identity['type'] == 'kit' and path in KIT_ARRAYS or
             identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
@@ -1224,6 +1225,78 @@ def _ancestry_relationship(row,identity):
     return (set(value)==keys and value['target_uuid']==raw['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(raw['value'].split('.')[:4])))
 
 
+# PF2e-specific HeritageSystemSchema8.6.1; authored association, never ownership.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/heritage/data.ts
+HERITAGE_SOURCE={'/system/'+p:('heritage_'+c,k,n) for p,c,k,n in (
+ ('ancestry','ancestry_association','null',True),
+ ('ancestry/name','ancestry_name','string',False),('ancestry/slug','ancestry_slug','string',False),
+ ('ancestry/uuid','ancestry_uuid','string',False),('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+HERITAGE_ARRAYS={'/system/traits/value':'heritage_trait_code','/system/traits/otherTags':'heritage_other_tag_code'}
+
+
+def _heritage_spec(path):
+    """PF2e-specific heritage8.6.1 source schema above; no effective benefits.
+
+    Nullable ancestry association and authored name/slug/uuid are independent of
+    the actual owner's acquired ancestry. Nonphysical Items admit no stock fields.
+    """
+    if path in HERITAGE_SOURCE:return HERITAGE_SOURCE[path]
+    for base,concept in HERITAGE_ARRAYS.items():
+        if path==base:return concept,'array',False
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path):return concept,'string',False
+    return None
+
+
+def _heritage_record(row,identity):
+    """PF2e-specific heritage8.6.1 exact source DTO; pinned schema above.
+
+    Authored association fields never establish exclusivity or current membership.
+    """
+    if len(row['raw'])!=1:return False
+    raw=row['raw'][0];path=raw['path'];spec=_heritage_spec(path)
+    if path in SOURCE_PATHS:return row['provenance']['mapping']!='pf2e.heritage.source.v1'
+    if spec is None or row['section']!='source' or row['kind']!='field' or row['key']!='source:'+path:return False
+    if raw['document_uuid']!=identity['uuid']:return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.heritage.source.v1',limitations=['heritage_source_not_effective_character']):return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):return False
+    if not raw['present']:return True
+    if value is None:return nullable
+    return {'null':False,'string':type(value) is str,'boolean':type(value) is bool,'array':type(value) is list and not value}[kind]
+
+
+def _heritage_relationship(row,identity):
+    """PF2e-specific heritage8.6.1 ancestry association; schema pinned above.
+
+    Immediate canonical ancestry Item identity is distinct from owner membership;
+    unresolved outcomes contain no target identity or prepared ancestry state.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship' or len(row['raw'])!=1 or row['key']!='relationships:heritage:ancestry':return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='source' or type(raw['present']) is not bool or raw['present']!=('value'in raw):return False
+    if row['provenance']!=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.heritage.ancestry-reference.v1',limitations=['ancestry_association_not_owner_membership']):return False
+    mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='heritage_ancestry_reference' or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if raw['path']=='/system/ancestry':return value==dict(status='missing',target_uuid=None) if not raw['present'] else raw['value'] is None and value==dict(status='unassociated',target_uuid=None)
+    if raw['path']!='/system/ancestry/uuid':return False
+    if not raw['present']:return value==dict(status='missing',target_uuid=None)
+    claim=raw['value']
+    if type(claim) is not str:return False
+    if not _effect_reference_uuid(claim,'Item'):return value==dict(status='unsupported',target_uuid=None)
+    if value.get('status')!='resolved':return value in [dict(status=status,target_uuid=None) for status in ('missing','denied','unsupported','unverified')]
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}
+    synthetic=claim.startswith('Scene.')
+    if synthetic:keys.add('token_uuid')
+    return (set(value)==keys and value['target_uuid']==claim and value['document_name']=='Item' and value['type']=='ancestry' and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(claim.split('.')[:4])))
+
+
 # PF2e-specific BackgroundSystemSchema8.6.1 and ABCFeatureEntryField; source definitions only.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/background/data.ts
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/abc/data.ts
@@ -1760,6 +1833,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return path in NPC_NOTES or _npc_spec(path) is not None
     if identity is None or identity['document_name'] != 'Item':
         return False
+    if identity['type'] == 'heritage':
+        return _heritage_spec(path) is not None
     if identity['type'] == 'background':
         return _background_spec(path) is not None
     if identity['type'] == 'ancestry':
@@ -2119,6 +2194,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='heritage' and row['section']=='relationships':
+        return _heritage_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='background' and row['section']=='relationships':
         return _background_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='ancestry' and row['section']=='relationships':
@@ -2169,6 +2246,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'heritage' and not _heritage_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'background' and not _background_record(row, identity):
         return False
@@ -2535,6 +2614,18 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     synthetic targets; missing/denied/unsupported/unverified disclose no target.
     Absent or empty items maps return missing/empty markers. No recursive feature
     hydration, granted/acquired claim, physical fields or effective benefit math.
+    heritage Items expose authored nullable ancestry association, separate stored
+    ancestry name/slug/uuid leaves, traits/tags, rarity, slug and publication.
+    Null association means unassociated, not proof of versatile eligibility or
+    ancestry exclusivity; absent association stays missing. Explicit relationships
+    returns one heritage_ancestry_reference at relationships:heritage:ancestry:
+    unassociated/missing/denied/unsupported/unverified have target_uuid null and no
+    target metadata. Resolved includes actual canonical ancestry Item target_uuid,
+    document_name, type, name (at most 256 characters), name_truncated and token_uuid
+    only for synthetic targets. Follow read_item with returned selectors. Stored
+    association proves no owner ancestry membership. No target source, recursive
+    expansion, physical fields, rule application or effective character math.
+    Source lists admit 12000 entries; malformed/oversized source fails ReadFailed.
     background Items expose authored keyed boost offers and nullable stored
     selections, trainedSkills.value skill codes and trainedSkills.lore text,
     keyed ABC feature uuid/img/name/level, traits/tags, slug and publication.

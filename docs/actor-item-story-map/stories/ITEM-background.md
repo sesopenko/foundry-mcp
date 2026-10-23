@@ -46,7 +46,7 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 The source mapping is ready to implement. Effective actor statistics, target-dependent calculations and automatic application of rule elements are excluded; prove supported interfaces and focused live behavior before adding them.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Live source/definition checkpoint evidence is recorded below; acquired-item integration remains open. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
 
 
 Selected source and explicit immediate definition links are implemented and

@@ -46,7 +46,7 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 A kit is not a PhysicalSystemSource subtype; use shared document extraction and its own items/price schema, not the physical allowlist.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+Delivered source/reference verification and its remaining live coverage limits are recorded below. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
 
 
 Selected bundle source and explicit immediate component references are delivered;

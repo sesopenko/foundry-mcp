@@ -245,3 +245,11 @@ Each implementation increment must record focused/full results and a local commi
 - Explicit immediate feat definitions retain source occurrence identity without acquired claims, Lore construction, grant execution or duplicate-training replacement. Actual MCP passed three background sources/prose and two feat follow-ups with unchanged source fingerprints.
 - Focused/full suites pass:281 Python tests (one skipped),341 JavaScript tests. Actual paginated JavaScript DTOs cross strict Python validation; world/pack/token, malformed/denied/stale/bounded cases have deterministic coverage.
 - ITEM-background remains In progress for its acquired same-Lore/feat multi-contributor acceptance in CORE-build. Completed stories remain23/39 (59.0%). Independent remaining build readers can proceed before this integration closes.
+
+
+### 34. Heritage selections and nullable ancestry links — October 22, 2026
+
+- ITEM-heritage preserves independent heritage identity, nullable ancestry association and metadata. Explicit ancestry links resolve only actual ancestry Items and do not establish owner membership, exclusivity, eligibility or effective benefits.
+- Focused/full suites pass:288 Python tests (one skipped),351 JavaScript tests. Actual MCP consumed three heritage definitions and exact prose, verified one Elf identity follow-up and two unassociated results, and preserved source fingerprints. World/pack/token, independent synthetic target, denied/stale and non-PF2e boundaries have deterministic coverage.
+- Corrected stale generic limitation text on delivered definition readers; regression coverage verifies accurate source limitations while retaining pending effective/acquisition capabilities.
+- ITEM-heritage Complete. Completed stories:24/39 (61.5%). Background acquired-item integration and remaining class/deity/feat readers still gate the character Build view.

@@ -75,6 +75,8 @@ Ancestry readers separate offered/selected/alternate choices and source benefits
 from character totals; named feature definitions do not imply acquisition.
 Background readers preserve boost choices, training/Lore labels and definition
 links; acquired contributor joins remain pending in the character Build view.
+Heritage readers preserve nullable ancestry associations and named links without
+inferring owner ancestry, exclusivity or effective benefits.
 
 
 

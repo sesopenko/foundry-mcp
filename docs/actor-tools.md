@@ -759,3 +759,26 @@ feat/Lore joins and duplicate-training handling remain CORE-build work; the
 background story stays In progress for that acceptance. See
 [fields](actor-item-story-map/background-fields.md) and
 [evidence](actor-item-story-map/background-verification.md).
+
+
+## Heritage selections and ancestry associations
+
+`heritage` source preserves its own identity, metadata and nullable ancestry
+association. Null association is explicit and does not manufacture exclusivity,
+current owner ancestry or full eligibility. Populated associations retain
+separate stored name/slug/UUID leaves; exact description supplies benefit prose.
+Heritage is nonphysical and no Actor benefits are calculated.
+
+Explicit relationships return one `heritage_ancestry_reference`: null source is
+unassociated, absence is missing, and a valid reference can resolve only to an
+actual ancestry Item. Resolved canonical selectors retain synthetic target token
+context for read_item; missing/denied/unsupported/unverified targets withhold
+identity. No association name search, target-source expansion or acquired
+membership claim occurs. Lists admit12000 entries; shared paging, byte bounds
+and source/target/permission revalidation apply.
+
+Three existing compendium heritages cover one named ancestry link and two null
+associations with exact prose and unchanged source fingerprints. World/owned/
+synthetic context and malformed/denied/stale cases have deterministic coverage.
+See [fields](actor-item-story-map/heritage-fields.md) and
+[evidence](actor-item-story-map/heritage-verification.md).

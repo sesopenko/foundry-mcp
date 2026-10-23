@@ -179,3 +179,11 @@ training/Lore source and keyed feature definitions. `actorBackgroundRelationship
 resolves only explicit immediate definition links. Empty structured fields do
 not prove no prose benefit; no skill rank, Lore Item or missing grant is created.
 The acquired contributor join remains pending in CORE-build.
+
+
+`actorHeritage.js` selects PF2e-specific8.6.1 nullable ancestry association and
+heritage metadata. `actorHeritageRelationships.js` resolves the explicit ancestry
+UUID to ancestry identity only. Null source remains unassociated; no owner
+ancestry, eligibility or effective benefits are inferred. Delivered definition
+reader limitations describe their actual source coverage rather than stale
+pending-type text.
