@@ -770,6 +770,12 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         container_support=next(entry for entry in registry.data['item_types'] if entry['type']=='backpack')
         assert container_support['mapped_supported'] and not container_support['effective_supported']
         assert container_support['verification']['live']['status']=='passed'
+        book_support=next(entry for entry in registry.data['item_types'] if entry['type']=='book')
+        assert book_support['source_supported'] and book_support['mapped_supported'] and not book_support['effective_supported']
+        assert book_support['verification']['deterministic']['status']=='passed'
+        assert book_support['verification']['live']['status']=='not_run'
+        assert 'book Items expose' in available['read_item'].description
+        assert '200' in available['read_item'].description
         inventory_support=next(entry for entry in registry.data['actor_sections'] if entry['name']=='inventory')
         assert inventory_support['source_supported'] and inventory_support['mapped_supported'] and not inventory_support['effective_supported']
         assert inventory_support['verification']['live']['status']=='passed'

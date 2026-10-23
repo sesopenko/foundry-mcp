@@ -214,3 +214,10 @@ Each implementation increment must record focused/full results and a local commi
 - Nested/rootless cycles, orphan/denied/wrong-type parents, multiple ammunition stacks, duplicate serialized/actual/kit references, token context and stale continuation cases have deterministic coverage. Live reads cover three Actor contexts and six physical types with unchanged source fingerprints; unavailable owned container/book/kit/attachment/selected-ammunition fixtures remain named gaps.
 - Actual runtime naming differences exposed mixed source/prepared provenance. A failing regression established the cause; inventory now uses cached persisted names consistently without weakening validation. Full suites pass:259 Python tests (one skipped),305 JavaScript tests.
 - CORE-inventory Complete for its declared source graph scope. Completed stories:21/39 (53.8%). Effective Actor integration and the remaining stories remain open.
+
+
+### 30. Formula/spell book source and immediate content checkpoint — October 22, 2026
+
+- ITEM-book now preserves category, capacity, ordered duplicate UUID claims and metadata alongside shared physical source and exact prose. Explicit relationships name immediate world/pack/owned/token targets without target-source or recursive content expansion; ownership/preparation/castability remain separate.
+- Deterministic helper, paginated reader and actual Python DTO tests cover empty/missing/denied/unsupported/stale states and resolution bounds. Full suites pass:264 Python tests (one skipped),314 JavaScript tests. Actual MCP discovery/regression checks retain book live verification as not_run.
+- The existing world,894 distinct Actor instances and26 Item compendiums contain no book Items. Standard blank formula/spell books are equipment and remain that type. ITEM-book stays In progress at its original representative-live-fixture gate; completed stories remain21/39 (53.8%).

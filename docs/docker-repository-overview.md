@@ -67,6 +67,8 @@ Actor valuables remain readable without inferred sale proceeds or doubled value.
 Actor inventory lists each actual possession once with stored container and
 selected-ammunition links. Quantity, price/per and carrying source remain
 independent; attachments and kit definitions do not create extra possessions.
+Formula/spell book source and explicit immediate content links have deterministic
+coverage; representative live book fixtures remain unavailable.
 
 
 

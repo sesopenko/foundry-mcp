@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-physical](CORE-physical.md) |
 | Dependency reason | Uses common physical source rules and identity/bounds. |
 
@@ -30,9 +30,9 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Implementation checklist
 
-- [ ] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
-- [ ] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
-- [ ] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
+- [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
+- [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
+- [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
 - [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
 
 ## Acceptance scenarios
@@ -47,3 +47,14 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 Pinned source/template establishes fields; representative live book Items and content-resolution behavior remain unverified. Formula-specific interpretation beyond the read passages stays partial.
 
 No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+
+
+Selected source and explicit immediate named-content links are implemented and
+deterministically verified; see [fields](../book-fields.md) and
+[verification](../book-verification.md). Duplicate indexes, canonical/token
+identity, exact descriptions, permissions and stale continuations are covered.
+The original representative live-book gate remains open: the existing world,
+all inspected Actor instances and26 Item compendiums contain no book Items.
+Standard blank books remain equipment. No fixture is fabricated or retyped and
+no live source/relationship support is claimed. Story completion awaits the
+specified evidence; formula ownership/preparation interpretation stays partial.

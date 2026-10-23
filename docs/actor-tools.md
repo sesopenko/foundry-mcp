@@ -655,3 +655,28 @@ invalidate continuations. No effective Bulk, sale proceeds, equipment benefits,
 ammunition compatibility or activation eligibility is inferred. See
 [field contract](actor-item-story-map/inventory-fields.md) and
 [verification](actor-item-story-map/inventory-verification.md).
+
+
+## Formula and spell book source
+
+The `book` Item reader exposes category, capacity and ordered content UUID source
+plus shared physical facts and explicit exact description. This PF2e physical
+type is separate from the private PDF library. Formula/spell categories and
+repeated content references stay distinct; no ownership, learned formula,
+preparation, capacity-use or casting availability is inferred.
+
+Explicit relationships return indexed `book_content_reference` records using
+`pf2e.book.content-reference.v1`, canonical immediate Item identity and synthetic
+target token context. Follow `read_item`; no recursive expansion occurs. Invalid
+source claims stay unsupported, while missing, denied and resolution failures
+remain explicit without target metadata. Empty versus absent content arrays
+retain exact source markers. At most200 references are resolved; larger books
+can still be read as source and individual UUIDs followed separately. Shared
+count/byte paging and stale-source/permission/target-name checks apply.
+
+Source and relationship contracts have deterministic and cross-language DTO
+coverage. The existing runtime contains no representative `book` Item;
+discovery therefore reports `live=not_run`, and the story remains In progress.
+Standard blank spellbooks/formula books are `equipment` in the pinned data;
+they must not be silently retyped. See [fields](actor-item-story-map/book-fields.md)
+and [evidence](actor-item-story-map/book-verification.md).

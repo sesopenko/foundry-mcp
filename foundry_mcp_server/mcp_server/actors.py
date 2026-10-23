@@ -598,6 +598,7 @@ def _empty_source_array(path: str, identity: dict[str, Any]) -> bool:
             identity['type'] == 'armor' and path in ARMOR_ARRAYS or
             identity['type'] == 'shield' and path in SHIELD_ARRAYS or
             identity['type'] == 'equipment' and path in EQUIPMENT_ARRAYS or
+            identity['type'] == 'book' and path in BOOK_ARRAYS or
             identity['type'] == 'treasure' and path in TREASURE_ARRAYS or
             identity['type'] == 'backpack' and path in CONTAINER_ARRAYS or
             identity['type'] == 'consumable' and (path in CONSUMABLE_ARRAYS or _contained_spell_spec(path) is not None and _contained_spell_spec(path)[1] == 'array') or
@@ -1052,6 +1053,81 @@ def _equipment_record(row,identity):
             'string':type(value) is str,'array':type(value) is list and not value}[kind]
 
 
+# PF2e-specific BookSystemSource8.6.1 authored metadata; no effective ownership or preparation.
+# https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/book/data.ts
+BOOK_SOURCE = {'/system/'+p:('book_'+c,k,n) for p,c,k,n in (
+ ('category','category_code','string',False),('capacity','capacity','number',False),
+ ('traits/rarity','rarity_code','string',False),
+ ('slug','source_slug','string',True),('publication/title','publication_title','string',False),
+ ('publication/authors','publication_authors','string',False),('publication/license','publication_license','string',False),
+ ('publication/remaster','publication_remaster','boolean',False),
+)}
+BOOK_ARRAYS = {'/system/'+p:'book_'+c for p,c in (
+ ('traits/value','trait_code'),('traits/otherTags','other_tag_code'),('contents','content_uuid'))}
+
+
+def _book_spec(path):
+    """PF2e-specific book8.6.1 source schema above; arrays retain exact codes.
+
+    No Item ownership, preparation, capacity usage or effective access is inferred.
+    """
+    if path in BOOK_SOURCE: return BOOK_SOURCE[path]
+    for base,concept in BOOK_ARRAYS.items():
+        if path == base: return (concept,'array',False)
+        if re.fullmatch(re.escape(base)+r'/(0|[1-9][0-9]*)',path): return (concept,'string',False)
+    return None
+
+
+def _book_relationship(row, identity):
+    """PF2e-specific BookSystemSource8.6.1 immediate contents UUID claim boundary.
+
+    Pinned book schema above; resolved definitions establish no ownership or
+    preparation. Duplicate references retain their original indexed source path.
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship':return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if len(raw)!=1 or type(raw[0]) is not dict:return False
+    r=raw[0]
+    if not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
+    if r['document_uuid']!=identity['uuid'] or r['basis']!='source' or type(r['present']) is not bool or r['present']!=('value' in r):return False
+    if provenance!=dict(contributors=[{k:r[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.book.content-reference.v1',limitations=['stored_book_contents_not_ownership_or_preparation']):return False
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='book_content_reference' or mapped['unit'] is not None:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if r['path']=='/system/contents':
+        return row['key']=='relationships:book:contents' and ((not r['present'] and value==dict(status='missing',target_uuid=None)) or (r['present'] and type(r['value']) is list and r['value']==[] and value==dict(status='empty',target_uuid=None)))
+    match=re.fullmatch(r'/system/contents/(0|[1-9][0-9]*)',r['path']) if type(r['path']) is str else None
+    if not match or row['key']!='relationships:book:contents:'+match[1] or not r['present'] or type(r['value']) is not str:return False
+    if value.get('status')!='resolved':return value in [dict(status=s,target_uuid=None) for s in ('missing','denied','unsupported','unverified')]
+    keys={'status','target_uuid','document_name','type','name','name_truncated'}
+    synthetic=re.fullmatch(r'Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+\.Item\.[^.\s#]+',r['value'])
+    if synthetic:keys.add('token_uuid')
+    return (set(value)==keys and value['target_uuid']==r['value'] and _effect_reference_uuid(value['target_uuid'],'Item') and value['document_name']=='Item' and type(value['type']) is str and value['type'] in ITEM_TYPES-{'affliction'} and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool and (not synthetic or value['token_uuid']=='.'.join(r['value'].split('.')[:4])))
+
+
+def _book_record(row,identity):
+    """PF2e-specific book8.6.1 strict selected source and physical separation.
+
+    Schema pinned above; contents and category remain authored, not owned or prepared.
+    Shared physical quantity, price.per and coin values retain their mapping.
+    """
+    if len(row['raw']) != 1: return False
+    raw=row['raw'][0];path=raw['path'];spec=_book_spec(path)
+    if spec is None:
+        if path in SOURCE_PATHS or path == UNIDENTIFIED_DESCRIPTION:
+            return row['provenance']['mapping'] != 'pf2e.book.source.v1'
+        return row['provenance']['mapping'] == 'pf2e.physical.source.v1'
+    if row['section'] != 'source' or row['kind'] != 'field' or row['key'] != 'source:'+path: return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if raw['document_uuid'] != identity['uuid']: return False
+    if row['provenance'] != dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.book.source.v1',limitations=['source_only_no_book_ownership_or_preparation']): return False
+    if row['mapped'] != dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value): return False
+    if not raw['present']: return True
+    if value is None and nullable: return True
+    return {'number':type(value) in (int,float) and math.isfinite(value),'boolean':type(value) is bool,
+            'string':type(value) is str,'array':type(value) is list and not value}[kind]
+
+
 # PF2e-specific TreasureSystemSchema8.6.1 authored metadata; no derived valuation or sale.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/treasure/data.ts
 TREASURE_SOURCE = {'/system/'+p:('treasure_'+c,k,n) for p,c,k,n in (
@@ -1428,6 +1504,8 @@ def _source_path(path: Any, identity: dict[str, Any] | None = None) -> bool:
         return True
     if identity['type'] == 'backpack' and _container_spec(path) is not None:
         return True
+    if identity['type'] == 'book' and _book_spec(path) is not None:
+        return True
     if identity['type'] == 'treasure' and _treasure_spec(path) is not None:
         return True
     if identity['type'] == 'equipment' and _equipment_spec(path) is not None:
@@ -1759,6 +1837,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if identity['document_name']=='Item' and identity['type']=='book' and row['section']=='relationships':
+        return _book_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='backpack' and row['section']=='relationships':
         return _container_relationship(row,identity)
     if identity['document_name']=='Actor' and row['section']=='spellcasting':
@@ -1801,6 +1881,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if identity['document_name'] == 'Item' and identity['type'] == 'consumable' and not _consumable_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'backpack' and not _container_record(row, identity):
+        return False
+    if identity['document_name'] == 'Item' and identity['type'] == 'book' and not _book_record(row, identity):
         return False
     if identity['document_name'] == 'Item' and identity['type'] == 'treasure' and not _treasure_record(row, identity):
         return False
@@ -2132,6 +2214,19 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     physical HP preserves persisted current/max independently: source maximum can
     differ from an effective reinforced maximum and current HP is not clamped. Source
     completion covers selected fields; relationships/effective/rules remain unsupported.
+    book Items expose source category (formula/spell or an unknown stored code),
+    capacity and ordered contents UUID claims, with traits/tags and publication.
+    Duplicate contents indexes remain distinct. Stored contents are definitions,
+    not owned Items or evidence of preparation, learning, capacity use or access.
+    Shared physical quantity/price/carrying fields retain their own provenance.
+    Book relationships expose immediate book_content_reference rows with exact
+    /system/contents/N origin indexes and resolved/missing/denied/unsupported/
+    unverified status. Resolved targets include target_uuid, document_name, type,
+    name, name_truncated and token_uuid for synthetic targets; follow read_item.
+    Absent/empty arrays return missing/empty scope rows. At most 200 references
+    are resolved per read; oversized selections fail ReadFailed. No recursive
+    expansion occurs and duplicate references remain distinct. Book support has
+    deterministic coverage only; representative live book fixtures are unavailable.
     treasure Items expose nullable category and authored traits/tags, rarity, slug
     and publication alongside shared physical quantity and price coin denominations
     and price.per. Quantity and price.per are independent stored values; no total

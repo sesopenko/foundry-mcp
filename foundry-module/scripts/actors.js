@@ -15,6 +15,8 @@ import { spellFields,spellDescriptionFields } from './actorSpell.js';
 import { spellcastingEntryFields,spellcastingEntryIssues } from './actorSpellcastingEntry.js';
 import { actorCastingRecords } from './actorCasting.js';
 import { actorInventoryRecords } from './actorInventory.js';
+import { bookFields } from './actorBook.js';
+import { bookRelationships } from './actorBookRelationships.js';
 import { spellEntryReference,spellEntryRelationship } from './actorSpellRelationships.js';
 import { weaponAmmoReference,weaponAmmoRelationship } from './actorWeaponRelationships.js';
 import { actionFields, actionReferenceFields } from './actorAction.js';
@@ -53,6 +55,7 @@ function selection(target, sections) {
   let castingEntry=[];let castingIssues=[];
   let castingView={records:[],reasons:[]};
   let inventoryView={records:[],reasons:[]};
+  let book=[];
   let weaponReference=null;
   let action=[];
   let melee=[];
@@ -244,6 +247,14 @@ function selection(target, sections) {
     try {npcNotes=npcNoteFields(source);}
     catch {fail('ReadFailed','Selected NPC biography has an unexpected type.','Inspect the NPC blurb/public/private source notes; no prepared text is substituted.');}
   }
+  // PF2e-specific book8.6.1 source definitions, not owned formulas/prepared spells.
+  if(target.document.documentName==='Item'&&source.type==='book'&&sections.some(name=>['source','relationships'].includes(name))){
+    try{book=bookFields(source);}
+    catch(error){
+      const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
+      fail('ReadFailed',`Selected book source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect book category, capacity and content UUID source; no contents, preparation or ownership is inferred.');
+    }
+  }
   // PF2e-specific Actor8.6.1 casting joins use actual owner Items and persisted
   // focus source only; availability and effective variants remain unevaluated.
   if(target.document.documentName==='Actor'&&sections.includes('spellcasting')){
@@ -301,7 +312,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, book, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -345,6 +356,10 @@ async function snapshot(target,sections) {
   if(target.document.type==='condition'&&sections.includes('relationships'))selected.conditionRelationships=conditionRelationships(target,selected.conditionReferences);
   if(target.document.type==='spell'&&sections.includes('relationships'))selected.spellRelationship=spellEntryRelationship(target,selected.spellReference);
   if(target.document.type==='weapon'&&sections.includes('relationships'))selected.weaponRelationship=weaponAmmoRelationship(target,selected.weaponReference);
+  if(target.document.type==='book'&&sections.includes('relationships')){
+    try{selected.bookRelationships=await bookRelationships(target,selected.book);}
+    catch{fail('ReadFailed','Book content references exceed the supported resolution bound.','Read source first and follow selected UUIDs with read_item; explicit relationships admit at most200 immediate claims.');}
+  }
   return selected;
 }
 
@@ -402,6 +417,10 @@ export async function getActorTypes(params = {}) {
     container.mapped_supported=true;
     container.limitations=['Container source and explicitly requested same-owner containment graph only; nested contents appear once, cycles/missing/denied/unsupported parents remain explicit. Capacity/ignored Bulk do not establish current contents or Actor Bulk. Unowned containers have unverified contents scope. Live verification covers compendium containers only; owned/token graphs have deterministic coverage.'];
     container.verification={deterministic:{status:'passed',evidence:['tests/js/actor-container.test.js','tests/js/actor-container-readers.test.js','tests/test_actor_container.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/container-verification.md','scripts/actor-live-check.py']}};
+    const book=result.item_types.find(entry=>entry.type==='book');
+    book.mapped_supported=true;
+    book.limitations=['Book category/capacity/contents and explicit immediate named content links only; no formula ownership, preparation, castability or recursive expansion. Deterministic coverage only: no representative live book Item exists in the existing runtime.'];
+    book.verification={deterministic:{status:'passed',evidence:['tests/js/actor-book.test.js','tests/js/actor-book-readers.test.js','tests/test_actor_book.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/book-verification.md']}};
     const inventory=result.actor_sections.find(entry=>entry.name==='inventory');
     inventory.source_supported=true;inventory.mapped_supported=true;
     inventory.limitations=['Owned physical possessions and persisted container/selected-ammunition links, preserving distinct quantities, price/per, carry/investment and serialized attachment metadata. No total Bulk, sale proceeds or effective benefits. Book/kit specialty expansion remains partial.'];
@@ -498,7 +517,7 @@ async function read(target,params,sections,tool) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific descriptors retain persisted fields. Source mappings never
     // substitute carried gear, prepared statistics, effective usage or Bulk.
-    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.ammo,'pf2e.ammo.source.v1'],[selected.armor,'pf2e.armor.source.v1'],[selected.container,'pf2e.container.source.v1'],[selected.treasure,'pf2e.treasure.source.v1'],[selected.shield,'pf2e.shield.source.v1'],[selected.equipment,'pf2e.equipment.source.v1'],[selected.consumable,'pf2e.consumable.source.v1'],[selected.spell,'pf2e.spell.source.v1'],[selected.castingEntry,'pf2e.spellcasting-entry.source.v1'],[selected.containedSpell,'pf2e.spell.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
+    for (const [fields,mapping] of [[selected.physical,'pf2e.physical.source.v1'],[selected.book,'pf2e.book.source.v1'],[selected.weapon,'pf2e.weapon.source.v1'],[selected.ammo,'pf2e.ammo.source.v1'],[selected.armor,'pf2e.armor.source.v1'],[selected.container,'pf2e.container.source.v1'],[selected.treasure,'pf2e.treasure.source.v1'],[selected.shield,'pf2e.shield.source.v1'],[selected.equipment,'pf2e.equipment.source.v1'],[selected.consumable,'pf2e.consumable.source.v1'],[selected.spell,'pf2e.spell.source.v1'],[selected.castingEntry,'pf2e.spellcasting-entry.source.v1'],[selected.containedSpell,'pf2e.spell.source.v1'],[selected.action,'pf2e.action.source.v1'],[selected.melee,'pf2e.melee.source.v1'],[selected.lore,'pf2e.lore.source.v1'],[selected.npc,'pf2e.npc.source.v1'],[selected.effect,'pf2e.effect.source.v1'],[selected.condition,'pf2e.condition.source.v1']]) {
     for (const field of fields) {
       const entry=record(target.identity.uuid,field.path,field.present,field.value,'source',field.concept);
       if (Object.hasOwn(field,'mapped_value')) entry.mapped.value=field.mapped_value;
@@ -532,6 +551,7 @@ async function read(target,params,sections,tool) {
       provenance:{contributors:[],mapping:'pf2e.npc.item-reference.v1',limitations:['One or more owned Items are unreadable; have the authorized GM grant access and retry.']}});
   }
   records.push(...selected.containment.records);
+  if(selected.bookRelationships)records.push(...selected.bookRelationships);
   if(selected.spellRelationship){
     const {path,present,value}=selected.spellReference;
     const raw=[{document_uuid:target.identity.uuid,path,present,...(present?{value}:{}),basis:'source'}];
@@ -603,6 +623,7 @@ async function read(target,params,sections,tool) {
   const isMelee=target.document.documentName==='Item'&&target.document.type==='melee';
   const isLore=target.document.documentName==='Item'&&target.document.type==='lore';
   const isTreasure=target.document.documentName==='Item'&&target.document.type==='treasure';
+  const isBook=target.document.documentName==='Item'&&target.document.type==='book';
   const isContainer=target.document.documentName==='Item'&&target.document.type==='backpack';
   const isCastingEntry=target.document.documentName==='Item'&&target.document.type==='spellcastingEntry';
   const isSpell=target.document.documentName==='Item'&&target.document.type==='spell';
@@ -617,10 +638,11 @@ async function read(target,params,sections,tool) {
   const castingSection=target.document.documentName==='Actor'&&sections.includes('spellcasting');
   const inventorySection=target.document.documentName==='Actor'&&sections.includes('inventory');
   const loreSkills=target.document.documentName==='Actor'&&sections.includes('skills');
-  const complete=name=>(inventorySection&&name==='inventory'&&!selected.inventoryView.reasons.length)||(isContainer&&(name==='source'||(name==='relationships'&&!selected.containment.reasons.length)))||(isCastingEntry&&name==='source'&&!selected.castingIssues.length)||name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isAmmo||isArmor||isShield||isEquipment||isConsumable||isTreasure)&&name==='source')||((isEffect||isCondition||isWeapon||isSpell)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
+  const complete=name=>(isBook&&['source','relationships'].includes(name))||(inventorySection&&name==='inventory'&&!selected.inventoryView.reasons.length)||(isContainer&&(name==='source'||(name==='relationships'&&!selected.containment.reasons.length)))||(isCastingEntry&&name==='source'&&!selected.castingIssues.length)||name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isAmmo||isArmor||isShield||isEquipment||isConsumable||isTreasure)&&name==='source')||((isEffect||isCondition||isWeapon||isSpell)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':(isContainer&&name==='relationships')||name==='source'||(castingSection&&name==='spellcasting')||(inventorySection&&name==='inventory')||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
       reasons:complete(name)?[]:inventorySection&&name==='inventory'?selected.inventoryView.reasons:isContainer&&name==='relationships'?selected.containment.reasons:castingSection&&name==='spellcasting'?selected.castingView.reasons:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?(isCastingEntry?[...new Set(selected.castingIssues.map(issue=>issue.reason))]:[PENDING]):['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':isTreasure?'Stored treasure category, quantity and denomination price/per basis only. Valuables on supported Actors remain readable despite loot-Actor exclusion. No coin conversion, doubled stack value, sale proceeds, usage or investment state is inferred.':isContainer?'Stored container Bulk and containment claims only; capacity is not current contents Bulk, ignored Bulk is conditional and no Actor total is calculated. Explicit relationships use actual owner scope, retain each descendant once and report cycles or unresolved parents.':isCastingEntry?'Stored casting mode, proficiency, attack/DC and per-slot/preparation source only. Prepared slot value zero does not establish exhaustion; repeated preparations stay separate. Focus pools and innate uses are not inferred from slot counters. No final PC statistics, usable casts or resource expenditure is calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable stock, uses and damage/healing plus contained spell definitions only. Nested spells retain source-path identity on this Item; no independent spell UUID, consumption, frequency expenditure, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+  if(isBook)base.limitations.push('Book category, capacity and stored content UUIDs only. Explicit relationships resolve immediate identities, preserving duplicate indexes. Referenced content is not formula ownership, a prepared spell or castability. No recursive expansion; representative live book fixtures are unavailable.');
   if(inventorySection)base.limitations.push('Stored possessions and same-owner containment/ammunition claims only. Each owned physical Item appears once; serialized attachments and kit definitions are separate. No total Bulk, sale proceeds, effective benefits or activation eligibility is calculated. Follow read_item for concrete source and exact activation prose.');
   if(castingSection)base.limitations.push('Actor casting is a source join only. Availability remains not_evaluated; ritual, flexible and item-casting semantics remain partial. Follow canonical group/spell selectors with read_item for exact definition/prose.');
   if(isCastingEntry)base.limitations.push(...selected.castingIssues.map(issue=>`Uninterpreted casting source at ${issue.path}: ${issue.reason}.`));

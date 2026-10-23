@@ -148,3 +148,11 @@ persisted container/ammunition claims. Disconnected/cyclic components remain
 visible once. Common physical source includes price/per and serialized
 attachment metadata; kits are separate definition references. No current
 Bulk, sale, activation eligibility or effective benefits are calculated.
+
+
+`actorBook.js` selects PF2e-specific book8.6.1 category/capacity/content UUID source.
+`actorBookRelationships.js` resolves at most200 explicitly requested immediate
+content claims with the public document boundary. Duplicate indexes remain
+separate; no target source or recursive contents are read. Book contents do not
+establish formula ownership or spell preparation. Live book fixtures are absent;
+discovery retains deterministic support with live verification not_run.
