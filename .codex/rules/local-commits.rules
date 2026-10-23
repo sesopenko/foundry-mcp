@@ -1,0 +1,17 @@
+# Trusted-project rules for authorized local unit/story commits.
+# Loaded at Codex startup; keep commands plain so prefix matching applies.
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "allow",
+    justification = "Stage verified work for the authorized local unit commit.",
+    match = ["git add AGENTS.md", "git add -A"],
+    not_match = ["git push", "git tag v1.0.0", "git reset --hard"],
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "allow",
+    justification = "Create the authorized local commit after required verification; no publication.",
+    match = ["git commit -m 'Document verified work'", "git commit --file /tmp/commit-message.txt"],
+    not_match = ["git push", "git tag v1.0.0", "git reset --hard"],
+)

@@ -12,6 +12,12 @@ a large search-and-replace or structured bulk transformation. Keep that operatio
 focused and reviewable. Run tests and other commands separately from file edits
 so approval requests do not bundle unrelated actions.
 
+The trusted project's `.codex/rules/local-commits.rules` allows staging and
+authorized local unit/story commits. Run `git add` and `git commit` as plain,
+separate commands without output redirection, pipes, environment assignments or
+shell wrappers so command-prefix rules can match. Use the tool's returned output
+directly. This does not authorize pushing, tagging, releasing or skipping checks.
+
 ## MCP server lifecycle
 
 At the start of work in this repository, check the server with
