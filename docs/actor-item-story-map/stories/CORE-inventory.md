@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 3 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | Complete |
 | Prerequisites | [ITEM-weapon](ITEM-weapon.md), [ITEM-armor](ITEM-armor.md), [ITEM-shield](ITEM-shield.md), [ITEM-equipment](ITEM-equipment.md), [ITEM-consumable](ITEM-consumable.md), [ITEM-ammo](ITEM-ammo.md), [ITEM-backpack](ITEM-backpack.md), [ITEM-treasure](ITEM-treasure.md) |
 | Dependency reason | Needs common possession/container/ammunition readers; book/kit expansion stays optional. |
 
@@ -24,3 +24,21 @@ Acceptance: nested containers, cycles, orphaned contents, multiple ammo stacks, 
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+
+Delivered owner-wide source inventory uses each actual owned physical Item once,
+including nested, disconnected and cyclic components. Persisted container and
+selected-ammunition links retain same-owner/token identities and explicit
+missing/denied/unsupported outcomes. Serialized attachments and actual kit
+references remain distinct from possessions; optional book/kit expansion stays
+partial. Independent quantity/price-per/carry/investment source never becomes
+effective benefits or valuation. See [field contract](../inventory-fields.md)
+and [verification](../inventory-verification.md).
+
+Deterministic helper, paginated reader and strict Python DTO tests cover the
+acceptance scenarios, source/membership/relationship/permission staleness,
+non-PF2e rejection and denied privacy. Actual MCP checks cover three world/token
+Actor contexts and six physical types with unchanged source fingerprints.
+The existing world lacks supported owned containers, books/kits, selected ammo
+and serialized attachments; these have deterministic coverage, not live claims.
+Full suites passed:259 Python tests (one skipped),305 JavaScript tests.

@@ -1613,6 +1613,140 @@ def _actor_casting_record(row, identity):
     return target(typ,local_id if value.get('status')=='resolved' else None)
 
 
+INVENTORY_LIMIT = ['stored_inventory_not_effective_benefits']
+# PF2e-specific PhysicalSystemSource8.6.1 projection, pinned physical schema above.
+INVENTORY_PHYSICAL = {'/system/'+p:(c,k,n) for p,c,k,n in (
+ ('level/value','item_level','number',False),('quantity','quantity','number',False),
+ ('baseItem','base_item_code','string',True),('size','size_code','string',False),
+ ('bulk/value','source_bulk','number',False),('hp/value','current_item_hit_points','number',False),
+ ('hp/max','source_maximum_item_hit_points','number',False),('hardness','source_hardness','number',False),
+ ('price/value/pp','price_platinum','number',False),('price/value/gp','price_gold','number',False),
+ ('price/value/sp','price_silver','number',False),('price/value/cp','price_copper','number',False),
+ ('price/per','price_per_quantity','number',False),('price/sizeSensitive','price_size_sensitive','boolean',False),
+ ('equipped/carryType','carry_type_code','string',False),('equipped/inSlot','in_slot','boolean',False),
+ ('equipped/handsHeld','hands_held','number',False),('equipped/invested','investment_state','boolean',True),
+ ('containerId','container_local_id','string',True),('material/type','material_type_code','string',True),
+ ('material/grade','material_grade_code','string',True),('identification/status','identification_status','string',False),
+ ('identification/unidentified/name','unidentified_name','string',False),
+ ('identification/unidentified/img','unidentified_image','string',False),('temporary','temporary_item','boolean',False),
+ ('usage/value','usage_code','string',False),
+)}
+
+
+def _inventory_physical(row, identity):
+    """PF2e-specific8.6.1 inventory shared physical leaves and attachment metadata.
+
+    Enforce exact persisted field projection before reusing Item path validation;
+    unidentified prose, effective benefits and serialized document UUIDs excluded.
+    Schema: pinned PhysicalSystemSource and concrete overrides linked above.
+    """
+    raw=row['raw'][0];path=raw['path'];spec=INVENTORY_PHYSICAL.get(path)
+    limits=['source_only_no_effective_calculation']
+    if path=='/system/usage/value':limits=[]
+    if path=='/system/subitems':
+        spec=('serialized_attachments','array',False)
+        limits=['serialized_sources_not_embedded_documents']
+    match=re.fullmatch(r'/system/subitems/(0|[1-9][0-9]*)/(_id|name|type)',path)
+    if match:
+        spec=({'_id':'attachment_local_id','name':'attachment_name','type':'attachment_type_code'}[match[2]],'string',False)
+        limits=['serialized_source_not_document','attachment_interpretation_pending']
+    if spec is None or row['provenance']['limitations']!=limits:return False
+    concept,kind,nullable=spec;value=raw.get('value')
+    if row['mapped']!=dict(concept=concept,value=value,unit=None) or type(row['mapped']['value']) is not type(value):return False
+    if raw['present'] and not (value is None and nullable):
+        if not {'number':type(value) in (int,float) and math.isfinite(value), 'string':type(value) is str,
+                'boolean':type(value) is bool,'array':type(value) is list and not value}[kind]:return False
+    return _record(row,['source'],identity)
+
+
+def _actor_inventory_record(row, identity):
+    """PF2e-specific8.6.1 Actor inventory source graph with same-owner identities.
+
+    PhysicalSystemSource containerId and WeaponSystemSource selectedAmmoId are
+    persisted claims, not access, equipped effects, Bulk or ammunition eligibility.
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'}:return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    for r in raw:
+        if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
+        if r['basis']!='source' or type(r['path']) is not str or type(r['present']) is not bool or r['present']!=('value' in r):return False
+    if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    if row['kind']=='field':
+        if len(raw)!=1 or provenance['mapping']!='pf2e.physical.source.v1':return False
+        r=raw[0];uuid=r['document_uuid'];path=r['path']
+        for typ in PHYSICAL_TYPES:
+            if row['key']=='inventory:source:'+typ+':'+str(uuid)+':'+path:
+                if not _casting_owned(uuid,identity):return False
+                return _inventory_physical(dict(row,section='source',key='source:'+path),dict(identity,document_name='Item',uuid=uuid,type=typ))
+        return False
+    if row['kind']!='relationship' or provenance['mapping']!='pf2e.actor.inventory-source.v1' or provenance['limitations']!=INVENTORY_LIMIT:return False
+    value=mapped['value']
+    if type(value) is not dict:return False
+    if row['key']=='inventory:scope':
+        return raw==[] and mapped['concept']=='inventory_scope' and value in [dict(status=x,target_uuid=None) for x in ('empty','denied')]
+    def target(types, local_id=None, cycle=False):
+        """PF2e-specific detached same-owner physical Item identity, token retained."""
+        expected={'status','target_uuid','document_name','type','name','name_truncated'}
+        if cycle:expected.add('cycle')
+        if identity['instance'] is not None:expected.add('token_uuid')
+        if set(value)!=expected or value['status']!='resolved' or value['document_name']!='Item' or value['type'] not in types:return False
+        if not _casting_owned(value['target_uuid'],identity) or type(value['name']) is not str or len(value['name'])>256 or type(value['name_truncated']) is not bool:return False
+        if cycle and type(value['cycle']) is not bool:return False
+        if local_id is not None and value['target_uuid']!=identity['uuid']+'.Item.'+local_id:return False
+        return identity['instance'] is None or value['token_uuid']==identity['instance']['token_uuid']
+    if mapped['concept'] in ('inventory_item','inventory_kit_definition'):
+        kit=mapped['concept']=='inventory_kit_definition'
+        types={'kit'} if kit else PHYSICAL_TYPES
+        label='kit' if kit else 'item'
+        if len(raw)!=2 or [r['path'] for r in raw]!=['/name','/type']:return False
+        uuid=raw[0]['document_uuid']
+        return _casting_owned(uuid,identity) and row['key']=='inventory:'+label+':'+uuid and all(r['document_uuid']==uuid and r['present'] for r in raw) and type(raw[0]['value']) is str and raw[1]['value'] in types and value.get('target_uuid')==uuid and value.get('type')==raw[1]['value'] and value.get('name')==raw[0]['value'][:256] and value.get('name_truncated')==(len(raw[0]['value'])>256) and target(types)
+    if len(raw)!=1:return False
+    r=raw[0];uuid=r['document_uuid'];local_id=r.get('value')
+    if not _casting_owned(uuid,identity) or r['present'] and local_id is not None and type(local_id) is not str:return False
+    container=mapped['concept']=='inventory_container'
+    if container:
+        if row['key']!='inventory:container:'+uuid or r['path']!='/system/containerId':return False
+    elif mapped['concept']=='inventory_selected_ammunition':
+        if row['key']!='inventory:ammunition:'+uuid or r['path']!='/system/selectedAmmoId':return False
+    else:return False
+    if value.get('status')=='resolved':return bool(local_id) and target({'backpack'} if container else {'ammo','weapon'},local_id,container)
+    expected={'status','target_uuid'}|({'cycle'} if container else set())
+    if set(value)!=expected or value['target_uuid'] is not None or value['status'] not in ('missing','denied','unsupported'):return False
+    if container and type(value['cycle']) is not bool:return False
+    if container and value['cycle'] and value['status']!='unsupported':return False
+    return value['status']=='missing' if not local_id else True
+
+
+
+def _inventory_section(records, section):
+    """PF2e-specific8.6.1 inventory diagnostics cannot claim complete benefits.
+
+    Enforce source graph diagnostics on each page; omitted records on other pages
+    may explain additional reasons, so only present evidence mandates reasons.
+    """
+    reasons=section['reasons']
+    allowed={'pagination','containment_cycle','inventory_items_denied',
+             'book_interpretation_pending','kit_interpretation_pending'}
+    allowed.update(prefix+status for prefix in ('container_parent_','selected_ammunition_') for status in ('missing','denied','unsupported'))
+    if not set(reasons)<=allowed or section['status']!=('partial' if reasons else 'complete'):return False
+    required=set()
+    for row in records:
+        if row['section']!='inventory':continue
+        concept=row['mapped']['concept'];value=row['mapped']['value']
+        if concept=='inventory_kit_definition':required.add('kit_interpretation_pending')
+        if concept=='inventory_item' and value.get('type')=='book':required.add('book_interpretation_pending')
+        if concept=='inventory_scope' and value.get('status')=='denied':required.add('inventory_items_denied')
+        if concept in ('inventory_container','inventory_selected_ammunition'):
+            if value.get('cycle'):required.add('containment_cycle')
+            if row['raw'][0].get('value') and value['status']!='resolved':
+                required.add(('container_parent_' if concept=='inventory_container' else 'selected_ammunition_')+value['status'])
+    return required<=set(reasons)
+
+
 def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     """Validate records including PF2e-specific persisted physical source fields.
 
@@ -1629,6 +1763,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return _container_relationship(row,identity)
     if identity['document_name']=='Actor' and row['section']=='spellcasting':
         return _actor_casting_record(row,identity)
+    if identity['document_name']=='Actor' and row['section']=='inventory':
+        return _actor_inventory_record(row,identity)
     for raw in row['raw']:
         if type(raw) is not dict or not {'document_uuid', 'path', 'present', 'basis'} <= set(raw) or not set(raw) <= {'document_uuid', 'path', 'present', 'basis', 'value'}:
             return False
@@ -1738,6 +1874,8 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                         pending={'strikes':'other_attacks_pending','abilities':'other_abilities_pending'}
                         valid = valid and all(row['status']=='partial' and pending[row['name']] in row['reasons'] for row in rows if row['name'] in pending)
                     valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
+                    if valid and result['identity']['document_name']=='Actor':
+                        valid = all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -1916,6 +2054,22 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     rejects over 12000 owned Items or 24000 selected records with ReadFailed; these
     source-complexity guards are separate from page count/byte limits. Request
     identity or selected Item readers separately if the casting view is too large.
+    Inventory exposes actual owned physical inventory_item references once, plus
+    persisted-name labels (prepared display names can differ), selected physical
+    source fields and same-owner inventory_container and
+    inventory_selected_ammunition claims. Resolved values contain target_uuid,
+    document_name/type/name/name_truncated and token_uuid in token context; follow
+    read_item for full definitions or exact activation prose. Missing/denied/
+    unsupported targets retain null target_uuid; container cycle flags diagnose
+    stored graph cycles. inventory_scope empty distinguishes no possessions from
+    a generic denied scope without identities. Serialized attachments remain
+    local source paths, never owned Item UUIDs. Actual owned kit definitions use
+    inventory_kit_definition references and remain partial without content
+    expansion; books expose common physical fields with specialty pending.
+    Quantity, price.per, carrying and investment preserve source values; no total
+    Bulk, sale price, effective benefits or activation eligibility is inferred.
+    Inventory source-complexity guards reject over 12000 owned Items or 24000
+    records with ReadFailed; use list_actor_items and read_item to narrow reads.
     limit defaults 50 (integer 1–100 records); max_bytes defaults 48000 (8000–48000
     UTF-8 JSON bytes). Exact text fragments use UTF-16 text.start/end/total offsets,
     at most 6000 units; concatenate same-path/revision raw values without enrichment.

@@ -617,3 +617,41 @@ excluded. Character/NPC/familiar valuables are supported independently of loot-
 Actor exclusion. Source completes after paging; relationships, rules and effective
 remain unsupported. See [field contract](actor-item-story-map/treasure-fields.md)
 and [evidence](actor-item-story-map/treasure-verification.md).
+
+## Actor inventory source graph
+
+Explicit Actor `inventory` returns one `inventory_item` identity reference per
+actual owned physical Item, common physical source fields, one
+`inventory_container` parent-claim edge per possession and an
+`inventory_selected_ammunition` edge per weapon. Canonical Item UUIDs retain the
+selected token context. Labels use persisted source names; PF2e prepared display
+names can differ. `read_item` follows those selectors for concrete type
+source and exact activation prose; prose is not expanded in Actor inventory.
+
+Join mapping is `pf2e.actor.inventory-source.v1`, with limitation
+`stored_inventory_not_effective_benefits`. Source field keys include type and
+actual donor UUID, retaining `pf2e.physical.source.v1` and source-path
+provenance. Quantity, denomination prices, price-per basis, carrying and
+investment source are independent facts. Serialized attachment paths remain
+metadata on the actual containing Item, without fabricated document UUIDs.
+Actual kit Items appear separately as `inventory_kit_definition`, never as
+possessions or recursively expanded component copies. Books retain common
+possession source with optional specialty interpretation pending.
+
+Edges resolve same-owner local IDs only. Missing/denied/unsupported targets have
+null target UUIDs. Absent/null/empty claims retain exact raw presence; they do
+not create missing-parent errors. A nonempty unresolved claim makes the section
+partial. Container `cycle=true` means following readable physical parent claims
+reaches a cycle, including a tail entering it; inaccessible ancestry remains
+unknown. Each actual possession appears once even in rootless components.
+`inventory_scope` distinguishes a verified empty inventory from unreadable
+Items. Denied Items expose no source/name/UUID. Pending book/kit interpretation
+is explicit and does not block ordinary inventory delivery.
+
+Shared count/byte paging and source-bound revision checks apply. Selected
+inventory rejects over12,000 owned Items or24,000 records rather than silently
+truncating. Source membership, relationship, carrying and permission changes
+invalidate continuations. No effective Bulk, sale proceeds, equipment benefits,
+ammunition compatibility or activation eligibility is inferred. See
+[field contract](actor-item-story-map/inventory-fields.md) and
+[verification](actor-item-story-map/inventory-verification.md).

@@ -64,6 +64,9 @@ Containers preserve stored capacity and containment claims with unique descendan
 and explicit cycles/missing parents; no total Bulk or unowned contents are inferred.
 Treasure preserves category, quantity and denomination price/per independently;
 Actor valuables remain readable without inferred sale proceeds or doubled value.
+Actor inventory lists each actual possession once with stored container and
+selected-ammunition links. Quantity, price/per and carrying source remain
+independent; attachments and kit definitions do not create extra possessions.
 
 
 

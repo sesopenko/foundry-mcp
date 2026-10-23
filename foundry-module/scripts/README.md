@@ -141,3 +141,10 @@ scope are explicit, with public canonical identities and token context.
 `actorTreasure.js` selects nullable valuables categories and metadata alongside
 shared quantity/denomination/price-per source. It never uses derived asset values,
 stackGroup, synthesized usage or investment, conversion or sale arithmetic.
+
+`actorInventory.js` builds the PF2e-specific owner-wide inventory source graph
+on Foundry14.369/PF2e8.6.1 using actual owned physical Item identities and
+persisted container/ammunition claims. Disconnected/cyclic components remain
+visible once. Common physical source includes price/per and serialized
+attachment metadata; kits are separate definition references. No current
+Bulk, sale, activation eligibility or effective benefits are calculated.

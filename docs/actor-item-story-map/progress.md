@@ -206,3 +206,11 @@ Each implementation increment must record focused/full results and a local commi
 - Focused/full suites passed (251 Python, one skipped; 291 JavaScript). Six actual MCP reads cover NPC-owned, synthetic-token and four pack categories, with exact source/description fingerprints unchanged. Character/familiar and non-unit basis cases have deterministic coverage.
 - Corrected an over-broad private-data test marker whose ordinary word collided with legitimate capability documentation; the unique fake source marker keeps exposure detection intact. No production behavior was weakened to satisfy the assertion.
 - ITEM-treasure Complete for valuables/source scope. Completed stories: 20/39 (51.3%). The Item prerequisites for CORE-inventory are now delivered.
+
+
+### 29. Actor inventory source graph — October22,2026
+
+- CORE-inventory lists actual owned physical possessions once, joins explicit container/ammunition claims and preserves source quantity, denomination price/per, carrying/investment and serialized attachment metadata. Kit definitions remain separate; book/kit specialty expansion is optional and explicitly partial.
+- Nested/rootless cycles, orphan/denied/wrong-type parents, multiple ammunition stacks, duplicate serialized/actual/kit references, token context and stale continuation cases have deterministic coverage. Live reads cover three Actor contexts and six physical types with unchanged source fingerprints; unavailable owned container/book/kit/attachment/selected-ammunition fixtures remain named gaps.
+- Actual runtime naming differences exposed mixed source/prepared provenance. A failing regression established the cause; inventory now uses cached persisted names consistently without weakening validation. Full suites pass:259 Python tests (one skipped),305 JavaScript tests.
+- CORE-inventory Complete for its declared source graph scope. Completed stories:21/39 (53.8%). Effective Actor integration and the remaining stories remain open.

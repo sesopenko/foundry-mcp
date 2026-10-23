@@ -294,6 +294,56 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
             if sample['owned']:
                 owner_code="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const actor=await foundry.utils.fromUuid("+json.dumps(sample['owner_uuid'])+");return JSON.stringify({revision:await digest(actor.toObject(true))});"
                 assert probe(payload(await client.call_tool('execute_javascript',{'code':owner_code})))['revision']==sample['owner_revision']
+        assert 'inventory_item' in available['read_actor'].description
+        inventory_probe="""
+const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
+const types=['weapon','armor','shield','equipment','consumable','ammo','backpack','book','treasure'];
+const actors=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type));
+const selected=new Map();for(const type of types){const actor=actors.find(a=>a.items.some(i=>i.type===type));if(actor)selected.set(actor.uuid,{actor,selector:{actor_uuid:actor.uuid}});}
+const token=game.scenes.contents.flatMap(s=>s.tokens.contents).find(t=>['character','npc','familiar'].includes(t.actor?.type)&&t.actor.items.some(i=>types.includes(i.type)));if(token)selected.set(token.uuid,{actor:token.actor,selector:{token_uuid:token.uuid}});
+const report=[];for(const {actor,selector}of selected.values()){const possessions=actor.items.filter(i=>types.includes(i.type)).map(item=>{const s=item.toObject(true),expected={};for(const path of ['/system/quantity','/system/price/per','/system/price/value/gp','/system/containerId','/system/equipped/carryType']){let value=s,present=true;for(const k of path.slice(1).split('/')){if(value===null||typeof value!=='object'||!Object.hasOwn(value,k)){present=false;break;}value=value[k];}expected[path]={present,...(present?{value}:{})};}return {uuid:item.uuid,type:item.type,name:s.name,expected};});report.push({selector,uuid:actor.uuid,possessions,revision:await digest(actor.toObject(true))});}
+return JSON.stringify(report).match(/[\\s\\S]{1,800}/g);
+"""
+        inventory_samples=probe(payload(await client.call_tool('execute_javascript',{'code':inventory_probe})))
+        assert len(inventory_samples)>=2
+        inventory_types=set()
+        for sample in inventory_samples:
+            rows=[];inventory_cursor=None
+            for _ in range(200):
+                args=dict(sample['selector'],sections=['inventory','effective'],limit=100)
+                if inventory_cursor:args['cursor']=inventory_cursor
+                page=payload(await client.call_tool('read_actor',args))
+                assert page['identity']['uuid']==sample['uuid'] and page['sections'][1]['status']=='unsupported'
+                rows.extend(page['records']);inventory_cursor=page['pagination']['next_cursor']
+                if not inventory_cursor:break
+            assert inventory_cursor is None and page['sections'][0]['status']=='complete'
+            assert len({r['key'] for r in rows})==len(rows)
+            references={r['mapped']['value']['target_uuid']:r for r in rows if r['mapped']['concept']=='inventory_item'}
+            assert set(references)=={i['uuid'] for i in sample['possessions']}
+            for item in sample['possessions']:
+                inventory_types.add(item['type'])
+                ref=references[item['uuid']]['mapped']['value']
+                assert ref['name']==item['name'][:256] and ref['type']==item['type']
+                if 'token_uuid' in sample['selector']:assert ref['token_uuid']==sample['selector']['token_uuid']
+                for path,expected in item['expected'].items():
+                    row=next(r for r in rows if r['key']=='inventory:source:'+item['type']+':'+item['uuid']+':'+path)
+                    assert {k:v for k,v in row['raw'][0].items() if k in ('present','value')}==expected
+                edge=next(r for r in rows if r['key']=='inventory:container:'+item['uuid'])
+                assert edge['mapped']['value']==dict(status='missing',target_uuid=None,cycle=False)
+            for row in rows:
+                if row['mapped']['concept']=='inventory_selected_ammunition':assert row['mapped']['value']==dict(status='missing',target_uuid=None)
+            if sample['possessions']:
+                follow_args=dict(item_uuid=sample['possessions'][0]['uuid'],sections=['identity'],limit=1)
+                if 'token_uuid' in sample['selector']:follow_args['token_uuid']=sample['selector']['token_uuid']
+                follow=payload(await client.call_tool('read_item',follow_args))
+                assert follow['identity']['uuid']==sample['possessions'][0]['uuid']
+                assert follow['identity']['actor']['uuid']==sample['uuid']
+            args=dict(sample['selector'],sections=['identity'],limit=1)
+            assert payload(await client.call_tool('read_actor',args))['identity']['uuid']==sample['uuid']
+            check="const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');const a=await foundry.utils.fromUuid("+json.dumps(sample['uuid'])+");return JSON.stringify({revision:await digest(a.toObject(true))});"
+            after=probe(payload(await client.call_tool('execute_javascript',{'code':check})))
+            assert after['revision']==sample['revision']
+        assert inventory_types>={'weapon','armor','equipment','consumable','ammo','treasure'}
         actor_casting_probe="""
 const {digest}=await import('/modules/foundry-mcp/scripts/actorReadUtils.js');
 const actors=game.actors.contents.filter(a=>['character','npc','familiar'].includes(a.type));
@@ -720,6 +770,9 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         container_support=next(entry for entry in registry.data['item_types'] if entry['type']=='backpack')
         assert container_support['mapped_supported'] and not container_support['effective_supported']
         assert container_support['verification']['live']['status']=='passed'
+        inventory_support=next(entry for entry in registry.data['actor_sections'] if entry['name']=='inventory')
+        assert inventory_support['source_supported'] and inventory_support['mapped_supported'] and not inventory_support['effective_supported']
+        assert inventory_support['verification']['live']['status']=='passed'
         actor_casting_support=next(entry for entry in registry.data['actor_sections'] if entry['name']=='spellcasting')
         assert actor_casting_support['source_supported'] and actor_casting_support['mapped_supported'] and not actor_casting_support['effective_supported']
         assert actor_casting_support['verification']['live']['status']=='passed'
@@ -760,7 +813,7 @@ const json=JSON.stringify(report);return Array.from({length:Math.ceil(json.lengt
         attack_support=next(entry for entry in registry.data['item_types'] if entry['type']=='melee')
         assert attack_support['mapped_supported'] and not attack_support['effective_supported']
         assert attack_support['verification']['live']['status']=='passed'
-        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'treasure_source_samples_verified':len(treasure_samples),'container_source_samples_verified':len(container_samples),'container_owned_samples_verified':container_owned_samples,'actor_casting_source_samples_verified':len(actor_casting_samples),'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
+        print(json.dumps({'passed':True,'discovered':sorted(needed),'source_pages':source_pages,'inventory_actor_samples_verified':len(inventory_samples),'inventory_physical_types_verified':len(inventory_types),'treasure_source_samples_verified':len(treasure_samples),'container_source_samples_verified':len(container_samples),'container_owned_samples_verified':container_owned_samples,'actor_casting_source_samples_verified':len(actor_casting_samples),'casting_entry_source_samples_verified':len(casting_samples),'spell_source_samples_verified':len(spell_samples),'consumable_source_samples_verified':len(consumable_samples),'equipment_source_samples_verified':len(equipment_samples),'shield_pack_samples_verified':len(shield_samples),'armor_source_samples_verified':len(armor_samples),'ammo_source_samples_verified':len(ammo_samples),'weapon_missing_selection_verified':True,'weapon_source_samples_verified':len(weapon_samples),'condition_empty_reference_relationships_verified':True,'condition_source_samples_verified':len(condition_samples)+len(pack_conditions),'effect_source_samples_verified':len(effect_samples)+len(pack_effects),'effect_empty_context_relationships_verified':True,'npc_source_verified':True,'npc_notes_verified':True,'npc_item_references_verified':reference_count,'item_owner_verified':True,'pack_hydration_verified':True,'physical_types_verified':physical_verified,'token_verified':bool(selection.get('token_uuid')),'lore_source_skills_verified':True,'attack_source_contexts_verified':3,'pack_attack_verified':True,'activation_modes_verified':4,'self_effect_followup_verified':True,'familiar_action_pack_verified':True,'runtime':actor.data['runtime']}))
 async def browser_status(refresh=False):
     import httpx, websockets
     root=Path(__file__).resolve().parent.parent
