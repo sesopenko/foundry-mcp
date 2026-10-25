@@ -58,3 +58,9 @@ all inspected Actor instances and26 Item compendiums contain no book Items.
 Standard blank books remain equipment. No fixture is fabricated or retyped and
 no live source/relationship support is claimed. Story completion awaits the
 specified evidence; formula ownership/preparation interpretation stays partial.
+
+The October25 constructor audit distinguishes the hidden creation-dialog option
+from a production constructor rejection: book has no such guard. The absence
+of an existing fixture does not prohibit a genuine marked temporary book via
+documented public creation in the authorized development world. That route
+still needs actual runtime verification and cleanup; see the verification ledger.

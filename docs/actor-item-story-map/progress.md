@@ -435,3 +435,17 @@ and full current availability remain open. Completed progress stays30/39 (76.9%)
 Full suites passed:359 Python tests (one skipped),484 JavaScript tests. Actual
 authenticated discovery passed without a browser; it explicitly did not check
 runtime behavior.
+
+## Remaining acceptance-gap audit — October 25, 2026
+
+Five token workflow regressions now cover two unlinked shared-base Actors with
+distinct source/current HP and owned Items, inactive scenes, linked controls,
+stale snapshots and token-selected familiar master differences. Existing live
+evidence covers one synthetic NPC; the two-token read-only comparison remains
+pending GM connectivity. No world documents changed. CORE-token stays In progress.
+
+The book constructor audit also corrects a potential false blocker: hidden UI
+creation is not production constructor rejection. A genuine marked temporary
+book is a candidate for the existing development world's live acceptance;
+actual support remains unverified. Affliction's explicit production guard is
+different and remains unresolved. Completed progress stays30/39 (76.9%).

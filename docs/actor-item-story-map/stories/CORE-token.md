@@ -26,4 +26,22 @@ Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-
 
 ## Navigation checkpoint — October 20, 2026
 
+### Reader acceptance evidence added October 25, 2026
+
+`tests/js/actor-token-readers.test.js` verifies the complete inactive-scene
+discovery → Actor read → owned Item listing → Item read flow. Two unlinked
+tokens share one base but preserve distinct source HP (7/19), current HP (5/17),
+actual Item UUIDs and duplicate local Item IDs. Linked controls retain world
+Actor/Item identities. Canvas access throws in the fixture; source fingerprints
+remain unchanged. Selected token/Actor/Item changes invalidate continuations.
+
+Token-selected familiar tests separately resolve two recorded masters, preserve
+missing/null/absent/denied states and reject stale master identity/permission
+changes. Unrelated master state and master HP do not invalidate identity/source
+reads that never select those values. Master-derived statistics stay unsupported.
+These deterministic checks close the prior reader-regression gap. Existing live
+evidence still covers only one synthetic NPC's current values; a read-only
+comparison of two existing same-base tokens remains pending GM connectivity.
+No token or synthetic Actor was created or modified. CORE-token stays In progress.
+
 `list_scene_actors` now navigates readable scenes and placed linked/synthetic tokens without canvas access. Missing Actors/base Actors, unsupported counts, permissions and stale continuations are explicit. Focused JavaScript and Python cross-language tests plus existing-runtime MCP navigation passed. Full acceptance remains open: type-specific readers must demonstrate distinct synthetic HP/Items and any relevant master dependencies; identity-only tests do not establish those values.

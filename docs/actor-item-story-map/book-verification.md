@@ -6,6 +6,23 @@ read-only runtime fixtures. It does not claim live acceptance of a book reader.
 
 ## Actual rulebook reads
 
+### October 25 runtime-gate clarification
+
+The absence of representative books is a fixture gap, not a proven constructor
+restriction. Pinned PF2e8.6.1
+[BookPF2e](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/book/document.ts)
+has no production constructor rejection. The base Item creation dialog omits
+book from its interactive type chooser; that UI restriction does not establish
+that documented programmatic document creation is unsupported. By contrast,
+affliction explicitly rejects production construction.
+
+Once the existing GM session is connected, a genuine marked temporary book
+created through documented public document creation is a valid verification
+candidate. Confirm runtime behavior, both categories and actual content links,
+preserve source fingerprints and remove only that fixture. Do not retype an
+equipment Item, bypass constructors or claim successful creation from this
+source inspection alone. Live acceptance remains unproven.
+
 The GM-private PDF MCP returned complete canonical pages with `next_offset=null`:
 
 | Book | Printed / physical page | Characters | Revision |

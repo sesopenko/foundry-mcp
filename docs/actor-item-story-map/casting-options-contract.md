@@ -82,6 +82,15 @@ Familiar Actor focus remains outside the current-resource contract.
 Flexible, ritual, item and unknown modes: preserve readable spell/entry identities
 and source with explicit unsupported contextual interpretation. Unassigned,
 denied, missing, wrong-type or mismatched relationships remain unresolved.
+Non-null ritual data contributes only the declared scalar witnesses
+`/system/ritual/primary/check`, `/system/ritual/secondary/checks` and
+`/system/ritual/secondary/casters`; malformed ritual data rejects the snapshot.
+No arbitrary ritual object is exposed or interpreted as a supported mode.
+
+Snapshot bounds: 12,000 owned Items, 24,000 options, 200 traits per spell,
+6,000 preparation positions per slot and 24,000 preparation positions total.
+Preparation traversal is cached once per entry; page limits do not relax these
+snapshot limits.
 
 ## Acceptance and remaining gates
 
