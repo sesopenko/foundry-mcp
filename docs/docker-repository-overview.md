@@ -96,6 +96,11 @@ Explicit spellcasting also includes separate transformed character/NPC focus
 pool values and owned-spell focus costs. Missing serialized fields remain
 unavailable; current-resource live verification is pending. These records do
 not establish cast rank, current castability or resource expenditure.
+Casting configuration options join actual spells to individual preparations
+or repertoire/innate/focus contexts. Repeated preparations, expended flags,
+signature configuration and base/configured/slot ranks stay distinct. Final
+cast rank and availability remain unevaluated; contextual-option live
+verification is pending.
 Familiar readers preserve stored master linkage and HP; creature prose requires
 explicit description. Identity resolves the world-character master or reports
 an explicit unresolved status. Owned action references retain exact Item

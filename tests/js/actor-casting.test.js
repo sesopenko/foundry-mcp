@@ -18,7 +18,8 @@ test('same-owner joins preserve repeated preparation indexes and separate source
  assert.ok(join(rows,'casting_preparation').every(r=>r.mapped.value.target_uuid===f.spell.item.uuid));
  assert.equal(join(rows,'casting_spell_assignment')[0].mapped.value.target_uuid,f.entry.item.uuid);
  for(const [uuid,path,value]of [[f.entry.item.uuid,'/system/slots/slot1/value',0],[f.entry.item.uuid,'/system/slots/slot1/prepared/1/expended',true],[f.spell.item.uuid,'/system/location/uses/value',0],[f.spell.item.uuid,'/system/location/heightenedLevel',4],[f.actor.uuid,'/system/resources/focus/value',0]])assert.equal(rows.find(r=>r.raw[0]?.document_uuid===uuid&&r.raw[0]?.path===path).raw[0].value,value);
- assert.deepEqual(result.reasons,['availability_not_evaluated','current_fields_unavailable']);assert.equal(new Set(rows.map(r=>r.key)).size,rows.length);assert.equal(JSON.stringify([f.entry.source,f.spell.source]),before);
+ assert.deepEqual(result.reasons,['availability_not_evaluated','current_fields_unavailable','signature_alternatives_not_evaluated']);assert.equal(new Set(rows.map(r=>r.key)).size,rows.length);assert.equal(JSON.stringify([f.entry.source,f.spell.source]),before);
+ const options=join(rows,'casting_contextual_option');assert.equal(options.length,2);assert.ok(options.every(row=>row.key.startsWith('spellcasting:option:')&&row.provenance.mapping==='pf2e.actor.casting-options.v1'));assert.deepEqual(options.map(row=>row.mapped.value.preparation_index),[0,1]);
 });
 test('missing denied wrong-type and mismatched assignment remain distinct without leaking identities',()=>{
  for(const [change,status]of [[f=>f.actor.items.delete('spell'),'missing'],[f=>f.spell.item.testUserPermission=()=>false,'denied'],[f=>f.spell.item.type='equipment','unsupported'],[f=>f.spell.source.system.location.value='another','mismatched_assignment']]){

@@ -414,3 +414,24 @@ current-resource live-verification gap. A bounded read-only
 connection; it has not been run. No runtime compatibility or complete casting
 availability is inferred from deterministic tests. Contextual options/signature
 rank rules remain unfinished. Completed progress remains30/39 (76.9%).
+
+## Casting contextual configuration options — October 25, 2026
+
+Explicit spellcasting now groups actual readable spells with preparation or
+repertoire/innate/focus contexts, preserving repeated preparation positions,
+expenditure flags, base/configured/slot ranks, independent auto-heightening
+configuration and signature flags. Cast rank stays null and availability stays
+not_evaluated. Unresolved preparation references retain their separate rows;
+unsupported modes preserve identities without inventing execution semantics.
+
+Canonical complete Player Core reads now include the Bard signature feature
+and the higher-slot-without-heightening distinction. See
+[verification](casting-verification.md) and [option contract](casting-options-contract.md).
+Strict Python validation reconstructs mapped values from source witnesses and
+checks actual paginated JavaScript responses. Preparation indexing is shared
+per entry, with explicit aggregate bounds. Live verification remains pending
+the existing GM connection; evaluated ranks, signature eligibility/alternatives
+and full current availability remain open. Completed progress stays30/39 (76.9%).
+Full suites passed:359 Python tests (one skipped),484 JavaScript tests. Actual
+authenticated discovery passed without a browser; it explicitly did not check
+runtime behavior.

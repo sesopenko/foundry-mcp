@@ -93,9 +93,10 @@ Innate uses belong to the individual spell, while ordinary spontaneous slots
 and focus resources belong to their shared entry/Actor. A focus entry without
 a focus trait must not acquire a fabricated consumption cost.
 
-The existing evidence paraphrases do not establish the precise signature
-exception well enough to generate all alternatives. Re-read canonical Player
-Core printed 297–299 and the signature passages before that expansion. Runtime
+Canonical Player Core printed 99 and 297–299 have now been re-read completely;
+see the [October 25 evidence](casting-verification.md). The class feature permits
+signature heightening and lower-rank versions, while a recorded signature flag
+alone does not establish acquired feature eligibility. Runtime
 rank getters and sheet collection builders may explain upstream behavior but
 are not adopted by this contract. Automatic-heightening source overrides must
 remain separate until their exact rulebook mapping is verified.

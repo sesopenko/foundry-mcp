@@ -151,6 +151,18 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 casting evidence: actual complete canonical Player Core Remaster
+reads added printed 99 (physical 100, 5095 characters) and reread printed
+297–299 (physical 298–300, respectively 5261/5706/5273 characters), revision
+`9e34130ba88cb6a700f588d8837c9ad0b1e5122bbf5e75f4d19f8bf3b575cd22`.
+Each returned `next_offset=null`. Printed 99 verifies Bard signature entitlement,
+including lower-rank versions when learned above minimum; printed 298 verifies
+higher-slot expenditure without higher cast rank. A persisted signature flag
+alone does not establish that class feature's acquisition or legality. See
+[casting verification](casting-verification.md#canonical-contextual-rank-reads--october-25-2026)
+and the [proposed option contract](casting-options-contract.md). These are
+rulebook reads, not new implementation or live availability evidence.
+
 The October 20 checks passed for all 39 story files and both navigation/evidence documents, plus links from the two updated research/handoff documents:
 
 - Exactly three Actor stories and 24 Item stories, matching the pinned declared Item types after excluding campaignFeature; 12 shared tasks.

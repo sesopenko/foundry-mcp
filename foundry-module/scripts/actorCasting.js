@@ -10,6 +10,7 @@ import {embeddedIdentity,permitted} from './actorDocuments.js';
 import {spellFields} from './actorSpell.js';
 import {spellcastingEntryFields,spellcastingEntryIssues} from './actorSpellcastingEntry.js';
 import {castingCurrentFields} from './actorCastingCurrent.js';
+import {actorCastingOptions} from './actorCastingOptions.js';
 const LIMIT=['source_configuration_only','availability_not_evaluated'];
 /** PF2e-specific own source lookup preserving absent versus zero/null. */
 function at(source,path){let node=source;for(const key of path.slice(1).split('/')){if(node===null||typeof node!=='object'||!Object.hasOwn(node,key))return {present:false};node=node[key];}return {present:true,value:node};}
@@ -85,6 +86,8 @@ export function actorCastingRecords(target,actorSource=target.document.toObject(
  // PF2e-specific familiar focus is excluded pending its separate master contract.
  if(['character','npc'].includes(actor.type))current(actor,'Actor');
  for(const key of actor.type==='character'?['value']:['value','max']){const path='/system/resources/focus/'+key,selected=at(actorSource,path);if(key==='max'&&selected.present&&selected.value===undefined)selected.present=false,delete selected.value;if(selected.present&&(typeof selected.value!=='number'||!Number.isFinite(selected.value)))throw new TypeError('Actor focus source must be a finite number.');records.push(record('spellcasting:focus:'+key,'casting_focus_'+key,[raw(actor.uuid,path,selected)],selected.present?selected.value:null,'field'));}
+ const options=actorCastingOptions({uuid:actor.uuid,type:actor.type,instance:target.token?{token_uuid:target.token.uuid}:null},[...readable.values()].map(({item,source})=>({identity:embeddedIdentity(item,{document:actor,token:target.token}),source})),actorSource,records);
+ records.push(...options.records);for(const reason of options.reasons)reasons.add(reason);
  if(records.length>24000)throw new TypeError('Casting source exceeds 24000 selected records.');
  return {records,reasons:[...reasons].sort()};
 }

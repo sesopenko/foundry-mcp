@@ -10,6 +10,7 @@ Selected transformed values are independent of persisted source; no getters,
 sheet data, rules, preparation methods or source fallbacks supply expectations.
 """
 
+import argparse
 import asyncio
 import json
 from pathlib import Path
@@ -62,7 +63,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
 """
 
 
-async def main():
+async def main(discovery_only=False):
     summary = {'passed': False}
     stage = 'connection'
     calls = 0
@@ -88,6 +89,10 @@ async def main():
             assert properties['max_bytes']['minimum'] <= 8000 <= properties['max_bytes']['maximum']
             assert tool.annotations.readOnlyHint
             assert all(term in tool.description.lower() for term in ('transformed', 'spellcasting', 'focus', 'partial'))
+            assert all(term in tool.description for term in ('casting_contextual_option', 'pf2e.actor.casting-options.v1', 'cast_rank', 'not_evaluated'))
+            if discovery_only:
+                print(json.dumps({'passed': True, 'discovery_verified': True, 'mcp_calls': calls, 'runtime_checked': False}))
+                return 0
             registry = payload(await client.call_tool('get_actor_types', {}))
             calls += 1
             assert any(row['name'] == 'spellcasting' for row in registry['actor_sections'])
@@ -171,4 +176,7 @@ async def main():
 
 
 if __name__ == '__main__':
-    raise SystemExit(asyncio.run(main()))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--discovery-only', action='store_true', help='Check actual MCP discovery without requiring a connected Foundry browser.')
+    args = parser.parse_args()
+    raise SystemExit(asyncio.run(main(args.discovery_only)))

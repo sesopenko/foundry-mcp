@@ -2522,6 +2522,20 @@ def _casting_section(records, section):
     """
     rows=[row for row in records if row['section']=='spellcasting']
     current=[row for row in rows if row['provenance']['mapping']=='pf2e.actor.casting-current.v1']
+    options=[row for row in rows if row['provenance']['mapping']=='pf2e.actor.casting-options.v1']
+    for option in options:
+        value=option['mapped']['value'];spell_uuid=value['spell']['target_uuid']
+        if value['signature'] is True and 'signature_alternatives_not_evaluated' not in section['reasons']:return False
+        for witness in rows:
+            if witness['key']=='spellcasting:assignment:'+spell_uuid and witness['mapped']['value']!=value['entry']:return False
+            for field in witness['raw']:
+                if field['path']=='/type' and field['present']:
+                    if field['document_uuid']==spell_uuid and field['value']!='spell':return False
+                    if field['document_uuid']==value['entry']['target_uuid'] and field['value']!='spellcastingEntry':return False
+        if value['context']=='unsupported_mode' and 'unsupported_casting_mode' not in section['reasons']:return False
+        if value['preparation_index'] is not None:
+            path=f"/system/slots/slot{value['slot_rank']}/prepared/{value['preparation_index']}/expended"
+            if not any(field['path']==path for field in option['raw']) and 'malformed_preparation' not in section['reasons']:return False
     if any(not row['raw'][0]['present'] for row in current) and 'current_fields_unavailable' not in section['reasons']:return False
     for row in current:
         raw=row['raw'][0]
@@ -2530,6 +2544,100 @@ def _casting_section(records, section):
             for field in witness['raw']:
                 if field['document_uuid']==raw['document_uuid'] and field['path']=='/type' and field['present'] and field['value']!='spell':return False
     return section['status']=='partial' and 'availability_not_evaluated' in section['reasons']
+
+
+def _actor_casting_option_record(row, identity):
+    """PF2e-specific8.6.1 owned spell/entry source contextual options.
+
+    SpellSystemSource location/level/traits, SpellcastingEntrySystemSource
+    prepared/slots and character/creature focus source are selected witnesses.
+    No rank, entitlement, availability or resource expenditure is calculated.
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship':return False
+    raw=row['raw'];mapped=row['mapped']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='casting_contextual_option' or mapped['unit'] is not None:return False
+    if row['provenance']!=dict(contributors=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw],mapping='pf2e.actor.casting-options.v1',limitations=['availability_not_evaluated','configured_rank_not_final_cast_rank']):return False
+    for field in raw:
+        if type(field) is not dict or not {'document_uuid','path','present','basis'}<=set(field) or not set(field)<={'document_uuid','path','present','basis','value'}:return False
+        if field['basis']!='source' or type(field['present']) is not bool or field['present']!=('value' in field):return False
+    value=mapped['value']
+    if type(value) is not dict or not raw:return False
+    position=0
+    def take(uuid,path,kind,nullable=False,required=False):
+        """PF2e-specific ordered scalar source witnesses; absence never defaults."""
+        nonlocal position
+        if position>=len(raw):raise ValueError('Missing option witness')
+        field=raw[position];position+=1
+        if field['document_uuid']!=uuid or field['path']!=path:raise ValueError('Wrong option witness')
+        result=field.get('value')
+        if required and not field['present']:raise ValueError('Missing required option witness')
+        if field['present'] and not (nullable and result is None):
+            valid={'string':type(result) is str,'number':type(result) in (int,float) and math.isfinite(result),'boolean':type(result) is bool}
+            if not valid.get(kind,False):raise ValueError('Invalid option witness type')
+        return result
+    def identify(uuid,typ):
+        """PF2e-specific owner-local identity derived from exact name/type source."""
+        if not _casting_owned(uuid,identity):raise ValueError('Wrong option owner')
+        name=take(uuid,'/name','string',required=True)
+        if take(uuid,'/type','string',required=True)!=typ:raise ValueError('Wrong option Item type')
+        result=dict(status='resolved',target_uuid=uuid,type=typ,name=name[:256],name_truncated=len(name)>256)
+        if identity['instance'] is not None:result['token_uuid']=identity['instance']['token_uuid']
+        return result
+    try:
+        spell_uuid=raw[0]['document_uuid'];spell=identify(spell_uuid,'spell')
+        assignment=take(spell_uuid,'/system/location/value','string',True)
+        ritual=position<len(raw) and raw[position]['path']=='/system/ritual/primary/check'
+        if ritual:
+            take(spell_uuid,'/system/ritual/primary/check','string',required=True)
+            take(spell_uuid,'/system/ritual/secondary/checks','string',required=True)
+            take(spell_uuid,'/system/ritual/secondary/casters','number',required=True)
+        entry_value=value.get('entry')
+        if type(entry_value) is not dict:return False
+        if entry_value.get('status')=='resolved':
+            entry_uuid=entry_value.get('target_uuid')
+            if not assignment or entry_uuid!=identity['uuid']+'.Item.'+assignment:return False
+            entry=identify(entry_uuid,'spellcastingEntry')
+        else:
+            if entry_value not in [dict(status=s,target_uuid=None) for s in ('missing','denied','unsupported')]:return False
+            if not assignment and entry_value['status']!='missing':return False
+            entry_uuid=None;entry=entry_value
+        base=take(spell_uuid,'/system/level/value','number')
+        configured=take(spell_uuid,'/system/location/heightenedLevel','number')
+        spell_auto=take(spell_uuid,'/system/location/autoHeightenLevel','number',True)
+        signature=take(spell_uuid,'/system/location/signature','boolean')
+        traits=[];cantrip=None
+        if position<len(raw) and raw[position]['path']=='/system/traits/value':
+            field=raw[position];position+=1
+            if field['document_uuid']!=spell_uuid or field['present'] and (type(field.get('value')) is not list or field['value']!=[]):return False
+            if field['present']:cantrip=False
+        else:
+            while position<len(raw) and raw[position]['path']==f'/system/traits/value/{len(traits)}':traits.append(take(spell_uuid,f'/system/traits/value/{len(traits)}','string',required=True))
+            if not traits or len(traits)>200:return False
+            cantrip='cantrip' in traits
+        mode=flexible=entry_auto=None
+        if entry_uuid:
+            mode=take(entry_uuid,'/system/prepared/value','string')
+            flexible=take(entry_uuid,'/system/prepared/flexible','boolean')
+            entry_auto=take(entry_uuid,'/system/autoHeightenLevel/value','number',True)
+        rank=value.get('slot_rank');index=value.get('preparation_index');expended=None
+        unsupported=ritual or bool(entry_uuid and (flexible is True or mode not in ('prepared','spontaneous','innate','focus')))
+        if rank is not None or index is not None:
+            if unsupported or mode!='prepared' or type(rank) is not int or not 0<=rank<=10 or type(index) is not int or not 0<=index<6000:return False
+            path=f'/system/slots/slot{rank}/prepared/{index}'
+            if take(entry_uuid,path+'/id','string',True,True)!=spell_uuid.rsplit('.Item.',1)[1]:return False
+            if position<len(raw) and raw[position]['path']==path+'/expended':expended=take(entry_uuid,path+'/expended','boolean')
+            take(entry_uuid,f'/system/slots/slot{rank}/value','number');take(entry_uuid,f'/system/slots/slot{rank}/max','number')
+        uses=dict(value=take(spell_uuid,'/system/location/uses/value','number'),max=take(spell_uuid,'/system/location/uses/max','number')) if mode=='innate' else None
+        context='unsupported_mode' if unsupported else 'prepared_use' if rank is not None else {'spontaneous':'spontaneous_repertoire','innate':'innate_spell','focus':'focus_spell'}.get(mode,'listed_spell')
+        scope={'prepared_use':'individual_preparation','spontaneous_repertoire':'shared_entry_slots','innate_spell':'individual_spell_uses','focus_spell':'shared_actor_focus'}.get(context,'not_evaluated')
+        if context=='focus_spell' and identity['type']!='familiar':
+            take(identity['uuid'],'/system/resources/focus/value','number')
+            if identity['type']=='npc':take(identity['uuid'],'/system/resources/focus/max','number')
+        expected=dict(spell=spell,entry=entry,mode=mode,context=context,base_rank=base,configured_rank=configured,spell_auto_heighten_rank=spell_auto,entry_auto_heighten_rank=entry_auto,cast_rank=None,slot_rank=rank,preparation_index=index,expended=expended,signature=signature,cantrip=cantrip,uses=uses,resource_scope=scope,availability='not_evaluated')
+        key=f"spellcasting:option:{spell_uuid}:{entry_uuid or 'unassigned'}:{rank if rank is not None else 'none'}:{index if index is not None else 'none'}"
+        return position==len(raw) and row['key']==key and json.dumps(value,sort_keys=True,allow_nan=False)==json.dumps(expected,sort_keys=True,allow_nan=False)
+    except (KeyError,TypeError,ValueError):return False
 
 
 def _actor_casting_current_record(row, identity):
@@ -2571,6 +2679,7 @@ def _actor_casting_record(row, identity):
     raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
     if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
     if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    if provenance['mapping']=='pf2e.actor.casting-options.v1':return _actor_casting_option_record(row,identity)
     if provenance['mapping']=='pf2e.actor.casting-current.v1':return _actor_casting_current_record(row,identity)
     for r in raw:
         if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
@@ -3399,6 +3508,37 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     statuses resolved/missing/denied/unsupported/unverified/mismatched_assignment
     distinguish stored membership from invalid or inaccessible links. Repeated
     preparations retain independent slot/index keys and expended source fields.
+    Contextual option relationships use mapping pf2e.actor.casting-options.v1,
+    concept casting_contextual_option and response-local keys
+    spellcasting:option:<spell UUID>:<entry UUID or unassigned>:<slot rank or none>:<preparation index or none>.
+    mapped.value.spell is the actual resolved owned spell; entry is the same
+    canonical resolved/missing/denied/unsupported assignment shape. Resolved
+    identities retain target_uuid/type/name/name_truncated and token_uuid in
+    token context. Unresolved entry objects contain only status/target_uuid null.
+    mode is the stored entry mode or null. context is prepared_use,
+    spontaneous_repertoire, innate_spell, focus_spell, listed_spell or
+    unsupported_mode. base_rank/configured_rank, spell_auto_heighten_rank and
+    entry_auto_heighten_rank preserve independent source configuration or null;
+    cast_rank is always null. slot_rank/preparation_index identify each ordinary
+    slot0–10 preparation position; slot0 is independent of the cantrip flag,
+    and slot11 never establishes a spell rank. expended/signature/cantrip are
+    recorded booleans or null. uses is an innate {value,max} pair with independently
+    nullable counts, otherwise null. resource_scope is individual_preparation,
+    shared_entry_slots, individual_spell_uses, shared_actor_focus or not_evaluated.
+    availability is always not_evaluated. Raw witnesses and contributors are
+    selected source fields; current-resource records remain separate. Mapping
+    limitations are availability_not_evaluated/configured_rank_not_final_cast_rank.
+    Signature flags never generate rank alternatives or establish entitlement;
+    signature_alternatives_not_evaluated records that boundary. Flexible, ritual,
+    item and unknown modes retain unsupported_casting_mode. Malformed preparation
+    source stays partial; missing expended is null, and malformed expenditure
+    values are omitted with malformed_preparation. Unresolved preparation claims
+    remain separate casting_preparation records, without fabricated spell options.
+    Options do not infer current availability, automatic heightening or higher-slot
+    casting ranks. Familiar options can name owned spells but exclude Actor focus
+    source contributors. Selection bounds are 12000 owned Item snapshots, 24000
+    total preparation positions/options and 200 traits per spell; exceeding these
+    returns ReadFailed. These complexity bounds are separate from page limits.
     Denied markers expose no related identity. The section remains partial with
     availability_not_evaluated: source slots/uses are not current castability,
     generated groups, adjusted ranks or attack/DC totals. Explicit spellcasting

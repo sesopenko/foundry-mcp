@@ -6,6 +6,11 @@ below remains unchanged. Current-resource deterministic checks pass; live
 verification is pending the existing development GM connection. No current
 availability or effective casting rank is certified.
 
+It also includes [contextual configuration options](casting-options-contract.md),
+with separate raw source witnesses. Unresolved preparations retain their
+existing relationship rows; options do not fabricate spell identities or final
+cast ranks. Signature alternatives and current availability remain unevaluated.
+
 This is a source-reading checkpoint for CORE-casting, audited against PF2e **8.6.1** and Foundry **14.369**. It does not establish current spell availability; contextual option presentation and the story's conditional availability verification remain separate work.
 
 The public document boundary reads the selected Actor's actual owned Item collection and each readable spell or spellcastingEntry's `toObject(true)` source. It retains real Item UUIDs and the selected token context. No UUID is synthesized for a nonexistent relationship; another Actor's matching local ID cannot supply a target. No casting, preparation, expenditure, statistic getter, sheet state or recursive hydration is used.

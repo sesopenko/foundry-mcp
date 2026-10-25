@@ -85,3 +85,40 @@ source inspection explains behavior; it does not by itself establish an external
 API contract, and production does not adopt this method. Explicit contextual
 option presentation remains separate work. Any future claim of complete current
 availability retains the original story's mode-specific verification requirement.
+
+## Canonical contextual-rank reads — October 25, 2026
+
+Browser-independent PDF MCP retrieval reread Player Core Remaster and read the
+Bard Signature Spells class feature. The ready book's revision was
+`9e34130ba88cb6a700f588d8837c9ad0b1e5122bbf5e75f4d19f8bf3b575cd22`.
+Every row below is an actual complete `read_pdf_pages` response, not a search
+snippet; `next_offset` was null on each page.
+
+| Printed label | Physical page | Total canonical characters |
+| --- | --- | --- |
+| 99 | 100 | 5095 |
+| 297 | 298 | 5261 |
+| 298 | 299 | 5706 |
+| 299 | 300 | 5273 |
+
+Printed 297 distinguishes individual preparations from spontaneous repertoire
+and requires knowing a spontaneous spell at its heightened rank. Printed 298
+explicitly permits spending a higher spontaneous slot while casting at the
+known lower rank, without heightened benefits. It also establishes ordinary
+cantrip/focus automatic heightening and one shared focus pool. Printed 299
+distinguishes innate granted ranks, ordinary inability to heighten innate spells,
+and innate-cantrip exceptions. Granting abilities may change those innate rules.
+
+Printed 99's Bard Signature Spells feature permits heightening designated spells
+without separately learning each rank. A signature spell learned above its
+minimum also permits lower-rank versions without separate learning. This is
+evidence for the class feature's entitlement; a stored
+`/system/location/signature` flag records configuration and does not independently
+prove acquisition, eligibility, available slots or legal casting. Do not apply
+the Bard feature to every Actor, entry mode or arbitrary flagged spell.
+
+All pages retain reading-order/table-structure warnings. No numeric table
+relationship was inferred. No private extracted text is committed. The
+[proposed contextual-option contract](casting-options-contract.md) distinguishes
+these verified rules from configuration-only presentation and deferred rank
+evaluation. These reads do not close CORE-casting's live availability gate.
