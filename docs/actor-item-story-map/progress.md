@@ -398,3 +398,19 @@ completed story is claimed. Contextual option/rank and signature rulebook
 verification remain the next casting work. After the machine restart the
 services/browser were restored; live checks await the existing test-world GM
 connection. Completed progress remains30/39 (76.9%).
+
+## Casting current-resource integration — October 25, 2026
+
+Explicit spellcasting now includes separately labelled transformed character/NPC
+focus value/max/cap and readable owned-spell focus costs. Source records are
+unchanged. Strict Python validation accepts actual paginated JavaScript DTOs,
+rejects wrong ownership/type/provenance, and requires missing-current diagnostics.
+Current-only Actor or spell changes invalidate continuations. Source/default
+reads do not request transformed serialization; familiar Actor pools stay excluded.
+
+The [contract](casting-current-contract.md) and registry explicitly retain a
+current-resource live-verification gap. A bounded read-only
+`scripts/actor-casting-current-live-check.py` is prepared for the existing GM
+connection; it has not been run. No runtime compatibility or complete casting
+availability is inferred from deterministic tests. Contextual options/signature
+rank rules remain unfinished. Completed progress remains30/39 (76.9%).

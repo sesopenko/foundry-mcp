@@ -18,7 +18,7 @@ test('same-owner joins preserve repeated preparation indexes and separate source
  assert.ok(join(rows,'casting_preparation').every(r=>r.mapped.value.target_uuid===f.spell.item.uuid));
  assert.equal(join(rows,'casting_spell_assignment')[0].mapped.value.target_uuid,f.entry.item.uuid);
  for(const [uuid,path,value]of [[f.entry.item.uuid,'/system/slots/slot1/value',0],[f.entry.item.uuid,'/system/slots/slot1/prepared/1/expended',true],[f.spell.item.uuid,'/system/location/uses/value',0],[f.spell.item.uuid,'/system/location/heightenedLevel',4],[f.actor.uuid,'/system/resources/focus/value',0]])assert.equal(rows.find(r=>r.raw[0]?.document_uuid===uuid&&r.raw[0]?.path===path).raw[0].value,value);
- assert.deepEqual(result.reasons,['availability_not_evaluated']);assert.equal(new Set(rows.map(r=>r.key)).size,rows.length);assert.equal(JSON.stringify([f.entry.source,f.spell.source]),before);
+ assert.deepEqual(result.reasons,['availability_not_evaluated','current_fields_unavailable']);assert.equal(new Set(rows.map(r=>r.key)).size,rows.length);assert.equal(JSON.stringify([f.entry.source,f.spell.source]),before);
 });
 test('missing denied wrong-type and mismatched assignment remain distinct without leaking identities',()=>{
  for(const [change,status]of [[f=>f.actor.items.delete('spell'),'missing'],[f=>f.spell.item.testUserPermission=()=>false,'denied'],[f=>f.spell.item.type='equipment','unsupported'],[f=>f.spell.source.system.location.value='another','mismatched_assignment']]){
@@ -28,10 +28,10 @@ test('missing denied wrong-type and mismatched assignment remain distinct withou
 });
 test('focus character source excludes derived max; creature optional max and absence are preserved',()=>{
  for(const type of ['character','npc','familiar']){const f=fixture(type);const rows=actorCastingRecords(f.target).records;assert.equal(join(rows,'casting_focus_max').length,type==='character'?0:1);}
- const f=fixture();f.actor.toObject=()=>({system:{}});for(const row of join(actorCastingRecords(f.target).records,'casting_focus_value')){assert.equal(row.raw[0].present,false);assert.equal(row.mapped.value,null);}
- f.actor.toObject=()=>({system:{resources:{focus:{value:'0'}}}});assert.throws(()=>actorCastingRecords(f.target),/finite number/);
- f.actor.toObject=()=>({system:{resources:{focus:{value:undefined}}}});assert.throws(()=>actorCastingRecords(f.target),/finite number/);
- f.actor.toObject=()=>({system:{resources:{focus:{value:0,max:undefined}}}});assert.equal(actorCastingRecords(f.target).records.find(r=>r.key==='spellcasting:focus:max').raw[0].present,false);
+ const f=fixture();f.actor.toObject=()=>({type:'npc',system:{}});for(const row of join(actorCastingRecords(f.target).records,'casting_focus_value')){assert.equal(row.raw[0].present,false);assert.equal(row.mapped.value,null);}
+ f.actor.toObject=()=>({type:'npc',system:{resources:{focus:{value:'0'}}}});assert.throws(()=>actorCastingRecords(f.target),/unexpected type|finite number/);
+ f.actor.toObject=()=>({type:'npc',system:{resources:{focus:{value:undefined}}}});assert.throws(()=>actorCastingRecords(f.target),/finite number/);
+ f.actor.toObject=()=>({type:'npc',system:{resources:{focus:{value:0,max:undefined}}}});assert.equal(actorCastingRecords(f.target).records.find(r=>r.key==='spellcasting:focus:max').raw[0].present,false);
 });
 test('legacy preparations and unsupported modes stay partial while valid siblings remain readable',()=>{
  for(const mode of ['ritual','items','unknown']){const f=fixture();f.entry.source.system.prepared.value=mode;f.entry.source.system.slots.slot2={prepared:{0:{id:'spell'}}};const result=actorCastingRecords(f.target);assert.ok(result.reasons.includes('unsupported_casting_mode'));assert.ok(result.reasons.includes('malformed_preparations'));assert.equal(join(result.records,'casting_preparation').length,2);}

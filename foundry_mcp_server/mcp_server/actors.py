@@ -2514,6 +2514,52 @@ def _casting_owned(uuid, identity):
     return type(uuid) is str and len(uuid)<=512 and uuid.startswith(prefix) and re.fullmatch(r'[^.\s#]+',uuid[len(prefix):]) is not None
 
 
+def _casting_section(records, section):
+    """PF2e-specific8.6.1 casting page evidence, not exhaustive Item coverage.
+
+    A same-page /type source witness must agree with transformed SpellCastData;
+    missing witnesses can be on another page and do not imply missing Items.
+    """
+    rows=[row for row in records if row['section']=='spellcasting']
+    current=[row for row in rows if row['provenance']['mapping']=='pf2e.actor.casting-current.v1']
+    if any(not row['raw'][0]['present'] for row in current) and 'current_fields_unavailable' not in section['reasons']:return False
+    for row in current:
+        raw=row['raw'][0]
+        if raw['path']!='/system/cast/focusPoints':continue
+        for witness in rows:
+            for field in witness['raw']:
+                if field['document_uuid']==raw['document_uuid'] and field['path']=='/type' and field['present'] and field['value']!='spell':return False
+    return section['status']=='partial' and 'availability_not_evaluated' in section['reasons']
+
+
+def _actor_casting_current_record(row, identity):
+    """PF2e-specific8.6.1 character/NPC focus and owned SpellCastData leaves.
+
+    Transformed serializer values remain separate from persisted source and do
+    not establish availability. Actor focus fields are finite numbers; spell
+    cast.focusPoints is an integer 0–3. Familiar derivation is unsupported.
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module
+    """
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='field' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['basis']!='transformed' or type(raw['present']) is not bool or raw['present']!=('value' in raw):return False
+    uuid=raw['document_uuid'];path=raw['path'];value=raw.get('value')
+    concepts={'/system/resources/focus/value':'current_focus_points','/system/resources/focus/max':'current_focus_pool_maximum','/system/resources/focus/cap':'current_focus_pool_cap'}
+    if identity['type'] in ('character','npc') and uuid==identity['uuid'] and type(path) is str and path in concepts:
+        concept=concepts[path]
+        valid=type(value) in (int,float) and math.isfinite(value)
+    elif _casting_owned(uuid,identity) and path=='/system/cast/focusPoints':
+        concept='current_spell_focus_point_cost'
+        valid=type(value) is int and 0<=value<=3
+    else:return False
+    if raw['present'] and not valid:return False
+    if row['key']!='spellcasting:current:'+uuid+':'+path:return False
+    return (row['mapped']==dict(concept=concept,value=value,unit=None)
+            and type(row['mapped'].get('value')) is type(value)
+            and row['provenance']==dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.actor.casting-current.v1',limitations=['casting_availability_not_evaluated']))
+
+
 def _actor_casting_record(row, identity):
     """PF2e-specific8.6.1 Actor source casting joins; no current castability.
 
@@ -2525,6 +2571,7 @@ def _actor_casting_record(row, identity):
     raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
     if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
     if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    if provenance['mapping']=='pf2e.actor.casting-current.v1':return _actor_casting_current_record(row,identity)
     for r in raw:
         if type(r) is not dict or not {'document_uuid','path','present','basis'}<=set(r) or not set(r)<={'document_uuid','path','present','basis','value'}:return False
         if r['basis']!='source' or type(r['path']) is not str or type(r['present']) is not bool or r['present']!=('value' in r):return False
@@ -3103,7 +3150,8 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                                         valid = valid and reasons==([] if status=='resolved' else ['familiar_master_'+status])
                     valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
                     if valid and result['identity']['document_name']=='Actor':
-                        valid = all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
+                        valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting')
+                        valid = valid and all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
                         valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
                         valid = valid and all(_current_section(result['records'], row, result['identity']) for row in rows if row['name']=='statistics')
             else:
@@ -3353,8 +3401,19 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     preparations retain independent slot/index keys and expended source fields.
     Denied markers expose no related identity. The section remains partial with
     availability_not_evaluated: source slots/uses are not current castability,
-    generated groups, adjusted ranks or attack/DC totals. Character focus maximum
-    is derived and excluded; stored zero differs from missing. Casting selection
+    generated groups, adjusted ranks or attack/DC totals. Explicit spellcasting
+    additionally returns character/NPC transformed focus value/max/cap as
+    current_focus_points/current_focus_pool_maximum/current_focus_pool_cap, and
+    owned spell /system/cast/focusPoints as current_spell_focus_point_cost.
+    These field records use keys spellcasting:current:<document UUID>:<path>,
+    mapping pf2e.actor.casting-current.v1, exact transformed raw/contributors,
+    and limitation casting_availability_not_evaluated. Actor values are finite
+    numbers; spell cost is integer 0–3. Missing fields have present false, no raw
+    value, mapped null and current_fields_unavailable. Zero remains a value;
+    source is never a fallback. Familiar Actor focus pools, slot expenditure,
+    contextual options and castability remain unsupported. Character source
+    focus maximum remains excluded. Default identity/source reads do not request
+    current resources. Casting selection
     rejects over 12000 owned Items or 24000 selected records with ReadFailed; these
     source-complexity guards are separate from page count/byte limits. Request
     identity or selected Item readers separately if the casting view is too large.

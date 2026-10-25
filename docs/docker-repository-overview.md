@@ -92,6 +92,10 @@ language notes require explicit description reads. Explicit statistics adds sele
 transformed attributes, AC/HP, saves, Perception/vision and movement for characters
 and NPCs, retaining a separate basis from source. The section remains partial;
 full current views, skill totals, generated Strikes and familiar derivation remain gated.
+Explicit spellcasting also includes separate transformed character/NPC focus
+pool values and owned-spell focus costs. Missing serialized fields remain
+unavailable; current-resource live verification is pending. These records do
+not establish cast rank, current castability or resource expenditure.
 Familiar readers preserve stored master linkage and HP; creature prose requires
 explicit description. Identity resolves the world-character master or reports
 an explicit unresolved status. Owned action references retain exact Item

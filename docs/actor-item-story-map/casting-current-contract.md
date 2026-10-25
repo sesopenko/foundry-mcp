@@ -5,16 +5,18 @@ declare the story complete or certify live behavior. Baseline: Foundry14.369 /
 PF2e8.6.1, upstream revision `28d9d156f252d084371d994dc359509b49eadf18`.
 
 `actorCastingCurrent.js` prepares a pure detached-data selector, covered by
-`tests/js/actor-casting-current.test.js`. It is not connected to published
-readers or the packaged runtime yet. Its passing tests establish field
-selection and validation only; runtime delivery remains subject to the gates
-below. Existing tool behavior and completed-story count are unchanged.
+`tests/js/actor-casting-current.test.js`. The explicit Actor `spellcasting`
+reader now integrates it with strict Python validation and packaged runtime
+dependencies. Deterministic tests establish field selection, provenance and
+pagination behavior; runtime verification remains pending the existing GM
+connection. The completed-story count is unchanged.
 
 ## Public serialization boundary
 
 The official [Actor toObject documentation](https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html#toobject)
 defines `toObject(false)` as selecting transformed document values. The analogous
-Item document boundary must be checked before runtime integration. These reads
+Item document boundary was also verified through the official v14 indexed API
+documentation before integration. These reads
 must use selected own data properties, preserve missing values, and never invoke
 PF2e preparation, sheet data builders, getters or casting methods.
 
@@ -42,6 +44,15 @@ contributor provenance, an explicit current-resource mapping and distinct keys.
 Do not silently switch existing source records to current values or replace an
 absent current field with source. Include every selected current value in the
 revision snapshot, so current-only changes invalidate continuations.
+
+Implemented records use key `spellcasting:current:<document UUID>:<path>`,
+mapping `pf2e.actor.casting-current.v1`, and limitation
+`casting_availability_not_evaluated`. Concepts are `current_focus_points`,
+`current_focus_pool_maximum`, `current_focus_pool_cap` and
+`current_spell_focus_point_cost`. Missing fields map to null while preserving
+`present: false` and add `current_fields_unavailable` to section reasons.
+The section remains partial with `availability_not_evaluated`. Familiar-owned
+spell costs use the same spell schema; familiar Actor focus remains excluded.
 
 Python must validate the exact path/type/document-owner contract and provenance,
 including spell Item relationships within the selected Actor/token context.

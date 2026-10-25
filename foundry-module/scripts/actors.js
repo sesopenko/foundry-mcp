@@ -365,13 +365,13 @@ function selection(target, sections) {
       fail('ReadFailed',`Selected book source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect book category, capacity and content UUID source; no contents, preparation or ownership is inferred.');
     }
   }
-  // PF2e-specific Actor8.6.1 casting joins use actual owner Items and persisted
-  // focus source only; availability and effective variants remain unevaluated.
+  // PF2e-specific Actor8.6.1 casting joins retain persisted source separately
+  // from selected transformed focus resources; availability remains unevaluated.
   if(target.document.documentName==='Actor'&&sections.includes('spellcasting')){
     try{castingView=actorCastingRecords(target,source);}
     catch(error){
       const path=String(error?.message??'').match(/\/system\/[A-Za-z0-9_~/-]+/)?.[0];
-      fail('ReadFailed',`Selected Actor casting source${path?` at ${path}`:''} does not match the verified schema.`,'Inspect the Actor casting source; no preparation, casting, resource expenditure or derived availability is evaluated.');
+      fail('ReadFailed',`Selected Actor casting data${path?` at ${path}`:''} does not match the verified schema.`,'Inspect stored casting configuration and selected serialized current resources; missing current fields are not replaced with source. No preparation, casting, resource expenditure or availability is evaluated.');
     }
   }
   // PF2e-specific8.6.1 inventory uses actual owned physical source and stored
@@ -616,8 +616,8 @@ export async function getActorTypes(params = {}) {
     inventory.verification={deterministic:{status:'passed',evidence:['tests/js/actor-inventory.test.js','tests/js/actor-inventory-readers.test.js','tests/test_actor_inventory.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/inventory-verification.md','scripts/actor-live-check.py']}};
     const casting=result.actor_sections.find(entry=>entry.name==='spellcasting');
     casting.source_supported=true;casting.mapped_supported=true;
-    casting.limitations=['Partial Actor casting source join with actual owned group/spell identities, preparations and persisted focus fields. Availability, effective cast ranks, ritual/flexible/item execution and resource expenditure remain unevaluated.'];
-    casting.verification={deterministic:{status:'passed',evidence:['tests/js/actor-casting.test.js','tests/js/actor-casting-readers.test.js','tests/test_actor_casting.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/casting-verification.md','scripts/actor-live-check.py']}};
+    casting.limitations=['Partial Actor casting join with actual owned group/spell identities, preparations and persisted focus fields. Separate transformed records select character/NPC focus value/max/cap and owned spell focus cost; missing serialized fields remain unavailable. Current-resource runtime verification is pending; existing live evidence covers source joins. Availability, effective cast ranks, ritual/flexible/item execution and resource expenditure remain unevaluated.'];
+    casting.verification={deterministic:{status:'passed',evidence:['tests/js/actor-casting.test.js','tests/js/actor-casting-readers.test.js','tests/test_actor_casting.py','tests/js/actor-casting-current.test.js','tests/js/actor-casting-current-readers.test.js','tests/test_actor_casting_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/casting-verification.md','docs/actor-item-story-map/casting-current-contract.md','scripts/actor-live-check.py']}};
     const castingEntry=result.item_types.find(entry=>entry.type==='spellcastingEntry');
     castingEntry.mapped_supported=true;
     castingEntry.limitations=['Stored casting mode and per-slot/preparation resource source only; malformed or legacy preparations remain explicitly partial. No slot exhaustion, focus/innate resources, effective DC/attack or castability is inferred. Spell joins belong to CORE-casting.'];

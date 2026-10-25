@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readActor,getActorTypes} from '../../foundry-module/scripts/actors.js';
 function fixture(synthetic=false,type='npc'){
  const source={name:'Caster',type,system:{resources:{focus:{value:1,max:2}}}};
- const actor={documentName:'Actor',uuid:synthetic?'Scene.s.Token.t.Actor.a':'Actor.a',id:'a',name:source.name,type,folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject:basis=>{assert.equal(basis,true);return structuredClone(source);}};
+ const actor={documentName:'Actor',uuid:synthetic?'Scene.s.Token.t.Actor.a':'Actor.a',id:'a',name:source.name,type,folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject:basis=>{assert.equal(typeof basis,'boolean');return structuredClone(source);}};
  const docs=new Map([[actor.uuid,actor]]),sources=new Map();
  for(const [id,itemType,system]of [['entry','spellcastingEntry',{prepared:{value:'prepared'},tradition:{value:'arcane'},slots:{slot1:{value:0,max:2,prepared:[{id:'spell',expended:false},{id:'spell',expended:true}]}}}],['spell','spell',{level:{value:1},traits:{value:['cantrip']},location:{value:'entry',signature:true,heightenedLevel:5,uses:{value:1,max:1}}}],['unassigned','spell',{level:{value:2},traits:{value:[]},location:{value:null}}]]){
-  const data={name:'Same name',type:itemType,system};sources.set(id,data);const item={documentName:'Item',uuid:actor.uuid+'.Item.'+id,id,name:data.name,type:itemType,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject:basis=>{assert.equal(basis,true);return structuredClone(data);}};actor.items.set(id,item);docs.set(item.uuid,item);
+  const data={name:'Same name',type:itemType,system};sources.set(id,data);const item={documentName:'Item',uuid:actor.uuid+'.Item.'+id,id,name:data.name,type:itemType,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject:basis=>{assert.equal(typeof basis,'boolean');return structuredClone(data);}};actor.items.set(id,item);docs.set(item.uuid,item);
  }
  const scene={documentName:'Scene',uuid:'Scene.s',name:'Scene',testUserPermission:()=>true},token={documentName:'Token',uuid:'Scene.s.Token.t',id:'t',name:'Token',parent:scene,actor,baseActor:actor,isLinked:!synthetic,testUserPermission:()=>true};docs.set(token.uuid,token);
  globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map([['a',actor]]),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>docs.get(uuid)}};return {source,actor,sources,token};
