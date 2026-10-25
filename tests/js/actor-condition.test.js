@@ -34,3 +34,14 @@ test('only schema-optional own undefined is absent and prepared getters remain u
  rows=conditionFields(source);assert.ok(rows.length>0);
  source.system.value.value=undefined;assert.throws(()=>conditionFields(source),TypeError);
 });
+test('selected condition type, ancestors, leaves and array accessors reject without invocation',()=>{
+ for(const path of [['type'],['system'],['system','value'],['system','value','value'],['system','persistent'],['system','persistent','formula'],['system','references','children','0'],['system','references','children','0','id'],['system','overrides','0']]){
+  const source=input();let node=source,calls=0;for(const key of path.slice(0,-1))node=node[key];Object.defineProperty(node,path.at(-1),{get(){calls++;return path.at(-1)==='type'?'condition':1;}});assert.throws(()=>conditionFields(source),TypeError);assert.equal(calls,0,path.join('/'));
+ }
+});
+test('condition nonplain own data is accepted while inherited fields and array entries stay absent',()=>{
+ const source=input();source.system.value=Object.assign(Object.create({get ignored(){throw Error('prototype accessed');}}),{isValued:true,value:0});assert.equal(row(conditionFields(source),'/system/value/value').value,0);
+ delete source.system.value.value;Object.defineProperty(Object.getPrototypeOf(source.system.value),'value',{get(){throw Error('inherited leaf accessed');}});assert.equal(row(conditionFields(source),'/system/value/value').present,false);
+ const array=[];array.length=1;const prototype=Object.create(Array.prototype);Object.defineProperty(prototype,'0',{get(){throw Error('inherited array accessed');}});Object.setPrototypeOf(array,prototype);source.system.overrides=array;assert.ok(!row(conditionFields(source),'/system/overrides/0'));
+ assert.equal(conditionFields(Object.create({get type(){throw Error('inherited type accessed');}})),null);
+});

@@ -44,3 +44,9 @@ test('condition source reads do not inspect related Items and retain no resolved
  const page=await readItem({item_uuid:f.item.uuid,sections:['source']});
  assert.ok(page.records.every(row=>row.section==='source'));assert.ok(!page.records.some(row=>row.mapped.value?.status==='resolved'));
 });
+test('condition parent affliction remains unsupported without reading or naming its target',async()=>{
+ const f=fixture();f.parent.type='affliction';Object.defineProperty(f.parent,'name',{get(){throw Error('unsupported target must not be named');}});
+ f.parent.toObject=()=>{throw Error('unsupported target must not be serialized');};
+ const page=await readItem({item_uuid:f.item.uuid,sections:['relationships']});
+ const parent=page.records.find(row=>row.mapped.concept==='condition_parent_reference');assert.deepEqual(parent.mapped.value,{status:'unsupported',target_uuid:null});assert.equal(parent.raw[0].value,'parent');assert.ok(!JSON.stringify(page).includes(f.parent.uuid));
+});

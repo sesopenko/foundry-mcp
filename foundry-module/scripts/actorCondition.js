@@ -6,12 +6,18 @@
  * duration, damage getters, formula evaluation, reference resolution or writes.
  */
 const SOURCE_LIMIT=['persisted_source_not_effective_condition_state'];
-/** PF2e-specific own-source lookup; only schema-optional persistent undefined is absent. */
+/** PF2e-specific own-data lookup, including nonplain serialized containers.
+ * Never traverse inherited fields or invoke accessors. Only schema-optional
+ * persistent undefined is absent; required primitive undefined remains invalid.
+ */
 function at(source,keys) {
  let value=source;
  for(const key of keys) {
-  if(value===null||typeof value!=='object'||!Object.hasOwn(value,key))return {present:false};
-  value=value[key];
+  if(value===null||typeof value!=='object')return {present:false};
+  const descriptor=Object.getOwnPropertyDescriptor(value,key);
+  if(!descriptor)return {present:false};
+  if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Condition source requires detached own data properties.');
+  value=descriptor.value;
  }
  return value===undefined&&keys.join('/')==='system/persistent'?{present:false}:{present:true,value};
 }
@@ -29,7 +35,7 @@ function leaf(source,keys,concept,type,nullable=false,choices=null) {
  * suppression, applicability or persistent damage result is inferred.
  */
 export function conditionFields(source) {
- if(source?.type!=='condition')return null;
+ if(at(source,['type']).value!=='condition')return null;
  const fields=[];
  const add=(suffix,concept,type,nullable=false,choices=null)=>fields.push(leaf(source,['system',...suffix.split('/')],concept,type,nullable,choices));
  const marker=(path,selected,concept)=>fields.push({path,...selected,concept,limitations:[...SOURCE_LIMIT]});
@@ -44,7 +50,8 @@ export function conditionFields(source) {
   if(!selected.present){marker(path,selected,concept);return;}
   if(!Array.isArray(selected.value))throw new TypeError(`Condition source ${path} must be an array.`);
   if(!selected.value.length)marker(path,{present:true,value:[]},concept);
-  selected.value.forEach((value,index)=>{
+  for(let index=0;index<selected.value.length;index++){
+   const item=at(selected.value,[String(index)]);if(!item.present)continue;const value=item.value;
    if(reference){
     if(value===null||typeof value!=='object'||Array.isArray(value))throw new TypeError(`Condition source ${path}/${index} must be a condition reference object.`);
     add(`${suffix}/${index}/id`,concept.replace(/_reference$/,'_item_id'),'string');
@@ -53,7 +60,7 @@ export function conditionFields(source) {
     if(typeof value!=='string')throw new TypeError(`Condition source ${path}/${index} must be a string.`);
     marker(`${path}/${index}`,{present:true,value},concept);
    }
-  });
+  }
  };
  add('value/isValued','condition_is_valued','boolean');add('value/value','condition_stored_value','number',true);
  if(container('persistent','condition_persistent_damage')) {

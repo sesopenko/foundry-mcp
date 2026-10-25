@@ -54,6 +54,27 @@ class ActorEffectTests(unittest.IsolatedAsyncioTestCase):
         bad=effect();bad['identity']['type']='condition'
         with self.assertRaises(ToolError):await self.read(bad)
 
+    async def test_same_page_badge_discriminator_preserves_page_independence(self):
+        for badge,value in [('formula',3),('counter','1d4'),('value','1d4')]:
+            result=effect('/system/badge/type',badge)
+            result['records'].extend(effect('/system/badge/value',value)['records'])
+            result['pagination']['returned']=2
+            with self.subTest(badge=badge,value=value),self.assertRaises(ToolError):await self.read(result)
+        for badge,value in [('formula','1d4'),('counter',0),('value',2)]:
+            result=effect('/system/badge/type',badge)
+            result['records'].extend(effect('/system/badge/value',value)['records']);result['pagination']['returned']=2
+            await self.read(result)
+        # A discriminator may be on a different page; isolated source stays valid.
+        await self.read(effect('/system/badge/value',3))
+        await self.read(effect('/system/badge/value','1d4'))
+
+    async def test_same_page_absent_or_null_container_cannot_have_present_descendant(self):
+        for path,child,value in [('/system/badge','/system/badge/value',0),('/system/context','/system/context/origin/actor','Actor.a'),('/system/context/target','/system/context/target/actor','Actor.a'),('/system/context/origin/spellcasting','/system/context/origin/spellcasting/attribute/mod',3),('/system/context/roll','/system/context/roll/total',0),('/system/badge/reevaluate','/system/badge/reevaluate/formula','1d4')]:
+            for present in (True,False):
+                result=effect(path,None,present=present)
+                result['records'].extend(effect(child,value)['records']);result['pagination']['returned']=2
+                with self.subTest(path=path,present=present),self.assertRaises(ToolError):await self.read(result)
+
     async def test_actual_browser_badge_branches_context_and_description_dtos(self):
         script=r"""
 import {readItem} from './foundry-module/scripts/actors.js';

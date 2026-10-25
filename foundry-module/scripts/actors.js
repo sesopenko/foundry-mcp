@@ -65,6 +65,12 @@ const VERIFICATION = {deterministic:{status:'passed',evidence:['tests/js/actor-r
 function selection(target, sections) {
   const source = target.document.toObject(true);
   if (!source || typeof source!=='object' || Array.isArray(source)) fail('ReadFailed','Document source is not a serialized object.','Inspect the selected document in Foundry.');
+  // PF2e-specific condition/effect8.6.1 selectors require detached own data;
+  // validate their type before dispatch can read it. No accessor is executed.
+  if(target.document.documentName==='Item'&&['condition','effect'].includes(target.document.type)){
+    const type=Object.getOwnPropertyDescriptor(source,'type');
+    if(!type||!Object.hasOwn(type,'value')||type.value!==target.document.type)fail('ReadFailed','Condition/effect source type is not matching detached data.','Inspect the selected Item in the supported runtime; accessors and subtype substitutions are not accepted as source.');
+  }
   const selected = {};
   let physical=[];
   let weapon=[];

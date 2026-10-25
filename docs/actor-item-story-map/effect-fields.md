@@ -1,5 +1,14 @@
 # Effect persisted-source contract
 
+The October25 boundary regression audit verifies selected own data descriptors
+for type, containers, badge discriminators, scalar fields and array indexes.
+Selected accessors reject without invocation; inherited and unrelated fields
+are not read. Nonplain own data and schema-optional undefined behavior remain
+supported. Relationship-only context extraction follows the same rule.
+Python checks badge discriminators and null/absent-container contradictions
+when their witnesses share a page; a discriminator on another page is not
+required or assumed. These checks do not evaluate formulas or effective state.
+
 This selector is PF2e-specific, audited against PF2e **8.6.1** revision
 `28d9d156f252d084371d994dc359509b49eadf18`, with the integration target
 Foundry **14.369**. Source evidence:
@@ -121,7 +130,7 @@ token_uuid for token-context Actors/Tokens; use read_item with item_uuid and
 returned token_uuid for Items. Standalone compendium Items resolve independently
 of any contextual token. The reader never merges duplicate roles or origins.
 
-Absent/null references report missing. Denied, unsupported and unverified
+Absent/null/empty references report missing. Denied, unsupported and unverified
 references retain raw claimed source but return null target_uuid and no resolved
 target metadata. Denied: grant target/owner/pack/scene access. Unsupported: inspect
 canonical UUID and supported type. Unverified: retry resolution or inspect stored

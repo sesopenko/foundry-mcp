@@ -218,7 +218,7 @@ def _condition_relationship(row, identity):
     if set(value) != required | ({'token_uuid'} if instance is not None else set()): return False
     if not re.fullmatch(r'[^.\s#]+', local_id): return False
     if value['target_uuid'] != identity['actor']['uuid'] + '.Item.' + local_id or value['document_name'] != 'Item': return False
-    if value['type'] not in get_args(ItemType) or role != 'parent_reference' and value['type'] != 'condition': return False
+    if value['type'] not in get_args(ItemType) or value['type']=='affliction' or role != 'parent_reference' and value['type'] != 'condition': return False
     if type(value['name']) is not str or len(value['name']) > 256 or type(value['name_truncated']) is not bool: return False
     return instance is None or value['token_uuid'] == instance['token_uuid']
 
@@ -283,6 +283,9 @@ def _effect_relationship(row,identity):
     if provenance['contributors']!=[{k:raw[k] for k in ('document_uuid','path','basis')} for raw in row['raw']]:return False
     mapped=row['mapped'];value=mapped['value']
     if mapped['concept']!='effect_'+role+'_reference' or mapped['unit'] is not None or type(value) is not dict:return False
+    selected=row['raw'][EFFECT_REFERENCE_ROLES.index(role)]
+    if not selected['present'] or selected['value'] is None or selected['value']=='':
+        return value==dict(status='missing',target_uuid=None)
     if value.get('status') in ('missing','denied','unsupported','unverified'):
         return set(value)=={'status','target_uuid'} and value['target_uuid'] is None
     if value.get('status')!='resolved' or not {'status','target_uuid','document_name','name','name_truncated'}<=set(value) or not set(value)<={'status','target_uuid','document_name','name','name_truncated','token_uuid'}:return False
@@ -332,6 +335,30 @@ def _effect_record(row,identity):
                'badge':type(value) is str or number,'array':type(value) is list and not value}[kind]
         if valid and (choices is None or value in choices):return True
     return False
+
+
+def _effect_source_page(records):
+    """PF2e-specific8.6.1 same-page effect source union consistency.
+
+    EffectSystemSource's badge discriminator selects string formula versus
+    numeric counter/value data. Null/missing containers cannot simultaneously
+    supply present descendants. Only witnesses on this page are compared: a
+    missing discriminator or parent marker may occur on a different page.
+    https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/effect/data.ts
+    """
+    fields={row['raw'][0]['path']:row['raw'][0] for row in records
+            if row['section']=='source' and row['provenance']['mapping']=='pf2e.effect.source.v1'}
+    containers=('/system/badge','/system/badge/reevaluate','/system/context',
+                '/system/context/origin/spellcasting','/system/context/target','/system/context/roll')
+    for path in containers:
+        marker=fields.get(path)
+        if marker is not None and (not marker['present'] or marker['value'] is None):
+            if any(child.startswith(path+'/') and field['present'] for child,field in fields.items()):return False
+    badge=fields.get('/system/badge/type');value=fields.get('/system/badge/value')
+    if badge is not None and badge['present'] and value is not None and value['present']:
+        if badge['value']=='formula':return type(value['value']) is str
+        return type(value['value']) in (int,float)
+    return True
 
 
 # PF2e-specific NPCSystemSource8.6.1 selected source fields, never effective math.
@@ -3258,6 +3285,8 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                                         status=r['mapped']['value']['status']
                                         valid = valid and reasons==([] if status=='resolved' else ['familiar_master_'+status])
                     valid = valid and all(_record(row, sections, result['identity']) for row in result['records']) and len({row['key'] for row in result['records']}) == len(result['records']) and _pagination(result.get('pagination'), len(result['records']), limit)
+                    if valid and result['identity']['document_name']=='Item' and result['identity']['type']=='effect':
+                        valid = _effect_source_page(result['records'])
                     if valid and result['identity']['document_name']=='Actor':
                         valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting')
                         valid = valid and all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')

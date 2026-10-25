@@ -9,12 +9,18 @@
 const EVENTS=['initiative-roll','turn-start','turn-end'];
 const SOURCE_LIMIT=['persisted_source_not_effective_or_expiration_state'];
 const OPTIONAL_PATHS=new Set(['badge/labels','badge/loop','badge/evaluate','badge/reevaluate/initial','context','context/origin/token','context/origin/item','context/origin/spellcasting','context/origin/spellcasting/tradition','context/target','context/target/token','context/roll/degreeOfSuccess']);
-/** PF2e-specific own-source lookup; missing fields receive no schema defaults. */
+/** PF2e-specific own-data lookup on detached, possibly nonplain serialization.
+ * Inherited fields remain absent and selected accessors reject without invoking.
+ * Missing fields receive no defaults; optional undefined retains its exact list.
+ */
 function at(source,keys) {
  let value=source;
  for(const key of keys) {
-  if(value===null||typeof value!=='object'||!Object.hasOwn(value,key))return {present:false};
-  value=value[key];
+  if(value===null||typeof value!=='object')return {present:false};
+  const descriptor=Object.getOwnPropertyDescriptor(value,key);
+  if(!descriptor)return {present:false};
+  if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Effect source requires detached own data properties.');
+  value=descriptor.value;
  }
  if(value===undefined&&OPTIONAL_PATHS.has(keys.slice(1).join('/')))return {present:false};
  return {present:true,value};
@@ -34,7 +40,7 @@ function leaf(source,keys,concept,type,nullable=false,choices=null) {
  * Unknown badge discriminator throws rather than silently dropping new schemas.
  */
 export function effectFields(source) {
- if(source?.type!=='effect')return null;
+ if(at(source,['type']).value!=='effect')return null;
  const fields=[];
  const add=(suffix,concept,type,nullable=false,choices=null)=>fields.push(leaf(source,['system',...suffix.split('/')],concept,type,nullable,choices));
  // PF2e-specific nullable schema containers are emitted only as null/missing.
@@ -49,10 +55,11 @@ export function effectFields(source) {
   if(!selected.present||(nullable&&selected.value===null)) {fields.push({path,...selected,concept,limitations:[...SOURCE_LIMIT]});return;}
   if(!Array.isArray(selected.value))throw new TypeError(`Effect source ${path} must be a string array${nullable?' or null':''}.`);
   if(!selected.value.length)fields.push({path,present:true,value:[],concept,limitations:[...SOURCE_LIMIT]});
-  selected.value.forEach((value,index)=>{
+  for(let index=0;index<selected.value.length;index++){
+   const item=at(selected.value,[String(index)]);if(!item.present)continue;const value=item.value;
    if(typeof value!=='string')throw new TypeError(`Effect source ${path}/${index} must be a string.`);
    fields.push({path:`${path}/${index}`,present:true,value,concept,limitations:[...SOURCE_LIMIT]});
-  });
+  }
  };
  for(const [path,concept,type,nullable,choices]of [
   ['level/value','effect_level','number'],['duration/value','effect_duration_value','number'],
@@ -68,15 +75,15 @@ export function effectFields(source) {
  if(duration.present&&duration.value< -1)throw new TypeError('Effect source duration value must be at least -1.');
  strings('traits/value','effect_trait_code');strings('traits/otherTags','effect_other_tag_code');
  if(container('badge','effect_badge')) {
-  const badge=source.system.badge;
-  if(!['counter','value','formula'].includes(badge.type))throw new TypeError('Effect source /system/badge/type must be counter, value or formula; verify the source schema before reading this badge.');
+  const badgeType=at(source,['system','badge','type']).value;
+  if(!['counter','value','formula'].includes(badgeType))throw new TypeError('Effect source /system/badge/type must be counter, value or formula; verify the source schema before reading this badge.');
   add('badge/type','effect_badge_type','string',false,['counter','value','formula']);
   strings('badge/labels','effect_badge_label',true);
-  add('badge/value','effect_badge_value',badge.type==='formula'?'string':'number');
-  if(badge.type==='counter') {
+  add('badge/value','effect_badge_value',badgeType==='formula'?'string':'number');
+  if(badgeType==='counter') {
    add('badge/min','effect_badge_min','number',true);add('badge/max','effect_badge_max','number',true);add('badge/loop','effect_badge_loop','boolean');
    for(const field of fields.filter(field=>['/system/badge/min','/system/badge/max'].includes(field.path)))if(field.present&&field.value!==null&&!Number.isInteger(field.value))throw new TypeError(`Effect source ${field.path} must be an integer or null.`);
-  } else if(badge.type==='formula') {
+  } else if(badgeType==='formula') {
    add('badge/evaluate','effect_badge_evaluate','boolean');add('badge/reevaluate','effect_badge_reevaluate_event','string',true,EVENTS);
   } else if(container('badge/reevaluate','effect_badge_reevaluate')) {
    add('badge/reevaluate/event','effect_badge_reevaluate_event','string',false,EVENTS);

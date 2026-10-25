@@ -42,7 +42,23 @@ class ActorEffectRelationshipTests(unittest.IsolatedAsyncioTestCase):
                 result=relationship(role,status,target)
                 await self.read(result)
                 for raw in result['records'][0]['raw']:raw.pop('value');raw['present']=False
-                await self.read(result)
+                if status=='missing':await self.read(result)
+                else:
+                    with self.assertRaises(ToolError):await self.read(result)
+
+    async def test_absent_null_and_empty_selected_reference_require_missing(self):
+        for role in EFFECT_REFERENCE_ROLES:
+            for present,value in ((False,None),(True,None),(True,'')):
+                for status in ('missing','denied','unsupported','unverified'):
+                    result=relationship(role,status)
+                    raw=result['records'][0]['raw'][EFFECT_REFERENCE_ROLES.index(role)]
+                    raw['present']=present
+                    if present:raw['value']=value
+                    else:raw.pop('value')
+                    with self.subTest(role=role,present=present,value=value,status=status):
+                        if status=='missing':await self.read(result)
+                        else:
+                            with self.assertRaises(ToolError):await self.read(result)
 
     async def test_synthetic_and_linked_context_keep_explicit_selector(self):
         for role,target in [('origin_actor','Scene.s.Token.t.Actor.a'),('target_actor','Scene.s.Token.t.Actor.a'),('origin_item','Scene.s.Token.t.Actor.a.Item.i'),('origin_actor','Actor.origin'),('origin_item','Actor.origin.Item.i')]:
@@ -84,14 +100,15 @@ const origin=doc('Actor','origin','npc'),target=doc('Actor','target','npc'),item
 const source={name:'Effect',type:'effect',system:{context:{origin:{actor:origin.uuid,token:null,item:item.uuid},target:{actor:target.uuid,token:null}}}};
 effect.toObject=()=>structuredClone(source);
 const pages=[];let cursor;do{const page=await readItem({item_uuid:'Item.a',sections:['relationships'],limit:2,...(cursor?{cursor}:{})});pages.push(page);cursor=page.pagination.next_cursor;}while(cursor);
-source.system.context=null;pages.push(await readItem({item_uuid:'Item.a',sections:['relationships']}));
-console.log(JSON.stringify(pages));
+const normalPages=pages.length;
+for(const context of [null,{origin:{actor:'',token:null,item:''},target:{actor:null,token:''}},undefined]){source.system.context=context;pages.push(await readItem({item_uuid:'Item.a',sections:['relationships']}));}
+console.log(JSON.stringify({pages,normalPages}));
 """
         process=subprocess.run(['node','--input-type=module'],input=script,text=True,capture_output=True,cwd=Path(__file__).resolve().parents[1])
         self.assertEqual(process.returncode,0,process.stderr)
-        pages=json.loads(process.stdout)
+        fixture=json.loads(process.stdout);pages=fixture['pages']
         for page in pages:await self.read(page)
-        rows=[row for page in pages[:-1] for row in page['records']]
+        rows=[row for page in pages[:fixture['normalPages']] for row in page['records']]
         self.assertEqual(len(rows),5)
         self.assertEqual([row['mapped']['value']['status'] for row in rows],['resolved','missing','resolved','resolved','missing'])
-        self.assertTrue(all(row['mapped']['value']['status']=='missing' for row in pages[-1]['records']))
+        self.assertTrue(all(row['mapped']['value']['status']=='missing' for page in pages[fixture['normalPages']:] for row in page['records']))

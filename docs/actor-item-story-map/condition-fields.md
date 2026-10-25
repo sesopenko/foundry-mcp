@@ -22,6 +22,10 @@ codes, slugs and formulas are preserved exactly without evaluation or localized
 label inference. Arrays emit indexed primitive leaves or one `[]` marker; null
 arrays fail. No populated object escapes the selector. Unknown extra fields
 are ignored, so rules, descriptions, flags and prepared getters are untouched.
+Selected own accessors are rejected without invocation, including type,
+container, scalar and array-index properties. Inherited properties are not
+source; nonplain containers with own data descriptors remain supported.
+The reader checks condition/effect source type before dispatch can invoke it.
 
 Paths below are relative to `/system/`. All leaves may be absent; `?null`
 indicates explicit null is accepted.

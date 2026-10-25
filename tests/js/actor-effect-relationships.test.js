@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readItem,readActor} from '../../foundry-module/scripts/actors.js';
+import {effectReferenceFields} from '../../foundry-module/scripts/actorEffectRelationships.js';
 function fixture(linked=true){
  const docs=new Map();
  const actor={documentName:'Actor',uuid:linked?'Actor.a':'Scene.s.Token.t.Actor.a',id:'a',name:'Origin',type:'npc',items:new Map(),folder:null,compendium:null,testUserPermission:()=>true,toObject(){throw Error('target source must not be read');}};
@@ -15,6 +16,22 @@ function fixture(linked=true){
  globalThis.foundry={utils:{fromUuid:async uuid=>docs.get(uuid)}};
  return {actor,token,origin,effect,source,docs};
 }
+test('effect relationship selectors reject selected context accessors without invoking them',()=>{
+ for(const path of [['system'],['system','context'],['system','context','origin'],['system','context','target'],['system','context','origin','actor'],['system','context','origin','token'],['system','context','origin','item'],['system','context','target','actor']]){
+  const f=fixture();let node=f.source,calls=0;for(const key of path.slice(0,-1))node=node[key];Object.defineProperty(node,path.at(-1),{get(){calls++;return null;}});assert.throws(()=>effectReferenceFields(f.source),TypeError);assert.equal(calls,0,path.join('/'));
+ }
+});
+test('effect relationship selectors preserve null/undefined absence and accept only own nonplain data',()=>{
+ const f=fixture();f.source.system.context=undefined;assert.ok(effectReferenceFields(f.source).every(field=>!field.present));
+ f.source.system.context={origin:null,target:undefined};assert.ok(effectReferenceFields(f.source).every(field=>!field.present));
+ f.source.system.context=Object.assign(Object.create({get target(){throw Error('inherited side');}}),{origin:Object.assign(Object.create({get token(){throw Error('inherited token');}}),{actor:'Actor.a',item:undefined})});
+ Object.defineProperty(f.source.system.context.origin,'unrelated',{get(){throw Error('unrelated field');}});const fields=effectReferenceFields(f.source);assert.equal(fields[0].value,'Actor.a');assert.ok(fields.slice(1).every(field=>!field.present));
+ for(const value of [[],false,1]){f.source.system.context=value;assert.throws(()=>effectReferenceFields(f.source),TypeError);f.source.system.context={origin:value};assert.throws(()=>effectReferenceFields(f.source),TypeError);}
+});
+test('actual relationships-only reads reject selected context getters without invoking them',async()=>{
+ const f=fixture();let calls=0;Object.defineProperty(f.source.system.context.origin,'actor',{get(){calls++;return 'Actor.secret';}});f.effect.toObject=()=>f.source;
+ await assert.rejects(readItem({item_uuid:f.effect.uuid,sections:['relationships']}),error=>error.rpcError?.code==='ReadFailed');assert.equal(calls,0);
+});
 test('effect relationships preserve immediate linked and synthetic selectors without reading target source',async()=>{
  for(const linked of [true,false]){
   const f=fixture(linked);const page=await readItem({item_uuid:f.effect.uuid,sections:['relationships']});

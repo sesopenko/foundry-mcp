@@ -449,3 +449,16 @@ creation is not production constructor rejection. A genuine marked temporary
 book is a candidate for the existing development world's live acceptance;
 actual support remains unverified. Affliction's explicit production guard is
 different and remains unresolved. Completed progress stays30/39 (76.9%).
+
+## Condition/effect boundary regression fixes — October 25, 2026
+
+Failing regressions exposed selected getter execution, an affliction-parent
+validation mismatch, impossible missing-reference statuses and same-page badge
+contradictions. Source and relationship selectors now require own detached data
+without invoking accessors; subtype dispatch validates condition/effect type
+before reading it. Python matches the existing browser's disabled-affliction
+and absent/null/empty-reference behavior and checks available page-local badge
+discriminators without requiring off-page witnesses. Actual JavaScript DTO
+regressions retain valid pagination and token context. No new API dependency,
+world write or effective-state claim was introduced. CORE-state integration
+remains next; completed progress stays30/39 (76.9%).

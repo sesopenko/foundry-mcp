@@ -54,3 +54,14 @@ test('schema-optional own undefined is absent while required source fields remai
  for(const path of ['/system/badge/loop','/system/badge/labels','/system/context']){assert.equal(row(rows,path).present,false);assert.ok(!Object.hasOwn(row(rows,path),'value'));}
  source.system.duration.sustained=undefined;assert.throws(()=>effectFields(source),TypeError);
 });
+test('selected effect type, ancestors, badge discriminator, context and arrays reject accessors without invocation',()=>{
+ for(const path of [['type'],['system'],['system','duration'],['system','duration','value'],['system','badge'],['system','badge','type'],['system','badge','value'],['system','badge','labels','0'],['system','context'],['system','context','origin'],['system','context','origin','actor'],['system','context','origin','rollOptions','0']]){
+  const source=input();let node=source,calls=0;for(const key of path.slice(0,-1))node=node[key];Object.defineProperty(node,path.at(-1),{get(){calls++;return path.at(-1)==='type'?'effect':1;}});assert.throws(()=>effectFields(source),TypeError);assert.equal(calls,0,path.join('/'));
+ }
+});
+test('effect nonplain own badge data is accepted, inherited discriminator and array elements stay unread',()=>{
+ const source=input();source.system.badge=Object.assign(Object.create({get unrelated(){throw Error('prototype accessed');}}),{type:'counter',value:0,min:null,max:3});assert.equal(row(effectFields(source),'/system/badge/value').value,0);
+ delete source.system.badge.type;Object.defineProperty(Object.getPrototypeOf(source.system.badge),'type',{get(){throw Error('inherited badge accessed');}});assert.throws(()=>effectFields(source),TypeError);
+ source.system.badge=null;const array=[];array.length=1;const prototype=Object.create(Array.prototype);Object.defineProperty(prototype,'0',{get(){throw Error('inherited array accessed');}});Object.setPrototypeOf(array,prototype);source.system.traits.value=array;assert.ok(!row(effectFields(source),'/system/traits/value/0'));
+ assert.equal(effectFields(Object.create({get type(){throw Error('inherited type accessed');}})),null);
+});

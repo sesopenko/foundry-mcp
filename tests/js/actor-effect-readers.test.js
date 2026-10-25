@@ -8,6 +8,13 @@ function fixture(){
  globalThis.foundry={utils:{fromUuid:async uuid=>uuid===item.uuid?item:null}};
  return {source,item};
 }
+test('effect reader rejects a selected source type accessor before dispatch without invoking it',async()=>{
+ const f=fixture();let invoked=0;
+ Object.defineProperty(f.source,'type',{get(){invoked++;return 'effect';}});
+ f.item.toObject=()=>f.source;
+ await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source']}),e=>e.rpcError.code==='ReadFailed');
+ assert.equal(invoked,0);
+});
 test('effect source preserves stored duration and formula through bounded pages without rolling',async()=>{
  const f=fixture(),before=JSON.stringify(f.source);let cursor,rows=[];
  do{const page=await readItem({item_uuid:f.item.uuid,sections:['source','effective'],limit:5,max_bytes:8000,...(cursor?{cursor}:{})});

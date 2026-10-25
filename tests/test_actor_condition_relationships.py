@@ -61,6 +61,10 @@ class ConditionRelationshipTests(unittest.IsolatedAsyncioTestCase):
         result['records'][0]['mapped']['value']['token_uuid']='Scene.other.Token.t'
         with self.assertRaises(ToolError):await self.read(result)
 
+    async def test_disabled_affliction_parent_cannot_resolve(self):
+        result=relationship();result['records'][0]['mapped']['value']['type']='affliction'
+        with self.assertRaises(ToolError):await self.read(result)
+
     async def test_unresolved_rows_do_not_disclose_target_metadata(self):
         for status in ('missing','denied','unsupported','unverified'):
             for extra in [dict(name='Secret'),dict(type='condition'),dict(target_uuid='Item.private'),dict(document_name='Item')]:

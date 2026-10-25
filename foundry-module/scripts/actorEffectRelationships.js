@@ -6,14 +6,26 @@
  */
 import {actorTarget,itemTarget,named} from './actorDocuments.js';
 export const EFFECT_REFERENCES=[['origin_actor','origin','actor'],['origin_token','origin','token'],['origin_item','origin','item'],['target_actor','target','actor'],['target_token','target','token']];
-/** PF2e-specific context source lookup preserves absent/null without defaults. */
+/** PF2e-specific detached own-data selection; accessors reject without invocation.
+ * Nonplain own data is accepted, inherited fields remain unavailable.
+ */
+function own(source,key){
+ if(source===null||typeof source!=='object')return undefined;
+ const descriptor=Object.getOwnPropertyDescriptor(source,key);
+ if(!descriptor)return undefined;
+ if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Effect relationship source requires detached own data properties.');
+ return descriptor.value;
+}
+/** PF2e-specific context source lookup preserves absent/null without defaults.
+ * Optional undefined context/sides/reference leaves stay absent. No inherited
+ * property or selected accessor is evaluated; no source container is returned.
+ */
 export function effectReferenceFields(source){
- const context=source.system?.context;
+ const context=own(own(source,'system'),'context');
  if(context!==undefined&&context!==null&&(typeof context!=='object'||Array.isArray(context)))throw new TypeError('Effect context must be a source object or null.');
- for(const side of ['origin','target']){const value=context?.[side];if(value!==undefined&&value!==null&&(typeof value!=='object'||Array.isArray(value)))throw new TypeError('Effect context side must be a source object or null.');}
+ const sides={};for(const side of ['origin','target']){const value=own(context,side);if(value!==undefined&&value!==null&&(typeof value!=='object'||Array.isArray(value)))throw new TypeError('Effect context side must be a source object or null.');sides[side]=value;}
  return EFFECT_REFERENCES.map(([role,side,kind])=>{
-  const context=source.system?.context?.[side];const present=context!==null&&typeof context==='object'&&Object.hasOwn(context,kind)&&context[kind]!==undefined;
-  const value=context?.[kind];
+  const value=own(sides[side],kind),present=value!==undefined;
   if(present&&value!==null&&typeof value!=='string')throw new TypeError('Effect context reference is not source UUID text.');
   return {role,path:`/system/context/${side}/${kind}`,present,...(present?{value}:{})};
  });
