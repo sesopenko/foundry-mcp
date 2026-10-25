@@ -386,3 +386,15 @@ default prose privacy and unchanged source fingerprints. Both marked temporary
 Actors were removed. See [verification](familiar-verification.md).
 Full suites:347 Python tests (one skipped),460 JavaScript tests. Completed
 progress remains30/39 (76.9%); source checkpoints do not close Actor stories.
+
+## Casting current-resource contract preparation — October 25, 2026
+
+Audited official public serialization and pinned transformed focus/cost schema
+contracts; [integration contract](casting-current-contract.md) separates current
+pool value/maximum/capacity and spell cost from persisted source and availability.
+A pure detached-data helper has seven focused passing tests. It is not yet
+connected to published readers or packaged runtime; no new live capability or
+completed story is claimed. Contextual option/rank and signature rulebook
+verification remain the next casting work. After the machine restart the
+services/browser were restored; live checks await the existing test-world GM
+connection. Completed progress remains30/39 (76.9%).
