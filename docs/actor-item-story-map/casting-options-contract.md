@@ -22,6 +22,13 @@ selectors. Never call casting, preparation, rank getters or sheet builders.
 
 Value fields:
 
+Source identity rows and option `spell`/`entry` names come from their exact
+persisted `/name` witnesses, clipped to 256 Unicode codepoints. Immediate
+assignment/preparation relationship labels retain the actual public display
+name, which PF2e may decorate. Same-page joins compare canonical identity,
+status, type and token context rather than requiring these different label
+contracts to match. Each row still validates its own name/provenance contract.
+
 | Field | Meaning |
 | --- | --- |
 | `spell`, `entry` | Existing canonical relationship objects, preserving unresolved status and token context. No cross-owner repairs. |

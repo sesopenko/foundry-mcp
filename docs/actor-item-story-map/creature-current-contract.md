@@ -165,4 +165,10 @@ with three required supplement mapping/reason terms, one discovery call and
 `runtime_checked: false`. Full offline suites passed:386 Python tests (one
 skipped),547 JavaScript tests. The existing current-statistics probe now checks
 core and supplemental records independently against public serialized fields;
-that extended live path has only been syntax-checked, not run against the world.
+that extended live path subsequently passed against two existing NPCs on
+October 25. One world NPC returned 52 records over eight pages (38 core and 14
+supplemental); one synthetic NPC returned 54 records over eight pages (44 core
+and 10 supplemental). Every returned supplemental path/presence/value matched
+independent public serialization; selected current snapshots and complete source
+fingerprints were unchanged. This verifies those NPC samples, without proving
+every optional predicate/IWR configuration or character/familiar supplements.

@@ -151,6 +151,20 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 token and casting follow-up: the read-only token check scanned 50
+Scenes and 778 tokens without a qualifying existing character/NPC same-base
+pair with distinct HP and meaningful Item state. CORE-token remains open; see
+[token verification](token-verification.md). Two existing NPC current-resource
+checks passed across prepared/spontaneous/innate/focus modes: 171 retained
+spellcasting pages, 1,052 records and 57 current records, plus 46 source/default
+pages. Independent public serialization and unchanged complete fingerprints
+passed. One documented byte-limit restart discarded 101 smaller-budget pages;
+323 calls were requested and 322 completed. See
+[resource verification](casting-current-contract.md#existing-npc-resource-verification--october-25).
+The NPC creature supplement check also passed with 14/10 supplemental records
+for world/synthetic samples. Final cast ranks, signature alternatives, complete
+availability and representative character/familiar resource checks remain open.
+
 October 25 runtime gates: genuine temporary world formula and spell books passed
 40 MCP calls, 26 pages, 82 raw source witnesses, six content relationships and 48
 exact description fragments. Source fingerprints and exact-marker cleanup were

@@ -38,10 +38,17 @@ remain unchanged. Selected token/Actor/Item changes invalidate continuations.
 Token-selected familiar tests separately resolve two recorded masters, preserve
 missing/null/absent/denied states and reject stale master identity/permission
 changes. Unrelated master state and master HP do not invalidate identity/source
-reads that never select those values. Master-derived statistics stay unsupported.
-These deterministic checks close the prior reader-regression gap. Existing live
-evidence still covers only one synthetic NPC's current values; a read-only
-comparison of two existing same-base tokens remains pending GM connectivity.
+reads that never select those values. These identity/source tests do not prove
+master-derived statistics. They close the prior reader-regression gap. Existing
+live evidence covers individual synthetic NPC current values; the qualifying
+two-token comparison remains open under the fixture gap recorded below.
 No token or synthetic Actor was created or modified. CORE-token stays In progress.
+
+The October 25 read-only harness subsequently scanned 50 existing Scenes and
+778 placed tokens across character/NPC candidates. Linked and inactive controls
+were available, but the required same-base pair with distinct HP and meaningful
+Item state was absent from that eligible scope. The explicit coverage-gap result
+does not close this story. See [token verification](../token-verification.md) for
+the bounded selection, deterministic harness checks and unchanged original gate.
 
 `list_scene_actors` now navigates readable scenes and placed linked/synthetic tokens without canvas access. Missing Actors/base Actors, unsupported counts, permissions and stale continuations are explicit. Focused JavaScript and Python cross-language tests plus existing-runtime MCP navigation passed. Full acceptance remains open: type-specific readers must demonstrate distinct synthetic HP/Items and any relevant master dependencies; identity-only tests do not establish those values.

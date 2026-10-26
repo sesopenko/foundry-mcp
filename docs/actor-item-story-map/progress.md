@@ -549,3 +549,27 @@ Character/familiar/token state, application and affliction gates remain open.
 
 Completed progress is **31/39 (79.5%)**. CORE-state remains In progress; its
 original acceptance criteria and dependencies are unchanged.
+
+## Token coverage and casting boundary verification — October 25, 2026
+
+The new read-only token harness scanned 50 Scenes and 778 placed tokens across
+eligible character/NPC instances. Linked and inactive controls exist, but the
+required same-base pair with distinct HP and meaningful Item state was absent.
+Eight offline tests prove selection and paginated reader orchestration without
+writes. CORE-token remains In progress under its original acceptance criteria;
+see [token verification](token-verification.md).
+
+Casting source identity and contextual-option names now match their persisted
+name witnesses, while immediate relationship labels retain display names.
+Failing-then-passing actual JavaScript/Python regressions cover this distinction,
+Unicode clipping and stable same-page identity joins, retaining forged-target
+rejection.
+
+The existing NPC current-resource run passed after bounded byte-limit recovery:
+171 retained casting pages, 1,052 records, 57 current records and 46 source pages.
+All four ordinary modes were represented. Complete fingerprints were unchanged;
+323 requested / 322 completed calls include one documented `ResponseTooLarge`
+restart that discarded 101 smaller-budget pages. A separate current-statistics
+run verified 14/10 supplemental records for world/synthetic NPCs, respectively.
+Neither run evaluates final rank, signature alternatives or complete castability.
+Completed progress remains **31/39 (79.5%)**.

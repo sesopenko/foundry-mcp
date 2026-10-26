@@ -100,7 +100,7 @@ class ActorCastingOptionsTests(unittest.IsolatedAsyncioTestCase):
         script=r"""
 import {readActor} from './foundry-module/scripts/actors.js';
 const actor={documentName:'Actor',uuid:'Actor.a',id:'a',name:'Caster',type:'npc',items:new Map(),folder:null,compendium:null,testUserPermission:()=>true,toObject:flag=>({type:'npc',name:'Caster',system:{resources:{focus:{value:0,max:3,cap:3}}}})};
-const add=(id,type,system)=>{const source={type,name:id,system};const item={documentName:'Item',uuid:`Actor.a.Item.${id}`,id,name:id,type,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject:flag=>flag?structuredClone(source):{type,system:type==='spell'?{cast:{focusPoints:0}}:{}}};actor.items.set(id,item);};
+const add=(id,type,system)=>{const source={type,name:id==='spell'?'Spell'+'😀'.repeat(257):'SourceEntry',system};const item={documentName:'Item',uuid:`Actor.a.Item.${id}`,id,name:id==='spell'?'Spell (Heightened)':'Public entry label',type,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject:flag=>flag?structuredClone(source):{type,system:type==='spell'?{cast:{focusPoints:0}}:{}}};actor.items.set(id,item);};
 add('entry','spellcastingEntry',{prepared:{value:'prepared'},slots:{slot1:{value:0,max:2,prepared:[{id:'spell',expended:false},{id:'spell',expended:true}]}}});
 add('spell','spell',{level:{value:1},traits:{value:[]},location:{value:'entry',signature:true,heightenedLevel:4}});
 globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map([['a',actor]]),items:new Map()};
@@ -117,3 +117,17 @@ console.log(JSON.stringify(pages));
         self.assertEqual(len(options),2)
         self.assertEqual([r['mapped']['value']['expended'] for r in options],[False,True])
         self.assertTrue(all(r['mapped']['value']['cast_rank'] is None for r in options))
+        self.assertTrue(all(r['mapped']['value']['spell']['name']=='Spell'+'😀'*251 and r['mapped']['value']['spell']['name_truncated'] for r in options))
+        self.assertTrue(all(r['mapped']['value']['entry']['name']=='SourceEntry' and not r['mapped']['value']['entry']['name_truncated'] for r in options))
+        merged=copy.deepcopy(pages[0]);merged['records']=[row for page in pages for row in page['records'] if row['provenance']['mapping']=='pf2e.actor.casting-options.v1' or row['key']=='spellcasting:assignment:Actor.a.Item.spell']
+        merged['pagination'].update(returned=len(merged['records']),next_cursor=None,complete=True)
+        merged['sections']=copy.deepcopy(pages[-1]['sections'])
+        self.manager.call.return_value=merged
+        await read_actor.fn(actor_uuid='Actor.a',sections=['spellcasting'],limit=100)
+        for field,replacement in [('target_uuid','Actor.a.Item.other'),('type','spell'),('token_uuid','Scene.s.Token.other')]:
+            forged=copy.deepcopy(merged)
+            assignment=next(row for row in forged['records'] if row['key']=='spellcasting:assignment:Actor.a.Item.spell')
+            assignment['mapped']['value'][field]=replacement
+            self.manager.call.return_value=forged
+            with self.subTest(forged_join=field),self.assertRaises(ToolError):
+                await read_actor.fn(actor_uuid='Actor.a',sections=['spellcasting'],limit=100)

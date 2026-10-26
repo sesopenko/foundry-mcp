@@ -2741,7 +2741,13 @@ def _casting_section(records, section):
         value=option['mapped']['value'];spell_uuid=value['spell']['target_uuid']
         if value['signature'] is True and 'signature_alternatives_not_evaluated' not in section['reasons']:return False
         for witness in rows:
-            if witness['key']=='spellcasting:assignment:'+spell_uuid and witness['mapped']['value']!=value['entry']:return False
+            if witness['key']=='spellcasting:assignment:'+spell_uuid:
+                # PF2e-specific assignment display labels and option persisted
+                # names have separate row contracts. Join stable identity only;
+                # each row's names remain independently validated above.
+                stable=('status','target_uuid','type','token_uuid')
+                if ({key:field for key,field in witness['mapped']['value'].items() if key in stable}
+                        != {key:field for key,field in value['entry'].items() if key in stable}):return False
             for field in witness['raw']:
                 if field['path']=='/type' and field['present']:
                     if field['document_uuid']==spell_uuid and field['value']!='spell':return False
@@ -4048,7 +4054,10 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     Spellcasting exposes owned spell/casting-entry identities, selected stored
     configuration, owner-local assignment/preparation joins and focus resources.
     casting_entry/casting_spell values resolve target_uuid and token_uuid when
-    applicable; follow read_item. casting_spell_assignment/casting_preparation
+    applicable; their names use persisted /name witnesses clipped to 256 Unicode
+    codepoints. Immediate assignment/preparation labels use public display names
+    and can differ; joins retain canonical identity and token context.
+    Follow read_item. casting_spell_assignment/casting_preparation
     statuses resolved/missing/denied/unsupported/unverified/mismatched_assignment
     distinguish stored membership from invalid or inaccessible links. Repeated
     preparations retain independent slot/index keys and expended source fields.
@@ -4058,7 +4067,8 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     mapped.value.spell is the actual resolved owned spell; entry is the same
     canonical resolved/missing/denied/unsupported assignment shape. Resolved
     identities retain target_uuid/type/name/name_truncated and token_uuid in
-    token context. Unresolved entry objects contain only status/target_uuid null.
+    token context. These option names use their persisted /name witnesses too.
+    Unresolved entry objects contain only status/target_uuid null.
     mode is the stored entry mode or null. context is prepared_use,
     spontaneous_repertoire, innate_spell, focus_spell, listed_spell or
     unsupported_mode. base_rank/configured_rank, spell_auto_heighten_rank and

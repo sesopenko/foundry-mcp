@@ -98,7 +98,8 @@ Character/NPC statistics also retains senses, language qualifications and
 immunities/weaknesses/resistances with their exceptions. Positive Infinity
 sense range uses an explicit JSON tag; predicates and resistance doubleVs
 remain data, without target-detection or damage calculations. Supplemental
-live verification is pending. See the
+serialization is live-verified on two existing world/synthetic NPCs; character
+configurations and target-dependent application remain unverified. See the
 [creature current contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/creature-current-contract.md).
 Explicit skills now adds selected transformed character/NPC modifiers, DCs,
 labels and proficiency data alongside the independent owned-Lore source list.
@@ -109,13 +110,17 @@ skill live verification is pending. See the
 [skills contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/skills-current-contract.md).
 Explicit spellcasting also includes separate transformed character/NPC focus
 pool values and owned-spell focus costs. Missing serialized fields remain
-unavailable; current-resource live verification is pending. These records do
+unavailable; current resources are live-verified on two existing NPCs across
+prepared, spontaneous, innate and focus modes. Character/familiar current-resource
+coverage remains unverified. These records do
 not establish cast rank, current castability or resource expenditure.
 Casting configuration options join actual spells to individual preparations
 or repertoire/innate/focus contexts. Repeated preparations, expended flags,
 signature configuration and base/configured/slot ranks stay distinct. Final
 cast rank and availability remain unevaluated; contextual-option live
-verification is pending.
+validation passes for the existing NPC run, while complete mode-specific
+availability remains unverified. Persisted identity names remain distinct from
+decorated display labels on immediate relationships.
 Familiar readers preserve stored master linkage and HP; creature prose requires
 explicit description. Identity resolves the world-character master or reports
 an explicit unresolved status. Owned action references retain exact Item

@@ -2,8 +2,8 @@
 
 The explicit spellcasting section now additionally includes separately labelled
 [current-resource records](casting-current-contract.md). The source contract
-below remains unchanged. Current-resource deterministic checks pass; live
-verification is pending the existing development GM connection. No current
+below remains unchanged. Current-resource deterministic checks and representative
+existing NPC live verification pass; character/familiar coverage remains open. No current
 availability or effective casting rank is certified.
 
 It also includes [contextual configuration options](casting-options-contract.md),

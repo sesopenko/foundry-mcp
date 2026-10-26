@@ -8,8 +8,9 @@ PF2e8.6.1, upstream revision `28d9d156f252d084371d994dc359509b49eadf18`.
 `tests/js/actor-casting-current.test.js`. The explicit Actor `spellcasting`
 reader now integrates it with strict Python validation and packaged runtime
 dependencies. Deterministic tests establish field selection, provenance and
-pagination behavior; runtime verification remains pending the existing GM
-connection. The completed-story count is unchanged.
+pagination behavior. Two existing NPCs now pass representative current-resource
+verification; character/familiar coverage and complete availability remain open.
+The completed-story count is unchanged.
 
 ## Public serialization boundary
 
@@ -67,7 +68,25 @@ zero versus absent, character source max exclusion, nonplain own-data containers
 inherited/getter rejection, malformed values, permissions and current-only stale
 continuations deterministically. Do not substitute a passing mock for that live gate.
 
-## Contextual options still required
+## Existing NPC resource verification — October 25
+
+The bounded live runner passed on two existing NPCs, covering prepared,
+spontaneous, innate and focus modes plus current focus pools and spell focus
+costs. It retained 171 spellcasting pages, 1,052 records and 57 selected current
+records, plus 46 source/default pages. Returned current presence and values
+matched independent public serialization; source fingerprints and selected
+current snapshots remained unchanged. Character/familiar current resources,
+final ranks, signature alternatives and complete availability remain unverified.
+
+The run made 323 requested / 322 completed MCP calls. One legitimate record
+exceeded the initial 8,000-byte budget at page 102. Following `ResponseTooLarge`
+recovery, the verifier discarded 101 prior pages and restarted that section at
+48,000 bytes without its old cursor or revision. Five offline tests cover this
+bounded single retry, UTF-8 limits, stale revisions and secret-free diagnostics.
+The smaller-budget failure was a caller-limit condition, not an empty result or
+proof of a Foundry API failure. No world data was written.
+
+## Contextual option remaining gates
 
 Current resource counts do not complete CORE-casting. Preserve the original
 [story acceptance](stories/CORE-casting.md) and [rulebook evidence](casting-verification.md).
@@ -83,7 +102,7 @@ Availability must remain unevaluated until all required mode-specific evidence
 and representative live verification are satisfied. Resource sufficiency alone
 does not establish actions, components, targets, requirements or spell legality.
 
-The next contextual-option record should join actual spell/entry identities,
+Implemented contextual-option records join actual spell/entry identities,
 mode, preparation position where applicable, definition/configured/slot rank
 and resource contributors. Preserve explicit unresolved claims. Option keys
 are response-local identifiers, never document UUIDs or mutation selectors.

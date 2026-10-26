@@ -86,7 +86,7 @@ export function actorCastingOptions(target,items,actorSource,relationshipRecords
     raw.push({document_uuid:row.identity.uuid,path,...selected,basis:'source'});return selected.present?selected.value:null;
    };
    /** PF2e-specific canonical identity with source name/type witnesses. */
-   const identify=row=>{read(row,'/name','string');read(row,'/type','string');const identity=row.identity;return {status:'resolved',target_uuid:identity.uuid,type:identity.type,name:identity.name,name_truncated:identity.name_truncated,...(target.instance?.token_uuid?{token_uuid:target.instance.token_uuid}:{})};};
+   const identify=row=>{const name=[...read(row,'/name','string')];read(row,'/type','string');const identity=row.identity;return {status:'resolved',target_uuid:identity.uuid,type:identity.type,name:name.slice(0,256).join(''),name_truncated:name.length>256,...(target.instance?.token_uuid?{token_uuid:target.instance.token_uuid}:{})};};
    const spellIdentity=identify(spell);read(spell,'/system/location/value','string',true);
    if(isRitual){read(spell,'/system/ritual/primary/check','string');read(spell,'/system/ritual/secondary/checks','string');read(spell,'/system/ritual/secondary/casters','number');}
    let entryIdentity;

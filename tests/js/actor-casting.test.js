@@ -12,6 +12,15 @@ function fixture(type='npc',synthetic=false){
  return {actor,target,add,entry,spell};
 }
 const join=(rows,concept)=>rows.filter(r=>r.mapped.concept===concept);
+test('source identity names preserve codepoint bounds independently of display relationship names',()=>{
+ const f=fixture();f.spell.source.name='Spell'+'😀'.repeat(257);f.spell.item.name='Spell (Heightened)';f.entry.source.name='SourceEntry';f.entry.item.name='Public entry label';
+ const rows=actorCastingRecords(f.target).records;
+ const spell=join(rows,'casting_spell')[0],entry=join(rows,'casting_entry')[0];
+ assert.equal(spell.mapped.value.name,'Spell'+'😀'.repeat(251));assert.equal(spell.mapped.value.name_truncated,true);assert.equal(entry.mapped.value.name,'SourceEntry');
+ assert.equal(join(rows,'casting_spell_assignment')[0].mapped.value.name,'Public entry label');
+ assert.equal(join(rows,'casting_preparation')[0].mapped.value.name,'Spell (Heightened)');
+ for(const option of join(rows,'casting_contextual_option')){assert.equal(option.mapped.value.spell.name,spell.mapped.value.name);assert.equal(option.mapped.value.entry.name,'SourceEntry');}
+});
 test('same-owner joins preserve repeated preparation indexes and separate source resource contexts',()=>{
  const f=fixture(),before=JSON.stringify([f.entry.source,f.spell.source]),result=actorCastingRecords(f.target),rows=result.records;
  assert.deepEqual(join(rows,'casting_preparation').map(r=>r.raw[0].path),['/system/slots/slot1/prepared/0/id','/system/slots/slot1/prepared/1/id']);

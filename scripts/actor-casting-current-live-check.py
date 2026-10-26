@@ -17,11 +17,75 @@ from pathlib import Path
 
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from fastmcp.exceptions import ToolError
 from mcp.shared.exceptions import McpError
 
 REQUEST_TIMEOUT_SECONDS = 30
 INIT_TIMEOUT_SECONDS = 10
 SESSION_TIMEOUT_SECONDS = 180
+
+
+def structured_error_code(error):
+    """Return only a known structured tool code, never error text or context."""
+    if not isinstance(error, ToolError):
+        return None
+    try:
+        data = json.loads(str(error))
+    except (ValueError, TypeError):
+        return None
+    code = data.get('code') if type(data) is dict else None
+    return code if type(code) is str and code in {
+        'InvalidFoundryResponse', 'ReadFailed', 'InvalidRequest', 'PermissionDenied',
+        'ContentChanged', 'NotFound', 'UnsupportedType', 'UnsupportedSystem',
+        'FoundryDisconnected', 'FoundryUnavailable', 'ResponseTooLarge',
+    } else None
+
+
+class CallProgress:
+    """Count requested/completed SDK calls, including a failed request."""
+
+    def __init__(self):
+        self.requested = 0
+        self.completed = 0
+
+    async def call(self, function, *args):
+        self.requested += 1
+        result = await function(*args)
+        self.completed += 1
+        return result
+
+
+async def bounded_pages(request, validate):
+    """Restart one section at 48000 bytes only after ResponseTooLarge at 8000.
+
+    Discard prior rows/cursors/revision on the sole retry. Each budget permits
+    200 requests, at most 400 total. Caller retains existing SDK deadlines.
+    """
+    discarded = 0
+    for restart, budget in enumerate((8000, 48000)):
+        rows, cursor, seen, revision = [], None, set(), None
+        for ordinal in range(1, 201):
+            try:
+                page = await request(budget, cursor, ordinal)
+            except ToolError as error:
+                if budget == 8000 and structured_error_code(error) == 'ResponseTooLarge':
+                    discarded += ordinal - 1
+                    break
+                raise
+            assert len(json.dumps(page, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8')) <= budget
+            validate(page)
+            if revision is None:
+                revision = page['revision']
+            assert page['revision'] == revision
+            rows.extend(page['records'])
+            cursor = page['pagination']['next_cursor']
+            if not cursor:
+                return rows, ordinal, restart, discarded
+            assert cursor not in seen
+            seen.add(cursor)
+        else:
+            raise AssertionError('Pagination exceeded fixed 200-page budget bound')
+    raise AssertionError('Pagination exhausted byte-limit budgets')
 
 
 def timeout_failure(error):
@@ -87,7 +151,8 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
 async def main(discovery_only=False):
     summary = {'passed': False}
     stage = 'connection'
-    calls = 0
+    progress = CallProgress()
+    sample_ordinal, page_ordinal = 0, 0
     try:
         root = Path(__file__).resolve().parent.parent
         token = None
@@ -103,8 +168,7 @@ async def main(discovery_only=False):
             transport, timeout=REQUEST_TIMEOUT_SECONDS, init_timeout=INIT_TIMEOUT_SECONDS,
         ) as client:
             stage = 'discovery'
-            tools = {tool.name: tool for tool in await client.list_tools()}
-            calls += 1
+            tools = {tool.name: tool for tool in await progress.call(client.list_tools)}
             assert {'execute_javascript', 'read_actor', 'get_actor_types'} <= tools.keys()
             tool = tools['read_actor']
             properties = tool.inputSchema['properties']
@@ -115,29 +179,28 @@ async def main(discovery_only=False):
             assert all(term in tool.description.lower() for term in ('transformed', 'spellcasting', 'focus', 'partial'))
             assert all(term in tool.description for term in ('casting_contextual_option', 'pf2e.actor.casting-options.v1', 'cast_rank', 'not_evaluated'))
             if discovery_only:
-                print(json.dumps({'passed': True, 'discovery_verified': True, 'mcp_calls': calls, 'runtime_checked': False}))
+                print(json.dumps({'passed': True, 'discovery_verified': True, 'mcp_calls': progress.completed, 'requested_calls': progress.requested, 'completed_calls': progress.completed, 'runtime_checked': False}))
                 return 0
             stage = 'registry'
-            registry = payload(await client.call_tool('get_actor_types', {}))
-            calls += 1
+            registry = payload(await progress.call(client.call_tool, 'get_actor_types', {}))
             assert any(row['name'] == 'spellcasting' for row in registry['actor_sections'])
             stage = 'guarded_existing_npc_selection'
-            before = javascript_payload(await client.call_tool('execute_javascript', {'code': SNAPSHOT}))
-            calls += 1
+            before = javascript_payload(await progress.call(client.call_tool, 'execute_javascript', {'code': SNAPSHOT}))
             assert 1 <= len(before['samples']) <= 2
-            totals = {'pages': 0, 'records': 0, 'current_records': 0, 'source_pages': 0}
-            for sample in before['samples']:
+            totals = {'pages': 0, 'records': 0, 'current_records': 0, 'source_pages': 0, 'byte_limit_restarts': 0, 'discarded_pages': 0}
+            for sample_ordinal, sample in enumerate(before['samples'], 1):
                 async def pages(sections=None):
-                    nonlocal calls
-                    rows, cursor, cursors, revision = [], None, set(), None
-                    for _ in range(200):
-                        args = {'actor_uuid': sample['uuid'], 'limit': 7, 'max_bytes': 8000}
+                    async def request(budget, cursor, ordinal):
+                        nonlocal page_ordinal
+                        page_ordinal = ordinal
+                        args = {'actor_uuid': sample['uuid'], 'limit': 7, 'max_bytes': budget}
                         if sections is not None:
                             args['sections'] = sections
                         if cursor:
                             args['cursor'] = cursor
-                        result = payload(await client.call_tool('read_actor', args))
-                        calls += 1
+                        return payload(await progress.call(client.call_tool, 'read_actor', args))
+
+                    def validate(result):
                         assert result['identity']['uuid'] == sample['uuid']
                         assert result['identity']['instance'] is None
                         if sections == ['spellcasting']:
@@ -146,16 +209,10 @@ async def main(discovery_only=False):
                             assert 'availability_not_evaluated' in section['reasons']
                             if any(not field['present'] for field in sample['fields']):
                                 assert 'current_fields_unavailable' in section['reasons']
-                        if revision is None:
-                            revision = result['revision']
-                        assert result['revision'] == revision
-                        rows.extend(result['records'])
-                        cursor = result['pagination']['next_cursor']
-                        if not cursor:
-                            return rows, len(cursors) + 1
-                        assert cursor not in cursors
-                        cursors.add(cursor)
-                    raise AssertionError('Pagination exceeded fixed 200-page bound')
+                    rows, count, restarts, discarded = await bounded_pages(request, validate)
+                    totals['byte_limit_restarts'] += restarts
+                    totals['discarded_pages'] += discarded
+                    return rows, count
 
                 stage = 'explicit_spellcasting'
                 rows, count = await pages(['spellcasting'])
@@ -188,8 +245,8 @@ async def main(discovery_only=False):
                     totals['source_pages'] += count
                     assert not any(raw['basis'] == 'transformed' for row in source for raw in row['raw'])
             stage = 'fingerprint_after'
-            after = javascript_payload(await client.call_tool('execute_javascript', {'code': SNAPSHOT}))
-            calls += 1
+            page_ordinal = 0
+            after = javascript_payload(await progress.call(client.call_tool, 'execute_javascript', {'code': SNAPSHOT}))
             assert before == after, 'Selected source or transformed snapshot changed'
             missing = sorted(set(['prepared', 'spontaneous', 'innate', 'focus', 'current_focus', 'spell_cost']) - set(before['coverage']))
             summary.update(passed=True, samples=len(before['samples']), coverage=before['coverage'], missing_coverage=missing, unverified_actor_types=['character', 'familiar'], fingerprint_unchanged=True, **totals)
@@ -197,7 +254,10 @@ async def main(discovery_only=False):
         summary.update(failure_stage=stage, exception_type=type(error).__name__, recovery='Read-only verification did not complete; a probe deadline or transport failure does not establish a Foundry API or world failure. No world data was written.')
         if failure := timeout_failure(error):
             summary['failure_kind'] = failure
-    summary['mcp_calls'] = calls
+        if code := structured_error_code(error):
+            summary['tool_error_code'] = code
+        summary.update(sample_ordinal=sample_ordinal, page_ordinal=page_ordinal)
+    summary.update(mcp_calls=progress.completed, requested_calls=progress.requested, completed_calls=progress.completed)
     print(json.dumps(summary))
     return 0 if summary['passed'] else 1
 

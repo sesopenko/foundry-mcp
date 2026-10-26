@@ -67,9 +67,19 @@ the statistics section remains partial. Full suites pass: **341 Python tests
 
 ## Remaining gates
 
-Familiar/master-derived values, skills/Lore totals and joins, senses/languages,
-IWR, generated Strikes, conditions/effects and complete target-dependent results
-remain unfinished. Non-null movement source strings have deterministic coverage;
+October 25 supplement verification: the extended read-only probe passed for
+the existing world and synthetic NPCs. It checked 52/54 records across eight
+pages each, including 14/10 creature supplemental records independently against
+public serialization. Source fingerprints and selected transformed snapshots
+were unchanged. This closes the sampled NPC senses/language/IWR serialization
+check, without proving all optional configurations, character/familiar
+supplements or target-dependent application.
+
+Representative familiar/master-derived values, skills/Lore totals and joins,
+character creature supplements, generated Strikes and complete target-dependent
+results remain unfinished or unverified. Separate existing NPC condition/effect
+source-state checks are recorded in the state contract; application remains
+unknown. Non-null movement source strings have deterministic coverage;
 additional conditional-effect configurations remain unverified.
 No v13 or future-version compatibility is established. ACT-character and
 ACT-npc remain Source implemented; this unit does not add completed stories.

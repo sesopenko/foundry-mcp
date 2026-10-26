@@ -18,8 +18,12 @@ function at(source,path){let node=source;for(const key of path.slice(1).split('/
 function raw(uuid,path,selected){return {document_uuid:uuid,path,...selected,basis:'source'};}
 /** PF2e-specific detached bounded source join record. */
 function record(key,concept,raw,value,kind='relationship',mapping='pf2e.actor.casting-source.v1',limitations=LIMIT){return {key,section:'spellcasting',kind,raw,mapped:{concept,value,unit:null},provenance:{contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping,limitations:[...limitations]}};}
-/** PF2e-specific actual local Item identity, with retained selected token context. */
-function identity(item,target){const id=embeddedIdentity(item,{document:target.document,token:target.token});return {status:'resolved',target_uuid:id.uuid,type:id.type,name:id.name,name_truncated:id.name_truncated,...(target.token?{token_uuid:target.token.uuid}:{})};}
+/**
+ * PF2e-specific actual local Item identity, retaining selected token context.
+ * Source-basis identity records pass their persisted name witness; immediate
+ * relationship context retains the public display label. Both clip codepoints.
+ */
+function identity(item,target,sourceName){const id=embeddedIdentity(item,{document:target.document,token:target.token}),name=sourceName===undefined?null:[...sourceName];return {status:'resolved',target_uuid:id.uuid,type:id.type,name:name?name.slice(0,256).join(''):id.name,name_truncated:name?name.length>256:id.name_truncated,...(target.token?{token_uuid:target.token.uuid}:{})};}
 /**
  * PF2e-specific Actor casting snapshot, with same-owner source joins and selected
  * transformed character/NPC focus and spell focus costs. PF2e8.6.1 contracts are
@@ -56,7 +60,7 @@ export function actorCastingRecords(target,actorSource=target.document.toObject(
  const resolve=(id,type,entryId=null)=>{if(typeof id!=='string'||!id)return {status:'missing',target_uuid:null};const candidate=items.find(item=>item.id===id);if(!candidate)return {status:'missing',target_uuid:null};if(!permitted(candidate))return {status:'denied',target_uuid:null};if(candidate.type!==type)return {status:'unsupported',target_uuid:null};if(entryId!==null){const assigned=readable.get(candidate.id)?.source?.system?.location?.value;if(assigned!==entryId)return {status:'mismatched_assignment',target_uuid:null};}return identity(candidate,target);};
  for(const {item,source}of readable.values()){
   const entry=item.type==='spellcastingEntry';
-  records.push(record(`spellcasting:${entry?'entry':'spell'}:${item.uuid}`,entry?'casting_entry':'casting_spell',[raw(item.uuid,'/name',{present:true,value:source.name}),raw(item.uuid,'/type',{present:true,value:source.type})],identity(item,target)));
+  records.push(record(`spellcasting:${entry?'entry':'spell'}:${item.uuid}`,entry?'casting_entry':'casting_spell',[raw(item.uuid,'/name',{present:true,value:source.name}),raw(item.uuid,'/type',{present:true,value:source.type})],identity(item,target,source.name)));
   if(entry){
    fields(item,spellcastingEntryFields(source),'pf2e.spellcasting-entry.source.v1');
    for(const issue of spellcastingEntryIssues(source))reasons.add(issue.reason);
