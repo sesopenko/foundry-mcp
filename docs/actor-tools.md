@@ -606,7 +606,9 @@ Absent, zero, configured ranks, signature/cantrip facts and stored use records s
 independent. No source counter establishes usable casts or an effective cast rank.
 All results remain partial with `availability_not_evaluated`; specialized modes,
 malformed legacy preparations and denied Items add explicit reasons. This does
-not complete CORE-casting. Selection rejects over 12,000 owned Items or 24,000
+not establish complete casting availability. CORE-casting acceptance is recorded
+in the [requirement audit](actor-item-story-map/casting-acceptance.md).
+Selection rejects over 12,000 owned Items or 24,000
 selected records with ReadFailed, independently of response pagination bounds.
 See [fields](actor-item-story-map/casting-fields.md) and
 [evidence](actor-item-story-map/casting-verification.md).

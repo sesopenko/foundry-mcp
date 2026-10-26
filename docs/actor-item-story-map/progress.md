@@ -637,3 +637,32 @@ array markers that cannot retain model serialization callbacks.
 Damage, target eligibility, other attack modes and remaining Actor integration
 dependencies remain open. Completed progress stays **31/39 (79.5%)**. See the
 [Strike contract](strike-current-contract.md) for exact delivered scope.
+
+## Casting reading acceptance — October 25, 2026
+
+CORE-casting now passes its original reading contract: source joins, independent
+rank/resource contexts, selected current resource fields and explicit limitations.
+The acceptance audit maps every original requirement to implementation/tests and
+actual runtime evidence; no casting engine or complete-availability claim was added.
+
+Independent MCP verification matched all 58 options and 663 unique source
+witnesses across prepared, spontaneous, innate and focus modes on two existing
+NPCs. Source/current fingerprints remained unchanged. Repeated preparations,
+zero generic counters, cantrips, absent innate uses and unresolved entries were
+observed. Signature true, innate cantrips and explicit expenditure booleans retain
+deterministic coverage only. New regressions also prove shared Actor focus across
+two entries and prevent higher spontaneous slot capacity from becoming a cast
+rank or signature entitlement.
+
+The run retained 171 casting pages/1,052 records/57 current records and 46
+source/default pages. Its 341 requested/340 completed calls include one legitimate
+ResponseTooLarge recovery at 48,000 bytes after discarding 101 earlier pages.
+The verifier now checks option key-set completeness, all selected source paths
+and mapped meanings rather than treating transformed-resource comparisons as
+proof of source-based options.
+
+CORE-casting is Complete; **32/39 stories (82.1%)**. Actor integrated checkpoints
+still require CORE-state. Final rank/availability, specialized casting and
+character/familiar current casting resources remain explicit advanced limitations.
+Full regression checks passed: 467 Python tests (one skipped) and 575 JavaScript
+tests. See the [acceptance audit](casting-acceptance.md).

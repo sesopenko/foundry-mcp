@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 3 |
 | Planning readiness | Planned |
-| Implementation status | In progress |
+| Implementation status | Complete |
 | Prerequisites | [ITEM-spell](ITEM-spell.md), [ITEM-spellcastingEntry](ITEM-spellcastingEntry.md) |
 | Dependency reason | Needs spell definitions and casting group/resource source records. |
 
@@ -42,3 +42,27 @@ signature/heightening distinctions and specialized-mode boundaries, remains work
 The original acceptance condition applies before any claim of complete current
 availability; it does not authorize casting or expenditure tests that write state.
 No casts, preparation, rolls or writes occur.
+
+## Acceptance verified — October 25, 2026
+
+The implemented source, contextual-option and selected-current-resource views
+now pass the original bounded reading acceptance. The
+[requirement audit](../casting-acceptance.md) records each requirement and its
+evidence without claiming complete availability or adding a casting engine.
+The earlier source-checkpoint paragraph describes the historical incomplete state.
+
+Independent actual MCP verification checked 58 contextual options and 663 unique
+source witnesses on two existing NPCs covering prepared, spontaneous, innate and
+focus modes. Exact option key sets, identities, indexed preparations, independent
+ranks/resource meanings and source witnesses matched public documents. The run
+retained 171 casting pages, 1,052 records, 57 current-resource records and 46
+source/default pages; source/current fingerprints remained unchanged.
+
+Observed cases include repeated preparations with zero generic counters,
+unresolved entries, cantrips and absent innate uses. Signature true, explicit
+expenditure booleans and innate cantrips were absent from this sample; independent
+deterministic fixtures cover those boundaries. Distinct focus entries share one
+Actor pool. Signature flags do not certify entitlement or produce rank choices;
+`cast_rank` remains null and `availability` remains `not_evaluated`.
+Specialized modes remain explicitly partial. Character/familiar current casting
+resources and complete availability are unverified, not advertised as passed.

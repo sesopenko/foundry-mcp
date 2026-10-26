@@ -1,12 +1,13 @@
 # Contextual casting configuration options
 
-Implemented configuration presentation for CORE-casting; this document does
-not establish live verification or a complete availability claim. Baseline: Foundry 14.369 / PF2e 8.6.1, upstream
+Implemented and verified configuration presentation for CORE-casting; this
+does not establish complete availability. Baseline: Foundry 14.369 / PF2e 8.6.1, upstream
 revision `28d9d156f252d084371d994dc359509b49eadf18`. Existing
 [source joins](casting-fields.md) and [current resources](casting-current-contract.md)
 remain independent. [Canonical rulebook evidence](casting-verification.md#canonical-contextual-rank-reads--october-25-2026)
 supports the distinctions below. Deterministic reader/boundary tests verify the
-declared shapes; live contextual-option verification remains pending.
+declared shapes; independent live contextual-option verification passed as
+recorded below and in the [acceptance audit](casting-acceptance.md).
 Actual authenticated MCP discovery also passed via
 `scripts/actor-casting-current-live-check.py --discovery-only` after the server
 restart. That check uses one discovery call, verifies descriptions/input bounds
@@ -114,3 +115,26 @@ heightening. Resource sufficiency alone never establishes actions, requirements,
 targets or legal casting. Original mode-specific live acceptance remains in
 force before claiming complete current availability; no casts or expenditure
 writes are authorized by this document.
+
+## Independent live verification — October 25
+
+Two existing NPCs supplied 58 options across all four common modes. An
+independent public-source census matched the entire option key set and count;
+663 unique source witnesses matched their own document paths. Separate bounded
+browser checks compared mapped identities, ranks, preparation positions,
+expenditure presence, mode contexts and resource scopes with public source.
+The verifier returns booleans/counts, avoiding source-prose expansion limits.
+
+The complete run made 341 requested / 340 completed MCP calls and retained
+171 casting pages, 1,052 records, 57 current records and 46 source/default pages.
+One byte-limit recovery discarded 101 earlier pages and restarted at 48,000
+bytes without reusing a cursor/revision. Full source/current fingerprints matched.
+No game data was written, cast, prepared or expended.
+
+Observed special cases were repeated preparations, zero generic slot counters,
+unresolved entries, ordinary cantrips and missing innate uses. Explicit true/false
+expenditure flags, innate cantrips and signature true were absent from this sample;
+deterministic fixtures independently cover them. Eight offline harness tests
+include actual production DTOs against independent Node source fixtures and
+reject missing/misbound options, altered ranks, false source witnesses and
+incomplete check results. Character/familiar current casting remains unverified.

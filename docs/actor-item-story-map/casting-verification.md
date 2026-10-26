@@ -122,3 +122,15 @@ relationship was inferred. No private extracted text is committed. The
 [proposed contextual-option contract](casting-options-contract.md) distinguishes
 these verified rules from configuration-only presentation and deferred rank
 evaluation. These reads do not close CORE-casting's live availability gate.
+
+## Contextual-option acceptance — October 25, 2026
+
+The later independent live check passed 58 contextual options and 663 unique
+source witnesses across the four common modes on two existing NPCs. It checked
+the exact expected option key set, mapped source meanings and full unchanged
+source/current fingerprints. See the [runtime record](casting-options-contract.md#independent-live-verification--october-25)
+and [original-requirement audit](casting-acceptance.md). This supersedes the
+historical pending contextual-presentation gate above; CORE-casting is Complete.
+Final rank, signature entitlement/alternatives, specialized-mode interpretation
+and complete availability remain explicitly unevaluated. The conditional live
+gate before advertising complete availability is preserved, not declared passed.

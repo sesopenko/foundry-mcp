@@ -1,7 +1,8 @@
 # Current casting resources and contextual options
 
-Implementation contract for the remaining CORE-casting work. This does not
-declare the story complete or certify live behavior. Baseline: Foundry14.369 /
+Implemented contract for selected CORE-casting resources. The
+[acceptance audit](casting-acceptance.md) records story completion and the
+remaining unsupported advanced capabilities. Baseline: Foundry14.369 /
 PF2e8.6.1, upstream revision `28d9d156f252d084371d994dc359509b49eadf18`.
 
 `actorCastingCurrent.js` prepares a pure detached-data selector, covered by
@@ -10,7 +11,8 @@ reader now integrates it with strict Python validation and packaged runtime
 dependencies. Deterministic tests establish field selection, provenance and
 pagination behavior. Two existing NPCs now pass representative current-resource
 verification; character/familiar coverage and complete availability remain open.
-The completed-story count is unchanged.
+Independent contextual-option verification is recorded in the
+[option contract](casting-options-contract.md#independent-live-verification--october-25).
 
 ## Public serialization boundary
 
@@ -86,9 +88,9 @@ bounded single retry, UTF-8 limits, stale revisions and secret-free diagnostics.
 The smaller-budget failure was a caller-limit condition, not an empty result or
 proof of a Foundry API failure. No world data was written.
 
-## Contextual option remaining gates
+## Advanced contextual limitations
 
-Current resource counts do not complete CORE-casting. Preserve the original
+Current resource counts alone do not prove contextual options. Preserve the original
 [story acceptance](stories/CORE-casting.md) and [rulebook evidence](casting-verification.md).
 Prepared options must retain individual preparation positions and expenditure
 flags; a generic zero slot counter cannot erase them. Spontaneous options must

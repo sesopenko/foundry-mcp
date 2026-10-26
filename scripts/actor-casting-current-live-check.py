@@ -12,6 +12,7 @@ sheet data, rules, preparation methods or source fallbacks supply expectations.
 
 import argparse
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 
@@ -147,6 +148,114 @@ const report=JSON.stringify({samples,coverage:[...covered].sort()});
 return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
 """
 
+OPTION_SETUP = """
+if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1'||location.origin!=='http://localhost:30000'||game.world.id!=='test')throw Error('Wrong development runtime');
+const actor=[...game.actors.values()].find(a=>a.uuid===ACTOR_UUID);
+if(!actor||!actor.testUserPermission(game.user,'OBSERVER')||actor.items.size>12000)throw Error('Unavailable option Actor');
+const sources=new Map();
+function source(doc){if(!doc||!doc.testUserPermission(game.user,'OBSERVER'))throw Error('Unreadable option contributor');if(doc!==actor&&doc.parent!==actor)throw Error('Wrong option owner');if(!sources.has(doc.uuid))sources.set(doc.uuid,doc.toObject(true));return sources.get(doc.uuid);}
+function at(value,path){for(const encoded of path.slice(1).split('/')){if(value===null||typeof value!=='object')return undefined;const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~'),d=Object.getOwnPropertyDescriptor(value,key);if(!d)return undefined;if(!Object.hasOwn(d,'value'))throw Error('Source accessor prohibited');value=d.value;}return value;}
+const scalar=(value,path)=>at(value,path)??null;
+const items=[...actor.items.values()];
+const assigned=spell=>{const id=at(source(spell),'/system/location/value');return typeof id==='string'&&id?items.find(i=>i.id===id):null;};
+const readableEntry=spell=>{const item=assigned(spell);return item?.testUserPermission(game.user,'OBSERVER')&&item.type==='spellcastingEntry'?item:null;};
+const ordinary=['prepared','spontaneous','innate','focus'];
+function positions(spell,entry){if(!entry)return [];const s=source(entry),p=source(spell);if(at(s,'/system/prepared/value')!=='prepared'||at(s,'/system/prepared/flexible')===true||at(p,'/system/ritual')!=null)return [];const result=[];for(let rank=0;rank<=10;rank++){const uses=at(s,'/system/slots/slot'+rank+'/prepared');if(!Array.isArray(uses))continue;if(uses.length>6000)throw Error('Preparation bound');for(let index=0;index<uses.length;index++)if(at(uses,'/'+index+'/id')===spell.id)result.push({rank,index,expended:typeof at(uses,'/'+index+'/expended')==='boolean'?at(uses,'/'+index+'/expended'):null});}return result;}
+function identity(value,doc){const name=[...at(source(doc),'/name')];return value.status==='resolved'&&value.target_uuid===doc.uuid&&value.type===doc.type&&value.name===name.slice(0,256).join('')&&value.name_truncated===(name.length>256)&&!Object.hasOwn(value,'token_uuid');}
+"""
+OPTION_CENSUS = """
+let expected_options=0;const modes=new Set(),observed=new Set(),keys=[];
+for(const spell of items.filter(i=>i.type==='spell'&&i.testUserPermission(game.user,'OBSERVER'))){const p=source(spell),entry=readableEntry(spell),uses=positions(spell,entry);expected_options+=uses.length||1;if(uses.length>1)observed.add('repeated_preparations');if(uses.some(u=>u.expended===true))observed.add('expended_preparation');if(uses.some(u=>u.expended===false))observed.add('unexpended_preparation');
+const mode=entry?at(source(entry),'/system/prepared/value'):null;
+for(const use of uses.length?uses:[null])keys.push('spellcasting:option:'+spell.uuid+':'+(entry?.uuid??'unassigned')+':'+(use?.rank??'none')+':'+(use?.index??'none'));
+if(entry&&uses.some(u=>at(source(entry),'/system/slots/slot'+u.rank+'/value')===0))observed.add('zero_generic_slot_counter');
+if(ordinary.includes(mode)&&at(source(entry),'/system/prepared/flexible')!==true&&at(p,'/system/ritual')==null)modes.add(mode);
+if(!entry)observed.add('unresolved_entry');if(at(p,'/system/location/signature')===true)observed.add('signature_recorded');if(at(p,'/system/traits/value')?.includes('cantrip'))observed.add(mode==='innate'?'innate_cantrip':'cantrip');if(mode==='innate'&&at(p,'/system/location/uses')===undefined)observed.add('innate_uses_absent');
+}
+const expected_keys_sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(keys.sort())))),b=>b.toString(16).padStart(2,'0')).join('');
+const report=JSON.stringify({expected_options,expected_keys_sha256,modes:[...modes].sort(),observed:[...observed].sort()});
+"""
+OPTION_CHECK = """
+const checks=[];
+for(const value of claims){const spell=items.find(i=>i.uuid===value.spell.target_uuid&&i.type==='spell');if(!spell||!spell.testUserPermission(game.user,'OBSERVER'))throw Error('Option spell unavailable');const p=source(spell),entry=readableEntry(spell),e=entry?source(entry):null,mode=e?scalar(e,'/system/prepared/value'):null;
+let ok=identity(value.spell,spell);
+if(entry)ok=ok&&identity(value.entry,entry);else{const target=assigned(spell),status=!target?'missing':!target.testUserPermission(game.user,'OBSERVER')?'denied':'unsupported';ok=ok&&value.entry.status===status&&value.entry.target_uuid===null;}
+const unsupported=at(p,'/system/ritual')!=null||(entry&&(at(e,'/system/prepared/flexible')===true||!ordinary.includes(mode)));
+const all=positions(spell,entry);let position=null;
+if(mode==='prepared'&&!unsupported&&all.length){position=all.find(r=>r.rank===value.slot_rank&&r.index===value.preparation_index);ok=ok&&!!position;}else ok=ok&&value.slot_rank===null&&value.preparation_index===null;
+const context=unsupported?'unsupported_mode':position?'prepared_use':mode==='spontaneous'?'spontaneous_repertoire':mode==='innate'?'innate_spell':mode==='focus'?'focus_spell':'listed_spell';
+const traits=at(p,'/system/traits/value'),cantrip=Array.isArray(traits)?traits.includes('cantrip'):null;
+const expected={mode,context,base_rank:scalar(p,'/system/level/value'),configured_rank:scalar(p,'/system/location/heightenedLevel'),slot_rank:position?position.rank:null,preparation_index:position?position.index:null,expended:position?position.expended:null,cast_rank:null,spell_auto_heighten_rank:scalar(p,'/system/location/autoHeightenLevel'),entry_auto_heighten_rank:e?scalar(e,'/system/autoHeightenLevel/value'):null,signature:scalar(p,'/system/location/signature'),cantrip,uses:mode==='innate'?{value:scalar(p,'/system/location/uses/value'),max:scalar(p,'/system/location/uses/max')}:null,resource_scope:context==='prepared_use'?'individual_preparation':context==='spontaneous_repertoire'?'shared_entry_slots':context==='innate_spell'?'individual_spell_uses':context==='focus_spell'?'shared_actor_focus':'not_evaluated',availability:'not_evaluated'};
+for(const [key,actual]of Object.entries(expected))ok=ok&&JSON.stringify(value[key])===JSON.stringify(actual);
+checks.push(ok);}
+const report=JSON.stringify(checks);
+"""
+OPTION_RAW = """
+const checks=[];for(const claim of claims){const doc=claim.document_uuid===actor.uuid?actor:items.find(i=>i.uuid===claim.document_uuid);const value=at(source(doc),claim.path);checks.push(claim.basis==='source'&&claim.present===(value!==undefined)&&(!claim.present||JSON.stringify(claim.value)===JSON.stringify(value)));}
+const report=JSON.stringify(checks);
+"""
+
+
+def option_code(actor_uuid, body, claims=None):
+    """PF2e-specific independent source checks, bounded code and boolean reports."""
+    code = OPTION_SETUP.replace('ACTOR_UUID', json.dumps(actor_uuid))
+    if claims is not None:
+        code += 'const claims=' + json.dumps(claims) + ';'
+    code += body
+    code += "\nreturn Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));"
+    assert len(code.encode()) <= 32768
+    return code
+
+
+async def verify_contextual_options(browser, actor_uuid, rows):
+    """PF2e-specific option semantics and all source witnesses, never availability.
+
+    Independent public document reads check each returned interpretation and
+    count expected source contexts. Only safe coverage tags and counts return.
+    """
+    options = [row for row in rows if row['provenance']['mapping'] == 'pf2e.actor.casting-options.v1']
+    census = await browser(option_code(actor_uuid, OPTION_CENSUS))
+    assert census['expected_options'] == len(options) and len(options) > 0
+    keys = sorted(row['key'] for row in options)
+    assert len(set(keys)) == len(keys)
+    assert hashlib.sha256(json.dumps(keys, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest() == census['expected_keys_sha256']
+    raw = {}
+    for row in options:
+        assert row['section'] == 'spellcasting' and row['kind'] == 'relationship'
+        assert row['mapped']['concept'] == 'casting_contextual_option'
+        assert row['mapped']['value']['availability'] == 'not_evaluated'
+        assert row['provenance']['limitations'] == ['availability_not_evaluated', 'configured_rank_not_final_cast_rank']
+        assert row['provenance']['contributors'] == [{key: witness[key] for key in ('document_uuid', 'path', 'basis')} for witness in row['raw']]
+        for witness in row['raw']:
+            key = (witness['document_uuid'], witness['path'])
+            assert key not in raw or raw[key] == witness
+            raw[key] = witness
+
+    async def check_batches(values, body, size):
+        batch = []
+        for value in values:
+            candidate = batch + [value]
+            try:
+                option_code(actor_uuid, body, candidate)
+            except AssertionError:
+                assert batch
+                checks = await browser(option_code(actor_uuid, body, batch))
+                assert len(checks) == len(batch) and all(check is True for check in checks)
+                batch = [value]
+            else:
+                batch = candidate
+            if len(batch) >= size:
+                checks = await browser(option_code(actor_uuid, body, batch))
+                assert len(checks) == len(batch) and all(check is True for check in checks)
+                batch = []
+        if batch:
+            checks = await browser(option_code(actor_uuid, body, batch))
+            assert len(checks) == len(batch) and all(check is True for check in checks)
+
+    await check_batches(list(raw.values()), OPTION_RAW, 80)
+    await check_batches([row['mapped']['value'] for row in options], OPTION_CHECK, 10)
+    return dict(options=len(options), unique_source_witnesses=len(raw), modes=census['modes'], observed=census['observed'])
+
 
 async def main(discovery_only=False):
     summary = {'passed': False}
@@ -187,7 +296,9 @@ async def main(discovery_only=False):
             stage = 'guarded_existing_npc_selection'
             before = javascript_payload(await progress.call(client.call_tool, 'execute_javascript', {'code': SNAPSHOT}))
             assert 1 <= len(before['samples']) <= 2
-            totals = {'pages': 0, 'records': 0, 'current_records': 0, 'source_pages': 0, 'byte_limit_restarts': 0, 'discarded_pages': 0}
+            totals = {'pages': 0, 'records': 0, 'current_records': 0, 'source_pages': 0, 'byte_limit_restarts': 0, 'discarded_pages': 0,
+                      'contextual_options': 0, 'option_source_witnesses': 0}
+            option_modes, option_observed = set(), set()
             for sample_ordinal, sample in enumerate(before['samples'], 1):
                 async def pages(sections=None):
                     async def request(budget, cursor, ordinal):
@@ -239,6 +350,16 @@ async def main(discovery_only=False):
                 expected = {(row['document_uuid'], row['path']): {key: row[key] for key in ('path', 'present', 'value') if key in row} for row in sample['fields']}
                 assert actual == expected
                 totals['current_records'] += len(current)
+                stage = 'contextual_options'
+
+                async def browser(code):
+                    return javascript_payload(await progress.call(client.call_tool, 'execute_javascript', {'code': code}))
+
+                options = await verify_contextual_options(browser, sample['uuid'], rows)
+                totals['contextual_options'] += options['options']
+                totals['option_source_witnesses'] += options['unique_source_witnesses']
+                option_modes.update(options['modes'])
+                option_observed.update(options['observed'])
                 stage = 'source_and_default_exclusion'
                 for sections in (['source'], None):
                     source, count = await pages(sections)
@@ -249,7 +370,14 @@ async def main(discovery_only=False):
             after = javascript_payload(await progress.call(client.call_tool, 'execute_javascript', {'code': SNAPSHOT}))
             assert before == after, 'Selected source or transformed snapshot changed'
             missing = sorted(set(['prepared', 'spontaneous', 'innate', 'focus', 'current_focus', 'spell_cost']) - set(before['coverage']))
-            summary.update(passed=True, samples=len(before['samples']), coverage=before['coverage'], missing_coverage=missing, unverified_actor_types=['character', 'familiar'], fingerprint_unchanged=True, **totals)
+            mandatory_modes = {'prepared', 'spontaneous', 'innate', 'focus'}
+            assert mandatory_modes <= option_modes
+            optional_scenarios = {'repeated_preparations', 'zero_generic_slot_counter', 'innate_cantrip', 'unresolved_entry',
+                                  'signature_recorded', 'expended_preparation', 'unexpended_preparation', 'cantrip', 'innate_uses_absent'}
+            summary.update(passed=True, samples=len(before['samples']), coverage=before['coverage'], missing_coverage=missing,
+                           contextual_option_modes=sorted(option_modes), observed_option_scenarios=sorted(option_observed),
+                           unobserved_option_scenarios=sorted(optional_scenarios - option_observed),
+                           availability_evaluated=False, unverified_actor_types=['character', 'familiar'], fingerprint_unchanged=True, **totals)
     except Exception as error:
         summary.update(failure_stage=stage, exception_type=type(error).__name__, recovery='Read-only verification did not complete; a probe deadline or transport failure does not establish a Foundry API or world failure. No world data was written.')
         if failure := timeout_failure(error):

@@ -151,6 +151,16 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 casting acceptance: independent actual MCP checks matched all 58
+contextual options and 663 unique source witnesses on two existing NPCs across
+prepared/spontaneous/innate/focus modes. Exact key sets, mapped meanings and
+unchanged source/current fingerprints passed. The run retained 171 casting
+pages/1,052 records plus 46 source/default pages, with 341 requested/340 completed
+calls and one bounded byte-limit restart. Unobserved flags retain explicit
+deterministic coverage; complete availability remains unevaluated. The
+[requirement audit](casting-acceptance.md) closes CORE-casting without certifying
+unsupported advanced behavior. Progress is **32/39 (82.1%)**.
+
 October 25 declared Strike view: official ActorData.system plus pinned
 CharacterSystemData/NPCSystemData actions and StrikeData contracts establish the
 selected own-data interface. World/synthetic NPCs and a marked character passed

@@ -17,11 +17,45 @@ test('prepared repeats preserve slot positions and expenditure independently of 
 test('spontaneous signature preserves repertoire without inventing slot or cast rank alternatives',()=>{
  const f=fixture('spontaneous'),result=f.run(),value=result.records[0].mapped.value;assert.equal(result.records.length,1);assert.equal(value.context,'spontaneous_repertoire');assert.equal(value.resource_scope,'shared_entry_slots');assert.equal(value.signature,true);assert.equal(value.slot_rank,null);assert.equal(value.cast_rank,null);assert.equal(value.preparation_index,null);assert.ok(result.reasons.includes('signature_alternatives_not_evaluated'));
 });
+test('higher spontaneous slot capacity does not become a heightened spell or signature entitlement',()=>{
+ const f=fixture('spontaneous');
+ f.spell.source.system.traits.value=[];
+ f.spell.source.system.location.heightenedLevel=3;
+ f.entry.source.system.slots.slot6={value:2,max:2,prepared:[]};
+ for(const signature of [false,true,undefined]){
+  if(signature===undefined)delete f.spell.source.system.location.signature;
+  else f.spell.source.system.location.signature=signature;
+  const result=f.run();assert.equal(result.records.length,1);
+  const value=result.records[0].mapped.value;
+  assert.equal(value.base_rank,1);assert.equal(value.configured_rank,3);
+  assert.equal(value.signature,signature??null);
+  assert.equal(value.cast_rank,null);assert.equal(value.slot_rank,null);
+  assert.equal(value.availability,'not_evaluated');
+  assert.equal(result.reasons.includes('signature_alternatives_not_evaluated'),signature===true);
+ }
+});
 test('innate cantrip uses remain individual zero/absent and never imply unlimited use',()=>{
  const f=fixture('innate');let value=f.run().records[0].mapped.value;assert.deepEqual(value.uses,{value:0,max:2});assert.equal(value.cantrip,true);assert.equal(value.resource_scope,'individual_spell_uses');delete f.spell.source.system.location.uses;value=f.run().records[0].mapped.value;assert.deepEqual(value.uses,{value:null,max:null});assert.equal(value.availability,'not_evaluated');
 });
 test('focus shares Actor source without fabricating cost or character source max; familiar excluded',()=>{
  for(const type of ['character','npc','familiar']){const f=fixture('focus',type);f.spell.source.system.traits.value=[];const row=f.run().records[0];assert.equal(row.mapped.value.resource_scope,'shared_actor_focus');assert.equal(row.mapped.value.cantrip,false);const actorRaw=row.raw.filter(raw=>raw.document_uuid===f.target.uuid);assert.equal(actorRaw.length,type==='character'?1:type==='npc'?2:0);assert.ok(!JSON.stringify(row).includes('focusPoints'));assert.equal(row.mapped.value.cast_rank,null);}
+});
+test('distinct focus entries reference one Actor pool without assigning a pool per spell',()=>{
+ const f=fixture('focus','npc');
+ const secondEntry=structuredClone(f.entry),secondSpell=structuredClone(f.spell);
+ secondEntry.identity.id='other-entry';secondEntry.identity.uuid=f.target.uuid+'.Item.other-entry';
+ secondSpell.identity.id='other-spell';secondSpell.identity.uuid=f.target.uuid+'.Item.other-spell';
+ secondSpell.source.system.location.value='other-entry';
+ f.items.push(secondEntry,secondSpell);
+ const before=JSON.stringify(f.items),rows=f.run().records;
+ assert.equal(rows.length,2);
+ assert.notEqual(rows[0].mapped.value.entry.target_uuid,rows[1].mapped.value.entry.target_uuid);
+ const pools=rows.map(row=>row.raw.filter(raw=>raw.document_uuid===f.target.uuid));
+ assert.deepEqual(pools[0],pools[1]);
+ assert.deepEqual(pools[0].map(raw=>[raw.path,raw.value]),[['/system/resources/focus/value',1],['/system/resources/focus/max',3]]);
+ assert.ok(rows.every(row=>row.mapped.value.resource_scope==='shared_actor_focus'&&row.mapped.value.availability==='not_evaluated'&&row.mapped.value.uses===null));
+ assert.ok(rows.every(row=>!row.raw.some(raw=>raw.path.includes('/location/uses/')||raw.path.includes('/cast/focusPoints'))));
+ assert.equal(JSON.stringify(f.items),before);
 });
 test('unassigned canonical statuses stay distinct and no unresolved spell identities are fabricated',()=>{
  for(const status of ['missing','denied','unsupported']){const f=fixture();f.items=[f.spell];f.relationships=[{key:`spellcasting:assignment:${f.spell.identity.uuid}`,mapped:{value:{status,target_uuid:null}}}];const value=f.run().records[0].mapped.value;assert.deepEqual(value.entry,{status,target_uuid:null});assert.equal(value.context,'listed_spell');assert.equal(value.mode,null);}
