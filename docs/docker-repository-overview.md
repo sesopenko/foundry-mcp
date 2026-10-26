@@ -92,6 +92,12 @@ language notes require explicit description reads. Explicit statistics adds sele
 transformed attributes, AC/HP, saves, Perception/vision and movement for characters
 and NPCs, retaining a separate basis from source. The section remains partial;
 full current views, skill totals, generated Strikes and familiar derivation remain gated.
+Character/NPC statistics also retains senses, language qualifications and
+immunities/weaknesses/resistances with their exceptions. Positive Infinity
+sense range uses an explicit JSON tag; predicates and resistance doubleVs
+remain data, without target-detection or damage calculations. Supplemental
+live verification is pending. See the
+[creature current contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/creature-current-contract.md).
 Explicit skills now adds selected transformed character/NPC modifiers, DCs,
 labels and proficiency data alongside the independent owned-Lore source list.
 Lore joins use actual owner-local Item IDs; unreadable linked Lore withholds

@@ -511,3 +511,21 @@ it has not been run. Representative live values and original integrated gates
 remain open; see the [contract](familiar-current-contract.md). A separate tiny
 skills-boundary regression also aligns empty-key rejection with the documented
 1–256-codepoint bound. Completed progress remains30/39 (76.9%).
+
+## Current senses, languages and conditional defenses — October 25, 2026
+
+Character/NPC statistics now includes selected current senses, language codes
+and qualifications, and IWR declarations with exceptions/doubleVs. Positive
+Infinity sense range retains exact tagged JSON encoding, never silent null.
+Custom predicates are bounded typed data without evaluation; omitted custom
+definitions stay explicit gaps. The same public serializer output supplies
+core and supplemental fields, with a combined snapshot bound and unchanged
+source/default behavior.
+
+World/pack/token, paginated Python DTO, getter-safety, conditional-data and
+current-only stale-read tests pass. Authenticated discovery passed without
+world access. The existing read-only current probe now compares supplemental
+values independently; it has not run against the GM world. See the
+[contract](creature-current-contract.md). Target detection, conditional damage
+application and representative live serialization remain unverified. Completed
+progress remains30/39 (76.9%).

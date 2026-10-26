@@ -3223,6 +3223,113 @@ def _actor_current_concept(path):
     return 'current_'+leaf+'_'+('movement' if len(rest)==1 else {'value':'speed','base':'base_speed','type':'movement_type','source':'movement_source_label'}[rest[1]])
 
 
+def _creature_predicate(value):
+    """PF2e-specific8.6.1 bounded RawPredicate data, never evaluated.
+
+    system/predication.ts declares the closed operator grammar. Root depth0,
+    depth8 and 512 total array/object/primitive nodes; text is at most6000 UTF-16
+    units. No source execution, arbitrary keys or boolean operands are admitted.
+    https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/system/predication.ts
+    """
+    nodes=0
+    def enter(depth):
+        nonlocal nodes
+        nodes+=1
+        if depth>8 or nodes>512:raise ValueError('Predicate bound')
+    def text(v):return type(v) is str and len(v.encode('utf-16-le',errors='surrogatepass'))//2<=6000
+    def array(v,depth,visit):
+        enter(depth)
+        return type(v) is list and len(v)<=512 and all(visit(child,depth+1) for child in v)
+    def operand(v,depth):
+        enter(depth)
+        return text(v) or type(v) in (int,float) and math.isfinite(v)
+    def statement(v,depth):
+        enter(depth)
+        if type(v) is str:return text(v) and bool(v)
+        if type(v) is not dict:return False
+        if set(v)=={'if','then'}:return statement(v['if'],depth+1) and statement(v['then'],depth+1)
+        if len(v)!=1:return False
+        key=next(iter(v));child=v[key]
+        if key in ('eq','gt','gte','lt','lte'):
+            return type(child) is list and len(child)==2 and array(child,depth+1,operand) and type(child[0]) is str
+        if key in ('and','or','nand','nor','xor','iff'):return array(child,depth+1,statement)
+        return key=='not' and statement(child,depth+1)
+    try:return array(value,0,statement)
+    except (ValueError,RecursionError):return False
+
+
+def _creature_current_spec(path):
+    """PF2e-specific8.6.1 transformed senses/languages/IWR allowlist.
+
+    CreaturePerceptionData/CreatureLanguagesData and ActorAttributes IWR types:
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor
+    Only own serialized data is represented; no getters or IWR methods adopted.
+    """
+    if type(path) is not str:return None
+    if path=='/system/perception/senses':return 'current_senses','collection'
+    match=re.fullmatch(r'/system/perception/senses/(0|[1-9][0-9]*)/(type|acuity|range|source|label)',path)
+    if match and int(match[1])<200:return 'current_sense_'+match[2],{'type':'string','acuity':'acuity','range':'range','source':'nullable_string','label':'nullable_string'}[match[2]]
+    if path=='/system/details/languages/value':return 'current_languages','collection'
+    if path=='/system/details/languages/details':return 'current_language_details','string'
+    match=re.fullmatch(r'/system/details/languages/value/(0|[1-9][0-9]*)',path)
+    if match and int(match[1])<200:return 'current_language_code','actual_string'
+    match=re.fullmatch(r'/system/attributes/(immunities|weaknesses|resistances)(?:/(0|[1-9][0-9]*)(?:/(.*))?)?',path)
+    if not match:return None
+    group,index,leaf=match.groups();singular={'immunities':'immunity','weaknesses':'weakness','resistances':'resistance'}[group]
+    if index is None:return 'current_'+group,'collection'
+    if int(index)>=200:return None
+    if leaf in ('type','source','label','definition') or leaf=='value' and group!='immunities':
+        return 'current_'+singular+'_'+leaf,{'type':'string','source':'nullable_string','label':'string','definition':'nullable_predicate','value':'number'}[leaf]
+    sub=re.fullmatch(r'(exceptions|doubleVs)(?:/(0|[1-9][0-9]*)(?:/(label|definition))?)?',leaf or '')
+    if not sub or sub[1]=='doubleVs' and group!='resistances':return None
+    which,position,child=sub.groups();prefix='current_'+singular+'_'+('exception' if which=='exceptions' else 'double_vs')
+    if position is None:return ('current_'+singular+'_exceptions' if which=='exceptions' else prefix),'collection'
+    if int(position)>=200:return None
+    return prefix+'_'+(child or 'type'),{'label':'string','definition':'predicate',None:'actual_string'}[child]
+
+
+def _creature_current_record(row,identity):
+    """PF2e-specific8.6.1 exact serialized creature supplements, not targeting."""
+    if identity['type'] not in ('character','npc') or set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='field' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='transformed' or type(raw['present']) is not bool or raw['present']!=('value' in raw):return False
+    path=raw['path'];spec=_creature_current_spec(path)
+    if spec is None or row['key']!='statistics:'+path:return False
+    concept,kind=spec;value=raw.get('value')
+    if not raw['present'] and kind=='actual_string':return False
+    if raw['present']:
+        text=type(value) is str and len(value.encode('utf-16-le',errors='surrogatepass'))//2<=6000
+        valid={'string':text,'actual_string':text,'nullable_string':value is None or text,
+               'acuity':text and value in ('precise','imprecise','vague'),
+               'number':type(value) in (int,float) and math.isfinite(value),
+               'range':type(value) in (int,float) and math.isfinite(value) or type(value) is dict and value=={'$number':'Infinity'},
+               'collection':type(value) is list and value==[],
+               'predicate':_creature_predicate(value),'nullable_predicate':value is None or _creature_predicate(value)}
+        if not valid[kind]:return False
+    expected=dict(concept=concept,value=None if kind=='collection' else value,unit=None)
+    if json.dumps(row['mapped'],sort_keys=True,allow_nan=False)!=json.dumps(expected,sort_keys=True,allow_nan=False):return False
+    return row['provenance']==dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.actor.creature-current.v1',limitations=['serialized_creature_details_not_target_context'])
+
+
+def _creature_current_page(records,section):
+    """PF2e-specific8.6.1 same-page collection/discriminator consistency."""
+    fields={r['raw'][0]['path']:r['raw'][0] for r in records if r['section']=='statistics' and r['provenance']['mapping']=='pf2e.actor.creature-current.v1'}
+    reasons=set(section['reasons'])
+    for path,raw in fields.items():
+        concept,kind=_creature_current_spec(path)
+        if kind in ('collection','actual_string'):
+            if any(child.startswith(path+'/') for child in fields):return False
+        match=re.match(r'(/system/attributes/(?:immunities|weaknesses|resistances)/(?:0|[1-9][0-9]*))/',path)
+        if match:
+            if 'conditional_iwr_not_evaluated' not in reasons:return False
+            if path==match[1]+'/definition':
+                typ=fields.get(match[1]+'/type')
+                if typ is not None and (not typ['present'] or typ['value']!='custom'):return False
+                if not raw['present'] and 'custom_iwr_definition_unavailable' not in reasons:return False
+    return True
+
+
 def _familiar_current_spec(path):
     """PF2e-specific8.6.1 familiar transformed primitive allowlist.
 
@@ -3359,7 +3466,8 @@ def _current_section(records, section, identity):
             if any(field['path'].startswith(path+'/') and field['present'] for field in raw):return False
     reasons=set(section['reasons'])
     return (section['status']=='partial' and 'other_statistics_pending' in reasons
-            and reasons<={'other_statistics_pending','current_fields_unavailable','pagination'}
+            and reasons<={'other_statistics_pending','current_fields_unavailable','conditional_iwr_not_evaluated','custom_iwr_definition_unavailable','pagination'}
+            and _creature_current_page(records,section)
             and (not any(not row['raw'][0]['present'] for row in rows) or 'current_fields_unavailable' in reasons))
 
 
@@ -3380,6 +3488,7 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     # PF2e-specific transformed statistics are admitted only at this narrow gate.
     if identity['document_name']=='Actor' and row['section']=='statistics':
         if identity['type']=='familiar':return _familiar_current_record(row,identity)
+        if type(row['provenance']) is dict and row['provenance'].get('mapping')=='pf2e.actor.creature-current.v1':return _creature_current_record(row,identity)
         return _actor_current_record(row,identity)
     if identity['document_name']=='Item' and identity['type']=='feat' and row['section']=='relationships':
         return _feat_relationship(row,identity)
@@ -3733,8 +3842,53 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     Statistics is always partial with other_statistics_pending, plus
     current_fields_unavailable when selected leaves are missing and pagination
     while more records remain. Character/NPC skills use the separate skills
-    section. No senses/languages/IWR, Strikes, condition/effect state or
-    target-context calculations are supplied by statistics.
+    section. Character/NPC statistics additionally selects transformed senses,
+    languages and immunity/weakness/resistance (IWR) details from that same public
+    serializer snapshot. These field records retain statistics:<path> keys but
+    mapping pf2e.actor.creature-current.v1 and exact limitation
+    serialized_creature_details_not_target_context; raw/contributor basis is
+    transformed and document_uuid is the selected Actor. Sense paths are
+    /system/perception/senses/<index>/{type,acuity,range,source,label}; concepts are
+    current_sense_<leaf>, acuity is precise/imprecise/vague, source/label may be
+    null, and range is a finite number or the exact JSON object
+    {"$number":"Infinity"} for positive Infinity. The same explicit object is
+    retained in raw.value and mapped.value. Null never substitutes for Infinity;
+    negative Infinity/NaN reject, and this encoding is allowed only for sense
+    range. It does not establish unlimited detection, line of sight or targets.
+    Language paths /system/details/languages/value/<index> and sibling details
+    map current_language_code and current_language_details, preserving codes and
+    conditional notes without interpreting communication or comprehension.
+    IWR paths /system/attributes/{immunities,weaknesses,resistances}/<index> expose
+    type/source/label and weakness/resistance value, with concepts
+    current_{immunity,weakness,resistance}_<leaf>. Source is nullable; values are
+    finite numbers, independent of damage or active applicability. Exceptions
+    and resistance-only doubleVs preserve indexed string codes or custom
+    /label and /definition fields. Their concepts use exception_type/label/
+    definition or resistance_double_vs_type/label/definition. Main definitions
+    are selected only for type custom, as own serialized Predicate data or null;
+    an omitted definition adds custom_iwr_definition_unavailable and
+    current_fields_unavailable. No getter, source fallback or reconstructed
+    predicate fills an omitted definition. A known null remains null.
+    Predicate definitions preserve closed RawPredicate JSON arrays: nonempty
+    string atoms; eq/gt/gte/lt/lte with [string,string-or-finite-number];
+    and/or/xor/nand/nor/iff arrays; not with one statement; or exact if/then
+    statements. No operator is evaluated. Root array depth is zero; maximum
+    depth8 and 512 array/object/primitive nodes, including operands and containers.
+    Every selected text value is at most6000 UTF-16 units. Extra predicate keys,
+    malformed operands and unsupported operators return ReadFailed.
+    Empty/missing arrays have a root marker mapped to null: current_senses,
+    current_languages, current_immunities/current_weaknesses/current_resistances,
+    and current_<singular>_exceptions or current_resistance_double_vs. Raw
+    present true/value [] differs from absent/no value. An empty predicate []
+    remains mapped [], since it is definition data rather than a collection
+    marker. Collections admit at most200 entries each, including each entry's
+    exceptions/doubleVs, and at most24000 supplement fields. Bounds exceedance
+    returns ReadFailed and is separate from page record/byte limits. Missing
+    selected fields add current_fields_unavailable. Any IWR entries add
+    conditional_iwr_not_evaluated; target predicates, exception applicability,
+    doubled resistance and damage are never calculated. Familiar statistics
+    retains its separate mapping/allowlist below. Strikes, condition/effect
+    application and target-context calculations remain outside statistics.
     Explicit description returns NPC
     stored blurb, publicNotes and privateNotes only, including GM-private biography;
     default source never includes them. Familiar source preserves nullable stored

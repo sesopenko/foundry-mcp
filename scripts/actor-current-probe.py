@@ -87,7 +87,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
                 arguments['cursor'] = cursor
             page = payload(await client.call_tool('read_actor', arguments))
             pages += 1
-            assert pages <= 20
+            assert pages <= 200
             assert page['identity']['uuid'] == sample['uuid']
             instance = page['identity']['instance']
             if sample['context'] == 'synthetic':
@@ -108,15 +108,58 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
                 break
             assert cursor not in cursors
             cursors.add(cursor)
-        actual = {}
+        actual, supplemental, seen_paths = {}, [], set()
         for row in rows:
             assert row['section'] == 'statistics' and len(row['raw']) == 1
             raw = row['raw'][0]
             assert raw['basis'] == 'transformed' and raw['document_uuid'] == sample['uuid']
-            assert raw['path'] not in actual
-            actual[raw['path']] = {key: raw[key] for key in ('path', 'present', 'value') if key in raw}
+            assert raw['path'] not in seen_paths
+            seen_paths.add(raw['path'])
+            assert row['key'] == 'statistics:' + raw['path'] and row['kind'] == 'field'
+            assert row['provenance']['contributors'] == [{'document_uuid': sample['uuid'], 'path': raw['path'], 'basis': 'transformed'}]
+            mapping = row['provenance']['mapping']
+            assert mapping in ('pf2e.actor.current.v1', 'pf2e.actor.creature-current.v1')
+            if mapping == 'pf2e.actor.current.v1':
+                actual[raw['path']] = {key: raw[key] for key in ('path', 'present', 'value') if key in raw}
+            else:
+                assert row['provenance']['limitations'] == ['serialized_creature_details_not_target_context']
+                supplemental.append(row)
+                expected_mapped = raw.get('value')
+                if expected_mapped == [] and not raw['path'].endswith('/definition'):
+                    expected_mapped = None
+                assert row['mapped']['value'] == expected_mapped
         assert actual == expected
-        summaries.append({'pages': pages, 'records': len(rows)})
+        assert 0 < len(supplemental) <= 24000
+        # Read only the returned supplementary paths, independently of the
+        # production selector. Batch small requests/results to preserve the
+        # development tool's bounded chunk envelope without dumping Actors.
+        for offset in range(0, len(supplemental), 20):
+            batch = supplemental[offset:offset + 20]
+            paths = [row['raw'][0]['path'] for row in batch]
+            independent = setup + 'const requested=' + json.dumps(paths) + ';const context=' + json.dumps(sample['context']) + ';' + r"""
+if(requested.length>24000)throw Error('Verification path bound exceeded');
+const candidate=selected.find(row=>row.context===context&&row.actor.type==='npc');
+if(!candidate)throw Error('Existing selected context unavailable');
+const serialized=candidate.actor.toObject(false);
+const own=(object,key)=>{if(object===null||typeof object!=='object')return {present:false};const d=Object.getOwnPropertyDescriptor(object,key);if(!d||!Object.hasOwn(d,'value')||d.value===undefined)return {present:false};return {present:true,value:d.value};};
+function clean(value,depth=0,budget={nodes:0}){
+ if(depth>10||++budget.nodes>1024)throw Error('Verification value bound exceeded');
+ if(value===null||typeof value==='string'||typeof value==='boolean'||typeof value==='number'&&Number.isFinite(value))return value;
+ if(Array.isArray(value)){const result=[];for(let i=0;i<value.length;i++){const field=own(value,String(i));if(!field.present)throw Error('Unavailable array data');result.push(clean(field.value,depth+1,budget));}return result;}
+ if(typeof value!=='object')throw Error('Unsupported selected data');
+ const result={};for(const key of Object.getOwnPropertyNames(value)){const field=own(value,key);if(!field.present)throw Error('Unavailable object data');Object.defineProperty(result,key,{value:clean(field.value,depth+1,budget),enumerable:true});}return result;
+}
+const fields=[];
+for(const path of requested){let value=serialized,present=true;for(const encoded of path.slice(1).split('/')){const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~'),field=own(value,key);if(!field.present){present=false;break;}value=field.value;}
+ if(present&&value===Infinity){if(!/^\/system\/perception\/senses\/\d+\/range$/.test(path))throw Error('Unexpected nonfinite selected field');value={'$number':'Infinity'};}
+ fields.push({path,present,...(present?{value:clean(value)}:{})});
+}
+const report=JSON.stringify({fields});
+return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
+"""
+            selected_fields = javascript_payload(await client.call_tool('execute_javascript', {'code': independent}))['fields']
+            assert selected_fields == [{key: row['raw'][0][key] for key in ('path', 'present', 'value') if key in row['raw'][0]} for row in batch]
+        summaries.append({'pages': pages, 'records': len(rows), 'core_records_checked': len(actual), 'supplement_records_checked': len(supplemental)})
     after = javascript_payload(await client.call_tool('execute_javascript', {'code': snapshot}))
     assert after == before, 'Selected source or transformed snapshot changed during verification.'
     print(json.dumps({'passed': True, 'samples': len(summaries), 'results': summaries}))

@@ -47,6 +47,7 @@ import {familiarCurrentFields} from './actorFamiliarCurrent.js';
 import { familiarMasterRelationship, familiarAbilityRecords } from './actorFamiliarRelationships.js';
 import {actorStateSnapshot} from './actorState.js';
 import {actorSkillsSnapshot} from './actorSkills.js';
+import {creatureSupplementFields} from './actorCreatureCurrent.js';
 import { effectFields } from './actorEffect.js';
 import { conditionFields } from './actorCondition.js';
 import { conditionReferenceFields,conditionRelationships } from './actorConditionRelationships.js';
@@ -282,6 +283,12 @@ function selection(target, sections) {
       const type=Object.getOwnPropertyDescriptor(transformed,'type');
       if(!type||!Object.hasOwn(type,'value')||type.value!==target.document.type)throw new TypeError('Transformed Actor type changed or is not detached data.');
       currentStatistics=currentStatisticFields(transformed);
+      // PF2e-specific CreatureSystemData8.6.1 supplements reuse this same
+      // serializer result. Predicates remain data; no target checks are run.
+      const supplement=creatureSupplementFields(transformed);
+      currentStatistics.supplementFields=supplement.fields;
+      currentStatistics.reasons=[...new Set([...currentStatistics.reasons,...supplement.reasons])].sort();
+      if(currentStatistics.fields.length+supplement.fields.length>24000)throw new TypeError('Selected current statistics exceed 24000 fields.');
     }catch{fail('ReadFailed','Selected transformed statistics do not match the verified schema or cannot be serialized.','Inspect this Actor in the supported Foundry/PF2e runtime; missing current fields are not replaced with source values or runtime getters.');}
   }
   // PF2e-specific FamiliarSystemSource8.6.1: source master ID/attribute and HP,
@@ -600,8 +607,8 @@ export async function getActorTypes(params = {}) {
     // distinct from source and from complete target-context/effective views.
     const statistics=result.actor_sections.find(entry=>entry.name==='statistics');
     statistics.source_supported=true;statistics.mapped_supported=true;statistics.effective_supported=true;
-    statistics.limitations=['Character/NPC selected transformed attributes, AC, HP, saves, Perception/vision and movement; select skills separately for current skill fields. Familiar statistics first verifies its recorded world-character master, then selects declared transformed defenses, movement and ordinary skills without recalculation. Source support here is the familiar master ID/ability context; numeric current fields retain transformed basis. Always partial: senses/languages/IWR, Strikes, Item-linked familiar skills and target-dependent modifiers remain pending. Unavailable master prevents familiar transformed serialization. Familiar-current live verification is pending; prior live evidence covers character/NPC selected statistics.'];
-    statistics.verification={deterministic:{status:'passed',evidence:['tests/js/actor-current.test.js','tests/js/actor-current-readers.test.js','tests/test_actor_current.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/current-statistics-verification.md','docs/actor-item-story-map/familiar-current-contract.md','scripts/actor-current-probe.py','scripts/actor-build-live-check.py']}};
+    statistics.limitations=['Character/NPC selected transformed attributes, defenses, Perception/vision, movement, senses, language codes/qualifications and IWR declarations; select skills separately for skill fields. Positive Infinity sense range uses the explicit JSON tag {"$number":"Infinity"}; it does not imply target detection. IWR exceptions/doubleVs/custom definitions retain bounded predicate data without evaluation or damage calculations. Familiar statistics first verifies its recorded world-character master before selected defenses, movement and ordinary skills; the added creature supplements do not apply to familiars. Source support is familiar master ID/ability context; current fields retain transformed basis. Always partial: generated Strikes, Item-linked familiar skills and target-dependent applicability remain pending. Supplement and familiar-current live verification are pending; prior live evidence covers earlier character/NPC selected statistics.'];
+    statistics.verification={deterministic:{status:'passed',evidence:['tests/js/actor-current.test.js','tests/js/actor-current-readers.test.js','tests/test_actor_current.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py','tests/js/actor-creature-current.test.js','tests/js/actor-creature-current-readers.test.js','tests/test_actor_creature_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/current-statistics-verification.md','docs/actor-item-story-map/familiar-current-contract.md','docs/actor-item-story-map/creature-current-contract.md','scripts/actor-current-probe.py','scripts/actor-build-live-check.py']}};
     // PF2e-specific character8.6.1 build source joins; other Actor types unsupported.
     const build=result.actor_sections.find(entry=>entry.name==='build');
     build.source_supported=true;
@@ -803,11 +810,11 @@ async function read(target,params,sections,tool) {
   if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('abilities'))records.push(...selected.familiarAbilities.records);
   // PF2e-specific8.6.1 current document-data leaves retain transformed basis;
   // source fields at the same path remain separate source-section records.
-  for(const field of selected.currentStatistics.fields){
+  for(const [fields,mapping]of [[selected.currentStatistics.fields,target.document.type==='familiar'?'pf2e.familiar.current.v1':'pf2e.actor.current.v1'],[selected.currentStatistics.supplementFields??[],'pf2e.actor.creature-current.v1']])for(const field of fields){
     const entry=record(target.identity.uuid,field.path,field.present,field.value,'statistics',field.concept);
     if(Object.hasOwn(field,'mapped_value'))entry.mapped.value=field.mapped_value;
     entry.raw[0].basis='transformed';entry.provenance.contributors[0].basis='transformed';
-    entry.provenance.mapping=target.document.type==='familiar'?'pf2e.familiar.current.v1':'pf2e.actor.current.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+    entry.provenance.mapping=mapping;entry.provenance.limitations=[...field.limitations];records.push(entry);
   }
   if(target.document.documentName==='Actor'&&sections.includes('inventory'))records.push(...selected.inventoryView.records);
   if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build'))records.push(...selected.buildView.records);
@@ -970,7 +977,7 @@ async function read(target,params,sections,tool) {
     const section=base.sections.find(row=>row.name==='statistics');
     if(['character','npc'].includes(target.document.type)){
       section.status='partial';section.reasons=[...selected.currentStatistics.reasons];
-      base.limitations.push('Statistics selects supported transformed document-data values for attributes, AC, HP, saves, Perception/vision and movement. Raw/provenance basis is transformed, distinct from source at the same paths. Other statistics, senses/languages/IWR, skill totals, generated Strikes and target-dependent modifiers remain pending; this is not a complete current character or creature sheet. Missing serialized fields remain unavailable, without source fallback or private getters.');
+      base.limitations.push('Statistics selects transformed attributes, defenses, Perception/vision, movement, senses, language qualifications and IWR declarations. Raw/provenance basis is transformed, distinct from source. Positive Infinity sense ranges are tagged JSON values, not null or target-detection claims. Conditional IWR predicates and doubleVs remain data, not evaluated damage application. Select skills separately for current skill fields. Generated Strikes and full target-context behavior remain pending. Missing serialized fields remain unavailable without source fallback or private getters; supplement live verification remains pending.');
     }else{
       section.status='partial';section.reasons=[...selected.currentStatistics.reasons];
       base.limitations.push('Familiar statistics requires a permission-checked recorded world-character master before transformed serialization. The source master ID/ability remain separate witnesses; selected familiar defenses, movement and ordinary skills retain transformed provenance without recalculation. Missing or denied master returns no transformed statistics. Independent attributes, normal Strikes and Item-linked skills are not inferred. Live familiar-current verification remains pending.');

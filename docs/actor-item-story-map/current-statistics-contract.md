@@ -14,6 +14,11 @@ future views remain candidates. This contract identifies a bounded extraction ro
 [ACT-familiar](stories/ACT-familiar.md). It does not close those checkpoints or
 replace their original acceptance criteria with a narrower delivered subset.
 
+Selected [senses, languages and IWR](creature-current-contract.md) now extend the
+character/NPC statistics snapshot with their own mapping, exact nonfinite-range
+encoding and bounded unevaluated predicate data. Their live gate remains open;
+the earlier live core-statistics evidence does not certify this extension.
+
 ## Implemented section contract
 
 Explicit `read_actor(..., sections=["statistics"])` selects character/NPC

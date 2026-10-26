@@ -142,7 +142,9 @@ Each `records` entry is `{key,section,kind,raw,mapped,provenance}`. `key` is a
 stable response-local string within the revision, never a mutation selector.
 `kind` is `field`, `relationship`, or `text`. `raw` is a list of
 `{document_uuid,path,present,value,basis}`; `basis` is `source` or
-`supported_effective`. Paths are JSON Pointers into documented serialized data;
+`transformed` for the implemented current-document allowlists. The earlier
+planned `supported_effective` label is not emitted in place of `transformed`.
+Paths are JSON Pointers into documented serialized data;
 `present=false` omits `value`, distinguishing missing from JSON null and zero.
 `mapped` contains `{concept,value,unit}` with null unit where inapplicable.
 `provenance` contains `contributors` (document UUID/source path/basis triples),
@@ -150,6 +152,14 @@ stable response-local string within the revision, never a mutation selector.
 Nonpersisted concepts have local keys and contributors, never fabricated UUIDs.
 Each type story must publish its allowlisted fields and mappings before enabling
 that type; this contract intentionally does not invent those 27 field registries.
+
+For current character/NPC sense ranges only, positive Infinity is represented
+exactly as `{"$number":"Infinity"}` in both raw and mapped values. This is a
+JSON-safe numeric encoding, not a document object, JSON null, source fallback
+or proof of target detection. Other nonfinite numbers and current null ranges
+are rejected. Bounded IWR predicates remain typed, unevaluated data; see the
+[creature current-field contract](actor-item-story-map/creature-current-contract.md)
+for the exact grammar, limits and conditional-applicability exclusions.
 
 An unresolved relationship is a record with `kind="relationship"`, raw source
 preserved, mapped `{concept,value:{target_uuid,status},unit:null}`; status is
