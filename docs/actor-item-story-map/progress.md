@@ -462,3 +462,19 @@ discriminators without requiring off-page witnesses. Actual JavaScript DTO
 regressions retain valid pagination and token context. No new API dependency,
 world write or effective-state claim was introduced. CORE-state integration
 remains next; completed progress stays30/39 (76.9%).
+
+## Integrated Actor state source view — October 25, 2026
+
+Explicit `read_actor` state now joins actual condition/effect identities,
+typed stored source and immediate local/external references. Overlapping Items
+remain separate, application stays unknown and unsupported affliction reading
+is explicit even in an empty result. Snapshot limits preflight owned Items,
+selected rows and nonempty external claims before resolution. Default/source
+reads do not inspect state Items; continuations track owned and external changes.
+
+Focused JavaScript and strict Python tests consume actual paginated reader
+responses, preserving token context and raw provenance while rejecting forged
+owners, activity claims and contradictory page witnesses. See the
+[contract](state-contract.md). CORE-state is In progress; affliction stages,
+effective suppression/expiry/application and live state-view verification retain
+their original gates. Completed progress remains30/39 (76.9%).

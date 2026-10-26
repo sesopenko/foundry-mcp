@@ -2535,6 +2535,90 @@ def _contributor(value: Any, identity: dict[str, Any] | None = None) -> bool:
 CASTING_LIMIT = ['source_configuration_only', 'availability_not_evaluated']
 
 
+def _state_child_identity(uuid, typ, identity):
+    """PF2e-specific8.6.1 actual owner context for condition/effect validation."""
+    return dict(identity,document_name='Item',uuid=uuid,id=uuid.rsplit('.Item.',1)[1],type=typ,
+                actor={key:identity[key] for key in ('uuid','name','type')})
+
+
+def _actor_state_record(row, identity):
+    """PF2e-specific8.6.1 owned condition/effect source, never application.
+
+    Reuses pinned condition/effect schemas and immediate relationship validators
+    with the selected Actor/token owner. Affliction reading remains unsupported.
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
+    """
+    if identity['type'] not in ('character','npc','familiar') or set(row)!={'key','section','kind','raw','mapped','provenance'}:return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    for field in raw:
+        if type(field) is not dict or not {'document_uuid','path','present','basis'}<=set(field) or not set(field)<={'document_uuid','path','present','basis','value'}:return False
+        if field['basis']!='source' or type(field['present']) is not bool or field['present']!=('value' in field):return False
+    if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    mapping=provenance['mapping']
+    if mapping=='pf2e.actor.state-capability.v1':
+        return (row['key']=='state:capability:affliction' and row['kind']=='field' and raw==[]
+                and mapped==dict(concept='state_affliction_support',value=dict(status='unsupported',reason='pf2e_8_6_1_affliction_disabled'),unit=None)
+                and provenance['limitations']==['no_effective_state_inference'])
+    if mapping=='pf2e.actor.state-source.v1':
+        if row['kind']!='relationship' or mapped['concept']!='state_item' or provenance['limitations']!=['stored_state_not_effective_application']:return False
+        if row['key']=='state:denied':return raw==[] and mapped['value']==dict(status='denied',target_uuid=None)
+        if len(raw)!=2 or [r['path'] for r in raw]!=['/name','/type'] or not all(r['present'] for r in raw):return False
+        uuid=raw[0]['document_uuid'];name=raw[0]['value'];typ=raw[1]['value']
+        if not _casting_owned(uuid,identity) or any(r['document_uuid']!=uuid for r in raw) or type(name) is not str or typ not in ('condition','effect'):return False
+        expected=dict(status='resolved',target_uuid=uuid,document_name='Item',type=typ,name=name[:256],name_truncated=len(name)>256,application='unknown')
+        if identity['instance'] is not None:expected['token_uuid']=identity['instance']['token_uuid']
+        return row['key']=='state:item:'+uuid and json.dumps(mapped['value'],sort_keys=True,allow_nan=False)==json.dumps(expected,sort_keys=True,allow_nan=False)
+    types={'pf2e.condition.source.v1':'condition','pf2e.effect.source.v1':'effect','pf2e.condition.reference.v1':'condition','pf2e.effect.context-reference.v1':'effect'}
+    typ=types.get(mapping)
+    if typ is None or not raw:return False
+    uuid=raw[0]['document_uuid']
+    if not _casting_owned(uuid,identity) or any(r['document_uuid']!=uuid for r in raw):return False
+    child=_state_child_identity(uuid,typ,identity)
+    if mapping in ('pf2e.condition.source.v1','pf2e.effect.source.v1'):
+        if len(raw)!=1 or (_condition_spec(raw[0]['path']) is None if typ=='condition' else not _effect_spec(raw[0]['path'])):return False
+        if row['key']!='state:source:'+uuid+':'+raw[0]['path']:return False
+        delegated=dict(row,section='source',key='source:'+raw[0]['path'])
+        return _record(delegated,['source'],child)
+    prefix='state:'+typ+':'+uuid+':'
+    if not row['key'].startswith(prefix):return False
+    expected_limit=(['Stored local reference or override slug only; no active/suppressed state or persistent-damage dominance is inferred. Unresolved targets disclose no resolved metadata.'] if typ=='condition' else ['Immediate stored context only; no acquired ability, learned spell, current application or recursive provenance is inferred. Unresolved targets disclose no identity.'])
+    if provenance['limitations']!=expected_limit:return False
+    suffix=row['key'][len(prefix):]
+    delegated=dict(row,section='relationships',key='relationships:'+typ+':'+suffix)
+    return _record(delegated,['relationships'],child)
+
+
+def _state_section(records, section, identity):
+    """PF2e-specific8.6.1 same-page state evidence; source is not application."""
+    rows=[r for r in records if r['section']=='state']
+    reasons=set(section['reasons'])
+    if section['status']!='partial' or not {'effective_application_not_evaluated','affliction_reading_unsupported'}<=reasons:return False
+    if any(r['key']=='state:denied' for r in rows) and 'state_items_denied' not in reasons:return False
+    if not reasons<={'effective_application_not_evaluated','affliction_reading_unsupported','state_items_denied','unresolved_state_references','pagination'}:return False
+    types={};source={}
+    for row in rows:
+        mapping=row['provenance']['mapping']
+        if mapping=='pf2e.actor.state-source.v1' and row['raw']:
+            uuid=row['raw'][0]['document_uuid'];typ=row['raw'][1]['value']
+        elif mapping in ('pf2e.condition.source.v1','pf2e.condition.reference.v1'):uuid=row['raw'][0]['document_uuid'];typ='condition'
+        elif mapping in ('pf2e.effect.source.v1','pf2e.effect.context-reference.v1'):uuid=row['raw'][0]['document_uuid'];typ='effect'
+        else:continue
+        if mapping in ('pf2e.condition.reference.v1','pf2e.effect.context-reference.v1'):
+            selected=[row['raw'][0]] if typ=='condition' else [row['raw'][EFFECT_REFERENCE_ROLES.index(row['key'].rsplit(':',1)[1])]]
+            if row['mapped']['value']['status']!='resolved' and any(field['present'] and type(field['value']) is str and field['value']!='' for field in selected):
+                if 'unresolved_state_references' not in reasons:return False
+        if uuid in types and types[uuid]!=typ:return False
+        types[uuid]=typ
+        if mapping=='pf2e.effect.source.v1':source.setdefault(uuid,[]).append(dict(row,section='source'))
+    for row in rows:
+        if row['provenance']['mapping']=='pf2e.condition.reference.v1' and row['mapped']['value']['status']=='resolved':
+            target=row['mapped']['value']
+            if target['target_uuid'] in types and types[target['target_uuid']]!=target['type']:return False
+    return all(_effect_source_page(fields) for fields in source.values())
+
+
 def _casting_owned(uuid, identity):
     """PF2e-specific immediate owned spell/entry UUID; generated UUIDs excluded."""
     prefix=identity['uuid']+'.Item.'
@@ -3135,6 +3219,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return _container_relationship(row,identity)
     if identity['document_name']=='Actor' and row['section']=='spellcasting':
         return _actor_casting_record(row,identity)
+    if identity['document_name']=='Actor' and row['section']=='state':
+        return _actor_state_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='inventory':
         return _actor_inventory_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='build':
@@ -3288,6 +3374,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     if valid and result['identity']['document_name']=='Item' and result['identity']['type']=='effect':
                         valid = _effect_source_page(result['records'])
                     if valid and result['identity']['document_name']=='Actor':
+                        valid = valid and all(_state_section(result['records'], row, result['identity']) for row in rows if row['name']=='state')
                         valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting')
                         valid = valid and all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
                         valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
@@ -3436,7 +3523,7 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     Synthetic actor UUIDs require token_uuid instead. Default sections identity,
     source expose common metadata and selected type-specific persisted fields.
     Known sections description/build/statistics/skills/strikes/abilities/spellcasting/inventory/
-    state/effective can be unsupported; get_actor_types reports delivered support.
+    effective can be unsupported; get_actor_types reports delivered support.
     Sections must be unique/nonempty (at most 12). PF2e character/npc/familiar only;
     other systems/versions/types give UnsupportedSystem/Version/Type errors.
 
@@ -3586,6 +3673,46 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     rejects over 12000 owned Items or 24000 selected records with ReadFailed; these
     source-complexity guards are separate from page count/byte limits. Request
     identity or selected Item readers separately if the casting view is too large.
+    Explicit state reads list each readable actual owned condition/effect Item
+    once, selected typed source and immediate same-owner condition/external effect
+    context relationships. state:item:<Item UUID> has mapping
+    pf2e.actor.state-source.v1, concept state_item and a resolved value with
+    target_uuid/document_name Item/type/name/name_truncated, token_uuid in token
+    context, and application unknown. Names use persisted source /name, which may
+    differ from prepared display names. Raw /name and /type contributors have
+    basis source; limitation is stored_state_not_effective_application.
+    state:source:<Item UUID>:<path> retains existing pf2e.condition.source.v1 or
+    pf2e.effect.source.v1 fields and limitations. state:condition:<Item UUID>:<path>
+    and state:effect:<Item UUID>:<role> reuse read_item relationships, including
+    resolved/missing/denied/unsupported/unverified statuses and exact source
+    contributors. Resolved targets provide canonical target_uuid and token_uuid
+    when needed for read_item/read_actor. Condition local IDs resolve only within
+    the actual owner; override slugs stay unverified. Effects resolve immediate
+    origin_actor/origin_token/origin_item/target_actor/target_token only, without
+    expanding target source. Overlapping effects, equal names, and granted ability
+    versus tracking effect remain separate actual Items; no duplicate ability or
+    acquired benefit is inferred. Unresolved nonempty claims add
+    unresolved_state_references. A generic state:denied marker contains only
+    status denied/target_uuid null, no source or identity, and state_items_denied.
+    State always remains partial with effective_application_not_evaluated and
+    affliction_reading_unsupported, even when supported Item results are empty.
+    The state:capability:affliction field (mapping pf2e.actor.state-capability.v1,
+    concept state_affliction_support, no raw/contributors) has value
+    {status:unsupported,reason:pf2e_8_6_1_affliction_disabled} and limitation
+    no_effective_state_inference. This capability is independent of Item presence:
+    no affliction stage, stage-range validity or effective affliction state is read.
+    Stored condition values, persistent damage, duration units/start/expiry and
+    badge formula/counter source never establish activity, suppression, current
+    expiry, damage dominance or complete application. No formulas are evaluated.
+    Limits are 12000 owned Items, 24000 selected records and 200 nonempty external
+    context claims, checked before relationship resolution and separately from
+    page count/bytes. Exceeding these bounds returns ReadFailed; request selected
+    read_item source/relationships instead. Default identity/source reads do not
+    request state. State requires the supported PF2e character/NPC/familiar
+    runtime and GM/document permissions; other systems/types are rejected before
+    interpretation. Empty or paginated supported results never prove no conditions,
+    effective effects or afflictions. Application interfaces and stage reading
+    remain unsupported; state does not change documents, rolls or game execution.
     Inventory exposes actual owned physical inventory_item references once, plus
     persisted-name labels (prepared display names can differ), selected physical
     source fields and same-owner inventory_container and
