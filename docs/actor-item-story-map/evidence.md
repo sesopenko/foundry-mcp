@@ -151,6 +151,14 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 condition/effect acceptance: after the explicit affliction deferral,
+the [requirement audit](state-acceptance.md) verifies current CORE-state source,
+origins, duration/badge/override, supported expiry, privacy and continuation
+requirements against deterministic and scoped live evidence. Unknown application
+and unsupported suppression remain visible; no full activity engine is claimed.
+CORE-state is Complete. Current delivery progress is **33/38 (86.8%)**, with
+ITEM-affliction separately Deferred and no completion credit for it.
+
 October 25 approved upstream deferral: the user classified dedicated Affliction
 Items as incomplete PF2e functionality, outside delivery of the entire story set,
 with follow-up after maintainers complete them. ITEM-affliction is Deferred,

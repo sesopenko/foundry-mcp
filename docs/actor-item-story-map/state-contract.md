@@ -1,9 +1,10 @@
 # Integrated Actor state source contract
 
-Implementation target for explicit `read_actor(sections=['state'])`, baseline
+Implemented contract for explicit `read_actor(sections=['state'])`, baseline
 Foundry 14.369 / PF2e 8.6.1, pinned upstream revision
-`28d9d156f252d084371d994dc359509b49eadf18`. This document does not itself establish
-shipped behavior, live verification or completion of [CORE-state](stories/CORE-state.md).
+`28d9d156f252d084371d994dc359509b49eadf18`. The
+[acceptance audit](state-acceptance.md) establishes CORE-state completion for
+the declared reading scope, with the exact runtime evidence recorded below.
 
 **Approved scope update — October 25, 2026:** dedicated affliction functionality
 is incomplete upstream and outside this delivery, per the user's explicit
@@ -172,11 +173,11 @@ The independent verifier distinguishes source identity names from PF2e display
 labels; an offline failing-then-passing test reproduces their difference. It
 uses source names for `state_item`, and display names for context relationships.
 
-The full story still requires supported evidence for suppressed-but-present
-effective state, live expiration verification/application and affliction tracked/out-of-range
-stages. This source join delivers useful state navigation while those capabilities
-remain explicitly unsupported. Do not mark CORE-state complete, erase its
-original acceptance criteria or count unsupported affliction absence as success.
+At this historical checkpoint, the affliction prerequisite and expanded runtime
+evidence were unresolved. Later character/token checks and the approved
+affliction deferral below supersede those delivery blockers. Suppression and
+complete application remain unsupported; the current acceptance audit does not
+count an unsupported affliction response as implemented stage reading.
 
 ## Marked character state verification — October 25
 

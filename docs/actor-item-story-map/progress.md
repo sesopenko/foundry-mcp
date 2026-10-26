@@ -753,3 +753,24 @@ Full regression checks passed: 497 Python tests (one skipped) and 578 JavaScript
 tests. Dependency/diagram validation passed for 38 delivery stories, 39 retained
 stories, 42 nodes and 79 edges. One stale error-wording assertion was updated to
 check the InvalidRequest code and readable-type guidance after its failing run.
+
+## Condition/effect reading acceptance — October 25, 2026
+
+CORE-state is Complete under its original supported-portions contract and the
+approved dedicated-affliction deferral. The [acceptance audit](state-acceptance.md)
+maps every current requirement to implementation/tests and the existing NPC,
+marked character and existing unlinked-token runtime evidence. No additional
+fixture collection or unsupported activity interface was needed.
+
+Stored override claims preserve both conditions with unknown application;
+overlapping effects and distinct origins remain separate; typed duration/badge
+source and both supported expiry flags retain exact provenance. Full condition
+suppression/general application remain explicitly unsupported. Familiar live
+state and token expired-true remain unverified advanced configurations.
+
+Progress is **33/38 delivery stories (86.8%)**, plus one Deferred affliction
+story outside delivery. Actor integrated checkpoints are now dependency-ready;
+their own combined-section acceptance and character ability-navigation gap still
+require work. CORE-token's missing existing distinct-HP pair remains Blocked.
+Full regression checks passed: 497 Python tests (one skipped) and 578 JavaScript
+tests. Dependency/diagram and whitespace checks also passed.
