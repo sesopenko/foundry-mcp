@@ -15,7 +15,7 @@ They never import, activate, cast, roll, enrich HTML, update documents or emit c
 `limits`, and `limitations`. Runtime contains `core_version`, `system_id`,
 `system_version`. Availability has `supported` and `reason` (null when supported,
 otherwise an explanation string). Each type/section
-entry distinguishes `allowed` (runtime declaration), `in_scope` (this backlog),
+entry distinguishes `allowed` (runtime declaration), `in_scope` (current delivery scope),
 `source_supported`, `mapped_supported`, `effective_supported`, and `limitations`.
 Type entries have `type` (system subtype) and `name` (display label); section entries have `name`. Limits are `{default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,max_text_units:6000,max_cursor_characters:4096,max_selector_characters:512}`.
 These support flags describe delivered behavior, never merely planned behavior.
@@ -40,7 +40,8 @@ no PF2e interpretation outside the pairing below. Next: `get_actor_tree`,
 | Core 13 | New Actor/Item tools unavailable; no verified compatible PF2e pairing. Existing tools and manifest policy are separate |
 | Non-PF2e systems | Discovery reports unsupported system; reader/discovery tools below return `UnsupportedSystem` |
 | Actors | character, npc, familiar; no narrative role/control inference from subtype |
-| Items | melee, action, feat, spell, spellcastingEntry, lore, condition, effect, affliction, ancestry, heritage, background, class, deity, weapon, armor, shield, equipment, consumable, ammo, backpack, book, kit, treasure |
+| Items | melee, action, feat, spell, spellcastingEntry, lore, condition, effect, ancestry, heritage, background, class, deity, weapon, armor, shield, equipment, consumable, ammo, backpack, book, kit, treasure |
+| Deferred upstream | affliction: outside delivery and readable filters until PF2e maintainers complete the type; registry support flags and in_scope are false |
 | Excluded | hazard, vehicle, loot, party, army, base/unknown Actors; campaignFeature, base/unknown Items |
 
 Current development baseline was separately checked through Foundry MCP on
@@ -116,7 +117,7 @@ optional `types`, `query`, `limit=50`, `max_bytes=48000`, `cursor`.
 `sections` is a nonempty unique list with at most 12 Actor sections or 6 Item
 sections; unknown names are invalid even when unsupported known sections remain
 valid requests. `types` is a nonempty unique list with at most 3 Actor types or
-24 Item types as appropriate; excluded/unknown types are invalid filters.
+23 readable Item types as appropriate; deferred affliction and excluded/unknown types are invalid readable filters.
 
 Identity always appears once per page. Actor sections are `identity`, `source`, `description`,
 `build`, `statistics`, `skills`, `strikes`, `abilities`, `spellcasting`,
@@ -441,9 +442,12 @@ is inferred. See the condition field boundary for keys and provenance.
 ## Runtime-disabled afflictions
 
 PF2e8.6.1 production rejects affliction Item construction. `get_actor_types`
-marks affliction source/mapped/effective support false, with live verification
+marks affliction `in_scope` and source/mapped/effective support false, with live verification
 not_run. `read_item` returns UnsupportedType before extracting an affliction
-source. `list_actor_items` counts afflictions as unsupported and continues other
+source. Dedicated affliction Items are explicitly deferred outside current delivery,
+per the user's October 25 decision. Readable-type filters omit `affliction` and
+reject it as an invalid filter; no source-only, stage or timer reader is offered.
+`list_actor_items` counts afflictions as unsupported and continues other
 Items; condition-parent links to one report unsupported without resolved metadata.
 Read original poison/disease/curse descriptions on their supported source Items.
 An offline source selector and stage-correspondence fixtures document schema

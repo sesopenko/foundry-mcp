@@ -29,11 +29,15 @@ ItemSection = Literal['identity', 'source', 'description', 'rules', 'relationshi
 ActorSections = Annotated[list[ActorSection], Field(min_length=1, max_length=12)]
 ItemSections = Annotated[list[ItemSection], Field(min_length=1, max_length=6)]
 ItemType = Literal['melee', 'action', 'feat', 'spell', 'spellcastingEntry', 'lore', 'condition', 'effect', 'affliction', 'ancestry', 'heritage', 'background', 'class', 'deity', 'weapon', 'armor', 'shield', 'equipment', 'consumable', 'ammo', 'backpack', 'book', 'kit', 'treasure']
-ItemTypes = Annotated[list[ItemType], Field(min_length=1, max_length=24)]
+# PF2e-specific known types include deferred affliction identifiers for explicit
+# unsupported diagnostics; callable read/navigation filters include readers only.
+ReadableItemType = Literal[tuple(value for value in get_args(ItemType) if value!='affliction')]
+ItemTypes = Annotated[list[ReadableItemType], Field(min_length=1, max_length=23)]
 Query = Annotated[str, Field(min_length=1, max_length=200, strict=True)]
 ACTOR_SECTIONS = {'identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective'}
 ITEM_SECTIONS = {'identity', 'source', 'description', 'rules', 'relationships', 'effective'}
 ITEM_TYPES = set(ItemType.__args__)
+READABLE_ITEM_TYPES = set(get_args(ReadableItemType))
 SOURCE_PATHS = {'/name', '/type', '/system/description/value'}
 # PF2e-specific PhysicalSystemSource 8.6.1 primitive paths. No prepared values.
 # https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/physical/data.ts
@@ -3847,6 +3851,10 @@ def _registry(result: dict[str, Any]) -> bool:
                 fields.add('type')
             if type(row) is not dict or set(row) != fields or type(row.get('name')) is not str or ('type' in fields and type(row.get('type')) is not str) or not all(type(row.get(flag)) is bool for flag in ('allowed', 'in_scope', 'source_supported', 'mapped_supported', 'effective_supported')) or not _strings(row.get('limitations')):
                 return False
+            # PF2e-specific dedicated affliction Items remain known selectors
+            # but are deferred from delivery scope pending upstream support.
+            if key=='item_types' and row['type']=='affliction' and (any(row[flag] for flag in ('in_scope','source_supported','mapped_supported','effective_supported')) or not any('deferred' in text.lower() for text in row['limitations'])):
+                return False
             identifiers.append(row.get('type', row['name']))
             verification = row.get('verification')
             if type(verification) is not dict or set(verification) != {'deterministic', 'live'}:
@@ -3941,7 +3949,15 @@ async def get_actor_types() -> dict[str, Any]:
     (core_version/system_id/system_version), availability, actor_types, item_types,
     actor_sections, item_sections, limits and limitations. allowed/in_scope differ
     from source_supported/mapped_supported/effective_supported; each registry entry
-    includes deterministic/live verification status and evidence. No support for
+    includes deterministic/live verification status and evidence.
+    Dedicated affliction Items remain known types with in_scope false and all
+    support flags false: delivery is deferred pending upstream support, with
+    original future acceptance retained. read_item rejects them before source
+    extraction; the state affliction capability remains unsupported.
+    There is no dedicated affliction reader or affliction search filter. Read
+    relevant original descriptions only on actual supported Item types; an empty
+    supported search/list does not establish absence of afflictions or state.
+    No support for
     complete effective statistics is implied by an allowed type. A true effective
     flag can describe a partial delivered section: character/NPC statistics
     selects transformed primitives while other current views remain unfinished.
@@ -4341,6 +4357,9 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     {status:unsupported,reason:pf2e_8_6_1_affliction_disabled} and limitation
     no_effective_state_inference. This capability is independent of Item presence:
     no affliction stage, stage-range validity or effective affliction state is read.
+    Dedicated affliction Items have no reader in this delivery scope. Consult
+    original descriptions on actual supported Items; empty supported results do
+    not establish absence of an affliction or other state.
     Stored condition values, persistent damage, duration units/start/expiry and
     badge formula/counter source never establish activity, suppression, current
     expiry beyond the separately labelled transformed effect boolean, damage
@@ -4683,6 +4702,9 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     upstream construction is disabled. read_item rejects affliction selectors with
     UnsupportedType before reading their source; inspect get_actor_types for this
     limitation. No schema-only prototype establishes runtime affliction support.
+    Dedicated affliction Items are deferred outside current delivery scope pending
+    upstream support; get_actor_types retains the known type with in_scope false
+    and source/mapped/effective support false. Original future acceptance remains.
     Condition Items expose persisted valuedness/value, persistent damage formula,
     damage type/recovery DC/critical-hit flag, local parent/child/override IDs and
     override slugs, group, traits and publication. Local IDs remain source text;
@@ -4738,8 +4760,11 @@ async def list_actor_items(actor_uuid: Identifier | None = None, token_uuid: Ide
     Exactly one actor_uuid (canonical world/compendium Actor UUID) or token_uuid
     (Scene.<id>.Token.<id>) is required, 1–512 characters, from discovery/reference
     identity; names/paths/local IDs are invalid. Token reads current token.actor.
-    Optional types is 1–24 unique in-scope PF2e Item types; omit for all in-scope
-    types, inspect get_actor_types first. Unknown/excluded types invalid. query is
+    Optional types is 1–23 unique readable PF2e Item types; omit for all readable
+    types, inspect get_actor_types first. Dedicated affliction Items have no reader
+    and cannot be selected in types; inspect original descriptions only on actual
+    supported Items. Empty results never establish absence of afflictions or state.
+    Unknown/excluded types invalid. query is
     a trimmed 1–200 character case-insensitive literal Item-name substring, not
     regex/semantic/full-description search. Duplicate names remain distinct UUIDs.
 
@@ -4759,8 +4784,8 @@ async def list_actor_items(actor_uuid: Identifier | None = None, token_uuid: Ide
     BridgeUnavailable: reconnect existing GM browser. No imports, writes or rolls.
     """
     _inputs(actor_uuid, token_uuid, limit=limit, max_bytes=max_bytes, cursor=cursor)
-    if types is not None and (type(types) is not list or not types or len(types) > 24 or any(type(x) is not str or x not in ITEM_TYPES for x in types) or len(set(types)) != len(types)):
-        raise _error('InvalidRequest', 'types must be 1–24 unique in-scope Item types.', 'Inspect get_actor_types for valid types.')
+    if types is not None and (type(types) is not list or not types or len(types) > 23 or any(type(x) is not str or x not in READABLE_ITEM_TYPES for x in types) or len(set(types)) != len(types)):
+        raise _error('InvalidRequest', 'types must be 1–23 unique readable Item types; dedicated affliction Items have no reader.', 'Inspect get_actor_types for delivered readers.')
     if query is not None and (type(query) is not str or not query.strip() or len(query.strip()) > 200):
         raise _error('InvalidRequest', 'query must be 1–200 characters after trim.', 'Use a literal nonblank Item name substring.')
     return await _call('listActorItems', dict(actor_uuid=actor_uuid, token_uuid=token_uuid, types=types, query=query, limit=limit, max_bytes=max_bytes, cursor=cursor), 'list')

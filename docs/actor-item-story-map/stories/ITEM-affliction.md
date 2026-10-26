@@ -5,12 +5,19 @@
 | Tracking | Value |
 | --- | --- |
 | Stage | 2 |
-| Planning readiness | Source ready; advanced gated |
-| Implementation status | Blocked |
+| Planning readiness | Deferred until upstream functionality is complete |
+| Implementation status | Deferred |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
 ## User outcome and evidence
+
+**Delivery decision — October 25, 2026:** the user explicitly classified dedicated
+Affliction Items as incomplete upstream and outside delivery of this story set.
+Keep this story and its original requirements for a future follow-up when PF2e
+maintainers complete the functionality. It is not Complete, contributes no
+completion credit, and is not a prerequisite of current condition/effect delivery.
+Discovery and readable-type filters must not suggest a usable affliction reader.
 
 As a GM-trusted LLM, I can read a `affliction` Item as **affliction definitions and tracked stage**, retain its original identity and selected source, and follow named contributors without triggering gameplay.
 
@@ -41,12 +48,11 @@ readable through their actual supported Item types. Resume runtime integration
 only after a supported system version and representative existing fixtures are
 available and audited.
 
-This is a runtime capability blocker, not an absent unit-test fixture: ordinary
+This is an upstream runtime limitation, not an absent unit-test fixture: ordinary
 public hydration uses the registered class whose production constructor throws.
 Offline stage tests cannot satisfy genuine Item reading. The original acceptance
-remains intact. Any acceptance of an explicitly unsupported affliction boundary
-requires the capability decision specified by CORE-acceptance; no such reduction
-is inferred from this blocked status.
+remains recorded for future work. The user explicitly approved the unsupported,
+out-of-delivery boundary above; no runtime functionality is inferred from deferral.
 
 ## Implementation checklist
 

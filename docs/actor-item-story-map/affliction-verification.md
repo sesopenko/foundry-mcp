@@ -1,5 +1,26 @@
 # Affliction evidence and runtime boundary
 
+## Approved deferral and actual interface verification — October 25, 2026
+
+The user explicitly deferred dedicated Affliction Items from this delivery until
+PF2e maintainers complete upstream functionality. The original schema/rulebook
+research below is retained for that follow-up, not offered as a runtime reader.
+ITEM-affliction is Deferred and excluded from current delivery progress and
+condition/effect dependencies; it is not Complete.
+
+The fresh-client `scripts/affliction-interface-check.py` passed against the
+running development server and refreshed GM bridge in four MCP calls. It checked
+all **22 published tool input schemas**, including nested enum/const definitions,
+for unusable affliction selectors and verified the descriptions' explicit
+unsupported boundaries. The registry reports in_scope/source/mapped/effective
+false. Both owned-Item and compendium Item affliction filter attempts were
+rejected at input validation, using nonexistent placeholders; zero documents
+were read, loaded, created or changed. No source, stage or timer fallback exists.
+Seven offline checker tests reject misleading schemas/descriptions, false support
+flags, accepted filters and backend missing-document errors posing as validation.
+
+## Historical rulebook and runtime research
+
 Verified October 20, 2026 (local date), against Foundry **14.369 / PF2e 8.6.1**.
 This records rulebook reads and a read-only fixture audit; it does not establish
 effective progression, application, recovery or expiry support.

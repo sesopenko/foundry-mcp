@@ -722,3 +722,34 @@ Completed progress remains **32/39 (82.1%)**. See
 Full regression checks passed: 484 Python tests (one skipped), 576 JavaScript
 tests, dependency/diagram validation and fresh-client discovery. The refreshed
 GM browser retained only its known window-size notification.
+
+## Approved affliction deferral and honest delivery scope — October 25, 2026
+
+The user explicitly classified dedicated Affliction Items as incomplete upstream
+and outside delivery of this story set, to be revisited after PF2e maintainers
+complete them. ITEM-affliction is Deferred, with its original acceptance retained
+for that follow-up. It is not Complete and earns no completion credit.
+
+Current delivery therefore contains **38 stories; 32 are Complete (84.2%)**.
+The recorded backlog still contains 39 stories, including the one deferred type.
+The percentage change from 82.1% reflects the approved denominator change, not
+another implemented story. CORE-state no longer depends on ITEM-affliction;
+its condition/effect acceptance remains unchanged. The separate token-pair
+fixture blocker is unchanged.
+
+Readable-type input schemas must omit affliction. Registry entries must report
+in_scope/source/mapped/effective false, and tool descriptions/errors must clearly
+identify upstream-incomplete, deferred functionality without suggesting a
+source-only or stage/timer fallback. Existing unsupported state markers and
+reading poison/disease/curse descriptions through supported Item types remain.
+
+Fresh-client verification of the running interface passed four MCP calls across
+22 published tools: no affliction input enum/const or dedicated reader is offered,
+the registry is out-of-scope/unsupported, and two invalid filters reject before
+document access. Zero documents were read or changed. The
+[interface record](affliction-verification.md#approved-deferral-and-actual-interface-verification--october-25-2026)
+and seven offline checker tests preserve this caller-facing boundary.
+Full regression checks passed: 497 Python tests (one skipped) and 578 JavaScript
+tests. Dependency/diagram validation passed for 38 delivery stories, 39 retained
+stories, 42 nodes and 79 edges. One stale error-wording assertion was updated to
+check the InvalidRequest code and readable-type guidance after its failing run.

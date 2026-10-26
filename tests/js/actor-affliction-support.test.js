@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {getActorTypes,readItem,listActorItems} from '../../foundry-module/scripts/actors.js';
+import {searchCompendiumActors} from '../../foundry-module/scripts/actorPacks.js';
 function fixture(){
  const actor={documentName:'Actor',uuid:'Actor.a',id:'a',type:'npc',name:'Owner',items:new Map(),folder:null,compendium:null,testUserPermission:()=>true};
  const item={documentName:'Item',uuid:'Actor.a.Item.affliction',id:'affliction',name:'Unsupported',type:'affliction',parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(){throw Error('must not read unsupported source');}};actor.items.set(item.id,item);
@@ -10,10 +11,23 @@ function fixture(){
 test('production affliction admission is explicitly unsupported before source extraction',async()=>{
  const {item}=fixture();await assert.rejects(readItem({item_uuid:item.uuid}),e=>e.rpcError.code==='UnsupportedType'&&e.message.includes('production'));
  const entry=(await getActorTypes()).item_types.find(row=>row.type==='affliction');
+ assert.equal(entry.in_scope,false);assert.ok(entry.limitations.some(text=>text.includes('deferred')));
  assert.equal(entry.source_supported,false);assert.equal(entry.mapped_supported,false);assert.equal(entry.effective_supported,false);assert.equal(entry.verification.live.status,'not_run');
+});
+test('affliction delivery scope stays deferred even for unsupported runtime pairings',async()=>{
+ for(const change of [()=>game.system.id='other',()=>game.version='13.999',()=>game.system.version='9.0.0']){
+  fixture();change();const entry=(await getActorTypes()).item_types.find(row=>row.type==='affliction');
+  assert.equal(entry.in_scope,false);assert.equal(entry.source_supported,false);assert.equal(entry.mapped_supported,false);assert.equal(entry.effective_supported,false);
+ }
 });
 test('unsupported afflictions do not break other owned Item navigation',async()=>{
  const {actor}=fixture();const page=await listActorItems({actor_uuid:actor.uuid});assert.equal(page.unsupported_count,1);assert.deepEqual(page.nodes,[]);
+});
+test('affliction filters reject before owned Items or pack indexes are inspected',async()=>{
+ const {actor}=fixture();Object.defineProperty(actor,'items',{get(){throw Error('must not inspect Items');}});
+ await assert.rejects(listActorItems({actor_uuid:actor.uuid,types:['affliction']}),error=>error.rpcError?.code==='InvalidRequest');
+ game.packs={get(){throw Error('must not inspect pack indexes');},values(){throw Error('must not inspect pack indexes');}};
+ await assert.rejects(searchCompendiumActors({pack_ids:['pf2e.example'],query:'source',document_type:'Item',types:['affliction']}),error=>error.rpcError?.code==='InvalidRequest');
 });
 test('condition parent reference to runtime-disabled affliction stays explicitly unsupported',async()=>{
  const {actor,item}=fixture();const condition={...item,id:'condition',uuid:actor.uuid+'.Item.condition',type:'condition',toObject:()=>({name:'Condition',type:'condition',system:{references:{parent:{id:item.id}}}})};actor.items.set(condition.id,condition);

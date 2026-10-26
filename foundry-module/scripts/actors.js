@@ -591,7 +591,8 @@ function bounds(params, allowed, sectionNames) {
 }
 
 /**
- * PF2e-specific capability registry for character/npc/familiar and 24 Item types.
+ * PF2e-specific capability registry for character/npc/familiar and 24 known
+ * Item types; 23 are readable, while affliction is explicitly deferred.
  * Core14.369/PF2e8.6.1 scope includes typed selected source, explicit named
  * relationships and source joins. Character/NPC statistics additionally selects
  * bounded transformed document-data primitives; full effective views remain
@@ -608,9 +609,12 @@ export async function getActorTypes(params = {}) {
   const itemAllowed = globalThis.foundry?.documents?.Item?.TYPES ?? globalThis.Item?.TYPES ?? [];
   const result = {contract_version:1,runtime:current,availability:{supported,reason:supported?null:'Supported pairing: Foundry14.369/PF2e8.6.1.'},
     actor_types:[...new Set([...ACTOR_TYPES,...actorAllowed])].map(type=>make(type,actorAllowed.includes(type),ACTOR_TYPES.includes(type))),
-    item_types:[...new Set([...ITEM_TYPES,...itemAllowed])].map(type=>make(type,itemAllowed.includes(type),ITEM_TYPES.includes(type))),
+    item_types:[...new Set([...ITEM_TYPES,...itemAllowed])].map(type=>make(type,itemAllowed.includes(type),ITEM_TYPES.includes(type)&&type!=='affliction')),
     actor_sections:ACTOR_SECTIONS.map(name=>make(name,true,true,true)),item_sections:ITEM_SECTIONS.map(name=>make(name,true,true,true)),limits:{...LIMITS},
     limitations:['No complete effective statistics or exhaustive ability list is claimed.']};
+  // PF2e-specific dedicated affliction Items are deferred from delivery scope
+  // pending upstream support, independently of current pairing availability.
+  result.item_types.find(entry=>entry.type==='affliction').limitations=['Dedicated affliction Items are deferred from delivery scope pending upstream support; PF2e8.6.1 production disables construction. Original future acceptance is retained; use original poison/disease/curse descriptions.'];
   // PF2e-specific action8.6.1 source milestone; section flags are conditional on
   // this per-type registry, never a promise for every other Item type.
   if (supported) {
@@ -724,7 +728,7 @@ export async function getActorTypes(params = {}) {
     weapon.verification={deterministic:{status:'passed',evidence:['tests/js/actor-weapon.test.js','tests/js/actor-weapon-readers.test.js','tests/js/actor-weapon-relationships.test.js','tests/test_actor_weapon.py','tests/test_actor_weapon_relationships.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/weapon-verification.md','scripts/actor-live-check.py']}};
     const affliction=result.item_types.find(entry=>entry.type==='affliction');
     affliction.source_supported=false;affliction.mapped_supported=false;
-    affliction.limitations=['PF2e8.6.1 production disables affliction Item construction. Offline schema selectors exist but runtime reading is unsupported; use original poison/disease/curse descriptions.'];
+    affliction.limitations=['Dedicated affliction Items are deferred from delivery scope pending upstream support; PF2e8.6.1 production disables construction. Offline schema selectors do not establish runtime support. Original future acceptance is retained; use original poison/disease/curse descriptions.'];
     affliction.verification={deterministic:{status:'passed',evidence:['tests/js/actor-affliction.test.js','tests/js/actor-affliction-support.test.js']},live:{status:'not_run',evidence:['docs/actor-item-story-map/affliction-verification.md']}};
     const condition=result.item_types.find(entry=>entry.type==='condition');
     condition.mapped_supported=true;
@@ -1055,9 +1059,9 @@ export async function readItem(params={}) {
  */
 export async function listActorItems(params={}) {
   bounds(params,['actor_uuid','token_uuid','types','query','limit','max_bytes','cursor']);ready();
-  let types=ITEM_TYPES;
+  const readableTypes=ITEM_TYPES.filter(type=>type!=='affliction');let types=readableTypes;
   if (params.types!==undefined && params.types!==null) {
-    if (!Array.isArray(params.types)||!params.types.length||params.types.length>ITEM_TYPES.length||new Set(params.types).size!==params.types.length||params.types.some(type=>!ITEM_TYPES.includes(type))) fail('InvalidRequest','types must be a nonempty unique list of in-scope Item types.');
+    if (!Array.isArray(params.types)||!params.types.length||params.types.length>readableTypes.length||new Set(params.types).size!==params.types.length||params.types.some(type=>!readableTypes.includes(type))) fail('InvalidRequest','types must be a nonempty unique list of readable Item types; dedicated affliction Items have no reader.');
     types=params.types;
   }
   let query='';

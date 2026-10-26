@@ -60,14 +60,14 @@ export async function listActorCompendiums(params={}) {
 }
 
 /**
- * PF2e-specific supported subtype filtering: character/npc/familiar or the 24
- * audited Item types; missing index type stays incomplete, never guessed.
+ * PF2e-specific supported subtype filtering: character/npc/familiar or the 23
+ * readable Item types; affliction is deferred, missing type is never guessed.
  * No prepared/effective data and no getDocument/getDocuments/import calls.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/static/template.json
  */
 export async function searchCompendiumActors(params={}) {
   const documentType=inputs(params,['pack_ids','query','types','document_type','limit','max_bytes','cursor']);
-  const query=queryInput(params.query,true);const allowed=documentType==='Actor'?ACTOR_TYPES:ITEM_TYPES;
+  const query=queryInput(params.query,true);const allowed=documentType==='Actor'?ACTOR_TYPES:ITEM_TYPES.filter(type=>type!=='affliction');
   const types=params.types==null?allowed:params.types;
   if (!Array.isArray(types)||!types.length||types.length>allowed.length||new Set(types).size!==types.length||types.some(type=>!allowed.includes(type))) fail('InvalidRequest','types must be a nonempty unique list of in-scope document types.');
   const ids=params.pack_ids;

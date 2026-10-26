@@ -81,7 +81,7 @@ test('owned Item navigation preserves duplicates, scope and continuation members
   const secondPage=await listActorItems({actor_uuid:actor.uuid,limit:1,cursor:first.pagination.next_cursor});
   assert.equal(secondPage.pagination.complete,true);assert.notEqual(secondPage.nodes[0].identity.uuid,first.nodes[0].identity.uuid);
   actor.items.delete('j');await assert.rejects(listActorItems({actor_uuid:actor.uuid,limit:1,cursor:first.pagination.next_cursor}),/changed/);
-  await assert.rejects(listActorItems({actor_uuid:actor.uuid,types:['unknown']}),/in-scope/);
+  await assert.rejects(listActorItems({actor_uuid:actor.uuid,types:['unknown']}),error=>error.rpcError?.code==='InvalidRequest'&&/readable Item types/.test(error.message));
 });
 
 test('mid-read source changes and permission revocation cannot produce stale or unauthorized data',async()=>{

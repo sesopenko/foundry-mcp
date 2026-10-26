@@ -13,7 +13,7 @@ import re
 
 ROOT = Path(__file__).resolve().parent.parent
 IDENTIFIER = re.compile(r'\b(?:ACT|ITEM|CORE|M)-[A-Za-z]+\b')
-STATUSES = {'Not started', 'In progress', 'Source implemented', 'Complete', 'Blocked'}
+STATUSES = {'Not started', 'In progress', 'Source implemented', 'Complete', 'Blocked', 'Deferred'}
 ACTORS = {'character', 'npc', 'familiar'}
 ITEMS = set('melee action feat spell spellcastingEntry lore condition effect affliction ancestry heritage background class deity weapon armor shield equipment consumable ammo backpack book kit treasure'.split())
 
@@ -55,9 +55,9 @@ def load_map(directory: Path) -> dict[str, Task]:
     if {key[4:] for key in tasks if key.startswith('ACT-')} != ACTORS:
         raise ValueError('Expected exactly character, npc, familiar Actor stories')
     if {key[5:] for key in tasks if key.startswith('ITEM-')} != ITEMS:
-        raise ValueError('Expected exactly the 24 in-scope Item stories')
+        raise ValueError('Expected exactly the 24 recorded Item stories')
     if len(tasks) != 39:
-        raise ValueError('Expected 39 implementation stories')
+        raise ValueError('Expected 39 recorded implementation stories')
     index = (directory / 'index.md').read_text()
     indexed = set()
     for row in index.splitlines():
@@ -90,6 +90,8 @@ def load_map(directory: Path) -> dict[str, Task]:
         for dependency in task.dependencies:
             if dependency not in tasks:
                 raise ValueError(f'{key}: unknown dependency {dependency}')
+            if task.status != 'Deferred' and tasks[dependency].status == 'Deferred':
+                raise ValueError(f'{key}: active task has deferred dependency {dependency}')
             if tasks[dependency].stage > task.stage:
                 raise ValueError(f'{key}: prerequisite {dependency} belongs to a later stage')
     visiting, visited = set(), set()
@@ -130,20 +132,27 @@ def load_map(directory: Path) -> dict[str, Task]:
 def report(tasks: dict[str, Task]) -> str:
     """Keep source checkpoints distinct from completed Actor stories."""
     stories = [task for task in tasks.values() if not task.identifier.startswith('M-')]
-    counts = Counter(task.status for task in stories)
-    result = [f'Stories: {len(stories)}; complete: {counts["Complete"]}; in progress: {counts["In progress"]}; source implemented: {counts["Source implemented"]}; blocked: {counts["Blocked"]}; not started: {counts["Not started"]}.',
+    delivery = [task for task in stories if task.status != 'Deferred']
+    counts = Counter(task.status for task in delivery)
+    progress = 100 * counts['Complete'] / len(delivery) if delivery else 0
+    result = [f'Current delivery stories: {len(delivery)}; recorded stories: {len(stories)}; deferred: {len(stories)-len(delivery)}; complete: {counts["Complete"]}; progress: {progress:.1f}%; in progress: {counts["In progress"]}; source implemented: {counts["Source implemented"]}; blocked: {counts["Blocked"]}; not started: {counts["Not started"]}.',
               'Ready work (all direct prerequisites delivered):']
-    ready = [task for task in tasks.values() if not task.delivered and task.status != 'Blocked'
+    ready = [task for task in tasks.values() if not task.delivered and task.status not in ('Blocked', 'Deferred')
              and all(tasks[dep].delivered for dep in task.dependencies)]
     result.extend(f'- {task.identifier}: {task.status} (owner {task.owner})' for task in sorted(ready, key=lambda t: (t.stage, t.identifier)))
     if not ready:
         result.append('- None; inspect blocked tasks and unresolved evidence gates.')
     result.append('Incomplete work and remaining prerequisites:')
     for task in sorted(tasks.values(), key=lambda t: (t.stage, t.identifier)):
-        if task.delivered:
+        if task.delivered or task.status == 'Deferred':
             continue
         remaining = ', '.join(sorted(dep for dep in task.dependencies if not tasks[dep].delivered)) or 'none'
         result.append(f'- {task.identifier}: {task.status}; remaining prerequisites: {remaining}')
+    result.append('Deferred backlog (outside current delivery scope):')
+    deferred = sorted((task for task in tasks.values() if task.status == 'Deferred'), key=lambda task: task.identifier)
+    result.extend(f'- {task.identifier}: Deferred (owner {task.owner}); not complete and excluded from delivery progress.' for task in deferred)
+    if not deferred:
+        result.append('- None.')
     result.append('Effective/live evidence gates remain in docs/actor-item-story-map/evidence.md; delivered source checkpoints do not close them.')
     return '\n'.join(result)
 
@@ -157,7 +166,9 @@ def main() -> None:
     except (ValueError, OSError) as error:
         parser.exit(1, f'actor-story-map: {error}\n')
     if arguments.command == 'check':
-        print(f'PASS: 39 stories, {len(tasks)} dependency nodes, {sum(len(t.dependencies) for t in tasks.values())} edges; acyclic; statuses and Mermaid consistent.')
+        stories = [task for task in tasks.values() if not task.identifier.startswith('M-')]
+        delivery = sum(task.status != 'Deferred' for task in stories)
+        print(f'PASS: {delivery} delivery stories, {len(stories)} recorded stories, {len(stories)-delivery} deferred; {len(tasks)} dependency nodes, {sum(len(t.dependencies) for t in tasks.values())} edges; acyclic; statuses and Mermaid consistent.')
     else:
         print(report(tasks))
 

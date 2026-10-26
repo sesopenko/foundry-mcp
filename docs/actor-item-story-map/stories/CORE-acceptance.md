@@ -12,6 +12,14 @@
 
 ## User outcome and implementation
 
+Approved delivery boundary (October 25, 2026): dedicated affliction Items are
+incomplete upstream and deferred until PF2e maintainers complete them. Exclude
+ITEM-affliction from delivery progress and current hard dependencies; retain its
+original story for follow-up. Actual discovery must identify the type as outside
+scope and unreadable, and readable-type input schemas must not offer it. This
+decision grants no source/stage/application support and does not change the
+remaining token-instance or condition/effect acceptance criteria.
+
 As a fresh GM-trusted client, I can discover the right entity, read supported source/book views, follow contributors and accurately recognize gaps.
 
 - Validate actual MCP discovery descriptions and input schemas against implemented behavior, including type/system restrictions, names plus IDs, bounds, exact continuations and actionable recovery.

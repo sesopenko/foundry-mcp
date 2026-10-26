@@ -51,8 +51,11 @@ and token-context checks. Formula evaluation and effective expiry remain unsuppo
 Condition source preserves valued flags, persistent-damage metadata, local
 references and override slugs. Explicit relationships resolve actual owner-local
 Item IDs; slugs remain unverified. Activity and suppression remain unsupported.
-PF2e8.6.1 production disables affliction Items. Discovery marks their reading
-unsupported; original poison/disease/curse descriptions remain the source.
+PF2e8.6.1 production disables dedicated affliction Items. Their functionality is
+deferred outside this delivery until PF2e maintainers complete it. Discovery
+reports `in_scope: false` and all reading support flags false; readable-type
+filters omit the type. No affliction source/stage/timer interface is offered.
+Poison/disease/curse descriptions on supported source Items remain readable.
 Weapon source includes damage, runes, range and ammunition configuration;
 carried weapons are not automatically effective Strikes or usable attacks.
 Ammunition reading preserves separate stock/uses and crafting categories. Only

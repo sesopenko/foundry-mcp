@@ -2,7 +2,7 @@
 
 Research audit: **October 20, 2026**. **Status: development in progress; see the [progress record](progress.md).**
 
-Enable a fresh GM-trusted LLM to discover and read characters, NPCs and familiars, and the Items that contribute to them, using rulebook concepts alongside selected source data and canonical identifiers. This backlog contains **39 stories: 3 Actor types, 24 Item types, and 12 shared tasks**, plus three integration checkpoints inside the Actor stories.
+Enable a fresh GM-trusted LLM to discover and read characters, NPCs and familiars, and the Items that contribute to them, using rulebook concepts alongside selected source data and canonical identifiers. Current delivery contains **38 stories: 3 Actor types, 23 Item types, and 12 shared tasks**, plus three integration checkpoints inside the Actor stories. The backlog retains 39 stories: dedicated affliction Items are deferred until PF2e maintainers complete that upstream functionality, as explicitly approved October 25, 2026. Deferred work is excluded from delivery progress and is never counted Complete.
 
 Start with [CORE-contract](stories/CORE-contract.md), then CORE-extract. The first useful vertical slice is world NPC discovery/source reading plus action, NPC attack and Lore readers; broader inventory/casting/state integrations can follow. Do not postpone this slice until every Item type or effective-state gate is complete.
 
@@ -23,7 +23,7 @@ Read the [evidence ledger](evidence.md), [research reference](../pf2e-actor-item
 
 Initial Actors: **character, npc, familiar**. Exclude hazard, vehicle, loot, party, army, generic base and unknown/module Actor types from scoped discovery; direct requests return explicit unsupported results. Narrative role/control/pet/companion status is separate from subtype and needs supported evidence.
 
-Relevant Item types each have a story below, including source-first book/affliction stories with advanced gates. Exclude specialized campaignFeature interpretation, generic base and unknown/module types. Unknown types remain explicitly unsupported, never silently equipment. Treasure Items remain included despite loot Actor exclusion. Specialized ritual/flexible/item casting is partial until its contract is established.
+Relevant Item types each retain a story below. Dedicated affliction Items are outside current delivery; their original requirements remain in ITEM-affliction for future upstream support. They must not block condition/effect delivery or be advertised as readable. Exclude specialized campaignFeature interpretation, generic base and unknown/module types. Unknown types remain explicitly unsupported, never silently equipment. Treasure Items remain included despite loot Actor exclusion. Specialized ritual/flexible/item casting is partial until its contract is established.
 
 ### Stages
 
@@ -49,7 +49,7 @@ Implementation status is tracked in each story and summarized by `./scripts/acto
 | [ACT-familiar: Read familiar and master-linked abilities (source checkpoint)](stories/ACT-familiar.md) | 2 | Source ready; effective views gated | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 | [ACT-npc: Read NPC and creature stat blocks (source checkpoint)](stories/ACT-npc.md) | 2 | Source ready; effective views gated | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 | [ITEM-action: Actions, reactions and passive abilities](stories/ITEM-action.md) | 2 | Ready for source milestone | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
-| [ITEM-affliction: Affliction definitions and tracked stage](stories/ITEM-affliction.md) | 2 | Source ready; advanced gated | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
+| [ITEM-affliction: Affliction definitions and tracked stage](stories/ITEM-affliction.md) | 2 | Deferred upstream; outside delivery | CORE-extract | Future work only after PF2e maintainers complete the type; no current reader or delivery dependency. |
 | [ITEM-ammo: Ammunition and explicit selection](stories/ITEM-ammo.md) | 2 | Ready for source milestone | CORE-physical | Uses common physical source rules and identity/bounds. |
 | [ITEM-ancestry: Ancestry choices and benefits](stories/ITEM-ancestry.md) | 2 | Ready for source milestone | CORE-extract | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 | [ITEM-armor: Armor properties and wearing state](stories/ITEM-armor.md) | 2 | Ready for source milestone | CORE-physical | Uses common physical source rules and identity/bounds. |
@@ -75,7 +75,7 @@ Implementation status is tracked in each story and summarized by `./scripts/acto
 | [CORE-build: Build choices, benefits and acquired-document joins](stories/CORE-build.md) | 3 | Planned | ITEM-ancestry, ITEM-heritage, ITEM-background, ITEM-class, ITEM-deity, ITEM-feat, ITEM-lore | Needs each build contributor plus owned feat/feature and Lore interpretation. |
 | [CORE-casting: Spell/group/resource joins](stories/CORE-casting.md) | 3 | Planned | ITEM-spell, ITEM-spellcastingEntry | Needs spell definitions and casting group/resource source records. |
 | [CORE-inventory: Inventory containment and source configuration joins](stories/CORE-inventory.md) | 3 | Planned | ITEM-weapon, ITEM-armor, ITEM-shield, ITEM-equipment, ITEM-consumable, ITEM-ammo, ITEM-backpack, ITEM-treasure | Needs common possession/container/ammunition readers; book/kit expansion stays optional. |
-| [CORE-state: Conditions, effects and affliction provenance joins](stories/CORE-state.md) | 3 | Planned | ITEM-condition, ITEM-effect, ITEM-affliction | Needs condition, effect and affliction source identities/status/origins. |
+| [CORE-state: Conditions and effects provenance joins](stories/CORE-state.md) | 3 | Planned | ITEM-condition, ITEM-effect | Needs condition/effect source identities/status/origins; dedicated affliction support is deferred outside delivery. |
 | [CORE-acceptance: Integrated discovery, contracts and compatibility acceptance](stories/CORE-acceptance.md) | 4 | Planned | M-NPC, M-PC, M-FAMILIAR, CORE-world, CORE-packs, CORE-token, CORE-journal, ITEM-book, ITEM-kit | Checks every type baseline, actor integration checkpoint and source/navigation adapter. |
 
 ### Actor integration checkpoints
@@ -117,7 +117,7 @@ flowchart LR
     ACT_familiar["ACT-familiar: source"]
     ACT_npc["ACT-npc: source"]
     ITEM_action["ITEM-action"]
-    ITEM_affliction["ITEM-affliction"]
+    ITEM_affliction["ITEM-affliction: deferred upstream"]
     ITEM_ammo["ITEM-ammo"]
     ITEM_ancestry["ITEM-ancestry"]
     ITEM_armor["ITEM-armor"]
@@ -203,7 +203,6 @@ flowchart LR
   ITEM_treasure --> CORE_inventory
   ITEM_condition --> CORE_state
   ITEM_effect --> CORE_state
-  ITEM_affliction --> CORE_state
   M_NPC --> CORE_acceptance
   M_PC --> CORE_acceptance
   M_FAMILIAR --> CORE_acceptance
@@ -233,6 +232,8 @@ flowchart LR
   ITEM_action --> M_FAMILIAR
   CORE_state --> M_FAMILIAR
   CORE_casting --> M_FAMILIAR
+  classDef deferred fill:#eee,stroke:#999,stroke-dasharray:5 5
+  class ITEM_affliction deferred
 ```
 
 ## Completion and management

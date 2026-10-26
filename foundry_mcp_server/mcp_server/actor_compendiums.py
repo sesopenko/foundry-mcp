@@ -1,6 +1,6 @@
 """PF2e-specific Actor/Item compendium discovery, index-first and read-only.
 
-Only character/npc/familiar and the documented 24 Item types are interpreted;
+Only character/npc/familiar and the documented 23 readable Item types are interpreted;
 source identity never establishes effective statistics or rules completeness.
 Core14.369/PF2e8.6.1 baseline and field evidence: docs/actor-tools.md.
 https://foundryvtt.com/api/v14/classes/foundry.documents.collections.CompendiumCollection.html
@@ -12,14 +12,14 @@ from typing import Annotated, Any, Literal
 from pydantic import Field
 
 from foundry_mcp_server.ws.connection import RpcError
-from .actors import (Identifier, Cursor, Limit, ByteLimit, ItemType, ITEM_TYPES,
+from .actors import (Identifier, Cursor, Limit, ByteLimit, ReadableItemType, READABLE_ITEM_TYPES,
                      _error, _identity, _pagination, _primitive, _runtime, _strings, _tool)
 from .actor_discovery import ActorType, SearchQuery, _bounds, _scope
 
 DocumentType = Literal['Actor', 'Item']
 PackId = Annotated[str, Field(min_length=1, max_length=256, strict=True)]
 PackIds = Annotated[list[PackId], Field(min_length=1, max_length=10)]
-TypeFilter = Annotated[list[ActorType | ItemType], Field(min_length=1, max_length=24)]
+TypeFilter = Annotated[list[ActorType | ReadableItemType], Field(min_length=1, max_length=23)]
 
 
 def _filters(document_type, query=None, *, required=False, types=None):
@@ -27,7 +27,7 @@ def _filters(document_type, query=None, *, required=False, types=None):
         raise _error('InvalidRequest','document_type must be Actor or Item.','Use list_actor_compendiums to discover pack document types.')
     if query is not None and (type(query) is not str or not query.strip() or len(query.strip()) > 200) or required and query is None:
         raise _error('InvalidRequest','query must contain 1–200 characters after trim.','Supply a literal name/title substring, not a semantic question.')
-    allowed={'character','npc','familiar'} if document_type=='Actor' else ITEM_TYPES
+    allowed={'character','npc','familiar'} if document_type=='Actor' else READABLE_ITEM_TYPES
     if types is not None and (type(types) is not list or not types or len(types)>len(allowed) or any(type(value) is not str or value not in allowed for value in types) or len(set(types)) != len(types)):
         raise _error('InvalidRequest','types must be unique in-scope types for the selected document_type.','Inspect get_actor_types; omit types for all in-scope types.')
 
@@ -48,7 +48,7 @@ def _document_node(node, document_type):
     identity=node['identity']
     if not _identity(identity) or identity['document_name'] != document_type or node['kind'] != document_type.lower() or identity['source_kind'] != 'compendium' or identity['folder'] is not None or not identity['uuid'].startswith('Compendium.') or identity['pack'] is None or identity['actor'] is not None or identity['instance'] is not None or node['parent_uuid'] is not None:
         return False
-    allowed={'character','npc','familiar'} if document_type=='Actor' else ITEM_TYPES
+    allowed={'character','npc','familiar'} if document_type=='Actor' else READABLE_ITEM_TYPES
     selector='actor_uuid' if document_type=='Actor' else 'item_uuid'
     return identity['type'] in allowed and node['next_call']==dict(tool='read_actor' if document_type=='Actor' else 'read_item',arguments={selector:identity['uuid']})
 
@@ -142,8 +142,11 @@ async def search_compendium_actors(pack_ids: PackIds, query: SearchQuery,
     document_type defaults Actor; Item selects Item packs. query is a nonblank
     1–200 character lowercase literal name substring after trim, not regex/fuzzy/
     semantic/full-description search. Optional types are unique in-scope types:
-    character/npc/familiar for Actor (at most 3), 24 documented types for Item;
+    character/npc/familiar for Actor (at most 3), 23 readable types for Item;
     omit for all in-scope types. Unknown/excluded/mismatched types are invalid.
+    Dedicated affliction Items have no reader and are excluded from filters and
+    results pending upstream support. Empty results never establish no affliction
+    or related state; inspect original descriptions on actual supported Items.
     No implicit all-pack search, full-pack getDocuments/imports or bulk hydration.
 
     Returns contract_version/runtime/revision/nodes/scopes/pagination/limitations.

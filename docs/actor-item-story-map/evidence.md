@@ -151,6 +151,17 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 approved upstream deferral: the user classified dedicated Affliction
+Items as incomplete PF2e functionality, outside delivery of the entire story set,
+with follow-up after maintainers complete them. ITEM-affliction is Deferred,
+not Complete. Current delivery is 38 stories with 32 Complete (**84.2%**); all
+39 original stories remain recorded. Its hard dependency on CORE-state is
+removed and the Mermaid graph remains consistent. Public discovery and readable
+filters must not suggest an affliction reader: in_scope/source/mapped/effective
+are false, while existing unsupported state markers and explicit rejection remain.
+Supported original poison/disease/curse descriptions remain available through
+their actual Item types. This supersedes the earlier unresolved-scope blocker.
+
 October 25 existing-token follow-up: state reading passed two unlinked instances,
 10 state pages/51 records, 71 raw witnesses and two owned Item follow-ups in 67
 calls with unchanged source/current fingerprints. The CORE-token verifier was

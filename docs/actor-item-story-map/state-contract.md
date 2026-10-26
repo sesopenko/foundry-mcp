@@ -5,6 +5,14 @@ Foundry 14.369 / PF2e 8.6.1, pinned upstream revision
 `28d9d156f252d084371d994dc359509b49eadf18`. This document does not itself establish
 shipped behavior, live verification or completion of [CORE-state](stories/CORE-state.md).
 
+**Approved scope update — October 25, 2026:** dedicated affliction functionality
+is incomplete upstream and outside this delivery, per the user's explicit
+decision. Its original requirements remain in the deferred ITEM-affliction story
+for future follow-up. Earlier references below to an affliction prerequisite or
+affliction-stage acceptance blocker are historical and superseded by this decision.
+State responses continue declaring that type unsupported; no affliction reader
+or implied absence claim is introduced. Other condition/effect acceptance remains.
+
 ## Reader outcome
 
 `actorStateSnapshot` joins the selected actual Actor/token's owned condition and

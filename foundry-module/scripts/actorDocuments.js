@@ -9,6 +9,8 @@
 import { fail, selector } from "./actorReadUtils.js";
 
 export const ACTOR_TYPES = ["character", "npc", "familiar"];
+// PF2e-specific known types include affliction for explicit unsupported
+// diagnostics only; readable navigation filters exclude this deferred type.
 export const ITEM_TYPES = ["melee", "action", "feat", "spell", "spellcastingEntry", "lore", "condition", "effect", "affliction", "ancestry", "heritage", "background", "class", "deity", "weapon", "armor", "shield", "equipment", "consumable", "ammo", "backpack", "book", "kit", "treasure"];
 
 /** Current runtime identity, without treating a manifest as a browser check. */
@@ -18,7 +20,8 @@ export function runtime() {
 
 /**
  * PF2e-specific admission: only core14.369/system8.6.1 has the audited schema.
- * All 3 Actor/24 Item types initially expose selected core source metadata only.
+ * Scope is 3 Actor/23 readable Item types; dedicated affliction Items are
+ * upstream-incomplete, deferred and rejected before source extraction.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/system.pf2e.json
  */
 export function ready(interpret = true) {

@@ -76,3 +76,55 @@ class StoryMapTests(unittest.TestCase):
             path.write_text(path.read_text().replace('| Implementation status | Not started |', '| Implementation status | Complete |'))
         with self.assertRaisesRegex(ValueError, 'integrated checkpoint'):
             tracker.load_map(self.directory)
+
+    def test_deferred_story_remains_recorded_without_delivery_credit_or_ready_work(self):
+        tasks={}
+        for index in range(39):
+            key=f'ITEM-test{index}'
+            tasks[key]=tracker.Task(key,2,set(),'Complete' if index<32 else 'Not started',key)
+        tasks['ITEM-test38'].status='Deferred'
+        self.assertFalse(tasks['ITEM-test38'].delivered)
+        report=tracker.report(tasks)
+        self.assertIn('delivery stories: 38; recorded stories: 39;',report)
+        self.assertIn('complete: 32;',report)
+        self.assertIn('progress: 84.2%',report)
+        ready,incomplete=report.split('Incomplete work and remaining prerequisites:',1)
+        self.assertNotIn('- ITEM-test38:',ready)
+        active,deferred=incomplete.split('Deferred backlog (outside current delivery scope):',1)
+        self.assertNotIn('- ITEM-test38:',active)
+        self.assertIn('- ITEM-test38: Deferred',deferred)
+
+    def test_deferred_status_is_valid_and_active_hard_dependencies_are_rejected(self):
+        path=self.directory/'stories/ITEM-affliction.md'
+        path.write_text(path.read_text().replace('| Implementation status | Not started |','| Implementation status | Deferred |'))
+        state_path=self.directory/'stories/CORE-state.md'
+        # Make the dependency explicit in both inventories regardless of the
+        # current approved delivery graph, to exercise the validation rule.
+        state_text=state_path.read_text()
+        lines=state_text.splitlines()
+        lines=[line[:-2]+' ITEM-affliction |' if line.startswith('| Prerequisites |') and 'ITEM-affliction' not in line else line for line in lines]
+        state_path.write_text('\n'.join(lines)+'\n')
+        index=self.directory/'index.md'
+        index_lines=index.read_text().splitlines()
+        for position,line in enumerate(index_lines):
+            if line.startswith('| [CORE-state:') and 'ITEM-affliction' not in line:
+                cells=line.split('|');cells[4]+=' ITEM-affliction ';index_lines[position]='|'.join(cells)
+        if not any('ITEM_affliction --> CORE_state' in line for line in index_lines):
+            position=index_lines.index('```',next(i for i,line in enumerate(index_lines) if line=='```mermaid')+1)
+            index_lines.insert(position,'  ITEM_affliction --> CORE_state')
+        index.write_text('\n'.join(index_lines)+'\n')
+        with self.assertRaisesRegex(ValueError,'active.*deferred|deferred.*dependency'):
+            tracker.load_map(self.directory)
+        # The deferred story remains valid after its active hard edge is removed
+        # consistently from the story, index row and Mermaid graph.
+        lines=state_path.read_text().splitlines()
+        lines=['| Prerequisites | ITEM-condition ITEM-effect |' if line.startswith('| Prerequisites |') else line for line in lines]
+        state_path.write_text('\n'.join(lines)+'\n')
+        index_lines=index.read_text().splitlines()
+        for position,line in enumerate(index_lines):
+            if line.startswith('| [CORE-state:'):
+                cells=line.split('|');cells[4]=' ITEM-condition ITEM-effect ';index_lines[position]='|'.join(cells)
+        index.write_text('\n'.join(line for line in index_lines if 'ITEM_affliction --> CORE_state' not in line)+'\n')
+        tasks=tracker.load_map(self.directory)
+        self.assertEqual(len(tasks),42)
+        self.assertEqual(tasks['ITEM-affliction'].status,'Deferred')

@@ -1,4 +1,4 @@
-# CORE-state: Conditions, effects and affliction provenance joins
+# CORE-state: Conditions and effects provenance joins
 
 [Story-map index](../index.md) · [Evidence ledger](../evidence.md)
 
@@ -7,10 +7,17 @@
 | Stage | 3 |
 | Planning readiness | Planned |
 | Implementation status | In progress |
-| Prerequisites | [ITEM-condition](ITEM-condition.md), [ITEM-effect](ITEM-effect.md), [ITEM-affliction](ITEM-affliction.md) |
-| Dependency reason | Needs condition, effect and affliction source identities/status/origins. |
+| Prerequisites | [ITEM-condition](ITEM-condition.md), [ITEM-effect](ITEM-effect.md) |
+| Dependency reason | Needs condition/effect source identities/status/origins; dedicated affliction functionality is deferred outside current delivery. |
 
 ## User outcome and implementation
+
+**Approved scope update — October 25, 2026:** dedicated affliction Items are
+incomplete upstream and outside this delivery, per the user's explicit decision.
+The original affliction join/stage requirements below are retained as future
+context and in ITEM-affliction; they are not current acceptance blockers.
+Existing state responses must continue reporting affliction support as
+unsupported, including when no readable condition/effect Items exist.
 
 As a reader, I can distinguish stored state records, their origins and the portions of effective state that are actually supported.
 
