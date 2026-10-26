@@ -44,6 +44,11 @@ After module refresh the existing browser was GM-ready. Its only console error
 was the previously identified minimum-window-size notification. Full offline
 suites passed: **347 Python tests (one skipped), 460 JavaScript tests**.
 Pack/token and denied/deleted-master variants have deterministic coverage;
-the live fixture establishes the world path. Casting/state joins and supported
-master-derived current statistics remain open. ACT-familiar is Source implemented
-and does not increase completed-story percentage.
+the live fixture establishes the world source path. At that checkpoint,
+master-derived current statistics remained unverified. The subsequent
+`--statistics` run now verifies 127 present declared public model fields, correct
+omission after master unassignment, and cleanup in 108 MCP calls. See the
+[current contract](familiar-current-contract.md#representative-world-verification--october-25)
+for exact scope and independent comparisons. Compendium/token current fixtures
+and integrated casting/state remain open. ACT-familiar stays Source implemented;
+these checkpoints do not increase the completed-story percentage.

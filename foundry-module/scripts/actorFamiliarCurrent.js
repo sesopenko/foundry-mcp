@@ -1,7 +1,7 @@
 /**
- * PF2e-specific familiar transformed document-data selector, tested contract
- * Foundry14.369/PF2e8.6.1. Public Actor.toObject(false) extraction boundary:
- * https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html#toobject
+ * PF2e-specific familiar current document-data selector, tested contract
+ * Foundry14.369/PF2e8.6.1. Public Actor.system own-data boundary:
+ * https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.ActorData.html#system
  * Pinned FamiliarSystemData explicitly declares CreatureAttributes, saves,
  * Perception, movement and SkillData (source excludes these derived fields):
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/familiar/data.ts
@@ -10,7 +10,7 @@
  * the familiar's master; this pure helper calls no APIs or runtime getters and
  * neither recalculates from master source nor invents independent attributes.
  */
-const LIMIT=['serialized_familiar_value_not_recalculated'];
+const LIMIT=['familiar_value_not_recalculated'];
 const escape=key=>key.replaceAll('~','~0').replaceAll('/','~1');
 
 /** PF2e-specific own-data lookup, preserving absent/undefined without fallback. */
@@ -19,15 +19,15 @@ function selected(serialized,keys){
  for(const key of keys){
   if(value===null||typeof value!=='object'||Array.isArray(value))throw new TypeError('Familiar current field has a malformed container.');
   const descriptor=Object.getOwnPropertyDescriptor(value,key);if(!descriptor)return {present:false};
-  if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Familiar current fields require detached own data properties.');
+  if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Familiar current fields require own data properties.');
   value=descriptor.value;if(value===undefined)return {present:false};
  }
  return {present:true,value};
 }
 
 /**
- * PF2e-specific detached familiar current primitives. Returns null for other
- * serialized subtypes, otherwise {fields,reasons}. Own data on nonplain
+ * PF2e-specific familiar current primitives from guarded {type,system} model
+ * context. Returns null for other subtypes, otherwise {fields,reasons}. Own data on nonplain
  * containers is accepted; selected accessors reject without invocation and
  * inherited leaves stay absent. Missing fields never use source/master fallback.
  * Ordinary skills are bounded to 512 own keys of 1–256 Unicode code points;

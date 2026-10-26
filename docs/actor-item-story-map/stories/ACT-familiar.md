@@ -29,7 +29,7 @@ Source checkpoint verified on Foundry14.369/PF2e8.6.1; see
 Identity resolves the stored world-character master claim without the system's
 master getter. Owned action references remain unclassified: this schema does
 not encode familiar/master benefit scope; read their exact Item descriptions.
-Integrated casting/state and master-derived statistics remain open below.
+Integrated casting/state and complete current views remain open below.
 
 ## Integrated checkpoint: M-FAMILIAR
 
@@ -53,7 +53,7 @@ Prerequisites beyond the source checkpoint: [ITEM-action](ITEM-action.md), [CORE
 ### Current-statistics implementation checkpoint — October 25, 2026
 
 Explicit statistics now verifies the recorded world-character master before
-public transformed serialization, then reads declared familiar defenses,
+declared public model reads, then selects familiar defenses,
 movement and ordinary skills. Source master ID/ability remain separate raw
 witnesses. Missing/deleted/denied/unassociated/unsupported master returns a
 partial source-context response without transformed values. See the
@@ -63,10 +63,17 @@ skills are withheld before exposing their keys or labels.
 
 World/pack/token deterministic checks and actual paginated JavaScript-to-Python
 responses pass, including permission/reassignment races. Actual MCP discovery
-also passes. Representative current-familiar live serialization remains pending
-the existing GM connection; the original live and integrated acceptance gates
-remain open. This does not close the story or certify recalculation behavior.
+also passes. Representative world-familiar current data now passes live checks:
+127 present fields, zero missing, in 128 records over 64 pages. Source/master,
+action descriptions, omission of current rows after master unassignment, and exact fixture cleanup
+also pass. See the current contract for 108-call evidence and scope. Compendium/
+token current fixtures and integrated casting/state gates remain open. This
+does not close the story or certify local recalculation behavior.
 
-Source checkpoint is ready after shared contracts/extraction. Integrated source joins are specified; effective statistics remain gated by supported-interface evidence and representative live fixtures. No populated character/familiar was live-verified in the original research, and no browser is connected in this audit. v13 PF2e support is unverified. See [evidence](../evidence.md#open-verification-gates).
+Source and selected current checkpoints are verified as described above.
+Integrated casting/state and broader contexts retain their original gates.
+The original research had no populated character/familiar runtime fixture;
+subsequent verification is recorded in the linked ledger. v13 PF2e support
+remains unverified. See [evidence](../evidence.md#open-verification-gates).
 
 This is one story with two checkpoints, not separate source/effective actor stories. Close it only when the declared delivered sections pass and every remaining advanced limitation is explicitly recorded; never mark an unsupported effective capability verified.

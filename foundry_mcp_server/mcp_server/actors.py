@@ -3368,10 +3368,10 @@ def _familiar_current_spec(path):
 
 
 def _familiar_current_record(row, identity):
-    """PF2e-specific8.6.1 familiar values serialized after master admission.
+    """PF2e-specific8.6.1 declared familiar model values after master admission.
 
     Exact source master provenance delegates the existing master contract;
-    transformed familiar primitives follow _familiar_current_spec, never local
+    Own public Actor.system data follows _familiar_current_spec, never local
     master-derived arithmetic. Page-level master/reason consistency is separate.
     """
     if row['key']=='statistics:familiar_master':
@@ -3396,7 +3396,7 @@ def _familiar_current_record(row, identity):
         if not valid.get(kind,type(value) is str and value==kind):return False
     expected=dict(concept=concept,value=None if kind=='collection' else value,unit=None)
     if json.dumps(row['mapped'],sort_keys=True,allow_nan=False)!=json.dumps(expected,sort_keys=True,allow_nan=False):return False
-    return row['provenance']==dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.familiar.current.v1',limitations=['serialized_familiar_value_not_recalculated'])
+    return row['provenance']==dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.familiar.current.v1',limitations=['familiar_value_not_recalculated'])
 
 
 def _familiar_current_section(records, section):
@@ -3941,10 +3941,11 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     denied/unsupported/unverified masters produce a partial statistics section
     with familiar_master_<status>, plus pagination if needed, and no transformed
     familiar fields or serialization fallback. Denied references reveal no
-    resolved metadata. Only a resolved permitted master admits public familiar
-    toObject(false) values. These field records have key statistics:<exact path>,
+    resolved metadata. Only a resolved permitted master admits familiar
+    public Actor.system own data values, without invoking getters or
+    toObject(false). These field records have key statistics:<exact path>,
     mapping pf2e.familiar.current.v1, one own familiar-Actor transformed
-    raw/contributor, and limitation serialized_familiar_value_not_recalculated.
+    raw/contributor, and limitation familiar_value_not_recalculated.
     The allowlist is AC value/breakdown/details; HP value/max/temp; fortitude,
     reflex and will value/totalModifier/breakdown; Perception value/totalModifier/
     breakdown/vision; and movement land/burrow/climb/fly/swim/travel with

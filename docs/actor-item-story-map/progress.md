@@ -591,3 +591,27 @@ flags, 56 records and 76 raw witnesses in 54 MCP calls with unchanged source.
 Expired-true, other Actor/token state, condition suppression, application and
 affliction gates remain open. CORE-state remains In progress; completed progress
 stays **31/39 (79.5%)**. See [state contract](state-contract.md).
+
+## Guarded public familiar model verification — October 25, 2026
+
+Familiar current reads now select declared own `Actor.system` data after the
+existing master/role/source/context permission checks. Schema-based serialization
+is not a fallback. Failing-then-passing tests cover omitted serialized fields,
+unresolved and raced master access, own-data getter rejection, model-only stale
+continuations and strict Python discovery/DTO contracts.
+
+The hardened fixture runner passed in the existing test world: 127 present
+current fields, zero missing, 128 statistics records across 64 pages, plus six
+Actor pages and 16 Item pages. Representative numeric AC, saves, ordinary skills
+and land Speed are required. Master unassignment returned only one source-context
+page with no derived rows; the verifier independently preserves the system's
+normalized nullable ability. Per-phase source fingerprints were unchanged and
+the exact marked familiar/character pair was removed, with no pending creations.
+The run made 108 MCP calls. Nine offline harness tests cover timeouts, lost
+responses, late-creation cleanup, real model witnesses and nullable source
+normalization.
+
+World familiar current values now have runtime evidence. Compendium/token
+current fixtures and integrated casting/state remain open, so ACT-familiar and
+M-FAMILIAR stay incomplete. Progress remains **31/39 (79.5%)**. See the
+[familiar current contract](familiar-current-contract.md).

@@ -151,6 +151,16 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 familiar model gate: public ActorData.system plus the pinned
+FamiliarSystemData declarations permit selected own derived data after the
+existing master guard. The marked-world fixture run passed 108 MCP calls,
+127 present fields (zero missing), 128 statistics records over 64 pages, six
+Actor pages and 16 Item pages. Independent public-model comparisons, source
+fingerprints within each phase, no derived rows after master unassignment and
+exact fixture cleanup passed. Expanding this to compendium/token current fixtures
+and integrated casting/state remains open; ACT-familiar is not Complete. See
+[familiar current verification](familiar-current-contract.md#representative-world-verification--october-25).
+
 October 25 declared effect-model correction: official public core ItemData.system
 and pinned `EffectSystemData.expired: boolean` permit selection of the own model
 data property even when `toObject(false)` omits it. New regressions fail under

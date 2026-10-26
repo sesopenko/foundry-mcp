@@ -486,7 +486,12 @@ async function actionRelationship(target,selected) {
   return {status:'resolved',target_uuid:effect.uuid,...(tokenUuid?{token_uuid:tokenUuid}:{}),reason:null,dependency:{uuid:effect.uuid,type:effect.type,parent_uuid:owner?.uuid??null,pack_id:pack?.collection??null}};
 }
 
-/** PF2e-specific detached source+immediate action relationship snapshot. */
+/**
+ * PF2e-specific source, immediate relationships and selected current snapshot.
+ * Familiar8.6.1 statistics resolves its permitted world-character master before
+ * selecting declared own Actor.system data; unresolved masters admit no model
+ * read. Field/version boundaries are defined in actorFamiliarCurrent.js.
+ */
 async function snapshot(target,sections) {
   const selected=selection(target,sections);
   // PF2e-specific condition/effect8.6.1 source joins include external identity
@@ -505,7 +510,7 @@ async function snapshot(target,sections) {
         if(selected.familiarMaster.record.mapped.value.status==='resolved'){
           // PF2e-specific familiar8.6.1 admission: source reassignment and master
           // permission are checked synchronously after resolution, before any
-          // public transformed serialization. No master getter is consulted.
+          // public declared model data. No master getter is consulted.
           ready();
           const pack=target.document.compendium;
           if(!permitted(target.document)||(pack&&!permitted(pack))||(target.token&&(!permitted(target.token)||!permitted(target.token.parent))))fail('PermissionDenied','The familiar or its selected context is no longer readable.','Restore authorized Actor, pack or Scene/Token access and restart the read.');
@@ -515,16 +520,15 @@ async function snapshot(target,sections) {
           const status=!master?'missing':!permitted(master)?'denied':master.documentName!=='Actor'||master.type!=='character'?'unsupported':master.id!==field.value||master.compendium||master.parent||master.uuid!==resolved.target_uuid?'unverified':null;
           if(status){selected.familiarMaster.record.mapped.value={status,target_uuid:null};selected.familiarMaster.reasons=['familiar_master_'+status];}
           else{
-            const transformed=target.document.toObject(false);
-            const type=transformed&&typeof transformed==='object'?Object.getOwnPropertyDescriptor(transformed,'type'):null;
-            if(!type||!Object.hasOwn(type,'value')||type.value!=='familiar')throw new TypeError('Familiar transformed subtype is invalid.');
-            selected.currentStatistics=familiarCurrentFields(transformed);
+            const system=Object.getOwnPropertyDescriptor(target.document,'system');
+            if(!system||!Object.hasOwn(system,'value'))throw new TypeError('Familiar current model requires own data.');
+            selected.currentStatistics=familiarCurrentFields({type:'familiar',system:system.value});
           }
         }
         if(selected.familiarMaster.record.mapped.value.status!=='resolved')selected.currentStatistics={fields:[],reasons:[...selected.familiarMaster.reasons]};
       }catch(error){
         if(error?.rpcError?.code)throw error;
-        fail('ReadFailed','Selected familiar current statistics do not match the verified serialization contract.','Inspect the supported runtime and recorded master; no source fallback, private getter or recalculation is used.');
+        fail('ReadFailed','Selected familiar current statistics do not match the declared public model contract.','Inspect the supported runtime and recorded master; no source fallback, private getter or recalculation is used.');
       }
     }
   }
@@ -607,7 +611,7 @@ export async function getActorTypes(params = {}) {
     // distinct from source and from complete target-context/effective views.
     const statistics=result.actor_sections.find(entry=>entry.name==='statistics');
     statistics.source_supported=true;statistics.mapped_supported=true;statistics.effective_supported=true;
-    statistics.limitations=['Character/NPC selected transformed attributes, defenses, Perception/vision, movement, senses, language codes/qualifications and IWR declarations; select skills separately for skill fields. Positive Infinity sense range uses the explicit JSON tag {"$number":"Infinity"}; it does not imply target detection. IWR exceptions/doubleVs/custom definitions retain bounded predicate data without evaluation or damage calculations. Familiar statistics first verifies its recorded world-character master before selected defenses, movement and ordinary skills; the added creature supplements do not apply to familiars. Source support is familiar master ID/ability context; current fields retain transformed basis. Always partial: generated Strikes, Item-linked familiar skills and target-dependent applicability remain pending. Live evidence covers selected character/NPC core statistics and two existing world/synthetic NPC creature supplements; character supplement configurations and familiar-current live verification remain pending.'];
+    statistics.limitations=['Character/NPC selected transformed attributes, defenses, Perception/vision, movement, senses, language codes/qualifications and IWR declarations; select skills separately for skill fields. Positive Infinity sense range uses the explicit JSON tag {"$number":"Infinity"}; it does not imply target detection. IWR exceptions/doubleVs/custom definitions retain bounded predicate data without evaluation or damage calculations. Familiar statistics first verifies its recorded world-character master before declared public Actor.system own-data defenses, movement and ordinary skills; the added creature supplements do not apply to familiars. Source support is familiar master ID/ability context; current fields retain transformed basis. Always partial: generated Strikes, Item-linked familiar skills and target-dependent applicability remain pending. Live evidence covers selected character/NPC core statistics, two world/synthetic NPC creature supplements and a marked world familiar with 127 present current fields and cleanup. Character supplement configurations and familiar compendium/token current fixtures remain unverified.'];
     statistics.verification={deterministic:{status:'passed',evidence:['tests/js/actor-current.test.js','tests/js/actor-current-readers.test.js','tests/test_actor_current.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py','tests/js/actor-creature-current.test.js','tests/js/actor-creature-current-readers.test.js','tests/test_actor_creature_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/current-statistics-verification.md','docs/actor-item-story-map/familiar-current-contract.md','docs/actor-item-story-map/creature-current-contract.md','scripts/actor-current-probe.py','scripts/actor-build-live-check.py']}};
     // PF2e-specific character8.6.1 build source joins; other Actor types unsupported.
     const build=result.actor_sections.find(entry=>entry.name==='build');
@@ -744,11 +748,11 @@ export async function getActorTypes(params = {}) {
     const description=result.actor_sections.find(entry=>entry.name==='description');
     description.limitations=['Explicit selection only: NPC blurb/publicNotes/GM-private privateNotes, character biography/language details with edict/anathema list markers, or familiar creature description. Exact bounded prose is retained without enrichment or execution.'];
     // PF2e-specific familiar8.6.1 source and world-character master identity;
-    // these schema contracts do not establish master-derived current values.
+    // current declared model values require the separate master permission guard.
     const familiar=result.actor_types.find(entry=>entry.type==='familiar');
     familiar.effective_supported=true;
-    familiar.limitations=['Selected persisted master ID/attribute and HP plus explicit creature description are delivered. Identity resolves the nullable world-character master claim with explicit unresolved statuses. Statistics permits selected transformed defenses, movement and ordinary skills only after master permission checks; unavailable master returns no transformed values. Values are serialized, not recalculated; independent attributes, normal Strikes, Item-linked skill totals, benefit activation and full integrated views remain unsupported. Familiar-current live verification is pending; existing live evidence covers source/master identity.'];
-    familiar.verification={deterministic:{status:'passed',evidence:['tests/js/actor-familiar.test.js','tests/js/actor-familiar-relationships.test.js','tests/js/actor-familiar-readers.test.js','tests/test_actor_familiar.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/familiar-verification.md','docs/actor-item-story-map/familiar-current-contract.md','scripts/actor-familiar-live-check.py']}};
+    familiar.limitations=['Selected persisted master ID/attribute and HP plus explicit creature description are delivered. Identity resolves the nullable world-character master claim with explicit unresolved statuses. Statistics reads declared public Actor.system own-data defenses, movement and ordinary skills only after master permission checks; unavailable master returns no current values. Values are read, not recalculated; independent attributes, normal Strikes, Item-linked skill totals, benefit activation and full integrated views remain unsupported. A marked world familiar passed 127 present current fields, no current rows after master unassignment, source/prose checks and confirmed cleanup. Compendium/token current fixtures and integrated casting/state remain unverified.'];
+    familiar.verification={deterministic:{status:'passed',evidence:['tests/js/actor-familiar.test.js','tests/js/actor-familiar-relationships.test.js','tests/js/actor-familiar-readers.test.js','tests/test_actor_familiar.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py','tests/test_actor_familiar_live_check.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/familiar-verification.md','docs/actor-item-story-map/familiar-current-contract.md','scripts/actor-familiar-live-check.py']}};
     result.actor_sections.find(entry=>entry.name==='abilities').limitations=['NPC actual owned action Item references and familiar owned action references are delivered; familiar/master benefit scope requires reading Item prose. Sections remain partial; active benefits and other Actor ability lists remain unsupported.'];
     const npc=result.actor_types.find(entry=>entry.type==='npc');
     npc.effective_supported=true;
@@ -981,7 +985,7 @@ async function read(target,params,sections,tool) {
       base.limitations.push('Statistics selects transformed attributes, defenses, Perception/vision, movement, senses, language qualifications and IWR declarations. Raw/provenance basis is transformed, distinct from source. Positive Infinity sense ranges are tagged JSON values, not null or target-detection claims. Conditional IWR predicates and doubleVs remain data, not evaluated damage application. Select skills separately for current skill fields. Generated Strikes and full target-context behavior remain pending. Missing serialized fields remain unavailable without source fallback or private getters; supplement live verification remains pending.');
     }else{
       section.status='partial';section.reasons=[...selected.currentStatistics.reasons];
-      base.limitations.push('Familiar statistics requires a permission-checked recorded world-character master before transformed serialization. The source master ID/ability remain separate witnesses; selected familiar defenses, movement and ordinary skills retain transformed provenance without recalculation. Missing or denied master returns no transformed statistics. Independent attributes, normal Strikes and Item-linked skills are not inferred. Live familiar-current verification remains pending.');
+      base.limitations.push('Familiar statistics requires a permission-checked recorded world-character master before declared public Actor.system own-data reads. The source master ID/ability remain separate witnesses; selected familiar defenses, movement and ordinary skills retain transformed provenance without recalculation or serialization fallback. Missing or denied master returns no current statistics. Independent attributes, normal Strikes and Item-linked skills are not inferred. Live verification covers a marked world familiar and master unassignment with cleanup; compendium/token current fixtures and full integrated views remain unverified.');
     }
   }
   if(target.document.documentName==='Actor'&&target.document.type==='character'){

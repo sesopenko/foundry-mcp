@@ -126,11 +126,13 @@ explicit description. Identity resolves the world-character master or reports
 an explicit unresolved status. Owned action references retain exact Item
 identities without inferring familiar/master benefit scope; follow `read_item`
 for prose. See the [familiar verification](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/familiar-verification.md).
-Familiar statistics now selects declared transformed defenses, movement and
+Familiar statistics now selects declared public model defenses, movement and
 ordinary skills only after verifying the recorded master's identity and access.
 Unavailable master returns source context without transformed statistics.
 Independent attributes, normal Strikes, Item-linked skill totals and local
-recalculation remain unsupported. Current-familiar live verification is pending;
+recalculation remain unsupported. A marked world familiar passed 127 current
+fields, omission of current rows after master unassignment and confirmed cleanup; compendium/token
+current fixtures and full integrated views remain unverified;
 see the [current contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/familiar-current-contract.md).
 Explicit Actor state joins actual owned conditions/effects, their selected
 source and immediate provenance. Application stays unknown: stored presence,

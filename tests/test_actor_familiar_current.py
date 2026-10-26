@@ -5,9 +5,11 @@ from pathlib import Path
 import subprocess
 import unittest
 from unittest.mock import AsyncMock
+from fastmcp import Client
 from fastmcp.exceptions import ToolError
 from foundry_mcp_server.mcp_server.actors import read_actor
 from foundry_mcp_server.mcp_server.tools import register_foundry_manager
+from foundry_mcp_server.mcp_server.server import mcp
 from test_actor_familiar import familiar
 
 
@@ -46,6 +48,13 @@ class FamiliarCurrentTests(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         self.manager=AsyncMock();register_foundry_manager(self.manager)
+
+    async def test_actual_discovery_declares_guarded_public_model_boundary(self):
+        async with Client(mcp) as client:
+            tool=next(tool for tool in await client.list_tools() if tool.name=='read_actor')
+        for text in ('public Actor.system own data','without invoking getters','familiar_value_not_recalculated','familiar_master_<status>'):
+            self.assertIn(text,tool.description)
+        self.assertNotIn('serialized_familiar_value_not_recalculated',tool.description)
 
     def page(self,rows=None,reasons=None):
         page=familiar('/system/master/id','m');page['records']=copy.deepcopy([master(),*self.rows] if rows is None else rows)
@@ -101,11 +110,12 @@ class FamiliarCurrentTests(unittest.IsolatedAsyncioTestCase):
 import {readActor} from './foundry-module/scripts/actors.js';
 let transformed=0;
 const source={type:'familiar',name:'Familiar',system:{master:{id:'m',ability:'cha'},attributes:{hp:{value:3,temp:0}}}};
-const actor={documentName:'Actor',uuid:'Actor.a',id:'a',name:'Familiar',type:'familiar',parent:null,folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject(flag){if(!flag){transformed++;return structuredClone(current);}return structuredClone(source);}};
+const actor={documentName:'Actor',uuid:'Actor.a',id:'a',name:'Familiar',type:'familiar',system:current.system,parent:null,folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject(flag){if(!flag)transformed++;return structuredClone(source);}};
 const master={documentName:'Actor',uuid:'Actor.m',id:'m',name:'Master',type:'character',parent:null,folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject(){throw Error('Do not expand master source');}};
 globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map([['a',actor],['m',master]]),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>uuid===actor.uuid?actor:uuid===master.uuid?master:null}};
 const defaults=await readActor({actor_uuid:actor.uuid});if(transformed!==0)throw Error('Default serialized current');
 const pages=[];let cursor;do{const page=await readActor({actor_uuid:actor.uuid,sections:['statistics'],limit:5,...(cursor?{cursor}:{})});pages.push(page);cursor=page.pagination.next_cursor;}while(cursor);
+if(transformed!==0)throw Error('Public model must not request current serialization');
 const missing=[];
 for(const mode of ['deleted','unassociated','denied','unsupported','unverified']){
  source.system.master.id='m';master.type='character';master.uuid='Actor.m';master.parent=null;master.testUserPermission=()=>true;game.actors.set('m',master);
@@ -119,6 +129,8 @@ console.log(JSON.stringify({defaults,pages,missing}));
         for page in result['pages']:rows.extend((await self.read(page))['records'])
         self.assertEqual(len([r for r in rows if r['key']=='statistics:familiar_master']),1)
         self.assertTrue(any(r['provenance']['mapping']=='pf2e.familiar.current.v1' for r in rows))
+        ac=next(r for r in rows if r['key']=='statistics:/system/attributes/ac/value')
+        self.assertEqual(ac['mapped']['value'],17)
         self.assertNotIn('SECRET',json.dumps(rows))
         for entry in result['missing']:
             page=entry['page'];await self.read(page)

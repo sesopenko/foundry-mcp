@@ -7,8 +7,8 @@ function fixture(context='world'){
  const current={name:'Familiar',type:'familiar',system:{attributes:{ac:{value:20,breakdown:'Selected AC',details:''},hp:{value:5,max:25,temp:1}},saves:Object.fromEntries(['fortitude','reflex','will'].map(save=>[save,{value:10,totalModifier:11,breakdown:'Selected save'}])),perception:{value:8,totalModifier:9,breakdown:'Selected Perception',vision:true},movement:{speeds:Object.fromEntries(['land','burrow','climb','fly','swim','travel'].map(mode=>[mode,['land','travel'].includes(mode)?{value:25,base:20,type:mode,source:null}:null]))},skills:{acrobatics:{slug:'acrobatics',label:'Acrobatics',value:6,totalModifier:7,dc:18,breakdown:'Selected skill',lore:false,itemId:null}}}};
  const calls=[],docs=new Map();let allowed=true,masterLookups=0,race=null;
  const master={documentName:'Actor',id:'master',uuid:'Actor.master',name:'Master',type:'character',items:new Map(),folder:null,compendium:null,testUserPermission:()=>allowed,toObject(){throw Error('master source must not be read');}};
- const actor={documentName:'Actor',id:'f',uuid:'Actor.f',name:'Familiar',type:'familiar',items:new Map(),folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){calls.push(flag);return flag?structuredClone(source):current;},prepareData(){throw Error('preparation prohibited');},update(){throw Error('writes prohibited');}};
- Object.defineProperty(actor,'master',{get(){throw Error('master getter prohibited');}});Object.defineProperty(actor,'system',{get(){throw Error('runtime system prohibited');}});
+ const actor={documentName:'Actor',id:'f',uuid:'Actor.f',name:'Familiar',type:'familiar',system:current.system,items:new Map(),folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){calls.push(flag);return structuredClone(source);},prepareData(){throw Error('preparation prohibited');},update(){throw Error('writes prohibited');}};
+ Object.defineProperty(actor,'master',{get(){throw Error('master getter prohibited');}});
  if(context==='pack'){actor.uuid='Compendium.pf2e.example.Actor.f';actor.compendium={collection:'pf2e.example',title:'Examples',testUserPermission:()=>true};}
  let selector={actor_uuid:actor.uuid};
  if(context==='token'){const scene={documentName:'Scene',uuid:'Scene.s',name:'Scene',testUserPermission:()=>true};const token={documentName:'Token',uuid:'Scene.s.Token.t',name:'Token',parent:scene,actor,baseActor:null,isLinked:false,testUserPermission:()=>true};actor.uuid='Scene.s.Token.t.Actor.f';docs.set(token.uuid,token);selector={token_uuid:token.uuid};}
@@ -19,10 +19,24 @@ function fixture(context='world'){
 }
 async function all(f,sections=['statistics']){const rows=[],pages=[];let cursor;do{const page=await readActor({...f.selector,sections,limit:3,max_bytes:8000,...(cursor?{cursor}:{})});rows.push(...page.records);pages.push(page);assert.ok(Buffer.byteLength(JSON.stringify(page))<=8000);cursor=page.pagination.next_cursor;assert.ok(pages.length<150);}while(cursor);return {rows,pages};}
 const code=expected=>error=>error.rpcError?.code===expected;
+test('declared public model survives serialization omissions without current serializer calls',async()=>{
+ const f=fixture(),result=await all(f);assert.equal(result.rows.find(row=>row.key==='statistics:/system/attributes/ac/value').mapped.value,20);assert.ok(f.calls.every(flag=>flag===true));
+});
+test('unresolved and raced master guards precede any model descriptor read; model getter never invokes',async()=>{
+ for(const race of [false,true]){
+  const f=fixture();let reads=0;Object.defineProperty(f.actor,'system',{get(){reads++;throw Error('must not invoke');}});
+  if(race)f.setRace(()=>f.setPermission(false));else f.source.system.master.id=null;
+  await all(f);assert.equal(reads,0);
+ }
+ const invalid=fixture();let reads=0;Object.defineProperty(invalid.actor,'system',{get(){reads++;throw Error('must not invoke');}});
+ await assert.rejects(readActor({...invalid.selector,sections:['statistics']}),code('ReadFailed'));assert.equal(reads,0);
+ const foreign=fixture();Object.defineProperty(foreign.actor,'system',{get(){throw Error('must not invoke');}});game.system.id='other';
+ await assert.rejects(readActor({...foreign.selector,sections:['statistics']}),code('UnsupportedSystem'));
+});
 
 test('world/pack/token familiar current statistics preserve source/master separation and bounded provenance',async()=>{
- for(const context of ['world','pack','token']){const f=fixture(context),before=JSON.stringify(f.source),result=await all(f,['source','statistics']);assert.ok(result.pages.length>1);const rows=result.rows,current=rows.find(row=>row.key==='statistics:/system/attributes/hp/value'),source=rows.find(row=>row.section==='source'&&row.raw[0]?.path==='/system/attributes/hp/value');assert.equal(source.raw[0].value,3);assert.equal(source.raw[0].basis,'source');assert.equal(current.raw[0].value,5);assert.equal(current.raw[0].basis,'transformed');assert.equal(current.provenance.mapping,'pf2e.familiar.current.v1');assert.equal(current.raw[0].document_uuid,f.actor.uuid);assert.deepEqual(current.provenance.limitations,['serialized_familiar_value_not_recalculated']);
-  const master=rows.find(row=>row.key==='statistics:familiar_master');assert.equal(master.mapped.value.target_uuid,f.master.uuid);assert.deepEqual(master.raw.map(raw=>raw.path),['/system/master/id','/system/master/ability']);assert.ok(master.raw.every(raw=>raw.basis==='source'&&raw.document_uuid===f.actor.uuid));assert.ok(!rows.some(row=>/\/abilities\/|\/attack(?:\/|$)/.test(row.raw[0]?.path??'')));assert.ok(f.calls.includes(false));assert.equal(JSON.stringify(f.source),before);assert.ok(result.pages.every(page=>page.sections.find(section=>section.name==='statistics').status==='partial'));if(context==='token')assert.ok(result.pages.every(page=>page.identity.instance.token_uuid===f.selector.token_uuid));
+ for(const context of ['world','pack','token']){const f=fixture(context),before=JSON.stringify(f.source),result=await all(f,['source','statistics']);assert.ok(result.pages.length>1);const rows=result.rows,current=rows.find(row=>row.key==='statistics:/system/attributes/hp/value'),source=rows.find(row=>row.section==='source'&&row.raw[0]?.path==='/system/attributes/hp/value');assert.equal(source.raw[0].value,3);assert.equal(source.raw[0].basis,'source');assert.equal(current.raw[0].value,5);assert.equal(current.raw[0].basis,'transformed');assert.equal(current.provenance.mapping,'pf2e.familiar.current.v1');assert.equal(current.raw[0].document_uuid,f.actor.uuid);assert.deepEqual(current.provenance.limitations,['familiar_value_not_recalculated']);
+  const master=rows.find(row=>row.key==='statistics:familiar_master');assert.equal(master.mapped.value.target_uuid,f.master.uuid);assert.deepEqual(master.raw.map(raw=>raw.path),['/system/master/id','/system/master/ability']);assert.ok(master.raw.every(raw=>raw.basis==='source'&&raw.document_uuid===f.actor.uuid));assert.ok(!rows.some(row=>/\/abilities\/|\/attack(?:\/|$)/.test(row.raw[0]?.path??'')));assert.ok(f.calls.every(flag=>flag===true));assert.equal(JSON.stringify(f.source),before);assert.ok(result.pages.every(page=>page.sections.find(section=>section.name==='statistics').status==='partial'));if(context==='token')assert.ok(result.pages.every(page=>page.identity.instance.token_uuid===f.selector.token_uuid));
  }
 });
 test('unresolved master states return only source context without current serialization',async()=>{

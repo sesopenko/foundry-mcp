@@ -3,11 +3,10 @@
 Implemented explicit `read_actor(sections=['statistics'])` contract on a
 familiar, Foundry 14.369 / PF2e 8.6.1, upstream revision
 `28d9d156f252d084371d994dc359509b49eadf18`. This checkpoint does not complete
-[ACT-familiar](stories/ACT-familiar.md). Live verification remains pending the
-existing development GM connection; deterministic checks do not establish live
-master-derived behavior.
+[ACT-familiar](stories/ACT-familiar.md). Representative world-familiar values
+are now live-verified below; complete integrated acceptance remains open.
 
-## Master guard before serialization
+## Master guard before current model reads
 
 Read the selected familiar's persisted `/system/master/id` and
 `/system/master/ability` through the existing source selector. Resolve the ID
@@ -15,10 +14,10 @@ only to an actual readable world character, using the existing permission-aware
 master relationship resolver. An ID is not a token selector; do not choose a
 same-named Actor, a compendium entry or a token-current replacement.
 
-Only a resolved, authorized master permits the familiar's public
-[`toObject(false)`](https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html#toobject)
-call for current statistics. Missing, unassociated, denied, unsupported or
-unverified master claims prevent that serializer call and all current rows.
+Only a resolved, authorized master permits selection of the familiar's public
+[`Actor.system`](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.ActorData.html#system)
+own data properties. Missing, unassociated, denied, unsupported or unverified
+master claims prevent any current model read and all current rows.
 Retain source/master relationship evidence and actionable partial reasons; no
 zero statistics or source fallback is fabricated. Never use `familiar.master`,
 private members, preparation methods, sheet data or locally reconstructed master
@@ -35,8 +34,8 @@ claim as transformed data.
 
 After the asynchronous master lookup, the reader rechecks world readiness,
 GM role, familiar/pack/Scene/Token permissions, source reassignment and master
-access before transformed serialization. Regression tests establish zero
-transformed calls when those permissions are lost during resolution.
+access before current model reads. Regression tests establish zero model reads
+when those permissions are lost during resolution.
 
 Explicit statistics additionally emits `statistics:familiar_master` in section
 `statistics`, using the existing `pf2e.familiar.master.v1` mapping, relationship
@@ -52,11 +51,12 @@ in revision checks independently of transformed current values.
 The pinned [FamiliarSystemData](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/familiar/data.ts)
 declares attributes, saves, Perception, movement and ordinary skills while its
 source interface explicitly excludes independent skills/saves/Perception.
-Selected transformed serialization is admissible independently of that source
-exclusion; it does not authorize every runtime property or helper object.
+Declared public model data is admissible independently of that source exclusion;
+schema-based serialization may omit those derived fields. This boundary does
+not authorize every runtime property or helper object.
 Related [creature data](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/creature/data.ts)
 and [statistic traces](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/system/statistic/data.ts)
-define the selected leaf meanings. Values must be own serialized data properties;
+define the selected leaf meanings. Values must be declared own data properties;
 nonplain containers are allowed, inherited values and getters are not fallbacks.
 
 Expose selected defenses, HP, Perception, movement and ordinary skill fields as
@@ -81,10 +81,12 @@ trace, must not be invented from a modifier.
 
 ## Exact selected fields and records
 
-The pure `familiarCurrentFields` selector consumes detached serialized data only;
-the integrated reader performs the master guard before obtaining that data.
+The pure `familiarCurrentFields` selector consumes a guarded `{type, system}`
+context and detaches only its selected own primitive values. The integrated
+reader performs the master guard before obtaining the model. No source or
+`toObject(false)` fallback is used.
 Descriptors contain `{path, present, value?, concept, limitations}` with
-limitation `serialized_familiar_value_not_recalculated`. Integrated records use
+limitation `familiar_value_not_recalculated`. Integrated records use
 mapping `pf2e.familiar.current.v1`, `section: statistics`, `kind: field`, exact
 familiar UUID and `basis: transformed` in their single raw witness and matching
 provenance contributor. Mapped unit is null; primitives retain their values and
@@ -107,7 +109,7 @@ No attribute, attack, proficiency-rank or resource records are admitted by this
 allowlist. Descriptor reasons always include `other_statistics_pending`, with
 `current_fields_unavailable` for missing selected fields and
 `familiar_item_linked_skills_unsupported` for skipped skills. These are distinct
-from unresolved-master reasons emitted before serialization.
+from unresolved-master reasons emitted before any current model read.
 
 ## Revision, privacy and completeness
 
@@ -116,14 +118,14 @@ master identity/status and selected familiar transformed values. Re-resolve
 permission and relationship facts when checking continuations; changed master
 claims, permissions, identity/status or current-only values invalidate stale
 pages. Shared count/UTF-8 byte pagination is independent of skill-map bounds.
-Default/source-only reads do not request or return current statistics.
+Default/source-only reads do not select or return current model statistics.
 
 Statistics remains partial with explicit unresolved-master or current-field gaps
 and pending-statistics limitations. Reading a complete page sequence is not
 proof of complete familiar mechanics, visibility, target-context rolls or active
 condition application.
 
-Deterministic coverage must establish serializer-not-called for every failed
+Deterministic coverage must establish model-not-read for every failed
 master status, world-character type/identity guards, master permission loss,
 source/derived separation, source-only exclusion, own-property admission,
 missing/null/zero distinctions, skipped Item-linked skill privacy, skill bounds,
@@ -133,9 +135,40 @@ descriptions and strict Python DTO validation must match the delivered fields.
 Authenticated discovery passed with the reusable Actor discovery checker and
 three required familiar-statistics terms. It used one discovery call and
 reported `runtime_checked: false`. The existing familiar fixture runner offers
-`--statistics` for later live verification using the same marked pair, exact
-public serializer comparisons and guarded cleanup; that mode has not been run.
+`--statistics` using the same marked pair, independent public model comparisons
+and guarded cleanup; the completed run is recorded below.
 Final offline suites passed:381 Python tests (one skipped),534 JavaScript tests.
+
+## Representative world verification — October 25
+
+`scripts/actor-familiar-live-check.py --world-id test --statistics` passed on
+Foundry14.369/PF2e8.6.1 in the existing localhost test world. It made 108 MCP
+calls and verified **127 present current fields, zero missing**, plus the source
+master context, in 128 statistics records across 64 pages. Acceptance requires
+present finite AC, saves, ordinary skills and land Speed, so matching missing
+fields cannot establish success. Every returned selected field matched an
+independent own-property read of public model data; no getter, preparation or
+local master formula was called.
+
+The same marked character/familiar pair and two inert action Items also passed
+six Actor pages (11 records), 16 Item pages, master identity follow-up and exact
+source/prose checks. Clearing only the fixture's master produced one statistics
+page containing source context and no derived rows. The system normalized the
+recorded master ability to null during that update; the verifier compares the
+actual post-update source instead of assuming the old ability survives. An
+offline regression fails with the old assumption and passes with exact source
+context validation.
+
+Complete source fingerprints remained unchanged within each read phase, before
+and after the intentional fixture-only unassignment. Exact UUID/type/run-marker
+cleanup removed the familiar before its character and confirmed no pending
+creation or remaining fixture. Offline deferred-creation and lost-response tests
+prevent false cleanup success or unrelated deletions. Request/initialization/
+session limits are 30/10/180 seconds, with separately bounded cleanup.
+
+This verifies selected world-familiar current values and the unassociated-master
+boundary. Compendium/token current fixtures, Item-linked skills and integrated
+casting/state remain separate gates. It does not certify all familiar mechanics.
 
 Original ACT-familiar gates remain: representative master-linked live values,
 familiar/master ability identity and description, world/compendium/token context,
