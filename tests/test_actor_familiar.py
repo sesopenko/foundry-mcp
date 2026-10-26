@@ -101,7 +101,8 @@ console.log(JSON.stringify({master:await familiarMasterRelationship(target,{path
 import {readActor} from './foundry-module/scripts/actors.js';
 const prose='<p>😀 Exact familiar</p>'.repeat(700);
 const source={name:'Familiar',type:'familiar',system:{master:{id:'m',ability:'unknown'},attributes:{hp:{value:1e21,temp:0,tempSource:'i',max:999}},details:{creature:{value:prose}}}};
-const actor={id:'a',uuid:'Actor.a',name:'Familiar',type:'familiar',documentName:'Actor',folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject:()=>structuredClone(source)};
+let transformedCalls=0;
+const actor={id:'a',uuid:'Actor.a',name:'Familiar',type:'familiar',documentName:'Actor',folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject(flag){if(flag===false){transformedCalls++;throw Error('Unavailable master must not serialize current familiar');}return structuredClone(source);}};
 const master={id:'m',uuid:'Actor.m',name:'Master',type:'character',documentName:'Actor',folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject:()=>({name:'Master',type:'character',system:{}})};
 for(let i=0;i<4;i++){
  const item={id:'i'+i,uuid:'Actor.a.Item.i'+i,name:'Ability '+i,type:'action',documentName:'Item',parent:actor,testUserPermission:()=>true,toObject:()=>({name:'Ability '+i,type:'action',system:{category:'familiar',traits:{value:i?['familiar','master','unknown']:[]}}})};actor.items.set(item.id,item);
@@ -109,7 +110,8 @@ for(let i=0;i<4;i++){
 const denied={id:'denied',type:'action',testUserPermission:()=>false};actor.items.set('denied',denied);
 globalThis.game={version:'14.369',system:{id:'pf2e',version:'8.6.1'},ready:true,user:{isGM:true},items:new Map(),actors:new Map([['a',actor],['m',master]])};
 globalThis.foundry={utils:{fromUuid:async uuid=>uuid==='Actor.m'?master:actor}};
-const pages=[];let cursor=null;do{const page=await readActor({actor_uuid:'Actor.a',sections:['identity','source','description','abilities','statistics'],limit:2,...(cursor?{cursor}:{})});pages.push(page);cursor=page.pagination.next_cursor;}while(cursor);console.log(JSON.stringify(pages));
+const pages=[];let cursor=null;do{const page=await readActor({actor_uuid:'Actor.a',sections:['identity','source','description','abilities'],limit:2,...(cursor?{cursor}:{})});pages.push(page);cursor=page.pagination.next_cursor;}while(cursor);
+game.actors.delete('m');pages.push(await readActor({actor_uuid:'Actor.a',sections:['statistics']}));if(transformedCalls!==0)throw Error('Unexpected transformed serialization');console.log(JSON.stringify(pages));
 """
         proc=subprocess.run(['node','--input-type=module'],input=script,text=True,capture_output=True,cwd=Path(__file__).resolve().parents[1])
         self.assertEqual(proc.returncode,0,proc.stderr)
@@ -126,5 +128,6 @@ const pages=[];let cursor=null;do{const page=await readActor({actor_uuid:'Actor.
         abilities=[r for r in records if r['section']=='abilities']
         self.assertEqual(len(abilities),5)
         self.assertTrue(all(r['mapped']['value']['ability_kind']=='unclassified' for r in abilities if r['mapped']['value']['status']=='resolved'))
-        self.assertFalse(any(r['section']=='statistics' or any(raw['path']=='/system/attributes/hp/max' for raw in r['raw']) for r in records))
-        self.assertTrue(all(next(s for s in p['sections'] if s['name']=='statistics')==dict(name='statistics',status='unsupported',reasons=['master_current_contract_pending']) for p in pages))
+        self.assertFalse(any(r['provenance']['mapping']=='pf2e.familiar.current.v1' or any(raw['path']=='/system/attributes/hp/max' for raw in r['raw']) for r in records))
+        self.assertEqual(pages[-1]['sections'],[dict(name='statistics',status='partial',reasons=['familiar_master_missing'])])
+        self.assertEqual(pages[-1]['records'][0]['mapped']['value'],dict(status='missing',target_uuid=None))

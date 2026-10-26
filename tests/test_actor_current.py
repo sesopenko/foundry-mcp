@@ -81,10 +81,10 @@ const pages=[];let cursor=null;do{const page=await readActor({actor_uuid:'Actor.
         self.assertFalse(rank['raw'][0]['present'])
         self.assertIsNone(rank['mapped']['value'])
 
-    async def test_familiar_requires_exact_pending_master_diagnostic(self):
+    async def test_familiar_requires_exact_missing_master_diagnostic(self):
         page=current(actor_type='familiar');page['records']=[]
         page['pagination']['returned']=0
-        page['sections'][0].update(status='unsupported',reasons=['master_current_contract_pending'])
+        page['sections'][0].update(status='partial',reasons=['familiar_master_missing'])
         await self.read(page)
         for reasons in ([],['arbitrary'],['master_current_contract_pending','pagination']):
             page['sections'][0]['reasons']=reasons

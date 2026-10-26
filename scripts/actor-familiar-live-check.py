@@ -40,13 +40,13 @@ def probe(value):
     return json.loads(value)
 
 
-async def main(world_id):
+async def main(world_id, check_statistics=False):
     root = Path(__file__).resolve().parent.parent
     token = next(line.partition('=')[2].strip() for line in (root / '.env.mcp').read_text().splitlines() if line.partition('=')[0].strip() == 'FOUNDRY_MCP_CALLER_TOKEN')
     transport = StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp', headers={'Authorization': 'Bearer ' + token})
     marker = json.dumps(str(uuid4()))
     master_uuid, familiar_uuid = None, None
-    summary = {'passed': False, 'cleanup_confirmed': False}
+    summary = {'passed': False, 'cleanup_confirmed': False, 'statistics_checked': False}
     stage = 'discovery'
     guard = """
 if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
@@ -81,7 +81,10 @@ if(location.origin!=='http://localhost:30000'||game.world.id!==WORLD)throw Error
             assert 'familiar' in tools['read_actor'].description.lower()
             registry = payload(await client.call_tool('get_actor_types', {}))
             support = next(actor for actor in registry['actor_types'] if actor['type'] == 'familiar')
-            assert support['source_supported'] and support['mapped_supported'] and not support['effective_supported']
+            assert support['source_supported'] and support['mapped_supported'] and support['effective_supported']
+            limitations = ' '.join(support['limitations']).lower()
+            assert 'full integrated views remain unsupported' in limitations
+            assert 'live verification is pending' in limitations
             stage = 'master_creation'
             created = await js(guard + """
 const actor=await Actor.implementation.create({name:'MCP temporary familiar master',type:'character',flags:{'foundry-mcp':{familiarVerificationRun:RUN}}});
@@ -146,10 +149,46 @@ const report=JSON.stringify({hash,count:actor.items.size});
             stage = 'default_privacy'
             defaults, _, _ = await pages('read_actor', {'actor_uuid': familiar_uuid})
             assert not any(row['section'] == 'description' for row in defaults)
+            assert not any(raw['basis'] == 'transformed' for row in defaults for raw in row['raw'])
+            assert not any(raw['basis'] == 'transformed' for row in rows for raw in row['raw'])
             assert 'Familiar source verification creature.' not in json.dumps(defaults)
-            stage = 'statistics_unsupported'
-            statistics, statistics_page, _ = await pages('read_actor', {'actor_uuid': familiar_uuid}, ['statistics'])
-            assert not statistics and statistics_page['sections'][0]['status'] == 'unsupported'
+            if check_statistics:
+                stage = 'statistics_pagination'
+                statistics, statistics_page, statistics_pages = await pages('read_actor', {'actor_uuid': familiar_uuid}, ['statistics'])
+                assert len({row['key'] for row in statistics}) == len(statistics)
+                assert statistics_page['sections'][0]['status'] == 'partial'
+                assert 'other_statistics_pending' in statistics_page['sections'][0]['reasons']
+                master_rows = [row for row in statistics if row['key'] == 'statistics:familiar_master']
+                assert len(master_rows) == 1
+                current_master = master_rows[0]
+                assert current_master['mapped']['value'] == value
+                assert current_master['provenance']['mapping'] == 'pf2e.familiar.master.v1'
+                assert current_master['raw'] == [
+                    {'document_uuid': familiar_uuid, 'path': '/system/master/id', 'present': True, 'value': setup['master_id'], 'basis': 'source'},
+                    {'document_uuid': familiar_uuid, 'path': '/system/master/ability', 'present': True, 'value': 'cha', 'basis': 'source'},
+                ]
+                assert current_master['provenance']['contributors'] == [{key: raw[key] for key in ('document_uuid', 'path', 'basis')} for raw in current_master['raw']]
+                current_rows = [row for row in statistics if row['provenance']['mapping'] == 'pf2e.familiar.current.v1']
+                assert 0 < len(current_rows) <= 1000
+                assert len(current_rows) + 1 == len(statistics)
+                expected = []
+                for row in current_rows:
+                    assert row['section'] == 'statistics' and row['kind'] == 'field' and len(row['raw']) == 1
+                    raw = row['raw'][0]
+                    assert raw['document_uuid'] == familiar_uuid and raw['basis'] == 'transformed'
+                    assert row['key'] == 'statistics:' + raw['path']
+                    assert row['provenance']['limitations'] == ['serialized_familiar_value_not_recalculated']
+                    assert row['provenance']['contributors'] == [{key: raw[key] for key in ('document_uuid', 'path', 'basis')}]
+                    expected.append({key: raw[key] for key in ('path', 'present', 'value') if key in raw})
+                stage = 'statistics_independent_serialization'
+                actual = await js(owned_guard + 'const paths=' + json.dumps([row['path'] for row in expected]) + ';' + """
+if(paths.length>1000)throw Error('Verification path bound exceeded');
+const serialized=actor.toObject(false),fields=[];
+for(const path of paths){let value=serialized,present=true;for(const encoded of path.slice(1).split('/')){const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~');if(value===null||typeof value!=='object'){present=false;break;}const d=Object.getOwnPropertyDescriptor(value,key);if(!d||!Object.hasOwn(d,'value')||d.value===undefined){present=false;break;}value=d.value;}fields.push({path,present,...(present?{value}:{})});}
+const report=JSON.stringify({fields});
+""")
+                assert actual['fields'] == expected
+                summary.update(statistics_checked=True, statistics_pages=statistics_pages, statistics_records=len(statistics), current_statistics_records=len(current_rows))
             assert await js(fingerprint) == before
             stage = 'nullable_master_setup'
             await js(owned_guard + """
@@ -161,6 +200,20 @@ const report=JSON.stringify({updated:actor.toObject(true).system.master.id===nul
             null_link = next(row for row in null_rows if row['key'] == 'identity:familiar_master')
             assert null_link['mapped']['value'] == {'status': 'unassociated', 'target_uuid': None}
             assert 'familiar_master_unassociated' in next(section for section in null_page['sections'] if section['name'] == 'identity')['reasons']
+            if check_statistics:
+                stage = 'statistics_unassociated_master'
+                null_statistics, null_statistics_page, null_statistics_pages = await pages('read_actor', {'actor_uuid': familiar_uuid}, ['statistics'])
+                assert len(null_statistics) == 1
+                null_master = null_statistics[0]
+                assert null_master['key'] == 'statistics:familiar_master'
+                assert null_master['mapped']['value'] == {'status': 'unassociated', 'target_uuid': None}
+                assert [raw['path'] for raw in null_master['raw']] == ['/system/master/id', '/system/master/ability']
+                assert all(raw['basis'] == 'source' for raw in null_master['raw'])
+                assert null_master['raw'][0]['value'] is None and null_master['raw'][1]['value'] == 'cha'
+                assert null_statistics_page['sections'][0]['status'] == 'partial'
+                assert 'familiar_master_unassociated' in null_statistics_page['sections'][0]['reasons']
+                assert not any(raw['basis'] == 'transformed' for row in null_statistics for raw in row['raw'])
+                summary['unassociated_statistics_pages'] = null_statistics_pages
             assert await js(fingerprint) == null_before
             summary.update(passed=True, actor_pages=count, actor_records=len(rows), item_pages=item_pages, owned_items=2, fingerprint_unchanged=True, nullable_master_verified=True)
         except Exception as error:
@@ -193,5 +246,6 @@ const report=JSON.stringify({clean:!game.actors.some(a=>a.getFlag('foundry-mcp',
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--world-id', required=True, help='Exact existing development world ID; required before fixture writes.')
+    parser.add_argument('--statistics', action='store_true', help='Verify permission-checked current fields using the same marked pair, plus suppression after master unassignment.')
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(main(args.world_id)))
+    raise SystemExit(asyncio.run(main(args.world_id, args.statistics)))

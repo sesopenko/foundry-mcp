@@ -5,9 +5,11 @@ Targeted audit: October 23, 2026. Contract target: Foundry **14.369**, PF2e
 `28d9d156f252d084371d994dc359509b49eadf18`.
 
 The `statistics` section now implements the character/NPC subset documented
-below and in [verification](current-statistics-verification.md). Skills, familiar
-derivation and the other listed future views remain candidates, not delivered
-support. This contract identifies a bounded extraction route for checkpoints in
+below and in [verification](current-statistics-verification.md). Separate
+[current skills](skills-current-contract.md) and
+[master-checked familiar statistics](familiar-current-contract.md) now have
+deterministic implementations, with their live gates still open. Other listed
+future views remain candidates. This contract identifies a bounded extraction route for checkpoints in
 [ACT-character](stories/ACT-character.md), [ACT-npc](stories/ACT-npc.md), and
 [ACT-familiar](stories/ACT-familiar.md). It does not close those checkpoints or
 replace their original acceptance criteria with a narrower delivered subset.
@@ -16,8 +18,9 @@ replace their original acceptance criteria with a narrower delivered subset.
 
 Explicit `read_actor(..., sections=["statistics"])` selects character/NPC
 attributes, AC, HP, saves, Perception/vision and movement from public
-`toObject(false)`. Familiar statistics remains unsupported with reason
-`master_current_contract_pending`, pending permission-aware master verification.
+`toObject(false)`. Familiar statistics uses its separate permission-checked
+master contract and closed field allowlist; unavailable master prevents all
+transformed serialization and returns explicit partial reasons.
 Default source reads do not request transformed serialization.
 
 Each field record has `key: "statistics:<JSON Pointer>"`, `section: "statistics"`,

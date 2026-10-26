@@ -79,10 +79,10 @@ test('current changes invalidate continuations even when persisted source is unc
   await assert.rejects(readActor({ ...params, cursor: first.pagination.next_cursor }), error => error.rpcError.code === 'PermissionDenied');
 });
 
-test('familiar statistics stay explicitly unsupported without transformed reads', async () => {
+test('familiar statistics with missing master remain partial without transformed reads', async () => {
   const f = fixture('world', 'familiar'), result = await readActor({ ...f.selector, sections: ['statistics'] });
-  assert.deepEqual(result.records, []);
-  assert.deepEqual(result.sections.find(section => section.name === 'statistics'), { name: 'statistics', status: 'unsupported', reasons: ['master_current_contract_pending'] });
+  assert.equal(result.records.length,1);assert.equal(result.records[0].key,'statistics:familiar_master');assert.deepEqual(result.records[0].mapped.value,{status:'missing',target_uuid:null});
+  assert.equal(result.sections.find(section => section.name === 'statistics').status,'partial');assert.ok(result.sections.find(section => section.name === 'statistics').reasons.includes('familiar_master_missing'));
   assert.ok(f.calls.every(flag => flag === true));
 });
 
@@ -109,17 +109,19 @@ test('statistics count and byte limits reject requests before serialization', as
   assert.deepEqual(f.calls, []);
 });
 
-test('discovery scopes effective flags to partial character/NPC statistics and the verified runtime', async () => {
+test('discovery scopes effective flags to selected statistics and source support to familiar master configuration', async () => {
   fixture();
   const registry=await getActorTypes();
   const statistics=registry.actor_sections.find(section=>section.name==='statistics');
-  assert.equal(statistics.source_supported,false);
+  // Statistics source support is the familiar master ID/ability context; the
+  // selected numeric statistics retain their separate transformed basis.
+  assert.equal(statistics.source_supported,true);
   assert.equal(statistics.mapped_supported,true);
   assert.equal(statistics.effective_supported,true);
   assert.match(statistics.limitations.join(' '),/Always partial/);
-  assert.match(statistics.limitations.join(' '),/Familiar current statistics remain unsupported/);
+  assert.match(statistics.limitations.join(' '),/Familiar/);
   for(const type of ['character','npc'])assert.equal(registry.actor_types.find(actor=>actor.type===type).effective_supported,true);
-  assert.equal(registry.actor_types.find(actor=>actor.type==='familiar').effective_supported,false);
+  assert.equal(registry.actor_types.find(actor=>actor.type==='familiar').effective_supported,true);
   game.system.id='other';
   const unsupported=await getActorTypes();
   assert.equal(unsupported.availability.supported,false);

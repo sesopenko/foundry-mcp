@@ -71,6 +71,11 @@ class ActorSkillsTests(unittest.IsolatedAsyncioTestCase):
             row['raw'][0]['value']=rank;row['mapped']['value']=dict(rank=rank,label='Expert')
             with self.subTest(rank=rank),self.assertRaises(ToolError):await self.read(self.page([row]))
 
+    async def test_empty_generated_skill_key_is_rejected(self):
+        row=copy.deepcopy(next(r for r in self.results[0]['records'] if r['mapped']['concept']=='current_skill_value'))
+        path='/system/skills//value';row['key']='skills:current:'+path;row['raw'][0]['path']=path;row['provenance']['contributors'][0]['path']=path
+        with self.assertRaises(ToolError):await self.read(self.page([row]))
+
     async def test_lore_identity_and_same_page_claims_are_exact(self):
         original=next(r for r in self.results[0]['records'] if r['provenance']['mapping']=='pf2e.actor.skills-lore.v1')
         changes=[lambda r:r['mapped']['value'].update(target_uuid='Actor.other.Item.one'),lambda r:r['mapped']['value'].update(type='effect'),lambda r:r['mapped']['value'].update(token_uuid='Scene.s.Token.t'),lambda r:r['mapped']['value'].update(name_truncated=0),lambda r:r['mapped']['value'].update(status='denied'),lambda r:r['raw'][0].update(value=False)]

@@ -18,12 +18,12 @@ async function pages(sections,options={}){let cursor;const result=[];do{const pa
 const byPath=(rows,path)=>rows.find(row=>row.raw[0]?.path===path);
 
 test('familiar source pagination preserves selected source and never resolves master or current statistics',async()=>{
- const f=fixture(),before=JSON.stringify(f.source),result=await pages(['source','statistics','effective']),rows=result.flatMap(page=>page.records);
+ const f=fixture(),before=JSON.stringify(f.source),result=await pages(['source','effective']),rows=result.flatMap(page=>page.records);
  assert.equal(f.lookups,0);assert.equal(result[0].identity.uuid,'Actor.f');
  const hp=byPath(rows,'/system/attributes/hp/value');assert.equal(hp.raw[0].value,0);assert.equal(hp.raw[0].basis,'source');assert.equal(hp.provenance.mapping,'pf2e.familiar.source.v1');
  assert.equal(byPath(rows,'/system/master/ability').mapped.value,'unknown-code');
  assert.ok(!rows.some(row=>/\/hp\/max|\/skills\/|\/saves\/|\/traits\//.test(row.raw[0]?.path??'')));
- assert.ok(result.every(page=>page.sections.filter(section=>['statistics','effective'].includes(section.name)).every(section=>section.status==='unsupported')));
+ assert.ok(result.every(page=>page.sections.filter(section=>section.name==='effective').every(section=>section.status==='unsupported')));
  assert.equal(JSON.stringify(f.source),before);
 });
 test('explicit familiar description fragments reconstruct exact source with stable offsets',async()=>{

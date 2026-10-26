@@ -708,7 +708,7 @@ def _skill_current_spec(path, actor_type):
     match=re.fullmatch(r'/system/skills/((?:[^~/]|~[01])*)/([^/]+)',path)
     if not match:return None
     key=match[1].replace('~1','/').replace('~0','~')
-    if len(key)>256:return None
+    if not 1<=len(key)<=256:return None
     leaf=match[2]
     kinds=dict(slug='string',label='string',attribute='attribute',value='number',totalModifier='number',dc='number',breakdown='string',lore='boolean',itemId='nullable_string')
     kinds.update(dict(rank='rank',armor='boolean') if actor_type=='character' else dict(base='number',mod='number',visible='boolean',note='string'))
@@ -3223,6 +3223,96 @@ def _actor_current_concept(path):
     return 'current_'+leaf+'_'+('movement' if len(rest)==1 else {'value':'speed','base':'base_speed','type':'movement_type','source':'movement_source_label'}[rest[1]])
 
 
+def _familiar_current_spec(path):
+    """PF2e-specific8.6.1 familiar transformed primitive allowlist.
+
+    FamiliarSystemData declares CreatureAttributes, CreatureSaves, Perception,
+    CreatureMovementData and SkillData. Source excludes these derived leaves.
+    https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/familiar/data.ts
+    No independent attributes, attacks, resources or proficiency ranks admitted.
+    """
+    if type(path) is not str:return None
+    if path=='/system/skills':return ('current_skill_collection','collection')
+    skill=_skill_current_spec(path,'npc')
+    if skill is not None and skill[0] in ('current_skill_slug','current_skill_label','current_skill_value','current_skill_total_modifier','current_skill_dc','current_skill_breakdown'):return skill
+    if path.startswith('/system/skills/'):return None
+    if path.startswith('/system/abilities/') or path.endswith('/rank'):return None
+    kind=_actor_current_spec(path,'npc')
+    return (_actor_current_concept(path),kind) if kind is not None else None
+
+
+def _familiar_current_record(row, identity):
+    """PF2e-specific8.6.1 familiar values serialized after master admission.
+
+    Exact source master provenance delegates the existing master contract;
+    transformed familiar primitives follow _familiar_current_spec, never local
+    master-derived arithmetic. Page-level master/reason consistency is separate.
+    """
+    if row['key']=='statistics:familiar_master':
+        if len(row['raw'])!=2 or type(row['provenance']) is not dict or row['provenance'].get('contributors')!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in row['raw']]:return False
+        ability=row['raw'][1]
+        if type(ability) is not dict or not {'document_uuid','path','present','basis'}<=set(ability) or not set(ability)<={'document_uuid','path','present','basis','value'}:return False
+        if ability['document_uuid']!=identity['uuid'] or ability['path']!='/system/master/ability' or ability['basis']!='source' or type(ability['present']) is not bool or ability['present']!=('value' in ability):return False
+        if ability['present'] and ability['value'] is not None and type(ability['value']) is not str:return False
+        narrowed=dict(row,key='identity:familiar_master',section='identity',raw=row['raw'][:1],provenance=dict(row['provenance'],contributors=row['provenance']['contributors'][:1]))
+        return _familiar_relationship(narrowed,identity)
+    if set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='field' or len(row['raw'])!=1:return False
+    raw=row['raw'][0]
+    if type(raw) is not dict or not {'document_uuid','path','present','basis'}<=set(raw) or not set(raw)<={'document_uuid','path','present','basis','value'}:return False
+    if raw['document_uuid']!=identity['uuid'] or raw['basis']!='transformed' or type(raw['present']) is not bool or raw['present']!=('value' in raw):return False
+    path=raw['path'];spec=_familiar_current_spec(path)
+    if spec is None or row['key']!='statistics:'+path:return False
+    concept,kind=spec;value=raw.get('value')
+    if raw['present']:
+        valid={'number':type(value) in (int,float) and math.isfinite(value),'string':type(value) is str,
+               'boolean':type(value) is bool,'null':value is None,'nullable_string':value is None or type(value) is str,
+               'collection':type(value) is dict and value=={}}
+        if not valid.get(kind,type(value) is str and value==kind):return False
+    expected=dict(concept=concept,value=None if kind=='collection' else value,unit=None)
+    if json.dumps(row['mapped'],sort_keys=True,allow_nan=False)!=json.dumps(expected,sort_keys=True,allow_nan=False):return False
+    return row['provenance']==dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.familiar.current.v1',limitations=['serialized_familiar_value_not_recalculated'])
+
+
+def _familiar_current_section(records, section):
+    """PF2e-specific8.6.1 same-page familiar/master admission diagnostics.
+
+    Master witnesses can be on another page. Explicit unresolved section reasons
+    never permit transformed rows, and available source/current master claims
+    must agree. No inference is made from an off-page absent discriminator.
+    """
+    rows=[r for r in records if r['section']=='statistics'];current=[r for r in rows if r['provenance']['mapping']=='pf2e.familiar.current.v1']
+    masters=[r for r in records if r['key'] in ('statistics:familiar_master','identity:familiar_master')]
+    reasons=set(section['reasons'])
+    if section['status']!='partial':return False
+    if masters:
+        first=masters[0]
+        if any(r['raw'][0]!=first['raw'][0] or r['mapped']!=first['mapped'] for r in masters[1:]):return False
+        claim=first['raw'][0]
+        for row in records:
+            for raw in row['raw']:
+                if raw['path']=='/system/master/id' and raw['basis']=='source' and raw!=claim:return False
+        ability=next((r['raw'][1] for r in masters if r['key']=='statistics:familiar_master'),None)
+        if ability is not None:
+            for row in records:
+                for raw in row['raw']:
+                    if raw['path']=='/system/master/ability' and raw['basis']=='source' and raw!=ability:return False
+        status=first['mapped']['value']['status']
+        if status!='resolved':return not current and reasons-{'pagination'}=={'familiar_master_'+status}
+    unresolved=reasons-{'pagination'}
+    if any(reason.startswith('familiar_master_') for reason in unresolved):
+        allowed={'familiar_master_'+s for s in ('missing','unassociated','denied','unsupported','unverified')}
+        return not current and not masters and len(unresolved)==1 and unresolved<=allowed
+    if 'other_statistics_pending' not in reasons or not reasons<={'other_statistics_pending','current_fields_unavailable','familiar_item_linked_skills_unsupported','pagination'}:return False
+    fields=[r['raw'][0] for r in current]
+    if any(not r['present'] for r in fields) and 'current_fields_unavailable' not in reasons:return False
+    for mode in ('burrow','climb','fly','swim'):
+        path='/system/movement/speeds/'+mode
+        if any(r['path']==path and (not r['present'] or r['value'] is None) for r in fields):
+            if any(r['path'].startswith(path+'/') and r['present'] for r in fields):return False
+    if any(r['path']=='/system/skills' for r in fields) and any(r['path'].startswith('/system/skills/') for r in fields):return False
+    return True
+
+
 def _actor_current_record(row, identity):
     """PF2e-specific current character/NPC leaves; exact transformed provenance.
 
@@ -3259,6 +3349,7 @@ def _current_section(records, section, identity):
     cannot simultaneously provide a present descendant in this snapshot.
     """
     rows=[row for row in records if row['section']=='statistics']
+    if identity['type']=='familiar':return _familiar_current_section(records,section)
     if identity['type'] not in ('character','npc'):
         return not rows and section['status']=='unsupported' and section['reasons']==['master_current_contract_pending']
     raw=[row['raw'][0] for row in rows]
@@ -3288,6 +3379,7 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return _familiar_relationship(row,identity)
     # PF2e-specific transformed statistics are admitted only at this narrow gate.
     if identity['document_name']=='Actor' and row['section']=='statistics':
+        if identity['type']=='familiar':return _familiar_current_record(row,identity)
         return _actor_current_record(row,identity)
     if identity['document_name']=='Item' and identity['type']=='feat' and row['section']=='relationships':
         return _feat_relationship(row,identity)
@@ -3640,9 +3732,9 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     nullable movement modes preserve null rather than inventing zero speed.
     Statistics is always partial with other_statistics_pending, plus
     current_fields_unavailable when selected leaves are missing and pagination
-    while more records remain. Familiar statistics is unsupported pending a
-    master contract. No skills, senses/languages/IWR, Strikes, condition/effect
-    state or target-context calculations are supplied by this section.
+    while more records remain. Character/NPC skills use the separate skills
+    section. No senses/languages/IWR, Strikes, condition/effect state or
+    target-context calculations are supplied by statistics.
     Explicit description returns NPC
     stored blurb, publicNotes and privateNotes only, including GM-private biography;
     default source never includes them. Familiar source preserves nullable stored
@@ -3665,9 +3757,45 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     optional token_uuid. Follow target_uuid with read_item for category/prose;
     traits and names do not establish familiar/master scope or active benefits.
     Abilities is always partial with other_abilities_pending; related_items_denied
-    adds an anonymous denied marker. Familiar statistics remains unsupported
-    with master_current_contract_pending. Neither empty references nor source
-    HP establishes complete current familiar mechanics.
+    adds an anonymous denied marker. Explicit familiar statistics first resolves
+    the actual source master ID through the permission-aware world Character
+    resolver, even when identity was not requested. statistics:familiar_master
+    retains the same familiar_master concept/mapping/value/limitation as identity,
+    but has two exact source witnesses: /system/master/id and
+    /system/master/ability, with missing/null distinctions. The latter is only
+    selected configuration, never an independent attribute or modifier. Identity's
+    master record keeps its original single-ID witness. Missing/unassociated/
+    denied/unsupported/unverified masters produce a partial statistics section
+    with familiar_master_<status>, plus pagination if needed, and no transformed
+    familiar fields or serialization fallback. Denied references reveal no
+    resolved metadata. Only a resolved permitted master admits public familiar
+    toObject(false) values. These field records have key statistics:<exact path>,
+    mapping pf2e.familiar.current.v1, one own familiar-Actor transformed
+    raw/contributor, and limitation serialized_familiar_value_not_recalculated.
+    The allowlist is AC value/breakdown/details; HP value/max/temp; fortitude,
+    reflex and will value/totalModifier/breakdown; Perception value/totalModifier/
+    breakdown/vision; and movement land/burrow/climb/fly/swim/travel with
+    value/base/type/source leaves and explicit null optional mode roots. Concepts
+    match the current_* character/NPC names above, without rank or attributes.
+    Familiar statistics also includes ordinary SkillData slug/label/value/
+    totalModifier/dc/breakdown, mapped to current_skill_<leaf> except total_modifier.
+    Skill keys are JSON Pointer escaped; missing or empty /system/skills has
+    concept current_skill_collection, mapped null and absent raw versus value {}.
+    Skills with lore true or a nonempty itemId are entirely withheld before keys,
+    labels or totals, adding familiar_item_linked_skills_unsupported; no Lore
+    relationship is inferred. Resolved-master statistics stays partial with
+    other_statistics_pending, current_fields_unavailable for missing selected
+    leaves, the linked-skill reason when applicable, and pagination. Finite numbers
+    and booleans retain serialized values; source is never a current-value fallback.
+    Selected master identity/configuration and familiar values participate in
+    revision checks; changed permissions/claims/values require restarting a
+    stale continuation. Familiar skill maps allow at most512 own keys of1–256
+    Unicode code points and at most24000 selected fields; overflow is ReadFailed.
+    No master getter, preparation, local derivation, independent attributes,
+    proficiency ranks, normal Strikes, attack/resource totals or complete familiar
+    mechanics are inferred. Neither empty references nor source HP establishes
+    complete current familiar mechanics. Default/source reads do not serialize
+    transformed familiar statistics.
     Character source exposes PF2e8.6.1 recorded level, nullable manual attribute
     modifiers, identity/language codes, XP, source HP/temporary HP/stamina, skill
     ranks, selected resources and persisted build choices. Null abilities remain

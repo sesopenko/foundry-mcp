@@ -5,12 +5,24 @@
  * master getter, or derived statistics. See familiar-fields.md for exclusions.
  */
 const LIMIT='familiar_source_not_master_derived_statistics';
+/** PF2e-specific detached source subtype; accessors are never source fields. */
+function sourceType(source){
+ if(source===null||typeof source!=='object')return undefined;
+ const descriptor=Object.getOwnPropertyDescriptor(source,'type');
+ if(!descriptor)return undefined;
+ if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Familiar source requires own data properties.');
+ return descriptor.value;
+}
 /** PF2e-specific familiar schema-leaf descriptor; source presence never supplies defaults. */
 function field(source,path,concept,kind,nullable=false){
  const keys=path.split('/');let value=source;
  for(const key of keys){
-  if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)||value[key]===undefined)return {path:`/${path}`,present:false,concept,limitations:[LIMIT]};
-  value=value[key];
+  if(value===null||typeof value!=='object')return {path:`/${path}`,present:false,concept,limitations:[LIMIT]};
+  const descriptor=Object.getOwnPropertyDescriptor(value,key);
+  if(!descriptor)return {path:`/${path}`,present:false,concept,limitations:[LIMIT]};
+  if(!Object.hasOwn(descriptor,'value'))throw new TypeError('Familiar source requires own data properties.');
+  value=descriptor.value;
+  if(value===undefined)return {path:`/${path}`,present:false,concept,limitations:[LIMIT]};
  }
  const valid=nullable&&value===null||kind==='integer'&&Number.isInteger(value)&&value>=0||kind==='string'&&typeof value==='string'||kind==='nonblank'&&typeof value==='string'&&value.length>0;
  if(!valid)throw new TypeError(`Familiar source /${path} must be ${kind==='integer'?'a nonnegative integer':kind==='nonblank'?'a nonblank string':'a string'}${nullable?' or null':''}.`);
@@ -24,7 +36,7 @@ function field(source,path,concept,kind,nullable=false){
  * master-derived fallback. Returns null for other Actor types.
  */
 export function familiarMasterField(source){
- if(source?.type!=='familiar')return null;
+ if(sourceType(source)!=='familiar')return null;
  return field(source,'system/master/id','recorded_master_character_id','string',true);
 }
 /**
@@ -37,7 +49,7 @@ export function familiarMasterField(source){
  * Detached source only; no API calls. Other Actor types return null.
  */
 export function familiarFields(source){
- if(source?.type!=='familiar')return null;
+ if(sourceType(source)!=='familiar')return null;
  return [familiarMasterField(source),
   field(source,'system/master/ability','recorded_master_attribute_code','string',true),
   field(source,'system/attributes/hp/value','recorded_hit_points','integer'),
@@ -52,6 +64,15 @@ export function familiarFields(source){
  * fallback. Other Actor types return null.
  */
 export function familiarNoteFields(source){
- if(source?.type!=='familiar')return null;
+ if(sourceType(source)!=='familiar')return null;
  return [field(source,'system/details/creature/value','familiar_creature_description_source','string')];
+}
+/**
+ * PF2e-specific familiar8.6.1 source master context only, using the pinned
+ * schema above. Current-statistics admission/revisions retain ID and recorded
+ * ability code separately from transformed values; no modifier is calculated.
+ */
+export function familiarMasterContextFields(source){
+ if(sourceType(source)!=='familiar')return null;
+ return [familiarMasterField(source),field(source,'system/master/ability','recorded_master_attribute_code','string',true)];
 }

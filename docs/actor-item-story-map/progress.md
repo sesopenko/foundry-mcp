@@ -494,3 +494,20 @@ Authenticated discovery passed without game data. See the
 [contract](skills-current-contract.md). NPC conditional variants, familiar
 skills and current-skill live verification remain open; this checkpoint does
 not close the full Actor stories. Completed progress stays30/39 (76.9%).
+
+## Permission-checked current familiar statistics — October 25, 2026
+
+Explicit statistics now resolves and rechecks the recorded world-character
+master before familiar transformed serialization. Source ID/ability remain
+separate witnesses; current defenses, movement and ordinary skills retain
+transformed provenance without local formulas. Unavailable master returns no
+transformed rows. Reassignment and permission-loss races are guarded before
+serialization; Item-linked skills are withheld without key/label disclosure.
+
+Deterministic world/pack/token and paginated Python boundary checks pass.
+Authenticated discovery passed with runtime_checked false. The existing fixture
+runner has an optional statistics mode reusing its marked pair and cleanup;
+it has not been run. Representative live values and original integrated gates
+remain open; see the [contract](familiar-current-contract.md). A separate tiny
+skills-boundary regression also aligns empty-key rejection with the documented
+1–256-codepoint bound. Completed progress remains30/39 (76.9%).

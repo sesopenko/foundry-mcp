@@ -45,7 +45,9 @@ async def verify(client, code):
     assert all(term.lower() in tool.description.lower() for term in ('transformed', 'partial', 'familiar', 'statistics'))
     registry = payload(await client.call_tool('get_actor_types', {}))
     statistics = next(row for row in registry['actor_sections'] if row['name'] == 'statistics')
-    assert not statistics['source_supported'] and statistics['mapped_supported'] and statistics['effective_supported']
+    # Source support is the familiar master context; NPC numeric rows below
+    # still require independently verified transformed provenance.
+    assert statistics['source_supported'] and statistics['mapped_supported'] and statistics['effective_supported']
     assert all(term in ' '.join(statistics['limitations']).lower() for term in ('character', 'npc', 'familiar'))
     # Reuse only guarded document selection and the independent path definitions.
     setup = code.split('const samples=')[0]

@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import {familiarFields,familiarNoteFields,familiarMasterField} from '../../foundry-module/scripts/actorFamiliar.js';
 const fixture=()=>({type:'familiar',system:{master:{id:'character-id',ability:'custom-code'},attributes:{hp:{value:0,temp:0,tempSource:'item-id',max:999},immunities:['secret']},details:{creature:{value:'<p>exact creature notes</p>'},level:{value:999},languages:{value:['secret']}},traits:{value:['secret']},perception:{mod:999},saves:{will:999},skills:{acrobatics:999},resources:{focus:{value:999}},abilities:{str:{mod:999}}}});
 const row=(rows,path)=>rows.find(entry=>entry.path===`/system/${path}`);
+test('familiar source master selection rejects own accessors without invoking them',()=>{
+ for(const select of [familiarMasterField,familiarFields]){
+  const source=fixture();let invoked=0;
+  Object.defineProperty(source.system.master,'id',{get(){invoked++;return 'character-id';}});
+  assert.throws(()=>select(source),TypeError);assert.equal(invoked,0);
+ }
+});
 test('familiar selects only persisted master and HP leaves without derived statistics',()=>{
  const input=fixture(),before=JSON.stringify(input),rows=familiarFields(input);
  assert.deepEqual(rows.map(entry=>entry.path),['/system/master/id','/system/master/ability','/system/attributes/hp/value','/system/attributes/hp/temp','/system/attributes/hp/tempSource']);

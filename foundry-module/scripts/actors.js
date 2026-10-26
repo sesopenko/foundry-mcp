@@ -42,7 +42,8 @@ import { loreFields } from './actorLore.js';
 import { npcFields, npcNoteFields } from './actorNpc.js';
 import { characterFields, characterNoteFields } from './actorCharacter.js';
 import { currentStatisticFields } from './actorCurrent.js';
-import { familiarFields, familiarNoteFields, familiarMasterField } from './actorFamiliar.js';
+import { familiarFields, familiarNoteFields, familiarMasterField, familiarMasterContextFields } from './actorFamiliar.js';
+import {familiarCurrentFields} from './actorFamiliarCurrent.js';
 import { familiarMasterRelationship, familiarAbilityRecords } from './actorFamiliarRelationships.js';
 import {actorStateSnapshot} from './actorState.js';
 import {actorSkillsSnapshot} from './actorSkills.js';
@@ -67,11 +68,11 @@ const VERIFICATION = {deterministic:{status:'passed',evidence:['tests/js/actor-r
 function selection(target, sections) {
   const source = target.document.toObject(true);
   if (!source || typeof source!=='object' || Array.isArray(source)) fail('ReadFailed','Document source is not a serialized object.','Inspect the selected document in Foundry.');
-  // PF2e-specific condition/effect8.6.1 selectors require detached own data;
+  // PF2e-specific condition/effect/familiar8.6.1 selectors require own data;
   // validate their type before dispatch can read it. No accessor is executed.
-  if(target.document.documentName==='Item'&&['condition','effect'].includes(target.document.type)){
+  if(target.document.documentName==='Item'&&['condition','effect'].includes(target.document.type)||target.document.documentName==='Actor'&&target.document.type==='familiar'){
     const type=Object.getOwnPropertyDescriptor(source,'type');
-    if(!type||!Object.hasOwn(type,'value')||type.value!==target.document.type)fail('ReadFailed','Condition/effect source type is not matching detached data.','Inspect the selected Item in the supported runtime; accessors and subtype substitutions are not accepted as source.');
+    if(!type||!Object.hasOwn(type,'value')||type.value!==target.document.type)fail('ReadFailed','Selected source type is not matching detached data.','Inspect the selected document in the supported runtime; accessors and subtype substitutions are not accepted as source.');
   }
   const selected = {};
   let physical=[];
@@ -94,7 +95,7 @@ function selection(target, sections) {
   let lore=[];
   let npc=[];
   let character=[];let characterNotes=[];
-  let familiar=[];let familiarNotes=[];let familiarMaster=null;
+  let familiar=[];let familiarNotes=[];let familiarMaster=null;let familiarMasterContext=[];
   let familiarAbilities={records:[],reasons:[]};
   let currentStatistics={fields:[],reasons:[]};
   let currentSkills={records:[],reasons:[]};
@@ -290,6 +291,7 @@ function selection(target, sections) {
       if(sections.includes('source'))familiar=familiarFields(source);
       if(sections.includes('description'))familiarNotes=familiarNoteFields(source);
       if(sections.includes('identity'))familiarMaster=familiarMasterField(source);
+      if(sections.includes('statistics')){familiarMasterContext=familiarMasterContextFields(source);familiarMaster=familiarMasterContext[0];}
       if(sections.includes('abilities'))familiarAbilities=familiarAbilityRecords(target);
     }catch{fail('ReadFailed','Selected familiar source or owned ability references do not match the verified schema or bounds.','Inspect stored master/HP/creature source; use list_actor_items and read_item for selected actions. No master-derived values or ability activation are substituted.');}
   }
@@ -441,7 +443,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, familiar, familiarNotes, familiarMaster, familiarAbilities, currentStatistics, currentSkills, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, familiar, familiarNotes, familiarMaster, familiarMasterContext, familiarAbilities, currentStatistics, currentSkills, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -488,9 +490,36 @@ async function snapshot(target,sections) {
   }
   // PF2e-specific familiar8.6.1 nullable world-character master claim, resolved
   // through the same public permission-aware Actor boundary, never .master.
-  if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('identity')){
+  if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&(sections.includes('identity')||sections.includes('statistics'))){
     try{selected.familiarMaster=await familiarMasterRelationship(target,selected.familiarMaster);}
     catch{fail('ReadFailed','The stored familiar master reference could not be inspected safely.','Inspect the familiar master setting and retry identity; no master getter or derived statistics are read.');}
+    if(sections.includes('statistics')){
+      try{
+        if(selected.familiarMaster.record.mapped.value.status==='resolved'){
+          // PF2e-specific familiar8.6.1 admission: source reassignment and master
+          // permission are checked synchronously after resolution, before any
+          // public transformed serialization. No master getter is consulted.
+          ready();
+          const pack=target.document.compendium;
+          if(!permitted(target.document)||(pack&&!permitted(pack))||(target.token&&(!permitted(target.token)||!permitted(target.token.parent))))fail('PermissionDenied','The familiar or its selected context is no longer readable.','Restore authorized Actor, pack or Scene/Token access and restart the read.');
+          const context=familiarMasterContextFields(target.document.toObject(true));
+          if(JSON.stringify(context)!==JSON.stringify(selected.familiarMasterContext))fail('ContentChanged','Familiar master configuration changed during resolution.','Discard accumulated pages and restart without cursor.');
+          const field=context[0],master=game.actors.get(field.value),resolved=selected.familiarMaster.record.mapped.value;
+          const status=!master?'missing':!permitted(master)?'denied':master.documentName!=='Actor'||master.type!=='character'?'unsupported':master.id!==field.value||master.compendium||master.parent||master.uuid!==resolved.target_uuid?'unverified':null;
+          if(status){selected.familiarMaster.record.mapped.value={status,target_uuid:null};selected.familiarMaster.reasons=['familiar_master_'+status];}
+          else{
+            const transformed=target.document.toObject(false);
+            const type=transformed&&typeof transformed==='object'?Object.getOwnPropertyDescriptor(transformed,'type'):null;
+            if(!type||!Object.hasOwn(type,'value')||type.value!=='familiar')throw new TypeError('Familiar transformed subtype is invalid.');
+            selected.currentStatistics=familiarCurrentFields(transformed);
+          }
+        }
+        if(selected.familiarMaster.record.mapped.value.status!=='resolved')selected.currentStatistics={fields:[],reasons:[...selected.familiarMaster.reasons]};
+      }catch(error){
+        if(error?.rpcError?.code)throw error;
+        fail('ReadFailed','Selected familiar current statistics do not match the verified serialization contract.','Inspect the supported runtime and recorded master; no source fallback, private getter or recalculation is used.');
+      }
+    }
   }
   if (target.document.type==='action'&&sections.includes('relationships')) selected.relationship=await actionRelationship(target,selected);
   if(target.document.type==='effect'&&sections.includes('relationships'))selected.effectRelationships=await effectRelationships(selected.effectReferences);
@@ -570,9 +599,9 @@ export async function getActorTypes(params = {}) {
     // PF2e-specific Creature/CharacterSystemData8.6.1 transformed primitives,
     // distinct from source and from complete target-context/effective views.
     const statistics=result.actor_sections.find(entry=>entry.name==='statistics');
-    statistics.source_supported=false;statistics.mapped_supported=true;statistics.effective_supported=true;
-    statistics.limitations=['Character/NPC selected transformed attributes, AC, HP, saves, Perception/vision and movement only, with raw/provenance basis transformed. Always partial: other statistics, senses/languages/IWR, skill totals, Strikes and target-dependent modifiers remain pending. Missing serialized leaves are unavailable without source/getter fallback. Familiar current statistics remain unsupported pending its master contract.'];
-    statistics.verification={deterministic:{status:'passed',evidence:['tests/js/actor-current.test.js','tests/js/actor-current-readers.test.js','tests/test_actor_current.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/current-statistics-verification.md','scripts/actor-current-probe.py','scripts/actor-build-live-check.py']}};
+    statistics.source_supported=true;statistics.mapped_supported=true;statistics.effective_supported=true;
+    statistics.limitations=['Character/NPC selected transformed attributes, AC, HP, saves, Perception/vision and movement; select skills separately for current skill fields. Familiar statistics first verifies its recorded world-character master, then selects declared transformed defenses, movement and ordinary skills without recalculation. Source support here is the familiar master ID/ability context; numeric current fields retain transformed basis. Always partial: senses/languages/IWR, Strikes, Item-linked familiar skills and target-dependent modifiers remain pending. Unavailable master prevents familiar transformed serialization. Familiar-current live verification is pending; prior live evidence covers character/NPC selected statistics.'];
+    statistics.verification={deterministic:{status:'passed',evidence:['tests/js/actor-current.test.js','tests/js/actor-current-readers.test.js','tests/test_actor_current.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/current-statistics-verification.md','docs/actor-item-story-map/familiar-current-contract.md','scripts/actor-current-probe.py','scripts/actor-build-live-check.py']}};
     // PF2e-specific character8.6.1 build source joins; other Actor types unsupported.
     const build=result.actor_sections.find(entry=>entry.name==='build');
     build.source_supported=true;
@@ -709,8 +738,9 @@ export async function getActorTypes(params = {}) {
     // PF2e-specific familiar8.6.1 source and world-character master identity;
     // these schema contracts do not establish master-derived current values.
     const familiar=result.actor_types.find(entry=>entry.type==='familiar');
-    familiar.limitations=['Selected persisted master ID/attribute and HP plus explicit creature description are delivered. Identity resolves the nullable world-character master claim with explicit unresolved statuses. Abilities lists actual owned action Items as unclassified references; read_item supplies their prose. Current master-derived statistics, benefit activation and full integrated views remain unsupported.'];
-    familiar.verification={deterministic:{status:'passed',evidence:['tests/js/actor-familiar.test.js','tests/js/actor-familiar-relationships.test.js','tests/js/actor-familiar-readers.test.js','tests/test_actor_familiar.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/familiar-verification.md','scripts/actor-familiar-live-check.py']}};
+    familiar.effective_supported=true;
+    familiar.limitations=['Selected persisted master ID/attribute and HP plus explicit creature description are delivered. Identity resolves the nullable world-character master claim with explicit unresolved statuses. Statistics permits selected transformed defenses, movement and ordinary skills only after master permission checks; unavailable master returns no transformed values. Values are serialized, not recalculated; independent attributes, normal Strikes, Item-linked skill totals, benefit activation and full integrated views remain unsupported. Familiar-current live verification is pending; existing live evidence covers source/master identity.'];
+    familiar.verification={deterministic:{status:'passed',evidence:['tests/js/actor-familiar.test.js','tests/js/actor-familiar-relationships.test.js','tests/js/actor-familiar-readers.test.js','tests/test_actor_familiar.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/familiar-verification.md','docs/actor-item-story-map/familiar-current-contract.md','scripts/actor-familiar-live-check.py']}};
     result.actor_sections.find(entry=>entry.name==='abilities').limitations=['NPC actual owned action Item references and familiar owned action references are delivered; familiar/master benefit scope requires reading Item prose. Sections remain partial; active benefits and other Actor ability lists remain unsupported.'];
     const npc=result.actor_types.find(entry=>entry.type==='npc');
     npc.effective_supported=true;
@@ -743,7 +773,12 @@ export async function getActorTypes(params = {}) {
 async function read(target,params,sections,tool) {
   const selected = await snapshot(target,sections); const revision = await digest(selected);
   const records = [];
-  if(selected.familiarMaster?.record)records.push(selected.familiarMaster.record);
+  if(selected.familiarMaster?.record&&sections.includes('identity'))records.push(selected.familiarMaster.record);
+  if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('statistics')){
+    const master=selected.familiarMaster.record;
+    const raw=selected.familiarMasterContext.map(field=>({document_uuid:target.identity.uuid,path:field.path,present:field.present,...(field.present?{value:field.value}:{}),basis:'source'}));
+    records.push({...master,key:'statistics:familiar_master',section:'statistics',raw,provenance:{...master.provenance,contributors:raw.map(({document_uuid,path,basis})=>({document_uuid,path,basis}))}});
+  }
   if (sections.includes('source')) {
     for (const field of ['name','type']) records.push(record(target.identity.uuid,`/${field}`,Object.hasOwn(selected.selected,`/${field}`),selected.selected[`/${field}`],'source',`document_${field}`));
     // PF2e-specific character8.6.1 source keeps nullable manual attributes and
@@ -772,7 +807,7 @@ async function read(target,params,sections,tool) {
     const entry=record(target.identity.uuid,field.path,field.present,field.value,'statistics',field.concept);
     if(Object.hasOwn(field,'mapped_value'))entry.mapped.value=field.mapped_value;
     entry.raw[0].basis='transformed';entry.provenance.contributors[0].basis='transformed';
-    entry.provenance.mapping='pf2e.actor.current.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
+    entry.provenance.mapping=target.document.type==='familiar'?'pf2e.familiar.current.v1':'pf2e.actor.current.v1';entry.provenance.limitations=[...field.limitations];records.push(entry);
   }
   if(target.document.documentName==='Actor'&&sections.includes('inventory'))records.push(...selected.inventoryView.records);
   if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build'))records.push(...selected.buildView.records);
@@ -937,8 +972,8 @@ async function read(target,params,sections,tool) {
       section.status='partial';section.reasons=[...selected.currentStatistics.reasons];
       base.limitations.push('Statistics selects supported transformed document-data values for attributes, AC, HP, saves, Perception/vision and movement. Raw/provenance basis is transformed, distinct from source at the same paths. Other statistics, senses/languages/IWR, skill totals, generated Strikes and target-dependent modifiers remain pending; this is not a complete current character or creature sheet. Missing serialized fields remain unavailable, without source fallback or private getters.');
     }else{
-      section.status='unsupported';section.reasons=['master_current_contract_pending'];
-      base.limitations.push('Familiar current statistics require the separately verified master relationship and derivation contract; no independent statistics are fabricated.');
+      section.status='partial';section.reasons=[...selected.currentStatistics.reasons];
+      base.limitations.push('Familiar statistics requires a permission-checked recorded world-character master before transformed serialization. The source master ID/ability remain separate witnesses; selected familiar defenses, movement and ordinary skills retain transformed provenance without recalculation. Missing or denied master returns no transformed statistics. Independent attributes, normal Strikes and Item-linked skills are not inferred. Live familiar-current verification remains pending.');
     }
   }
   if(target.document.documentName==='Actor'&&target.document.type==='character'){

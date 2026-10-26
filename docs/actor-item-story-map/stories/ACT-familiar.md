@@ -50,6 +50,23 @@ Prerequisites beyond the source checkpoint: [ITEM-action](ITEM-action.md), [CORE
 
 ## Readiness and outstanding gates
 
+### Current-statistics implementation checkpoint — October 25, 2026
+
+Explicit statistics now verifies the recorded world-character master before
+public transformed serialization, then reads declared familiar defenses,
+movement and ordinary skills. Source master ID/ability remain separate raw
+witnesses. Missing/deleted/denied/unassociated/unsupported master returns a
+partial source-context response without transformed values. See the
+[contract](../familiar-current-contract.md). No private master getter, local
+derivation, independent attributes or normal Strikes are used. Item-linked
+skills are withheld before exposing their keys or labels.
+
+World/pack/token deterministic checks and actual paginated JavaScript-to-Python
+responses pass, including permission/reassignment races. Actual MCP discovery
+also passes. Representative current-familiar live serialization remains pending
+the existing GM connection; the original live and integrated acceptance gates
+remain open. This does not close the story or certify recalculation behavior.
+
 Source checkpoint is ready after shared contracts/extraction. Integrated source joins are specified; effective statistics remain gated by supported-interface evidence and representative live fixtures. No populated character/familiar was live-verified in the original research, and no browser is connected in this audit. v13 PF2e support is unverified. See [evidence](../evidence.md#open-verification-gates).
 
 This is one story with two checkpoints, not separate source/effective actor stories. Close it only when the declared delivered sections pass and every remaining advanced limitation is explicitly recorded; never mark an unsupported effective capability verified.
