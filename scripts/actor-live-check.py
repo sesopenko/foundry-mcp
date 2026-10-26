@@ -180,6 +180,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
             refs=payload(await client.call_tool('read_actor',arguments))
             assert all(section['status']=='partial' for section in refs['sections'])
             for row in refs['records']:
+                if row['provenance']['mapping']!='pf2e.npc.item-reference.v1':continue
                 value=row['mapped']['value']
                 if value['status']!='resolved':continue
                 followed=payload(await client.call_tool('read_item',{'item_uuid':value['target_uuid'],'sections':['identity']}))

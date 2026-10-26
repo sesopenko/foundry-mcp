@@ -377,13 +377,25 @@ provenance. Source remains partial; explicit `description` returns bounded NPC b
 notes and GM-private notes separately. Character/familiar description and NPC
 integrated/effective sections remain pending. See [NPC field boundary](actor-item-story-map/npc-fields.md).
 
-NPC `strikes` and `abilities` now return only actual owned melee/action Item
+NPC authored `strikes` and `abilities` retain actual owned melee/action Item
 references, with mapping `pf2e.npc.item-reference.v1` and concepts `npc_attack_item`
 and `npc_ability_item`. Each resolved mapped value contains `target_uuid`,
 `status: resolved` and selected `token_uuid` when applicable. Follow with
 `read_item`. Denied markers contain null target/status denied and no raw identity.
 Both sections remain partial (`other_attacks_pending`/`other_abilities_pending`);
 these references do not claim complete effective attack or acquired ability lists.
+
+Explicit character/NPC `strikes` additionally selects declared own current
+`Actor.system.actions` data. It separates attack modifiers, readiness flags,
+traits, variants and alternative usages from source Item definitions. Origins
+resolve only exact permitted owned Item membership; generated unarmed attacks
+have Actor paths and no fabricated Item UUID. Accessor-backed fields, including
+PC MAP labels/penalties, have explicit unsupported capability records and are
+never invoked or recalculated. Damage, target eligibility and other attack modes
+remain unsupported. Exact long strings use UTF-16 fragments and ordinary bounded
+continuations. See the [current Strike contract](actor-item-story-map/strike-current-contract.md)
+for all keys, fields, bounds, raw bases, privacy, and runtime evidence. NPC source
+references remain independently identifiable by their original mapping.
 
 ## Effect source checkpoint
 

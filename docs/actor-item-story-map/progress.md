@@ -615,3 +615,25 @@ World familiar current values now have runtime evidence. Compendium/token
 current fixtures and integrated casting/state remain open, so ACT-familiar and
 M-FAMILIAR stay incomplete. Progress remains **31/39 (79.5%)**. See the
 [familiar current contract](familiar-current-contract.md).
+
+## Declared current Strike view — October 25, 2026
+
+Character/NPC Strikes now selects closed public `Actor.system.actions` own data,
+separately retaining authored NPC melee references. Response-local Actor paths
+cover generated attacks and alternatives without invented Item UUIDs. Actual
+permitted owned object membership is required for canonical origin links;
+denied and unverified origins protect labels and totals. Getter-backed PC MAP
+fields are explicit unsupported capabilities, not missing values or recomputed
+penalties. Long text fragments are exact and bounded.
+
+Live world/synthetic NPC plus marked-character verification passed 29 pages,
+214 records and 220 raw witnesses across 78 MCP calls. Four origins were owned
+Items; one was generated unarmed on a character with zero owned Items. Six
+accessors were confirmed without invocation. Source fingerprints and exact
+fixture cleanup passed. Unit regressions cover all contexts, privacy, stale
+current/source state, text, bounds, source-name precision, packaging and detached
+array markers that cannot retain model serialization callbacks.
+
+Damage, target eligibility, other attack modes and remaining Actor integration
+dependencies remain open. Completed progress stays **31/39 (79.5%)**. See the
+[Strike contract](strike-current-contract.md) for exact delivered scope.

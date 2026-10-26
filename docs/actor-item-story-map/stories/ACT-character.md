@@ -78,3 +78,14 @@ proposal-only status for this subset. A populated marked character supplied
 The section remains partial. Skills/Lore totals, senses/languages, IWR, generated
 Strikes, state and complete integrated current views remain open; this checkpoint
 does not close M-PC or mark the story Complete.
+
+## Declared current Strike checkpoint — October 25, 2026
+
+Explicit Strikes now reads selected public `Actor.system.actions` own data,
+including generated attacks without owned Items, alternative usages and exact
+bounded text. A genuine marked character with zero owned Items supplied a
+generated unarmed Strike and six getter-backed MAP capabilities without invoking
+their getters or inventing an Item UUID. Source fingerprints and cleanup passed.
+See the [current Strike contract](../strike-current-contract.md). Current damage,
+target eligibility and non-Strike kinds remain unsupported; shared casting/state
+dependencies and full M-PC acceptance remain open.

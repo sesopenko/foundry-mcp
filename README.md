@@ -276,6 +276,11 @@ NPC blurb, public notes and GM-private notes. Integrated/effective statistics
 remain pending; elite/weak adjustments are not calculated.
 Explicit NPC strikes and abilities expose actual owned attack/action Item
 references for follow-up reading, with partial completeness and token context.
+Character/NPC Strikes also expose declared current attack data and bounded
+alternative usages. Generated unarmed attacks retain Actor paths without invented
+Item UUIDs; accessor-backed PC MAP fields stay explicitly unread. Damage and
+target eligibility remain unsupported. See the
+[current Strike contract](docs/actor-item-story-map/strike-current-contract.md).
 Effect source preserves duration units, badge types/formulas and context fields.
 Explicit relationships resolve immediate origin/target identities with permission
 and token-context checks. Formula evaluation and effective expiry remain unsupported.

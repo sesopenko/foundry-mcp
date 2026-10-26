@@ -67,7 +67,8 @@ test('NPC attacks and abilities expose distinct actual Item references with foll
  const {readItem}=await import('../../foundry-module/scripts/actors.js');
  const pages=[];let cursor;
  do{const page=await readActor({actor_uuid:f.actor.uuid,sections:['strikes','abilities'],limit:1,...(cursor?{cursor}:{})});pages.push(page);cursor=page.pagination.next_cursor;}while(cursor);
- const rows=pages.flatMap(p=>p.records);assert.equal(rows.length,3);
+ const allRows=pages.flatMap(p=>p.records),rows=allRows.filter(row=>row.provenance.mapping==='pf2e.npc.item-reference.v1');assert.equal(rows.length,3);
+ const current=allRows.filter(row=>row.provenance.mapping==='pf2e.actor.strike-current.v1');assert.equal(current.length,1);assert.equal(current[0].mapped.concept,'current_strike_collection');assert.equal(current[0].raw[0].present,false);
  assert.equal(new Set(rows.map(r=>r.mapped.value.target_uuid)).size,3);
  assert.ok(pages.every(p=>p.sections.every(s=>s.status==='partial')));
  for(const row of rows){assert.equal(row.raw[0].value,'Duplicate');assert.equal(row.provenance.mapping,'pf2e.npc.item-reference.v1');
@@ -78,8 +79,11 @@ test('NPC attacks and abilities expose distinct actual Item references with foll
 test('denied NPC attack references hide source and identity while unsupported Actor types remain explicit',async()=>{
  const f=fixture();f.actor.items.set('secret',{uuid:'Actor.a.Item.secret',type:'melee',testUserPermission:()=>false,toObject(){throw Error('must not read');}});
  const page=await readActor({actor_uuid:f.actor.uuid,sections:['strikes','abilities']});
- assert.equal(page.records.length,1);assert.deepEqual(page.records[0].raw,[]);assert.equal(page.records[0].mapped.value.status,'denied');
+ const references=page.records.filter(row=>row.provenance.mapping==='pf2e.npc.item-reference.v1');assert.equal(references.length,1);assert.deepEqual(references[0].raw,[]);assert.equal(references[0].mapped.value.status,'denied');
+ assert.equal(page.records.find(row=>row.mapped.concept==='current_strike_collection').raw[0].present,false);
  assert.ok(!JSON.stringify(page).includes('Item.secret'));assert.ok(page.sections[0].reasons.includes('related_items_denied'));
  f.actor.type='character';f.source.type='character';
- const unsupported=await readActor({actor_uuid:f.actor.uuid,sections:['strikes','abilities']});assert.ok(unsupported.sections.every(s=>s.status==='unsupported'));assert.deepEqual(unsupported.records,[]);
+ const character=await readActor({actor_uuid:f.actor.uuid,sections:['strikes','abilities']});assert.equal(character.sections.find(s=>s.name==='strikes').status,'partial');assert.equal(character.sections.find(s=>s.name==='abilities').status,'unsupported');
+ assert.equal(character.records[0].mapped.concept,'current_strike_collection');assert.equal(character.records[0].raw[0].present,false);
+ f.actor.type='familiar';f.source.type='familiar';const unsupported=await readActor({actor_uuid:f.actor.uuid,sections:['strikes']});assert.equal(unsupported.sections[0].status,'unsupported');assert.deepEqual(unsupported.records,[]);
 });

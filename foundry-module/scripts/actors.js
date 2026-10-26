@@ -16,6 +16,7 @@ import { spellcastingEntryFields,spellcastingEntryIssues } from './actorSpellcas
 import { actorCastingRecords } from './actorCasting.js';
 import { actorInventoryRecords } from './actorInventory.js';
 import { actorBuildRecords } from './actorBuild.js';
+import { actorStrikeSnapshot } from './actorStrikes.js';
 import { bookFields } from './actorBook.js';
 import { bookRelationships } from './actorBookRelationships.js';
 import { kitFields } from './actorKit.js';
@@ -494,6 +495,12 @@ async function actionRelationship(target,selected) {
  */
 async function snapshot(target,sections) {
   const selected=selection(target,sections);
+  // PF2e-specific Character/NPCSystemData8.6.1 compiled actions are declared
+  // public model data, separate from authored NPC melee Item references.
+  if(target.document.documentName==='Actor'&&['character','npc'].includes(target.document.type)&&sections.includes('strikes')){
+    try{selected.strikeView=actorStrikeSnapshot(target);}
+    catch{fail('ReadFailed','Current Strike data exceeds or differs from the declared public model contract.','Read owned attack/weapon definitions with list_actor_items and read_item. Current views allow 256 nodes, depth four and24000 records; no preparation, getters, rolls or damage methods are called.');}
+  }
   // PF2e-specific condition/effect8.6.1 source joins include external identity
   // dependencies before revision hashing; no state application is inferred.
   if(target.document.documentName==='Actor'&&sections.includes('state')){
@@ -745,6 +752,10 @@ export async function getActorTypes(params = {}) {
       section.verification={deterministic:{status:'passed',evidence:['tests/js/actor-npc-readers.test.js','tests/test_actor_npc_references.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/npc-fields.md','scripts/actor-live-check.py']}};
       section.limitations=['NPC actual owned melee/action Item references only; sections remain partial. Other Actor types and effective attack/ability lists remain unsupported.'];
     }
+    const strikes=result.actor_sections.find(entry=>entry.name==='strikes');
+    strikes.mapped_supported=true;strikes.effective_supported=true;
+    strikes.limitations=['Character/NPC declared current Actor.system.actions own-data fields, bounded alternative usages, traits and variants, separate from existing authored NPC melee references. Generated origins have no Item UUID; resolved origins require exact permitted owned membership. PC getter-backed MAP labels/penalties are explicit unsupported capability rows, never invoked or recalculated. Always partial: target eligibility, damage and other attack modes are not evaluated. Live checks cover world/synthetic NPCs and a marked character with generated unarmed origin, six unread accessor fields and confirmed cleanup. Pack and alternate-usage configurations remain unverified live; familiar Strikes remain unsupported.'];
+    strikes.verification={deterministic:{status:'passed',evidence:['tests/js/actor-strikes.test.js','tests/js/actor-strikes-current-readers.test.js','tests/test_actor_strikes_current.py','tests/test_actor_strikes_live_check.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/strike-current-contract.md','scripts/actor-strikes-current-live-check.py']}};
     const description=result.actor_sections.find(entry=>entry.name==='description');
     description.limitations=['Explicit selection only: NPC blurb/publicNotes/GM-private privateNotes, character biography/language details with edict/anathema list markers, or familiar creature description. Exact bounded prose is retained without enrichment or execution.'];
     // PF2e-specific familiar8.6.1 source and world-character master identity;
@@ -778,7 +789,8 @@ export async function getActorTypes(params = {}) {
 
 /**
  * PF2e-specific read boundary: selected source/description schema8.6.1 and
- * explicitly requested character/NPC transformed statistics. Source never gains
+ * explicitly requested character/NPC transformed statistics and declared current
+ * Strike data. Source never gains
  * effective meaning through relabelling; each raw contributor keeps its basis.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
@@ -812,6 +824,7 @@ async function read(target,params,sections,tool) {
   }
   if(target.document.documentName==='Actor'&&sections.includes('spellcasting'))records.push(...selected.castingView.records);
   if(target.document.documentName==='Actor'&&sections.includes('state'))records.push(...selected.stateView.records);
+  if(selected.strikeView)records.push(...selected.strikeView.records);
   if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('abilities'))records.push(...selected.familiarAbilities.records);
   // PF2e-specific8.6.1 current document-data leaves retain transformed basis;
   // source fields at the same path remain separate source-section records.
@@ -962,6 +975,12 @@ async function read(target,params,sections,tool) {
     const section=base.sections.find(row=>row.name==='state');
     section.status='partial';section.reasons=[...selected.stateView.reasons];
     base.limitations.push('State joins actual owned condition/effect source and immediate provenance without deduplicating overlapping Items. Owned effects separately expose serialized /system/expired with transformed basis; missing remains unavailable, and false does not prove application. Application is unknown: stored presence and overrides do not prove activity or suppression; duration and expiry timing are source configuration, not remaining time. Affliction reading is explicitly unsupported even when no state Items are listed. Follow canonical Item identities with read_item for descriptions.');
+  }
+  if(selected.strikeView){
+    const section=base.sections.find(row=>row.name==='strikes');
+    section.status='partial';section.reasons=[...new Set([...selected.strikeView.reasons,...(selected.npcItemSections.strikes?['other_attacks_pending',...(selected.npcItemSections.strikes.denied.length?['related_items_denied']:[])]:[])])];
+    base.limitations=base.limitations.filter(message=>message!=='Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.');
+    base.limitations.push('Strikes separates declared current character/NPC Actor.system.actions data from authored NPC melee Item references. Response-local paths and keys are not UUIDs or write selectors. Generated origins have no canonical Item selector; resolved origins require actual permitted owned Item membership. Getter-backed fields are explicitly unsupported, including PC MAP labels/penalties; no getter, preparation, attack, damage or roll method is invoked. Ready/canAttack are system-reported context, not target eligibility; final damage and other attack modes remain unsupported. Long strings retain exact UTF-16 text fragments; continue all pages.');
   }
   if(loreSkills){
     const section=base.sections.find(row=>row.name==='skills');

@@ -38,6 +38,13 @@ NPC blurb, public notes and GM-private notes. Integrated/effective statistics
 remain pending; elite/weak adjustments are not calculated.
 Explicit NPC strikes and abilities expose actual owned attack/action Item
 references for follow-up reading, with partial completeness and token context.
+Character/NPC Strikes additionally expose declared current attack data and
+bounded alternatives, separately from authored Item references. Generated
+unarmed attacks retain Actor paths without fabricated Item UUIDs. PC MAP getters
+are explicitly unread; damage, target eligibility and other attack modes remain
+unsupported. World/synthetic NPCs and a marked character passed live checks with
+confirmed cleanup; see the
+[current Strike contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/strike-current-contract.md).
 Effect source preserves duration units, badge types/formulas and context fields.
 Explicit relationships resolve immediate origin/target identities with permission
 and token-context checks. Formula evaluation and effective expiry remain unsupported.

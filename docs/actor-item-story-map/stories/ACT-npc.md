@@ -69,3 +69,13 @@ See [contract](../current-statistics-contract.md) and
 The section remains partial; remaining skill/sense/language/IWR views, state,
 casting and full integrated current acceptance remain open. This checkpoint does
 not close M-NPC or mark the story Complete.
+
+## Declared current Strike checkpoint — October 25, 2026
+
+Explicit Strikes now combines separately identified declared current action data
+with the existing authored melee Item references. Existing world/synthetic NPCs
+passed independent current witnesses and canonical owned-source follow-ups with
+unchanged source fingerprints. See the [current Strike contract](../strike-current-contract.md)
+for the combined character/NPC verification and bounds. Damage, target-specific
+application and other attack modes remain unsupported. Shared casting/state and
+complete M-NPC acceptance remain open.

@@ -151,6 +151,14 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 declared Strike view: official ActorData.system plus pinned
+CharacterSystemData/NPCSystemData actions and StrikeData contracts establish the
+selected own-data interface. World/synthetic NPCs and a marked character passed
+29 pages, 214 records, 220 raw witnesses, four owned origins, one generated
+unarmed origin and six unread accessor capabilities in 78 MCP calls. Source
+fingerprints and cleanup were confirmed. Current damage and target context remain
+unsupported; see [Strike verification](strike-current-contract.md#runtime-verification--october-25).
+
 October 25 familiar model gate: public ActorData.system plus the pinned
 FamiliarSystemData declarations permit selected own derived data after the
 existing master guard. The marked-world fixture run passed 108 MCP calls,

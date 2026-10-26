@@ -95,9 +95,16 @@ console.log(JSON.stringify(pages));
         self.assertEqual(len(pages),6)
         for page in pages:
             await self.read(page)
-            self.assertEqual(len(page['records']),2)
-            self.assertEqual(len({r['mapped']['value']['target_uuid'] for r in page['records']}),2)
+            references=[r for r in page['records'] if r['provenance']['mapping']=='pf2e.npc.item-reference.v1']
+            self.assertEqual(len(references),2)
+            self.assertEqual(len({r['mapped']['value']['target_uuid'] for r in references}),2)
+            if page['sections'][0]['name']=='strikes':
+                current=[r for r in page['records'] if r not in references]
+                self.assertEqual(len(current),1)
+                self.assertEqual(current[0]['mapped']['concept'],'current_strike_collection')
+                self.assertFalse(current[0]['raw'][0]['present'])
+            else:self.assertEqual(len(page['records']),2)
             self.assertEqual(page['sections'][0]['status'],'partial')
             instance=page['identity']['instance']
             if instance:
-                for row in page['records']:self.assertEqual(row['mapped']['value']['token_uuid'],instance['token_uuid'])
+                for row in references:self.assertEqual(row['mapped']['value']['token_uuid'],instance['token_uuid'])

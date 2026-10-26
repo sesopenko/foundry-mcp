@@ -3490,6 +3490,135 @@ def _current_section(records, section, identity):
             and (not any(not row['raw'][0]['present'] for row in rows) or 'current_fields_unavailable' in reasons))
 
 
+def _strike_path(path, actor_type):
+    """PF2e-specific8.6.1 bounded CharacterAttack/NPC StrikeData leaf contract.
+
+    Public Actor.system data only; actor/{character,npc}/data.ts,
+    actor/data/base.ts and modifiers.ts at revision28d9d156f252d084371d994dc359509b49eadf18.
+    Returns (concept suffix,type,nullable) or None, without calculating Strikes.
+    """
+    if path=='/system/actions':return ('collection','array',False)
+    match=re.fullmatch(r'/system/actions/(0|[1-9][0-9]*)(.*)',path)
+    if not match or int(match[1])>=256:return None
+    tail=match[2];depth=0
+    while tail.startswith('/altUsages/'):
+        part=re.match(r'/altUsages/(0|[1-9][0-9]*)(.*)',tail)
+        if not part or int(part[1])>=256:return None
+        depth+=1
+        if depth>4:return None
+        tail=part[2]
+    scalar={'type':('type','string'),'slug':('slug','string'),'label':('label','string'),'glyph':('action_glyph','string'),'description':('description','string'),'breakdown':('attack_breakdown','string'),'ready':('ready','boolean'),'canAttack':('can_attack','boolean'),'totalModifier':('attack_modifier','number')}
+    scalar.update({'visible':('visible','boolean'),'handsAvailable':('hands_available','boolean')} if actor_type=='character' else {'sourceId':('source_item_local_id','string'),'attackRollType':('attack_roll_type','string')})
+    if tail[1:] in scalar:
+        concept,kind=scalar[tail[1:]];return (concept,kind,False)
+    roots={'options':'options','variants':'variants','traits':'traits','altUsages':'alternate_usages'}
+    if actor_type=='character':roots.update(domains='domains',weaponTraits='weapon_traits')
+    if tail[1:] in roots:return (roots[tail[1:]],'array',False)
+    entry=re.fullmatch(r'/(options|domains)/(0|[1-9][0-9]*)',tail)
+    if entry and int(entry[2])<256 and (entry[1]!='domains' or actor_type=='character'):return ('option' if entry[1]=='options' else 'domain','string',False)
+    entry=re.fullmatch(r'/variants/(0|[1-9][0-9]*)/(penalty|label)',tail)
+    if entry and int(entry[1])<16:return ('map_penalty','number',False) if entry[2]=='penalty' else ('variant_label','string',False)
+    entry=re.fullmatch(r'/(traits|weaponTraits)/(0|[1-9][0-9]*)/(name|label|description)',tail)
+    if entry and int(entry[2])<64 and (entry[1]!='weaponTraits' or actor_type=='character'):
+        return (('weapon_trait_' if entry[1]=='weaponTraits' else 'trait_')+{'name':'code','label':'label','description':'description'}[entry[3]],'string',entry[3]=='description')
+    return None
+
+
+def _strike_node(path):
+    """PF2e-specific bounded response-local action node path, never a UUID."""
+    parts=path.split('/')
+    return (len(parts)>=4 and parts[:3]==['','system','actions'] and len(parts)<=12 and len(parts)%2==0
+            and all(re.fullmatch(r'0|[1-9][0-9]*',parts[i]) and int(parts[i])<256 for i in range(3,len(parts),2))
+            and all(parts[i]=='altUsages' for i in range(4,len(parts),2)))
+
+
+def _strike_current_record(row, identity):
+    """PF2e-specific8.6.1 closed current Strike DTO; no damage or target inference.
+
+    Actor.system.actions declared by character/npc data schemas. Source Item
+    witnesses establish only actual owned origin identity; generated attacks
+    acquire no document selector. See strike-current-contract.md.
+    """
+    if identity['type'] not in ('character','npc') or set(row)-{'key','section','kind','raw','mapped','provenance','text'}:return False
+    mapped=row['mapped'];provenance=row['provenance'];raw=row['raw']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'} or provenance['limitations']!=['current_strike_not_target_context']:return False
+    for field in raw:
+        if type(field) is not dict or set(field)!={'document_uuid','path','present','basis'}|({'value'} if field.get('present') is True else set()) or type(field.get('present')) is not bool:return False
+    if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    mapping=provenance['mapping'];value=mapped['value']
+    if mapping=='pf2e.actor.strike-capability.v1':
+        if row['kind']!='field' or raw or 'text' in row:return False
+        if row['key']=='strikes:current:denied':return mapped['concept']=='current_strike_capability' and value==dict(status='denied',target_uuid=None)
+        if row['key']=='strikes:capability:non_strike_actions':return mapped['concept']=='current_strike_capability' and value==dict(status='unsupported',reason='non_strike_actions_unsupported')
+        if type(value) is not dict or set(value)!={'status','reason','path'} or type(value['path']) is not str:return False
+        path=value['path']
+        return (row['key']=='strikes:unavailable:'+path and mapped['concept']=='current_strike_field_support'
+                and value==dict(status='unsupported',reason='accessor_not_read',path=path)
+                and (_strike_path(path,identity['type']) is not None or path.endswith('/item') and _strike_node(path[:-5])))
+    if mapping=='pf2e.actor.strike-origin.v1':
+        if row['kind']!='relationship' or 'text' in row or not raw or mapped['concept']!='current_strike_origin':return False
+        node=row['key'].removeprefix('strikes:origin:')
+        if row['key']!='strikes:origin:'+node or not _strike_node(node):return False
+        witness=raw[0]
+        if witness['document_uuid']!=identity['uuid'] or witness['path']!=node+'/type' or witness['basis']!='transformed' or not witness['present'] or witness['value']!='strike':return False
+        if value in (dict(status='generated',target_uuid=None),dict(status='unavailable',target_uuid=None)):return len(raw)==1
+        if type(value) is not dict or len(raw)!=3 or not witness['present'] or type(value.get('name_truncated')) is not bool:return False
+        typ='weapon' if identity['type']=='character' else 'melee';uuid=value.get('target_uuid')
+        if not _casting_owned(uuid,identity):return False
+        name,kind=raw[1:]
+        if any(r['document_uuid']!=uuid or r['basis']!='source' or not r['present'] for r in raw[1:]) or name['path']!='/name' or type(name['value']) is not str or len(name['value'].encode('utf-16-le','surrogatepass'))//2>300000 or kind['path']!='/type' or kind['value']!=typ:return False
+        expected=dict(status='resolved',target_uuid=uuid,type=typ,name=name['value'][:256],name_truncated=len(name['value'])>256)
+        if identity['instance'] is not None:expected['token_uuid']=identity['instance']['token_uuid']
+        return value==expected
+    if mapping!='pf2e.actor.strike-current.v1' or len(raw)!=1:return False
+    field=raw[0];path=field['path']
+    if type(path) is not str:return False
+    spec=_strike_path(path,identity['type'])
+    if not spec or field['document_uuid']!=identity['uuid'] or field['basis']!='transformed' or mapped['concept']!='current_strike_'+spec[0]:return False
+    selected=field.get('value');suffix,kind,nullable=spec
+    if row['kind']=='text':
+        metadata=row.get('text')
+        if kind!='string' or suffix=='type' or not field['present'] or type(selected) is not str or value is not None or type(metadata) is not dict or set(metadata)!={'path','start','end','total','complete'}:return False
+        if metadata['path']!=path or any(type(metadata[k]) is not int for k in ('start','end','total')) or type(metadata['complete']) is not bool:return False
+        start,end,total=metadata['start'],metadata['end'],metadata['total']
+        return (0<=start<=end<=total<=300000 and end-start<=6000 and len(json.dumps(selected,ensure_ascii=False).encode('utf-8','surrogatepass'))<=1000 and end-start==len(selected.encode('utf-16-le','surrogatepass'))//2 and metadata['complete']==(end==total)
+                and re.fullmatch(re.escape('strikes:current:'+path+':text:')+r'(0|[1-9][0-9]*)',row['key']) is not None)
+    if row['kind']!='field' or 'text' in row or row['key']!='strikes:current:'+path:return False
+    if not field['present']:return value is None
+    if nullable and selected is None:return value is None
+    if kind=='array':return type(selected) is list and selected==[] and value is None
+    if kind=='string':return type(selected) is str and len(selected.encode('utf-16-le','surrogatepass'))//2<=300000 and len(json.dumps(selected,ensure_ascii=False).encode('utf-8','surrogatepass'))<=1000 and value==selected and (suffix!='type' or selected=='strike')
+    if kind=='boolean':return type(selected) is bool and type(value) is bool and value==selected
+    return type(selected) in (int,float) and math.isfinite(selected) and type(value) in (int,float) and type(value) is not bool and value==selected
+
+
+def _strike_section(records, section, identity):
+    """PF2e-specific partial current Strike diagnostics without off-page claims."""
+    current=[row for row in records if row['section']=='strikes' and row['provenance']['mapping'].startswith('pf2e.actor.strike-')]
+    if identity['type']!='character' and not current:return True
+    reasons=set(section['reasons'])
+    if section['status']!='partial' or not {'target_context_not_evaluated','current_strike_damage_unsupported'}<=reasons:return False
+    allowed={'target_context_not_evaluated','current_strike_damage_unsupported','current_strike_fields_unavailable','non_strike_actions_unsupported','strike_items_denied','current_strike_origins_unavailable','other_attacks_pending','related_items_denied','pagination'}
+    if not reasons<=allowed:return False
+    for row in current:
+        if row['key']=='strikes:current:denied' and 'strike_items_denied' not in reasons:return False
+        if row['key']=='strikes:capability:non_strike_actions' and 'non_strike_actions_unsupported' not in reasons:return False
+        if row['key'].startswith('strikes:unavailable:') or row['provenance']['mapping']=='pf2e.actor.strike-current.v1' and any(not r['present'] for r in row['raw']):
+            if 'current_strike_fields_unavailable' not in reasons:return False
+        if row['provenance']['mapping']=='pf2e.actor.strike-origin.v1' and row['mapped']['value']['status']=='unavailable' and 'current_strike_origins_unavailable' not in reasons:return False
+        blocked=None
+        if row['key'].startswith('strikes:unavailable:'):blocked=row['mapped']['value']['path']
+        elif row['provenance']['mapping']=='pf2e.actor.strike-origin.v1' and row['mapped']['value']['status']=='unavailable':blocked=row['key'].removeprefix('strikes:origin:')
+        elif row['provenance']['mapping']=='pf2e.actor.strike-current.v1' and _strike_path(row['raw'][0]['path'],identity['type'])[1]=='array':blocked=row['raw'][0]['path']
+        if blocked:
+            for sibling in current:
+                if sibling is row or sibling['provenance']['mapping']!='pf2e.actor.strike-current.v1':continue
+                path=sibling['raw'][0]['path']
+                if path==blocked or path.startswith(blocked+'/'):return False
+    return True
+
+
 def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     """Validate records including PF2e-specific persisted physical source fields.
 
@@ -3509,6 +3638,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         if identity['type']=='familiar':return _familiar_current_record(row,identity)
         if type(row['provenance']) is dict and row['provenance'].get('mapping')=='pf2e.actor.creature-current.v1':return _creature_current_record(row,identity)
         return _actor_current_record(row,identity)
+    if identity['document_name']=='Actor' and row['section']=='strikes' and type(row['provenance']) is dict and row['provenance'].get('mapping') in ('pf2e.actor.strike-current.v1','pf2e.actor.strike-origin.v1','pf2e.actor.strike-capability.v1'):
+        return _strike_current_record(row,identity)
     if identity['document_name']=='Item' and identity['type']=='feat' and row['section']=='relationships':
         return _feat_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='deity' and row['section']=='relationships':
@@ -3692,6 +3823,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                         valid = valid and all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
                         valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
                         valid = valid and all(_current_section(result['records'], row, result['identity']) for row in rows if row['name']=='statistics')
+                        valid = valid and all(_strike_section(result['records'], row, result['identity']) for row in rows if row['name']=='strikes')
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -4046,12 +4178,69 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate
     specialty names remain separate Items, never merged skill totals.
-    NPC strikes/abilities contain actual owned melee/action Item references only:
+    NPC authored strikes/abilities retain actual owned melee/action Item references:
     npc_attack_item/npc_ability_item values have resolved target_uuid and selected
     token_uuid when applicable; follow with read_item. Both sections remain partial
     with other_attacks_pending/other_abilities_pending. Permission-denied related
     Items produce a generic denied marker with null target_uuid and no selectors;
     related_items_denied is reported without exposing their names or identities.
+    Explicit character/NPC strikes also selects declared current Actor.system.actions
+    own data, never preparation, getters, roll/damage methods or source fallback.
+    Familiar current Strikes remain unsupported; non-PF2e is rejected. Generated
+    actions and alternate usages have response-local /system/actions/I paths,
+    optionally /altUsages/J to depth four (root zero), never invented UUIDs.
+    Normal rows use strikes:current:<path>, kind field, mapping
+    pf2e.actor.strike-current.v1, one owning Actor raw/contributor with transformed
+    basis, limitation current_strike_not_target_context and mapped primitive/null.
+    Common leaves type/slug/label/glyph/description/breakdown are strings;
+    ready/canAttack are booleans; totalModifier is finite numeric. Character adds
+    visible/handsAvailable booleans and domains strings; NPC adds sourceId and
+    attackRollType strings. Arrays preserve options strings, variants penalty
+    numbers/label strings, traits name/label strings and nullable description;
+    characters also expose equivalent weaponTraits. Empty arrays retain [] raw
+    markers with mapped null; absent own fields have present false/no value.
+    Concepts prefix current_strike_: scalar suffixes match leaf names except
+    glyph action_glyph, breakdown attack_breakdown, canAttack can_attack,
+    totalModifier attack_modifier, handsAvailable hands_available,
+    sourceId source_item_local_id and attackRollType attack_roll_type. Indexed
+    options/domains use option/domain; variants penalty/label use map_penalty/
+    variant_label; traits name/label/description use trait_code/trait_label/
+    trait_description, weaponTraits use weapon_trait_* equivalents. Array-root
+    concepts use collection for actions, otherwise options/domains/variants/traits/
+    weapon_traits/alternate_usages. No MAP arithmetic or final damage is inferred.
+    Strings over 1000 serialized UTF-8 bytes use kind text, keys
+    strikes:current:<path>:text:<index>, mapped null and exact raw fragments with
+    text {path,start,end,total,complete} in UTF-16 units; reconstruct in returned
+    order without enrichment. Own getters emit strikes:unavailable:<path>, mapping
+    pf2e.actor.strike-capability.v1, no raw/contributors, concept
+    current_strike_field_support and {status:unsupported,reason:accessor_not_read,
+    path}; they are distinct from missing fields and are never invoked.
+    Origins use strikes:origin:<node path>, kind relationship, mapping
+    pf2e.actor.strike-origin.v1, concept current_strike_origin and transformed
+    action type witness. Exact permitted owned weapon (character) or melee (NPC)
+    membership adds Item name/type source witnesses and {status:resolved,
+    target_uuid,type,name,name_truncated,token_uuid?}; follow read_item with returned
+    token context. Mapped names clip to 256 Unicode codepoints; raw source names
+    remain exact. Ephemeral same-owner
+    origins return {status:generated,target_uuid:null}; unavailable/foreign origins
+    return {status:unavailable,target_uuid:null} without other node fields. Check
+    origin permissions before exposing labels/totals. Denied nodes expose only
+    strikes:current:denied, concept current_strike_capability, value
+    {status:denied,target_uuid:null}. Non-Strike kinds expose only aggregate
+    strikes:capability:non_strike_actions with {status:unsupported,
+    reason:non_strike_actions_unsupported}. These capability rows share the
+    capability mapping, current limitation and empty provenance.
+    Current Strikes always remains partial with target_context_not_evaluated and
+    current_strike_damage_unsupported; missing/accessor fields add
+    current_strike_fields_unavailable, other kinds non_strike_actions_unsupported,
+    denied nodes strike_items_denied, unavailable origins
+    current_strike_origins_unavailable. Existing NPC source reasons remain.
+    Bounds:12000 owned Items,256 action nodes,depth4,16 variants,64 traits per list,
+    256 options/domains,24000 records,300000 UTF-16 units per selected string.
+    Cycles/holes/malformed selected data exceed the contract and return ReadFailed.
+    Count/UTF-8 page bounds are separate. Selected current fields, origin identities,
+    source witnesses and permissions participate in revisions; ContentChanged means
+    discard pages and restart. Default/source-only reads never inspect actions.
     Spellcasting exposes owned spell/casting-entry identities, selected stored
     configuration, owner-local assignment/preparation joins and focus resources.
     casting_entry/casting_spell values resolve target_uuid and token_uuid when

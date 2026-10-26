@@ -266,3 +266,10 @@ seven pages**, matching independently selected serialized values and retaining
 source fingerprints, followed by confirmed fixture cleanup. See the
 [verification record](current-statistics-verification.md) for the full delivered
 scope, regression evidence and remaining limitations.
+
+Declared current Strike data is now a separate explicit `strikes` view through
+public `Actor.system.actions`, not part of this statistics selector. The
+[Strike contract](strike-current-contract.md) records own-data fields, canonical
+versus generated origins, unread PC MAP accessors, text bounds and live evidence.
+No preparation, roll or damage method is adopted; full target context and current
+damage remain unsupported.
