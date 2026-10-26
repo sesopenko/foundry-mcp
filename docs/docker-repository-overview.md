@@ -148,9 +148,11 @@ Owned effects separately expose the declared public `Item.system.expired` boolea
 transformed provenance. Missing expiry stays unavailable; `false` does not
 establish active application. No expiry calculation or activity getter is used.
 Every result reports unsupported affliction reading even when supported state
-Items are absent. Live state checks cover two existing NPCs, including a present
-false expiry flag that public serialization omitted. Expired-true and other
-Actor/token state and effective application remain unverified. See the
+Items are absent. Live state checks cover two existing NPCs and a marked world
+character, including true/false expiry, distinct overlapping-effect origins,
+an unevaluated encounter formula badge and condition source. Read fingerprints
+and fixture cleanup passed. Familiar/token state and effective suppression or
+application remain unverified. See the
 [state contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/state-contract.md).
 
 

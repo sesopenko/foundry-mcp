@@ -40,6 +40,21 @@ test('actual paginated state reads join owned source and immediate references wi
 test('state continuations detect owned source/membership/permission and external identity/status changes',async()=>{
  for(const mutate of [f=>f.sources.get('condition').system.value.value++,f=>f.actor.items.delete('condition'),f=>f.condition.testUserPermission=()=>false,f=>f.external.name='Renamed',f=>f.external.testUserPermission=()=>false]){const f=fixture(),params={...f.selector,sections:['state'],limit:1},first=await readActor(params);assert.ok(first.pagination.next_cursor);mutate(f);await assert.rejects(readActor({...params,cursor:first.pagination.next_cursor}),code('ContentChanged'));}
 });
+test('stored override claims retain both present conditions without reading activity or inferring suppression',async()=>{
+ const f=fixture(),other=f.add('other-condition','condition',{value:{isValued:true,value:1},references:{parent:null,children:[],overrides:[{id:'condition',type:'condition'}],overriddenBy:[]},overrides:[]});
+ f.sources.get('condition').system.references.overriddenBy=[{id:'other-condition',type:'condition'}];
+ let activityReads=0;
+ for(const item of [f.condition,other])Object.defineProperty(item,'active',{get(){activityReads++;throw Error('activity interface not adopted');}});
+ const before=JSON.stringify([...f.sources]),result=await all(f);
+ const conditions=result.rows.filter(row=>row.mapped.concept==='state_item'&&row.mapped.value.type==='condition');
+ assert.equal(conditions.length,2);assert.ok(conditions.every(row=>row.mapped.value.application==='unknown'));
+ const overriding=result.rows.find(row=>row.key===`state:condition:${other.uuid}:/system/references/overrides/0/id`);
+ const overridden=result.rows.find(row=>row.key===`state:condition:${f.condition.uuid}:/system/references/overriddenBy/0/id`);
+ assert.equal(overriding.mapped.value.target_uuid,f.condition.uuid);
+ assert.equal(overridden.mapped.value.target_uuid,other.uuid);
+ assert.ok(result.pages.every(page=>page.sections[0].reasons.includes('effective_application_not_evaluated')));
+ assert.equal(activityReads,0);assert.equal(JSON.stringify([...f.sources]),before);
+});
 test('state capability is always explicit, denied source stays hidden and other systems fail before serialization',async()=>{
  const f=fixture();for(const item of f.actor.items.values()){item.testUserPermission=()=>false;item.toObject=()=>{throw Error('denied source');};}const denied=await all(f);assert.equal(denied.rows.length,2);assert.deepEqual(denied.rows.find(row=>row.key==='state:denied').mapped.value,{status:'denied',target_uuid:null});assert.ok(denied.pages.every(page=>page.sections[0].reasons.includes('state_items_denied')));
  f.actor.items.clear();const empty=await all(f);assert.equal(empty.rows.length,1);assert.equal(empty.rows[0].key,'state:capability:affliction');

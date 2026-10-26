@@ -666,3 +666,28 @@ still require CORE-state. Final rank/availability, specialized casting and
 character/familiar current casting resources remain explicit advanced limitations.
 Full regression checks passed: 467 Python tests (one skipped) and 575 JavaScript
 tests. See the [acceptance audit](casting-acceptance.md).
+
+## Character state and expired-true verification — October 25, 2026
+
+The explicit opt-in state fixture now verifies a genuine character with three
+effects, three conditions and two inert origin actions in the existing test world.
+Actual MCP passed 27 state pages/173 records, 238 raw witnesses and 12 resolved
+relationships across 40 calls. True and false own-model expiry flags, distinct
+origins for same-name effects, an unevaluated encounter formula badge and
+valued/unvalued/persistent-damage condition source all matched independent reads.
+Read fingerprints and exact cleanup passed.
+
+The default runner remains read-only. Optional setup creates only the marked
+character and owned Items, updates only its timed effect's start and cleans up
+through exact UUID/type/run checks. Nine independent safety regressions cover
+delayed creation, lost responses, cancellation, bounded deadlines and cleanup;
+the state reader regression retains stored override claims without reading
+condition activity or claiming suppression.
+
+CORE-state remains In progress: genuine affliction reading and effective
+suppression/application are still open, as are familiar/token state fixtures.
+Progress remains **32/39 (82.1%)**. See the
+[state verification record](state-contract.md#marked-character-state-verification--october-25).
+Full suites passed: 478 Python tests (one skipped) and 576 JavaScript tests.
+Fresh-client discovery also passed; the refreshed GM browser showed only the
+previously known window-size notification.

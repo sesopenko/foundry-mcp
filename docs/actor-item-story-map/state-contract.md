@@ -48,8 +48,8 @@ is the system-data boundary; pinned PF2e `effect/document.ts:212` declares
 No remaining-duration getter, preparation or local expiry calculation is used.
 Own data descriptors prevent invocation of selected getters. `false` does not
 prove active application. Missing declared expiry remains unknown, with no
-source or serialization fallback. A present false flag is live-verified below;
-true has deterministic coverage only.
+source or serialization fallback. Both true and false flags are live-verified
+below; neither flag establishes effective application.
 Recorded override links do not prove suppression. A present
 condition/effect does not establish active application. An absent optional
 origin/target role is an ordinary absent relationship, not an unresolved-gap
@@ -169,3 +169,37 @@ effective state, live expiration verification/application and affliction tracked
 stages. This source join delivers useful state navigation while those capabilities
 remain explicitly unsupported. Do not mark CORE-state complete, erase its
 original acceptance criteria or count unsupported affliction absence as success.
+
+## Marked character state verification — October 25
+
+The explicit `--state-fixture --world-id test` check passed on one genuine
+temporary character in the existing development world: **27 pages, 173 records,
+238 raw witnesses and 12 resolved relationships in 40 requested/completed MCP
+calls**. Two inert action Items supplied distinct canonical origins for two
+same-name effects. An unlimited effect exposed `expired: false`; a timed effect
+exposed `expired: true`. A third effect retained encounter duration and its exact
+formula badge with `evaluate: false`, without rolling or posting chat. Valued,
+unvalued and persistent-damage condition source cases matched public documents.
+Every state identity retained `application: unknown`.
+
+Fixture setup used documented public Actor creation, embedded Item creation and
+one embedded update to the temporary timed effect's start. PF2e normal creation
+sets owned effect start to current world time; the setup update moved only that
+fixture field into the past. It did not advance world time, change combat or
+settings, or modify existing documents. Read fingerprints were captured after
+setup and matched after all reads. The reader did not calculate expiry or invoke
+activity, duration, preparation or roll methods.
+
+Exact UUID/type/unpredictable-run-marker cleanup deleted the temporary Actor
+and its owned Items; pending creation and remaining marked Actor counts were
+both zero. Nine independent safety tests cover real setup/cleanup JavaScript,
+late creation, lost responses, cancellation, deadlines and default read-only
+dispatch. Five normal harness tests cover source/current witnesses and fixture
+admission. A paginated reader regression also preserves two conditions with
+stored override claims and unknown application without accessing `Condition.active`.
+
+The default runner remains read-only against existing NPCs. Familiar/token state,
+effective condition suppression/application and genuine affliction documents
+remain unverified or unsupported. This checkpoint supersedes the earlier
+expired-true/character fixture gaps, but does not close CORE-state or its
+affliction prerequisite.

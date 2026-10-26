@@ -43,3 +43,15 @@ expired-true and other Actor/token fixtures remain unverified. The
 existing prerequisite graph and original acceptance criteria are unchanged.
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Character and expired-true checkpoint — October 25, 2026
+
+A genuine marked world character passed 27 state pages, 173 records, 238 raw
+witnesses and 12 resolved relationships in 40 MCP calls. Both expiry booleans,
+same-name effects with distinct Item origins, an unevaluated encounter formula
+badge and valued/unvalued/persistent-damage conditions matched independent public
+document reads. Read fingerprints and exact fixture cleanup passed; see the
+[verification record](../state-contract.md#marked-character-state-verification--october-25).
+This closes the earlier expired-true/character fixture gap. Effective suppression,
+application, familiar/token state and the original affliction prerequisite remain
+open. CORE-state stays In progress.

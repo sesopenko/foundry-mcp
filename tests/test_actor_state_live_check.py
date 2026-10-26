@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,47 @@ HARNESS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(HARNESS)
 
 
+class StateFixtureAdmissionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_invalid_fixture_flags_reject_before_credentials_or_client(self):
+        for arguments in [dict(state_fixture=True), dict(world_id='test'),
+                          dict(state_fixture=True, world_id='campaign'),
+                          dict(state_fixture=True, world_id='test', discovery_only=True)]:
+            with self.subTest(arguments=arguments), \
+                 patch.object(HARNESS.Path, 'read_text', side_effect=AssertionError('Credentials prohibited')), \
+                 patch.object(HARNESS, 'Client', side_effect=AssertionError('Client prohibited')):
+                with self.assertRaises(ValueError):
+                    await HARNESS.main(**arguments)
+
+
 class StateLiveCheckTests(unittest.TestCase):
+    def test_actual_fixture_setup_uses_only_marked_owner_and_unevaluated_formula(self):
+        script = r"""
+const code=JSON.parse(process.argv[1]),writes=[],created=[];let deleted=0;
+globalThis.location={origin:'http://localhost:30000'};
+globalThis.game={ready:true,user:{isGM:true},version:'14.369',system:{id:'pf2e',version:'8.6.1'},world:{id:'test'},time:{worldTime:1000},actors:[]};
+const actor={uuid:'Actor.fixture',type:'character',items:new Map(),getFlag:()=> 'offline-state-run',async delete(){deleted++;},async createEmbeddedDocuments(type,inputs){writes.push('createOwned');return inputs.map((source,index)=>{const id='i'+this.items.size,item={id,uuid:this.uuid+'.Item.'+id,type:source.type,parent:this,source};this.items.set(id,item);created.push(item);return item;});},async updateEmbeddedDocuments(type,updates){writes.push('updateOwned');for(const update of updates){const item=this.items.get(update._id);if(!item)throw Error('Nonfixture Item update');item.source.system.start={value:update['system.start.value'],initiative:update['system.start.initiative']};}return updates;}};
+globalThis.Actor={implementation:{create:async source=>{writes.push('createActor');if(source.type!=='character'||source.flags['foundry-mcp'].stateVerificationRun!=='offline-state-run')throw Error('Unsafe create');game.actors.push(actor);return actor;}}};
+const chunks=await new Function('return (async()=>{'+code+'})()')();
+const result=JSON.parse(chunks.join(''));
+console.log(JSON.stringify({writes,deleted,count:actor.items.size,result,items:created.map(item=>({uuid:item.uuid,type:item.type,source:item.source}))}));
+"""
+        process = subprocess.run(['node', '--input-type=module', '-e', script,
+                                  json.dumps(HARNESS.fixture_code(HARNESS.CREATE_STATE, 'offline-state-run'))],
+                                 cwd=ROOT, capture_output=True, text=True, timeout=10)
+        self.assertEqual(process.returncode, 0, process.stderr)
+        observation = json.loads(process.stdout)
+        self.assertEqual(observation['writes'], ['createActor', 'createOwned', 'createOwned', 'updateOwned'])
+        self.assertEqual(observation['deleted'], 0)
+        self.assertEqual(observation['count'], 8)
+        effects = [item for item in observation['items'] if item['type'] == 'effect']
+        self.assertEqual(len(effects), 3)
+        self.assertEqual(effects[0]['source']['name'], effects[1]['source']['name'])
+        self.assertNotEqual(effects[0]['source']['system']['context']['origin']['item'], effects[1]['source']['system']['context']['origin']['item'])
+        self.assertEqual(effects[1]['source']['system']['start'], {'value': 400, 'initiative': None})
+        self.assertEqual(effects[2]['source']['system']['badge'], {'type': 'formula', 'value': '1d4', 'evaluate': False, 'reevaluate': None})
+        self.assertEqual(effects[2]['source']['system']['duration']['unit'], 'encounter')
+        self.assertTrue(all(item['source']['system']['rules'] == [] for item in observation['items']))
+
     def test_actual_expiry_check_reads_public_own_data_without_serialization_or_getters(self):
         script = """
 let serializations=0,getters=0;

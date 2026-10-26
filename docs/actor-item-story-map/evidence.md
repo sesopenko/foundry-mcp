@@ -151,6 +151,14 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 character state checkpoint: the marked temporary character passed
+27 pages/173 records, 238 raw witnesses and 12 resolved relationships in 40 MCP
+calls. Both own public-model expiry flags, separate overlapping-effect origins,
+an unevaluated encounter formula badge and three condition source cases matched
+independent public reads. Source fingerprints and exact cleanup passed. Effective
+suppression/application and affliction support remain open; CORE-state is not
+Complete. See [state verification](state-contract.md#marked-character-state-verification--october-25).
+
 October 25 casting acceptance: independent actual MCP checks matched all 58
 contextual options and 663 unique source witnesses on two existing NPCs across
 prepared/spontaneous/innate/focus modes. Exact key sets, mapped meanings and
