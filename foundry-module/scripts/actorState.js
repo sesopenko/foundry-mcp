@@ -1,9 +1,9 @@
 /**
  * PF2e-specific character/NPC/familiar stored condition/effect integration on
  * Foundry14.369/PF2e8.6.1. Reuses public Actor.items, Item.parent/toObject(true)
- * and audited identity/relationship helpers, plus public Item.toObject(false):
- * https://foundryvtt.com/api/v14/classes/foundry.documents.Item.html#toobject
- * Only the detached EffectSystemData.expired boolean is selected as current.
+ * and audited identity/relationship helpers, plus declared public Item.system:
+ * https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.ItemData.html#system
+ * Only the own-data EffectSystemData.expired boolean is selected as current.
  * Schema contracts:
  * https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
  * condition/data.ts, effect/data.ts, abstract-effect/data.ts. No active/expired
@@ -20,26 +20,28 @@ const STORED=['stored_state_not_effective_application'];
 const CONDITION_REFERENCE_LIMIT=['Stored local reference or override slug only; no active/suppressed state or persistent-damage dominance is inferred. Unresolved targets disclose no resolved metadata.'];
 const EFFECT_REFERENCE_LIMIT=['Immediate stored context only; no acquired ability, learned spell, current application or recursive provenance is inferred. Unresolved targets disclose no identity.'];
 
-/** PF2e-specific own serialized identity field; never invoke selected getters. */
+/** PF2e-specific own declared data field; never invoke selected getters. */
 function own(source,key){
  if(source===null||typeof source!=='object')return undefined;
  const descriptor=Object.getOwnPropertyDescriptor(source,key);
  if(!descriptor)return undefined;
- if(!Object.hasOwn(descriptor,'value'))throw new TypeError('State source requires detached own data properties.');
+ if(!Object.hasOwn(descriptor,'value'))throw new TypeError('State fields require own data properties.');
  return descriptor.value;
 }
 /** PF2e-specific selected stored evidence with actual document provenance. */
 function raw(uuid,field){return {document_uuid:uuid,path:field.path,present:field.present,...(field.present?{value:field.value}:{}),basis:'source'};}
 /**
- * PF2e-specific EffectSystemData8.6.1 serialized expired flag, not application.
- * Reads only own data from public Item.toObject(false); no source fallback,
- * activity/remainingDuration getter or expiry calculation. Missing is unknown.
- * Pinned schema: src/module/item/effect/data.ts at the revision linked above.
+ * PF2e-specific EffectSystemData8.6.1 expired flag, not full application.
+ * Reads only the declared public Item.system own-data property. This derived
+ * field may be omitted by toObject(false); no serialization/source fallback,
+ * activity/remainingDuration getter or local expiry calculation is used.
+ * Missing is unknown. Pinned effect/data.ts and effect/document.ts declare
+ * EffectPF2e.system:EffectSystemData and its expired:boolean at the revision above.
  */
 function effectExpiry(item){
- const system=own(item.toObject(false),'system'),value=own(system,'expired');
+ const system=own(item,'system'),value=own(system,'expired');
  const present=system!==null&&typeof system==='object'&&Object.hasOwn(system,'expired');
- if(present&&typeof value!=='boolean')throw new TypeError('Serialized effect expiry must be boolean.');
+ if(present&&typeof value!=='boolean')throw new TypeError('Declared effect expiry must be boolean.');
  return {document_uuid:item.uuid,path:'/system/expired',present,...(present?{value}:{}),basis:'transformed'};
 }
 /** PF2e-specific state DTO, never an effective application assertion. */
@@ -55,7 +57,7 @@ function record(key,kind,concept,evidence,value,mapping,limitations){return {key
  * effect context claims before any relationship resolution. Local conditions
  * and immediate effect context reuse existing permission-aware readers; targets'
  * source is never expanded. Caller retains this detached result in revisions.
- * Selects each readable effect's serialized expiry with transformed provenance;
+ * Selects each readable effect's declared current expiry with transformed provenance;
  * false does not establish activity. Missing adds current_effect_expiry_unavailable.
  * Returns {records,reasons}; application is always unknown and reasons always
  * include effective_application_not_evaluated and affliction_reading_unsupported.
@@ -94,7 +96,7 @@ export async function actorStateSnapshot(target){
     records.push(record(`state:condition:${uuid}:${reference.path}`,'relationship',reference.concept,reference.raw.map(field=>raw(uuid,field)),reference.result,'pf2e.condition.reference.v1',CONDITION_REFERENCE_LIMIT));
    }
   }else{
-   records.push(record(`state:current:${uuid}:/system/expired`,'field','current_effect_expired',[expiry],expiry.present?expiry.value:null,'pf2e.effect.current.v1',['serialized_effect_expiry_not_application']));
+   records.push(record(`state:current:${uuid}:/system/expired`,'field','current_effect_expired',[expiry],expiry.present?expiry.value:null,'pf2e.effect.current.v1',['effect_expiry_not_application']));
    const evidence=references.map(field=>raw(uuid,field));
    for(const reference of await effectRelationships(references)){
     if(reference.present&&typeof reference.value==='string'&&reference.value!==''&&reference.result.status!=='resolved')reasons.add('unresolved_state_references');

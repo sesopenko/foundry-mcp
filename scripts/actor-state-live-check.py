@@ -5,7 +5,8 @@ https://foundryvtt.com/api/v14/classes/foundry.abstract.Document.html
 https://foundryvtt.com/api/v14/functions/foundry.utils.fromUuid.html
 PF2e 8.6.1 condition/effect schemas, revision
 28d9d156f252d084371d994dc359509b49eadf18, establish source field meanings
-and the derived EffectSystemData.expired boolean selected via toObject(false).
+and the derived EffectSystemData.expired boolean selected through public
+Item.system own data properties (never getters or preparation methods).
 No fixtures, gameplay calls, production selector imports or document writes.
 """
 
@@ -70,6 +71,24 @@ const result={samples,coverage:[...covered].sort()};
 
 # PF2e-specific state_item names are persisted source identities; immediate
 # context references deliberately retain the resolved document display name.
+WITNESS_CHECK = """
+const checks=[];
+for(const claim of claims){
+ const item=await foundry.utils.fromUuid(claim.document_uuid);
+ if(!item||item.documentName!=='Item'||!item.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable source Item');
+ if(claim.basis==='transformed'){
+  if(claim.path!=='/system/expired'||item.type!=='effect')throw Error('Unexpected current witness');
+  const system=Object.getOwnPropertyDescriptor(item,'system');
+  const expired=system&&Object.hasOwn(system,'value')&&system.value!==null&&typeof system.value==='object'?Object.getOwnPropertyDescriptor(system.value,'expired'):null;
+  const present=!!expired&&Object.hasOwn(expired,'value')&&typeof expired.value==='boolean';
+  checks.push({present,...(present?{value:expired.value}:{})});continue;
+ }
+ let value=JSON.parse(JSON.stringify(item.toObject(true))),present=true;
+ for(const encoded of claim.path.slice(1).split('/')){const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~');if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)){present=false;break;}value=value[key];}
+ checks.push({present,...(present?{value}:{})});
+}
+const result=checks;
+"""
 TARGET_CHECK = """
 const checks=[];
 for(const claim of claims){const doc=await foundry.utils.fromUuid(claim.target_uuid);if(!doc||!doc.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable relationship target');const selectedName=claim.source_identity?doc.toObject(true).name:doc.name;if(typeof selectedName!=='string')throw Error('Unavailable relationship name');const name=[...selectedName];checks.push({target_uuid:doc.uuid,document_name:doc.documentName,name:name.slice(0,256).join(''),name_truncated:name.length>256,...(Object.hasOwn(claim,'type')?{type:doc.type}:{})});}
@@ -114,7 +133,7 @@ async def main(discovery_only=False):
             assert props['limit']['minimum'] <= 7 <= props['limit']['maximum']
             assert props['max_bytes']['minimum'] <= 8000 <= props['max_bytes']['maximum']
             assert tool.annotations.readOnlyHint
-            for text in ('state_item', 'state:capability:affliction', 'pf2e.actor.state-source.v1', 'pf2e.actor.state-capability.v1', 'effective_application_not_evaluated', 'affliction_reading_unsupported', 'unresolved_state_references', 'state_items_denied', '12000', '24000', '200'):
+            for text in ('state_item', 'state:capability:affliction', 'pf2e.actor.state-source.v1', 'pf2e.actor.state-capability.v1', 'effective_application_not_evaluated', 'affliction_reading_unsupported', 'unresolved_state_references', 'state_items_denied', 'Item.system', 'effect_expiry_not_application', '12000', '24000', '200'):
                 assert text in tool.description
             if discovery_only:
                 print(json.dumps({'passed': True, 'discovery_verified': True, 'runtime_checked': False, 'mcp_calls': calls}))
@@ -124,7 +143,8 @@ async def main(discovery_only=False):
             before = await js(SELECT)
             assert 1 <= len(before['samples']) <= 2
             totals = {'pages': 0, 'records': 0, 'source_pages': 0, 'raw_witnesses': 0, 'resolved_relationships': 0,
-                      'serialized_expiry_present': 0, 'serialized_expiry_absent': 0}
+                      'current_expiry_present': 0, 'current_expiry_absent': 0,
+                      'expired_true': 0, 'expired_false': 0}
             for sample in before['samples']:
                 async def pages(sections):
                     rows, cursor, seen, revision = [], None, set(), None
@@ -173,7 +193,9 @@ async def main(discovery_only=False):
                         assert raw['document_uuid'] in allowed
                         if row['provenance']['mapping'] == 'pf2e.effect.current.v1':
                             assert raw['basis'] == 'transformed' and raw['path'] == '/system/expired'
-                            totals['serialized_expiry_present' if raw['present'] else 'serialized_expiry_absent'] += 1
+                            totals['current_expiry_present' if raw['present'] else 'current_expiry_absent'] += 1
+                            if raw['present']:
+                                totals['expired_true' if raw['value'] else 'expired_false'] += 1
                         else:
                             assert raw['basis'] == 'source'
                         witnesses.append(raw)
@@ -184,11 +206,7 @@ async def main(discovery_only=False):
                 # Request only selected source witnesses in batches, never whole prose snapshots.
                 for offset in range(0, len(witnesses), 40):
                     batch = witnesses[offset:offset + 40]
-                    result = await js('const claims=' + json.dumps(batch) + ';' + """
-const checks=[];
-for(const claim of claims){const item=await foundry.utils.fromUuid(claim.document_uuid);if(!item||item.documentName!=='Item'||!item.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable source Item');let value=JSON.parse(JSON.stringify(item.toObject(claim.basis!=='transformed'))),present=true;for(const encoded of claim.path.slice(1).split('/')){const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~');if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)){present=false;break;}value=value[key];}checks.push({present,...(present?{value}:{})});}
-const result=checks;
-""")
+                    result = await js('const claims=' + json.dumps(batch) + ';' + WITNESS_CHECK)
                     assert result == [{key: raw[key] for key in ('present', 'value') if key in raw} for raw in batch]
                 for offset in range(0, len(targets), 30):
                     result = await js('const claims=' + json.dumps(targets[offset:offset + 30]) + ';' + TARGET_CHECK)

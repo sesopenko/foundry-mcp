@@ -573,3 +573,21 @@ restart that discarded 101 smaller-budget pages. A separate current-statistics
 run verified 14/10 supplemental records for world/synthetic NPCs, respectively.
 Neither run evaluates final rank, signature alternatives or complete castability.
 Completed progress remains **31/39 (79.5%)**.
+
+## Declared public effect expiry — October 25, 2026
+
+The earlier serializer-only reader omitted expiry because `toObject(false)`
+does not include every declared current system field. Official public core
+`ItemData.system`, pinned PF2e `EffectPF2e.system: EffectSystemData`, and its
+`expired: boolean` declaration establish the supported model boundary. The
+reader now selects that own data property with transformed provenance, without
+getters, preparation, time arithmetic or source/serialization fallback.
+
+Failing-then-passing JavaScript/Python tests preserve false, reject accessors and
+invalid values, protect denied Items, and stale continuations on model-only
+changes. An independent Node-backed verifier reproduces serializer omission.
+The existing NPC run now verifies one present false expiry flag, zero absent
+flags, 56 records and 76 raw witnesses in 54 MCP calls with unchanged source.
+Expired-true, other Actor/token state, condition suppression, application and
+affliction gates remain open. CORE-state remains In progress; completed progress
+stays **31/39 (79.5%)**. See [state contract](state-contract.md).

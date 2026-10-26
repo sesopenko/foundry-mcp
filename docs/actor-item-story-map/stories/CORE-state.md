@@ -34,10 +34,12 @@ tracked/out-of-range-stage acceptance remains open. Effective suppression,
 application and expanded live state-view verification also remain open. Two
 existing NPC source-state views now pass independent read-only verification;
 see the state contract for exact scope. Serialized owned
-effect expiry is selected separately through public `Item.toObject(false)`;
+effect expiry is selected separately through public `Item.system` and the pinned
+`EffectSystemData.expired` own data declaration;
 its boolean retains transformed provenance and never establishes application.
-Missing serialization remains unknown. Deterministic expiry and stale-cursor
-coverage does not replace the pending runtime gate. The
+missing model data remains unknown even if source/serialization contains a value.
+The existing NPC run verifies a present false flag with unchanged source;
+expired-true and other Actor/token fixtures remain unverified. The
 existing prerequisite graph and original acceptance criteria are unchanged.
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.

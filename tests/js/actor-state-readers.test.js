@@ -10,7 +10,7 @@ function fixture(synthetic=false){
  docs.set(actor.uuid,actor);docs.set(external.uuid,external);
  let selector={actor_uuid:actor.uuid};
  if(synthetic){const scene={documentName:'Scene',uuid:'Scene.s',name:'Scene',testUserPermission:()=>true};const token={documentName:'Token',id:'t',uuid:'Scene.s.Token.t',name:'Token',parent:scene,actor,baseActor:null,isLinked:false,testUserPermission:()=>true};docs.set(token.uuid,token);selector={token_uuid:token.uuid};}
- function add(id,type,system={}){const source={name:'Duplicate',type,system},current={name:'Duplicate',type,system:{expired:false}};const item={documentName:'Item',id,uuid:`${actor.uuid}.Item.${id}`,name:'Duplicate',type,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){stateReads++;assert.equal(typeof flag,'boolean');return flag?source:current;}};actor.items.set(id,item);sources.set(id,source);transformed.set(id,current);docs.set(item.uuid,item);return item;}
+ function add(id,type,system={}){const source={name:'Duplicate',type,system},current={name:'Duplicate',type,system:{}};const item={documentName:'Item',id,uuid:`${actor.uuid}.Item.${id}`,name:'Duplicate',type,system:{expired:false},parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){stateReads++;assert.equal(flag,true,'state must not rely on transformed serialization for model-only expiry');return source;}};actor.items.set(id,item);sources.set(id,source);transformed.set(id,current);docs.set(item.uuid,item);return item;}
  const condition=add('condition','condition',{value:{isValued:true,value:2},references:{parent:{id:'effect'},children:[],overrides:[],overriddenBy:[]},persistent:{formula:'1d6',damageType:'fire',dc:15,criticalHit:false},overrides:[]});
  const effect=add('effect','effect',{duration:{value:2,unit:'rounds',expiry:'turn-start',sustained:false},badge:{type:'counter',value:1,min:null,max:3},context:{origin:{actor:external.uuid},target:null,roll:null}});
  globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map([['a',actor],['external',external]]),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>docs.get(uuid)}};
@@ -18,15 +18,15 @@ function fixture(synthetic=false){
 }
 async function all(f){const rows=[],pages=[];let cursor;do{const page=await readActor({...f.selector,sections:['state'],limit:2,max_bytes:8000,...(cursor?{cursor}:{})});assert.ok(Buffer.byteLength(JSON.stringify(page))<=8000);pages.push(page);rows.push(...page.records);cursor=page.pagination.next_cursor;assert.ok(pages.length<150);}while(cursor);return {rows,pages};}
 const code=expected=>error=>error.rpcError?.code===expected;
-test('state cursor stales when only serialized current effect expiry changes',async()=>{
+test('state cursor stales when only public model current effect expiry changes',async()=>{
  const f=fixture(),params={...f.selector,sections:['state'],limit:1},first=await readActor(params),source=JSON.stringify([...f.sources]);assert.ok(first.pagination.next_cursor);
- f.transformed.get('effect').system.expired=true;assert.equal(JSON.stringify([...f.sources]),source);
+ f.effect.system.expired=true;assert.equal(JSON.stringify([...f.sources]),source);
  await assert.rejects(readActor({...params,cursor:first.pagination.next_cursor}),code('ContentChanged'));
 });
 test('actual reader retains false transformed expiry and reports missing expiry separately',async()=>{
  const f=fixture(),first=await all(f),key=`state:current:${f.effect.uuid}:/system/expired`,row=first.rows.find(row=>row.key===key);
  assert.ok(row);assert.equal(row.raw[0].basis,'transformed');assert.equal(row.raw[0].value,false);assert.equal(row.mapped.value,false);
- delete f.transformed.get('effect').system.expired;const missing=await all(f),absent=missing.rows.find(row=>row.key===key);assert.ok(absent);assert.equal(absent.raw[0].present,false);assert.ok(!Object.hasOwn(absent.raw[0],'value'));assert.equal(absent.mapped.value,null);assert.ok(missing.pages.every(page=>page.sections[0].reasons.includes('current_effect_expiry_unavailable')));
+ delete f.effect.system.expired;const missing=await all(f),absent=missing.rows.find(row=>row.key===key);assert.ok(absent);assert.equal(absent.raw[0].present,false);assert.ok(!Object.hasOwn(absent.raw[0],'value'));assert.equal(absent.mapped.value,null);assert.ok(missing.pages.every(page=>page.sections[0].reasons.includes('current_effect_expiry_unavailable')));
 });
 
 test('actual paginated state reads join owned source and immediate references with canonical world/token provenance',async()=>{
@@ -46,6 +46,6 @@ test('state capability is always explicit, denied source stays hidden and other 
  const other=fixture();game.system.id='other';await assert.rejects(readActor({...other.selector,sections:['state']}),code('UnsupportedSystem'));assert.equal(other.stateReads,0);
 });
 test('default/source reads never serialize state Items and selected source accessors fail without invocation',async()=>{
- const f=fixture();for(const sections of [undefined,['source']])await readActor({...f.selector,...(sections?{sections}:{})});assert.equal(f.stateReads,0);
+ const f=fixture();let modelReads=0;for(const item of f.actor.items.values())Object.defineProperty(item,'system',{configurable:true,get(){modelReads++;throw Error('model must remain unselected');}});for(const sections of [undefined,['source']])await readActor({...f.selector,...(sections?{sections}:{})});assert.equal(f.stateReads,0);assert.equal(modelReads,0);
  let calls=0;Object.defineProperty(f.sources.get('effect').system.context.origin,'actor',{get(){calls++;return 'Actor.secret';}});await assert.rejects(readActor({...f.selector,sections:['state']}),code('ReadFailed'));assert.equal(calls,0);
 });

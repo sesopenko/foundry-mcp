@@ -39,19 +39,30 @@ active flags or unlimited resources. An origin roll total is historical source,
 not a new check modifier or roll.
 
 Condition activity, suppression and effect applicability remain unsupported.
-For actual readable owned effects only, public `Item.toObject(false)` supplies
-the declared `EffectSystemData.expired` boolean when serialized. The contract is
-the pinned upstream `src/module/item/effect/data.ts:110` and public
-[Item.toObject](https://foundryvtt.com/api/v14/classes/foundry.documents.Item.html#toobject).
+For actual readable owned effects only, the reader selects the own data property
+`Item.system.expired`. Public core
+[ItemData.system](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.ItemData.html#system)
+is the system-data boundary; pinned PF2e `effect/document.ts:212` declares
+`EffectPF2e.system: EffectSystemData` and `effect/data.ts:110` declares its
+`expired: boolean`. This model field can be omitted by `toObject(false)`.
 No remaining-duration getter, preparation or local expiry calculation is used.
-`false` does not prove active application. Missing serialized expiry remains
-unknown, with no source fallback. Runtime verification remains pending.
+Own data descriptors prevent invocation of selected getters. `false` does not
+prove active application. Missing declared expiry remains unknown, with no
+source or serialization fallback. A present false flag is live-verified below;
+true has deterministic coverage only.
 Recorded override links do not prove suppression. A present
 condition/effect does not establish active application. An absent optional
 origin/target role is an ordinary absent relationship, not an unresolved-gap
 reason. Nonempty claimed references that cannot resolve remain explicitly
 missing, denied, unsupported or unverified under the existing relationship
 contract; they must not be confused with an omitted optional role.
+
+`ConditionPF2e.active` is a different evidence case: the exported class declares
+a default-public boolean, but neither the condition system-data schema nor an
+independently established external API contract documents it. It is not adopted
+by this reader pending clearer support evidence; it is not labelled private or
+unsupported by upstream. Stored override references alone still cannot establish
+current condition inactivity or general rule suppression.
 
 Affliction source/mapped/effective support remains explicitly unsupported in
 every result, including an Actor with no affliction Items. PF2e 8.6.1's
@@ -73,7 +84,7 @@ or unbounded nested source objects are returned.
 | --- | --- | --- |
 | `state:item:<Item UUID>` | relationship / `state_item` | `pf2e.actor.state-source.v1`; resolved Item identity with `application: unknown`, actual type, name bounded to 256 Unicode codepoints, truncation flag and optional selected `token_uuid`. Raw `/name` and `/type` witnesses. |
 | `state:source:<Item UUID>:<path>` | field / existing typed concept | `pf2e.condition.source.v1` or `pf2e.effect.source.v1`; existing typed mapped value, limitations and one exact source witness. |
-| `state:current:<Item UUID>:/system/expired` | field / `current_effect_expired` | `pf2e.effect.current.v1`; boolean or null when absent. One `/system/expired` witness with `basis: transformed`, matching contributors and limitation `serialized_effect_expiry_not_application`. Effects only. Missing witness has `present: false` and no value. |
+| `state:current:<Item UUID>:/system/expired` | field / `current_effect_expired` | `pf2e.effect.current.v1`; boolean or null when absent. One declared public model `/system/expired` witness with `basis: transformed`, matching contributors and limitation `effect_expiry_not_application`. Effects only. Missing witness has `present: false` and no value. |
 | `state:condition:<Item UUID>:<path>` | relationship / existing condition reference concept | `pf2e.condition.reference.v1`; existing owner-local relationship value and exact ID/type or slug witnesses. |
 | `state:effect:<Item UUID>:<role>` | relationship / `effect_<role>_reference` | `pf2e.effect.context-reference.v1`; existing immediate context relationship value. Each role retains all five source UUID witnesses. |
 | `state:capability:affliction` | field / `state_affliction_support` | `pf2e.actor.state-capability.v1`; `{status: unsupported, reason: pf2e_8_6_1_affliction_disabled}`, empty raw/contributors, limitation `no_effective_state_inference`. Always present. |
@@ -93,7 +104,7 @@ The section is always partial. Reasons always include
 `effective_application_not_evaluated` and `affliction_reading_unsupported`.
 Add `state_items_denied` for the aggregate denial marker and
 `current_effect_expiry_unavailable` when an owned readable effect lacks its
-serialized expiry flag. Add
+declared current expiry flag. Add
 `unresolved_state_references` for nonempty unresolved claims only. Shared
 pagination may additionally add `pagination`; optional absent roles do not add
 an unresolved reason.
@@ -106,7 +117,7 @@ before any external hydration; page size does not relax snapshot bounds.
 Empty/null optional relationship roles do not consume the nonempty-claim bound.
 Use shared record-count and UTF-8-byte pagination separately from these bounds.
 
-The detached revision snapshot includes selected owned source, serialized effect
+The detached revision snapshot includes selected owned source, current effect
 expiry and resolved
 external identities, permission and membership facts. Changes to either source
 or relationship targets invalidate stale continuations. Pass
@@ -130,15 +141,24 @@ complete source fingerprints and exercise at least representative existing
 conditions/effects without gameplay writes. Unit coverage alone does not close
 the runtime gate.
 
-October 25 existing-world verification passed through
+The initial October 25 serialization-only existing-world verification passed through
 `scripts/actor-state-live-check.py`: two existing NPCs, condition/effect coverage,
 10 state pages, 56 state records, 36 source/default pages, 76 raw witnesses and
 two resolved relationship checks across 54 MCP calls. Full source fingerprints
 were unchanged. The one effect omitted serialized expiry: zero present flags,
 one absent flag. The unavailable result was verified independently against
-public serialization; no current expiry value is live-verified. Character,
+public serialization; no current expiry value was live-verified at that checkpoint. Character,
 familiar, synthetic-token state, effective application and afflictions remain
 unverified. These results do not close the original story requirements.
+
+The subsequent public-model audit corrected that narrower boundary. The same
+two existing NPCs now pass the independent check with **one present expiry flag
+(`false`), zero absent flags**, 10 state pages, 56 records, 36 source/default
+pages, 76 raw witnesses and two resolved relationships in 54 MCP calls. Complete
+source fingerprints were unchanged. The check reads the declared own model
+property independently; it never invokes an expiry getter or recalculates time.
+Character/familiar/token state and an expired-true runtime fixture remain
+unverified. Condition activity and effect application are still unsupported.
 
 The independent verifier distinguishes source identity names from PF2e display
 labels; an offline failing-then-passing test reproduces their difference. It

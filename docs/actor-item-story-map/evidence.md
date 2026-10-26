@@ -151,6 +151,15 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 declared effect-model correction: official public core ItemData.system
+and pinned `EffectSystemData.expired: boolean` permit selection of the own model
+data property even when `toObject(false)` omits it. New regressions fail under
+the old serializer-only boundary, then pass with strict getter-free model reads.
+The same existing NPC check now verifies one present false expiry flag (zero
+absent), 56 records and 76 raw witnesses across 54 MCP calls, with unchanged
+complete source fingerprints. This does not establish active application or
+condition suppression; see [state contract](state-contract.md).
+
 October 25 token and casting follow-up: the read-only token check scanned 50
 Scenes and 778 tokens without a qualifying existing character/NPC same-base
 pair with distinct HP and meaningful Item state. CORE-token remains open; see

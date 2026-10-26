@@ -2632,11 +2632,11 @@ def _state_child_identity(uuid, typ, identity):
 
 
 def _actor_state_record(row, identity):
-    """PF2e-specific8.6.1 owned condition/effect source and serialized expiry.
+    """PF2e-specific8.6.1 owned condition/effect source and public current expiry.
 
     Reuses pinned condition/effect schemas and immediate relationship validators
     with the selected Actor/token owner. EffectSystemData.expired from public
-    Item.toObject(false) uses transformed provenance; it does not prove full
+    Item.system own data uses transformed provenance; it does not prove full
     application. Missing transformed expiry stays missing. Afflictions unsupported.
     https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
     """
@@ -2658,7 +2658,7 @@ def _actor_state_record(row, identity):
         if field['present'] and type(field['value']) is not bool:return False
         return (mapped['concept']=='current_effect_expired' and type(mapped['value']) is (bool if field['present'] else type(None))
                 and mapped['value']==(field['value'] if field['present'] else None)
-                and provenance['limitations']==['serialized_effect_expiry_not_application'])
+                and provenance['limitations']==['effect_expiry_not_application'])
     if mapping=='pf2e.actor.state-capability.v1':
         return (row['key']=='state:capability:affliction' and row['kind']=='field' and raw==[]
                 and mapped==dict(concept='state_affliction_support',value=dict(status='unsupported',reason='pf2e_8_6_1_affliction_disabled'),unit=None)
@@ -4124,11 +4124,13 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     state:current:<owned Item UUID>:/system/expired, kind field, mapping
     pf2e.effect.current.v1 and concept current_effect_expired. Its single raw
     witness and exact contributor use /system/expired with basis transformed,
-    from public Item.toObject(false), selecting PF2e8.6.1 EffectSystemData.expired.
-    A present value must be boolean (false is preserved); absent serialized data
+    from public Item.system, selecting the own data property declared by
+    PF2e8.6.1 EffectSystemData.expired. No getters or toObject(false) fallback
+    are used; serialization can omit this declared current flag.
+    A present value must be boolean (false is preserved); absent declared data
     has present false, no raw value and mapped null, adding
     current_effect_expiry_unavailable. Limitation is exactly
-    serialized_effect_expiry_not_application. This does not infer application,
+    effect_expiry_not_application. This does not infer application,
     suppression, remaining seconds or condition activity, and never calculates
     expiry independently. state:condition:<Item UUID>:<path>
     and state:effect:<Item UUID>:<role> reuse read_item relationships, including

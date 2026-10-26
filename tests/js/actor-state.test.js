@@ -8,36 +8,39 @@ function fixture(type='npc',synthetic=false){
  const target={document:actor,identity:{uuid:actor.uuid},token:null};
  if(synthetic){const scene={documentName:'Scene',uuid:'Scene.s',name:'Scene',testUserPermission:()=>true};target.token={documentName:'Token',uuid:'Scene.s.Token.t',name:'Token',parent:scene,actor,baseActor:null,isLinked:false,testUserPermission:()=>true};docs.set(target.token.uuid,target.token);}
  globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map([['a',actor]]),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>{resolutions++;return docs.get(uuid);}}};
- const add=(id,type,system={},name='Duplicate')=>{const source={type,name,system},transformed={type,name,system:{expired:false}};const serializations=[];const item={documentName:'Item',id,uuid:`${actor.uuid}.Item.${id}`,type,name,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){serializations.push(flag);assert.equal(typeof flag,'boolean');return flag?source:transformed;}};actor.items.set(id,item);docs.set(item.uuid,item);return {item,source,transformed,serializations};};
+ const add=(id,type,system={},name='Duplicate')=>{const source={type,name,system},transformed={type,name,system:{}};const serializations=[];const item={documentName:'Item',id,uuid:`${actor.uuid}.Item.${id}`,type,name,system:{expired:false},parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){serializations.push(flag);assert.equal(typeof flag,'boolean');return flag?source:transformed;}};actor.items.set(id,item);docs.set(item.uuid,item);return {item,source,transformed,serializations};};
  return {actor,target,docs,add,get resolutions(){return resolutions;}};
 }
 const identityRows=result=>result.records.filter(row=>row.key.startsWith('state:item:'));
-test('effect expiry is selected transformed serialized evidence, preserving false without asserting application',async()=>{
+test('effect expiry uses public system model when source and transformed serialization omit it',async()=>{
  for(const expired of [false,true]){
-  const f=fixture(),effect=f.add('effect','effect');effect.transformed.system.expired=expired;
+  const f=fixture(),effect=f.add('effect','effect');effect.item.system.expired=expired;
+  Object.defineProperty(effect.item,'expired',{get(){throw Error('effect convenience getter prohibited');}});
   Object.defineProperty(effect.source.system,'expired',{get(){throw Error('source expiry must not be read');}});
   const result=await actorStateSnapshot(f.target),row=result.records.find(row=>row.key===`state:current:${effect.item.uuid}:/system/expired`);
   assert.ok(row);assert.equal(row.section,'state');assert.equal(row.kind,'field');
   assert.deepEqual(row.raw,[{document_uuid:effect.item.uuid,path:'/system/expired',present:true,value:expired,basis:'transformed'}]);
   assert.deepEqual(row.mapped,{concept:'current_effect_expired',value:expired,unit:null});
-  assert.deepEqual(row.provenance,{contributors:[{document_uuid:effect.item.uuid,path:'/system/expired',basis:'transformed'}],mapping:'pf2e.effect.current.v1',limitations:['serialized_effect_expiry_not_application']});
-  assert.ok(effect.serializations.includes(false));assert.ok(result.reasons.includes('effective_application_not_evaluated'));
+  assert.deepEqual(row.provenance,{contributors:[{document_uuid:effect.item.uuid,path:'/system/expired',basis:'transformed'}],mapping:'pf2e.effect.current.v1',limitations:['effect_expiry_not_application']});
+  assert.ok(!effect.serializations.includes(false));assert.ok(result.reasons.includes('effective_application_not_evaluated'));
  }
 });
 test('missing transformed expiry remains unavailable and source cannot supply a fallback',async()=>{
- const f=fixture(),effect=f.add('effect','effect',{expired:true});delete effect.transformed.system.expired;
+ const f=fixture(),effect=f.add('effect','effect',{expired:true});effect.transformed.system.expired=true;delete effect.item.system.expired;
  const result=await actorStateSnapshot(f.target),row=result.records.find(row=>row.key===`state:current:${effect.item.uuid}:/system/expired`);
  assert.ok(row);assert.deepEqual(row.raw,[{document_uuid:effect.item.uuid,path:'/system/expired',present:false,basis:'transformed'}]);assert.equal(row.mapped.value,null);
  assert.ok(result.reasons.includes('current_effect_expiry_unavailable'));
+ Object.setPrototypeOf(effect.item.system,{expired:false});const inherited=await actorStateSnapshot(f.target);assert.equal(inherited.records.find(row=>row.key===`state:current:${effect.item.uuid}:/system/expired`).raw[0].present,false);
 });
 test('transformed expiry rejects nonboolean and accessor leaves without invoking getters',async()=>{
- for(const value of [null,0,'false',{},undefined]){const f=fixture(),effect=f.add('effect','effect');effect.transformed.system.expired=value;await assert.rejects(actorStateSnapshot(f.target),TypeError);}
- for(const location of ['expired','system']){const f=fixture(),effect=f.add('effect','effect');let calls=0;Object.defineProperty(location==='expired'?effect.transformed.system:effect.transformed,location,{get(){calls++;return false;}});await assert.rejects(actorStateSnapshot(f.target),TypeError);assert.equal(calls,0);}
+ for(const value of [null,0,'false',{},undefined]){const f=fixture(),effect=f.add('effect','effect');effect.item.system.expired=value;await assert.rejects(actorStateSnapshot(f.target),TypeError);}
+ for(const location of ['expired','system']){const f=fixture(),effect=f.add('effect','effect');let calls=0;Object.defineProperty(location==='expired'?effect.item.system:effect.item,location,{get(){calls++;return false;}});await assert.rejects(actorStateSnapshot(f.target),TypeError);assert.equal(calls,0);}
 });
 test('stored state covers actual distinct same-name Items, selected source, context and token provenance without application claims',async()=>{
  for(const type of ['character','npc','familiar']){
   const f=fixture(type,true),condition=f.add('condition','condition',{value:{isValued:true,value:0},persistent:null,references:{parent:{id:'effect'},children:[],overrides:[],overriddenBy:[]},overrides:[]}),effect=f.add('effect','effect',{duration:{value:-1,unit:'unlimited',expiry:null,sustained:false},badge:{type:'formula',value:'1d4',reevaluate:null},context:{origin:{actor:f.actor.uuid,token:f.target.token.uuid,item:condition.item.uuid},target:null,roll:null}});
   for(const field of ['active','suppressed','expired','rules','description'])for(const source of [condition.source,effect.source])Object.defineProperty(source.system,field,{get(){throw Error('unselected state accessed');}});
+  Object.defineProperty(condition.item,'system',{get(){throw Error('condition model activity prohibited');}});
   const result=await actorStateSnapshot(f.target),items=identityRows(result);assert.equal(items.length,2);assert.equal(new Set(items.map(row=>row.mapped.value.target_uuid)).size,2);assert.ok(items.every(row=>row.mapped.value.name==='Duplicate'&&row.mapped.value.application==='unknown'&&row.mapped.value.token_uuid===f.target.token.uuid));
   assert.ok(!condition.serializations.includes(false),'conditions must not use transformed activity/expiry data');
   const source=result.records.find(row=>row.key===`state:source:${condition.item.uuid}:/system/value/value`);assert.equal(source.raw[0].value,0);assert.equal(source.raw[0].basis,'source');assert.equal(source.provenance.mapping,'pf2e.condition.source.v1');
@@ -51,7 +54,7 @@ test('empty inventory always states affliction capability and absence is not app
  const f=fixture(),result=await actorStateSnapshot(f.target);assert.deepEqual(result.reasons,['affliction_reading_unsupported','effective_application_not_evaluated']);assert.deepEqual(result.records[0],{key:'state:capability:affliction',section:'state',kind:'field',raw:[],mapped:{concept:'state_affliction_support',value:{status:'unsupported',reason:'pf2e_8_6_1_affliction_disabled'},unit:null},provenance:{contributors:[],mapping:'pf2e.actor.state-capability.v1',limitations:['no_effective_state_inference']}});
 });
 test('denied scoped Items expose one marker; afflictions and unrelated types never serialize or name',async()=>{
- const f=fixture();for(const [id,type,denied]of [['one','effect',true],['two','condition',true],['affliction','affliction',false],['other','action',true]]){const {item}=f.add(id,type);item.testUserPermission=()=>!denied;item.toObject=()=>{throw Error('unreadable source');};Object.defineProperty(item,'name',{get(){throw Error('unreadable name');}});}
+ const f=fixture();for(const [id,type,denied]of [['one','effect',true],['two','condition',true],['affliction','affliction',false],['other','action',true]]){const {item}=f.add(id,type);item.testUserPermission=()=>!denied;item.toObject=()=>{throw Error('unreadable source');};Object.defineProperty(item,'system',{get(){throw Error('unreadable model');}});Object.defineProperty(item,'name',{get(){throw Error('unreadable name');}});}
  const result=await actorStateSnapshot(f.target);assert.equal(result.records.length,2);assert.deepEqual(result.records.find(row=>row.key==='state:denied').mapped.value,{status:'denied',target_uuid:null});assert.ok(result.reasons.includes('state_items_denied'));assert.ok(!JSON.stringify(result).includes('.Item.'));
 });
 test('source identity/owner/accessor failures reject safely and names use codepoint clipping',async()=>{

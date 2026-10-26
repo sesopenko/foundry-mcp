@@ -86,6 +86,7 @@ universal monster, character sheet or spell schema.
 | Allowed types | `Actor.TYPES`, `Item.TYPES` | Runtime discovery; allowed does not mean populated or fully supported |
 | Selected source | `toObject()` | Source values by default; select allowed fields instead of returning the entire document |
 | Transformed data | `toObject(false)` | Transformed serialization; not a promise to expose all effective sheet statistics or getters |
+| Declared PF2e current model data | Public `Actor.system` / `Item.system` plus pinned document-data contracts | Select only specifically declared, version-verified own data fields; serialization omission does not make those fields private. Never substitute undocumented members, selected getters or sheet preparation state. See the [effect expiry boundary](actor-item-story-map/state-contract.md#source-unknown-and-unsupported-state). |
 | Roll context | `getRollData()` | System-defined roll data, not a complete normalized sheet |
 | Permissions | Document/pack `testUserPermission` | Explicit checks; `getUserLevel` alone does not account for all role privileges |
 | Compendiums | `game.packs`, `documentName`, `collection`, `title`, `visible`, `getIndex`, `getDocument` | Index-first discovery, then hydrate selected documents without importing |

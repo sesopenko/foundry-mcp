@@ -16,7 +16,7 @@ from test_actor_casting import casting
 SCRIPT=r"""
 import {readActor} from './foundry-module/scripts/actors.js';
 const docs=new Map(),actor={documentName:'Actor',uuid:'Actor.a',id:'a',name:'Actor',type:'npc',items:new Map(),folder:null,compendium:null,testUserPermission:()=>true,toObject:()=>({type:'npc',name:'Actor',system:{}})};docs.set(actor.uuid,actor);
-const add=(id,type,system,readable=true)=>{const source={type,name:'Same name',system};const item={documentName:'Item',uuid:`Actor.a.Item.${id}`,id,name:'Prepared name',type,parent:actor,folder:null,compendium:null,testUserPermission:()=>readable,toObject:()=>{if(!readable)throw Error('denied source');return structuredClone(source);}};actor.items.set(id,item);docs.set(item.uuid,item);return item;};
+const add=(id,type,system,readable=true)=>{const source={type,name:'Same name',system};const item={documentName:'Item',uuid:`Actor.a.Item.${id}`,id,name:'Prepared name',type,system:type==='effect'?{expired:false}:{},parent:actor,folder:null,compendium:null,testUserPermission:()=>readable,toObject:()=>{if(!readable)throw Error('denied source');return structuredClone(source);}};actor.items.set(id,item);docs.set(item.uuid,item);return item;};
 add('c','condition',{value:{isValued:true,value:2},persistent:{formula:'1d6',damageType:'fire',dc:15,criticalHit:false},references:{parent:{id:'e'},children:[{id:'missing',type:'condition'}],overrides:[],overriddenBy:[]},overrides:['frightened']});
 add('e','effect',{level:{value:1},duration:{value:-1,unit:'encounter',expiry:'turn-end',sustained:false},start:{value:0,initiative:null},badge:{type:'formula',value:'1d4',evaluate:false,reevaluate:null},context:{origin:{actor:'Actor.a',token:null,item:'Actor.a.Item.c'},target:null}});
 add('hidden','condition',{},false);add('aff','affliction',{stage:999});
@@ -57,7 +57,7 @@ class ActorStateTests(unittest.IsolatedAsyncioTestCase):
         for text in ('state:current:<owned Item UUID>:/system/expired','pf2e.effect.current.v1',
                      'current_effect_expired','basis transformed','false is preserved',
                      'present false, no raw value and mapped null','current_effect_expiry_unavailable',
-                     'serialized_effect_expiry_not_application','Item.toObject(false)'):
+                     'effect_expiry_not_application','public Item.system','own data','EffectSystemData.expired'):
             self.assertIn(text,description)
         self.assertTrue(tool.annotations.readOnlyHint)
         self.assertFalse(schema['additionalProperties'])
@@ -75,7 +75,13 @@ class ActorStateTests(unittest.IsolatedAsyncioTestCase):
         if present:raw['value']=value
         return dict(key='state:current:Actor.a.Item.e:/system/expired',section='state',kind='field',raw=[raw],
                     mapped=dict(concept='current_effect_expired',value=value if present else None,unit=None),
-                    provenance=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.effect.current.v1',limitations=['serialized_effect_expiry_not_application']))
+                    provenance=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.effect.current.v1',limitations=['effect_expiry_not_application']))
+
+    async def test_actual_public_expiry_survives_omission_from_serialization(self):
+        rows=[row for row in self.rows() if row['provenance']['mapping']=='pf2e.effect.current.v1']
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0],self.expiry(False))
+        await self.read(self.page(rows))
 
     async def test_transformed_effect_expiry_preserves_false_true_and_missing(self):
         for value in (False,True):
