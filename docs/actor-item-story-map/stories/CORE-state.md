@@ -31,7 +31,11 @@ affliction reading, including an empty supported collection.
 This partial implementation does not pass the remaining affliction dependency
 or complete the story. Production PF2e8.6.1 disables affliction construction;
 tracked/out-of-range-stage acceptance remains open. Effective suppression,
-application/expiry and live state-view verification also remain open. The
+application and live state-view verification also remain open. Serialized owned
+effect expiry is selected separately through public `Item.toObject(false)`;
+its boolean retains transformed provenance and never establishes application.
+Missing serialization remains unknown. Deterministic expiry and stale-cursor
+coverage does not replace the pending runtime gate. The
 existing prerequisite graph and original acceptance criteria are unchanged.
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.

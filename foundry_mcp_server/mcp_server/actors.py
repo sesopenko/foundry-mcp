@@ -2632,21 +2632,33 @@ def _state_child_identity(uuid, typ, identity):
 
 
 def _actor_state_record(row, identity):
-    """PF2e-specific8.6.1 owned condition/effect source, never application.
+    """PF2e-specific8.6.1 owned condition/effect source and serialized expiry.
 
     Reuses pinned condition/effect schemas and immediate relationship validators
-    with the selected Actor/token owner. Affliction reading remains unsupported.
+    with the selected Actor/token owner. EffectSystemData.expired from public
+    Item.toObject(false) uses transformed provenance; it does not prove full
+    application. Missing transformed expiry stays missing. Afflictions unsupported.
     https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
     """
     if identity['type'] not in ('character','npc','familiar') or set(row)!={'key','section','kind','raw','mapped','provenance'}:return False
     raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
     if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
     if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    mapping=provenance['mapping']
     for field in raw:
         if type(field) is not dict or not {'document_uuid','path','present','basis'}<=set(field) or not set(field)<={'document_uuid','path','present','basis','value'}:return False
-        if field['basis']!='source' or type(field['present']) is not bool or field['present']!=('value' in field):return False
+        if field['basis']!=('transformed' if mapping=='pf2e.effect.current.v1' else 'source') or type(field['present']) is not bool or field['present']!=('value' in field):return False
     if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
-    mapping=provenance['mapping']
+    # PF2e-specific EffectSystemData.expired is derived, never persisted source.
+    # 8.6.1 effect/data.ts at the immutable revision linked in this docstring.
+    if mapping=='pf2e.effect.current.v1':
+        if len(raw)!=1 or row['kind']!='field':return False
+        field=raw[0];uuid=field['document_uuid']
+        if not _casting_owned(uuid,identity) or field['path']!='/system/expired' or row['key']!='state:current:'+uuid+':/system/expired':return False
+        if field['present'] and type(field['value']) is not bool:return False
+        return (mapped['concept']=='current_effect_expired' and type(mapped['value']) is (bool if field['present'] else type(None))
+                and mapped['value']==(field['value'] if field['present'] else None)
+                and provenance['limitations']==['serialized_effect_expiry_not_application'])
     if mapping=='pf2e.actor.state-capability.v1':
         return (row['key']=='state:capability:affliction' and row['kind']=='field' and raw==[]
                 and mapped==dict(concept='state_affliction_support',value=dict(status='unsupported',reason='pf2e_8_6_1_affliction_disabled'),unit=None)
@@ -2686,15 +2698,16 @@ def _state_section(records, section, identity):
     reasons=set(section['reasons'])
     if section['status']!='partial' or not {'effective_application_not_evaluated','affliction_reading_unsupported'}<=reasons:return False
     if any(r['key']=='state:denied' for r in rows) and 'state_items_denied' not in reasons:return False
-    if not reasons<={'effective_application_not_evaluated','affliction_reading_unsupported','state_items_denied','unresolved_state_references','pagination'}:return False
+    if not reasons<={'effective_application_not_evaluated','affliction_reading_unsupported','state_items_denied','unresolved_state_references','current_effect_expiry_unavailable','pagination'}:return False
     types={};source={}
     for row in rows:
         mapping=row['provenance']['mapping']
         if mapping=='pf2e.actor.state-source.v1' and row['raw']:
             uuid=row['raw'][0]['document_uuid'];typ=row['raw'][1]['value']
         elif mapping in ('pf2e.condition.source.v1','pf2e.condition.reference.v1'):uuid=row['raw'][0]['document_uuid'];typ='condition'
-        elif mapping in ('pf2e.effect.source.v1','pf2e.effect.context-reference.v1'):uuid=row['raw'][0]['document_uuid'];typ='effect'
+        elif mapping in ('pf2e.effect.source.v1','pf2e.effect.context-reference.v1','pf2e.effect.current.v1'):uuid=row['raw'][0]['document_uuid'];typ='effect'
         else:continue
+        if mapping=='pf2e.effect.current.v1' and not row['raw'][0]['present'] and 'current_effect_expiry_unavailable' not in reasons:return False
         if mapping in ('pf2e.condition.reference.v1','pf2e.effect.context-reference.v1'):
             selected=[row['raw'][0]] if typ=='condition' else [row['raw'][EFFECT_REFERENCE_ROLES.index(row['key'].rsplit(':',1)[1])]]
             if row['mapped']['value']['status']!='resolved' and any(field['present'] and type(field['value']) is str and field['value']!='' for field in selected):
@@ -4097,7 +4110,17 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     differ from prepared display names. Raw /name and /type contributors have
     basis source; limitation is stored_state_not_effective_application.
     state:source:<Item UUID>:<path> retains existing pf2e.condition.source.v1 or
-    pf2e.effect.source.v1 fields and limitations. state:condition:<Item UUID>:<path>
+    pf2e.effect.source.v1 fields and limitations. Each readable effect also has
+    state:current:<owned Item UUID>:/system/expired, kind field, mapping
+    pf2e.effect.current.v1 and concept current_effect_expired. Its single raw
+    witness and exact contributor use /system/expired with basis transformed,
+    from public Item.toObject(false), selecting PF2e8.6.1 EffectSystemData.expired.
+    A present value must be boolean (false is preserved); absent serialized data
+    has present false, no raw value and mapped null, adding
+    current_effect_expiry_unavailable. Limitation is exactly
+    serialized_effect_expiry_not_application. This does not infer application,
+    suppression, remaining seconds or condition activity, and never calculates
+    expiry independently. state:condition:<Item UUID>:<path>
     and state:effect:<Item UUID>:<role> reuse read_item relationships, including
     resolved/missing/denied/unsupported/unverified statuses and exact source
     contributors. Resolved targets provide canonical target_uuid and token_uuid
@@ -4118,7 +4141,8 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     no affliction stage, stage-range validity or effective affliction state is read.
     Stored condition values, persistent damage, duration units/start/expiry and
     badge formula/counter source never establish activity, suppression, current
-    expiry, damage dominance or complete application. No formulas are evaluated.
+    expiry beyond the separately labelled transformed effect boolean, damage
+    dominance or complete application. No formulas are evaluated.
     Limits are 12000 owned Items, 24000 selected records and 200 nonempty external
     context claims, checked before relationship resolution and separately from
     page count/bytes. Exceeding these bounds returns ReadFailed; request selected

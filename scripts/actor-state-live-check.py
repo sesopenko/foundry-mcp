@@ -4,7 +4,8 @@ Public Document.toObject/testUserPermission, Actor.items and fromUuid only:
 https://foundryvtt.com/api/v14/classes/foundry.abstract.Document.html
 https://foundryvtt.com/api/v14/functions/foundry.utils.fromUuid.html
 PF2e 8.6.1 condition/effect schemas, revision
-28d9d156f252d084371d994dc359509b49eadf18, establish source field meanings.
+28d9d156f252d084371d994dc359509b49eadf18, establish source field meanings
+and the derived EffectSystemData.expired boolean selected via toObject(false).
 No fixtures, gameplay calls, production selector imports or document writes.
 """
 
@@ -159,7 +160,11 @@ async def main(discovery_only=False):
                     assert row['section'] == 'state'
                     assert row['provenance']['contributors'] == [{key: raw[key] for key in ('document_uuid', 'path', 'basis')} for raw in row['raw']]
                     for raw in row['raw']:
-                        assert raw['document_uuid'] in allowed and raw['basis'] == 'source'
+                        assert raw['document_uuid'] in allowed
+                        if row['provenance']['mapping'] == 'pf2e.effect.current.v1':
+                            assert raw['basis'] == 'transformed' and raw['path'] == '/system/expired'
+                        else:
+                            assert raw['basis'] == 'source'
                         witnesses.append(raw)
                     value = row['mapped']['value']
                     if row['kind'] == 'relationship' and isinstance(value, dict) and value.get('status') == 'resolved':
@@ -170,7 +175,7 @@ async def main(discovery_only=False):
                     batch = witnesses[offset:offset + 40]
                     result = await js('const claims=' + json.dumps(batch) + ';' + """
 const checks=[];
-for(const claim of claims){const item=await foundry.utils.fromUuid(claim.document_uuid);if(!item||item.documentName!=='Item'||!item.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable source Item');let value=JSON.parse(JSON.stringify(item.toObject(true))),present=true;for(const encoded of claim.path.slice(1).split('/')){const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~');if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)){present=false;break;}value=value[key];}checks.push({present,...(present?{value}:{})});}
+for(const claim of claims){const item=await foundry.utils.fromUuid(claim.document_uuid);if(!item||item.documentName!=='Item'||!item.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable source Item');let value=JSON.parse(JSON.stringify(item.toObject(claim.basis!=='transformed'))),present=true;for(const encoded of claim.path.slice(1).split('/')){const key=encoded.replace(/~1/g,'/').replace(/~0/g,'~');if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)){present=false;break;}value=value[key];}checks.push({present,...(present?{value}:{})});}
 const result=checks;
 """)
                     assert result == [{key: raw[key] for key in ('present', 'value') if key in raw} for raw in batch]

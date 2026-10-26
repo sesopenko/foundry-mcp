@@ -3,21 +3,31 @@ import assert from 'node:assert/strict';
 import {readActor} from '../../foundry-module/scripts/actors.js';
 
 function fixture(synthetic=false){
- const docs=new Map(),sources=new Map();let stateReads=0;
+ const docs=new Map(),sources=new Map(),transformed=new Map();let stateReads=0;
  const actorSource={name:'Creature',type:'npc',system:{attributes:{hp:{value:9}}}};
  const actor={documentName:'Actor',id:'a',uuid:synthetic?'Scene.s.Token.t.Actor.a':'Actor.a',name:'Creature',type:'npc',folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject:flag=>{assert.equal(flag,true);return structuredClone(actorSource);}};
  const external={documentName:'Actor',id:'external',uuid:'Actor.external',name:'Origin',type:'npc',folder:null,compendium:null,items:new Map(),testUserPermission:()=>true,toObject(){throw Error('target source must not expand');}};
  docs.set(actor.uuid,actor);docs.set(external.uuid,external);
  let selector={actor_uuid:actor.uuid};
  if(synthetic){const scene={documentName:'Scene',uuid:'Scene.s',name:'Scene',testUserPermission:()=>true};const token={documentName:'Token',id:'t',uuid:'Scene.s.Token.t',name:'Token',parent:scene,actor,baseActor:null,isLinked:false,testUserPermission:()=>true};docs.set(token.uuid,token);selector={token_uuid:token.uuid};}
- function add(id,type,system={}){const source={name:'Duplicate',type,system};const item={documentName:'Item',id,uuid:`${actor.uuid}.Item.${id}`,name:'Duplicate',type,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){stateReads++;assert.equal(flag,true);return source;}};actor.items.set(id,item);sources.set(id,source);docs.set(item.uuid,item);return item;}
+ function add(id,type,system={}){const source={name:'Duplicate',type,system},current={name:'Duplicate',type,system:{expired:false}};const item={documentName:'Item',id,uuid:`${actor.uuid}.Item.${id}`,name:'Duplicate',type,parent:actor,folder:null,compendium:null,testUserPermission:()=>true,toObject(flag){stateReads++;assert.equal(typeof flag,'boolean');return flag?source:current;}};actor.items.set(id,item);sources.set(id,source);transformed.set(id,current);docs.set(item.uuid,item);return item;}
  const condition=add('condition','condition',{value:{isValued:true,value:2},references:{parent:{id:'effect'},children:[],overrides:[],overriddenBy:[]},persistent:{formula:'1d6',damageType:'fire',dc:15,criticalHit:false},overrides:[]});
  const effect=add('effect','effect',{duration:{value:2,unit:'rounds',expiry:'turn-start',sustained:false},badge:{type:'counter',value:1,min:null,max:3},context:{origin:{actor:external.uuid},target:null,roll:null}});
  globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map([['a',actor],['external',external]]),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>docs.get(uuid)}};
- return {actor,actorSource,external,condition,effect,selector,sources,add,get stateReads(){return stateReads;}};
+ return {actor,actorSource,external,condition,effect,selector,sources,transformed,add,get stateReads(){return stateReads;}};
 }
 async function all(f){const rows=[],pages=[];let cursor;do{const page=await readActor({...f.selector,sections:['state'],limit:2,max_bytes:8000,...(cursor?{cursor}:{})});assert.ok(Buffer.byteLength(JSON.stringify(page))<=8000);pages.push(page);rows.push(...page.records);cursor=page.pagination.next_cursor;assert.ok(pages.length<150);}while(cursor);return {rows,pages};}
 const code=expected=>error=>error.rpcError?.code===expected;
+test('state cursor stales when only serialized current effect expiry changes',async()=>{
+ const f=fixture(),params={...f.selector,sections:['state'],limit:1},first=await readActor(params),source=JSON.stringify([...f.sources]);assert.ok(first.pagination.next_cursor);
+ f.transformed.get('effect').system.expired=true;assert.equal(JSON.stringify([...f.sources]),source);
+ await assert.rejects(readActor({...params,cursor:first.pagination.next_cursor}),code('ContentChanged'));
+});
+test('actual reader retains false transformed expiry and reports missing expiry separately',async()=>{
+ const f=fixture(),first=await all(f),key=`state:current:${f.effect.uuid}:/system/expired`,row=first.rows.find(row=>row.key===key);
+ assert.ok(row);assert.equal(row.raw[0].basis,'transformed');assert.equal(row.raw[0].value,false);assert.equal(row.mapped.value,false);
+ delete f.transformed.get('effect').system.expired;const missing=await all(f),absent=missing.rows.find(row=>row.key===key);assert.ok(absent);assert.equal(absent.raw[0].present,false);assert.ok(!Object.hasOwn(absent.raw[0],'value'));assert.equal(absent.mapped.value,null);assert.ok(missing.pages.every(page=>page.sections[0].reasons.includes('current_effect_expiry_unavailable')));
+});
 
 test('actual paginated state reads join owned source and immediate references with canonical world/token provenance',async()=>{
  for(const synthetic of [false,true]){const f=fixture(synthetic),before=JSON.stringify([...f.sources]),result=await all(f);assert.ok(result.pages.length>1);assert.equal(new Set(result.rows.map(row=>row.key)).size,result.rows.length);assert.ok(result.pages.every(page=>page.sections[0].status==='partial'&&page.sections[0].reasons.includes('effective_application_not_evaluated')));

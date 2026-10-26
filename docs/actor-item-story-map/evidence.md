@@ -151,6 +151,16 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 state expiry checkpoint: explicit Actor `state` reads now select an
+owned effect's declared `EffectSystemData.expired` from public
+`Item.toObject(false)`, with transformed provenance separate from stored duration
+and timing. Deterministic tests cover false/true, absent data without source
+fallback, accessors and invalid values, denied Items, strict Python DTOs and
+stale continuations after transformed-only changes. Condition activity and
+effect application remain unknown; the serialized expiry flag does not establish
+either. Existing-world runtime verification is still pending. CORE-state and
+its affliction dependency remain open; story progress remains 30/39.
+
 October 25 casting evidence: actual complete canonical Player Core Remaster
 reads added printed 99 (physical 100, 5095 characters) and reread printed
 297–299 (physical 298–300, respectively 5261/5706/5273 characters), revision

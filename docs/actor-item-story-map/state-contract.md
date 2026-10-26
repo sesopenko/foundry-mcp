@@ -38,8 +38,15 @@ formula text. Missing values stay missing; do not invent durations, zero counter
 active flags or unlimited resources. An origin roll total is historical source,
 not a new check modifier or roll.
 
-Condition activity, suppression, effect applicability and computed expiration
-remain unsupported. Recorded override links do not prove suppression. A present
+Condition activity, suppression and effect applicability remain unsupported.
+For actual readable owned effects only, public `Item.toObject(false)` supplies
+the declared `EffectSystemData.expired` boolean when serialized. The contract is
+the pinned upstream `src/module/item/effect/data.ts:110` and public
+[Item.toObject](https://foundryvtt.com/api/v14/classes/foundry.documents.Item.html#toobject).
+No remaining-duration getter, preparation or local expiry calculation is used.
+`false` does not prove active application. Missing serialized expiry remains
+unknown, with no source fallback. Runtime verification remains pending.
+Recorded override links do not prove suppression. A present
 condition/effect does not establish active application. An absent optional
 origin/target role is an ordinary absent relationship, not an unresolved-gap
 reason. Nonempty claimed references that cannot resolve remain explicitly
@@ -58,7 +65,7 @@ were found; it does not prove the Actor has no affliction or other effective sta
 
 All rows have `section: state`, `mapped: {concept, value, unit: null}` and
 `provenance: {contributors, mapping, limitations}`. Each contributor exactly
-matches a raw witness's `document_uuid`, `path` and `basis: source`; raw witnesses
+matches a raw witness's `document_uuid`, `path` and `basis`; raw witnesses
 add `present` and, only when present, `value`. No fabricated document selectors
 or unbounded nested source objects are returned.
 
@@ -66,6 +73,7 @@ or unbounded nested source objects are returned.
 | --- | --- | --- |
 | `state:item:<Item UUID>` | relationship / `state_item` | `pf2e.actor.state-source.v1`; resolved Item identity with `application: unknown`, actual type, name bounded to 256 Unicode codepoints, truncation flag and optional selected `token_uuid`. Raw `/name` and `/type` witnesses. |
 | `state:source:<Item UUID>:<path>` | field / existing typed concept | `pf2e.condition.source.v1` or `pf2e.effect.source.v1`; existing typed mapped value, limitations and one exact source witness. |
+| `state:current:<Item UUID>:/system/expired` | field / `current_effect_expired` | `pf2e.effect.current.v1`; boolean or null when absent. One `/system/expired` witness with `basis: transformed`, matching contributors and limitation `serialized_effect_expiry_not_application`. Effects only. Missing witness has `present: false` and no value. |
 | `state:condition:<Item UUID>:<path>` | relationship / existing condition reference concept | `pf2e.condition.reference.v1`; existing owner-local relationship value and exact ID/type or slug witnesses. |
 | `state:effect:<Item UUID>:<role>` | relationship / `effect_<role>_reference` | `pf2e.effect.context-reference.v1`; existing immediate context relationship value. Each role retains all five source UUID witnesses. |
 | `state:capability:affliction` | field / `state_affliction_support` | `pf2e.actor.state-capability.v1`; `{status: unsupported, reason: pf2e_8_6_1_affliction_disabled}`, empty raw/contributors, limitation `no_effective_state_inference`. Always present. |
@@ -84,6 +92,8 @@ returned `token_uuid` for linked or synthetic instance context.
 The section is always partial. Reasons always include
 `effective_application_not_evaluated` and `affliction_reading_unsupported`.
 Add `state_items_denied` for the aggregate denial marker and
+`current_effect_expiry_unavailable` when an owned readable effect lacks its
+serialized expiry flag. Add
 `unresolved_state_references` for nonempty unresolved claims only. Shared
 pagination may additionally add `pagination`; optional absent roles do not add
 an unresolved reason.
@@ -96,7 +106,8 @@ before any external hydration; page size does not relax snapshot bounds.
 Empty/null optional relationship roles do not consume the nonempty-claim bound.
 Use shared record-count and UTF-8-byte pagination separately from these bounds.
 
-The detached revision snapshot includes selected owned source and resolved
+The detached revision snapshot includes selected owned source, serialized effect
+expiry and resolved
 external identities, permission and membership facts. Changes to either source
 or relationship targets invalidate stale continuations. Pass
 `pagination.next_cursor` unchanged as `cursor` with the same selectors, sections
@@ -125,7 +136,7 @@ with one MCP discovery call and `runtime_checked: false`. The reusable runner is
 existing GM browser connection.
 
 The full story still requires supported evidence for suppressed-but-present
-effective state, expiration/application and affliction tracked/out-of-range
+effective state, live expiration verification/application and affliction tracked/out-of-range
 stages. This source join delivers useful state navigation while those capabilities
 remain explicitly unsupported. Do not mark CORE-state complete, erase its
 original acceptance criteria or count unsupported affliction absence as success.

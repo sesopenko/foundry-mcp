@@ -672,7 +672,8 @@ export async function getActorTypes(params = {}) {
     // PF2e-specific condition/effect8.6.1 persisted joins, not active state.
     const state=result.actor_sections.find(entry=>entry.name==='state');
     state.source_supported=true;state.mapped_supported=true;
-    state.limitations=['Actual owned condition/effect source and immediate owner-local or external provenance only. Application stays unknown; presence, overrides, duration and expiry timing do not prove activity, suppression or expiration. Affliction reading is explicitly unsupported in every state result, including empty supported collections. Live state-view verification is pending.'];
+    state.effective_supported=true;
+    state.limitations=['Actual owned condition/effect source and immediate owner-local or external provenance, plus the owned effect serialized /system/expired boolean with transformed basis. Missing expiry remains unavailable; false does not prove activity or application. Presence, overrides, duration and expiry timing do not prove activity or suppression. Affliction reading is explicitly unsupported in every state result, including empty supported collections. Always partial; live state-view and expiry verification are pending.'];
     state.verification={deterministic:{status:'passed',evidence:['tests/js/actor-state.test.js','tests/js/actor-state-readers.test.js','tests/test_actor_state.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/state-contract.md']}};
     const casting=result.actor_sections.find(entry=>entry.name==='spellcasting');
     casting.source_supported=true;casting.mapped_supported=true;
@@ -956,7 +957,7 @@ async function read(target,params,sections,tool) {
   if(stateSection){
     const section=base.sections.find(row=>row.name==='state');
     section.status='partial';section.reasons=[...selected.stateView.reasons];
-    base.limitations.push('State joins actual owned condition/effect source and immediate provenance without deduplicating overlapping Items. Application is unknown: stored presence and overrides do not prove activity or suppression; duration and expiry timing are source configuration, not remaining time. Affliction reading is explicitly unsupported even when no state Items are listed. Follow canonical Item identities with read_item for descriptions.');
+    base.limitations.push('State joins actual owned condition/effect source and immediate provenance without deduplicating overlapping Items. Owned effects separately expose serialized /system/expired with transformed basis; missing remains unavailable, and false does not prove application. Application is unknown: stored presence and overrides do not prove activity or suppression; duration and expiry timing are source configuration, not remaining time. Affliction reading is explicitly unsupported even when no state Items are listed. Follow canonical Item identities with read_item for descriptions.');
   }
   if(loreSkills){
     const section=base.sections.find(row=>row.name==='skills');

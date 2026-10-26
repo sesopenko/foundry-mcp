@@ -1,7 +1,10 @@
 /**
  * PF2e-specific character/NPC/familiar stored condition/effect integration on
  * Foundry14.369/PF2e8.6.1. Reuses public Actor.items, Item.parent/toObject(true)
- * and audited identity/relationship helpers. Schema contracts:
+ * and audited identity/relationship helpers, plus public Item.toObject(false):
+ * https://foundryvtt.com/api/v14/classes/foundry.documents.Item.html#toobject
+ * Only the detached EffectSystemData.expired boolean is selected as current.
+ * Schema contracts:
  * https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/item
  * condition/data.ts, effect/data.ts, abstract-effect/data.ts. No active/expired
  * getters, prepared application, duration arithmetic, rolls, writes or target
@@ -27,6 +30,18 @@ function own(source,key){
 }
 /** PF2e-specific selected stored evidence with actual document provenance. */
 function raw(uuid,field){return {document_uuid:uuid,path:field.path,present:field.present,...(field.present?{value:field.value}:{}),basis:'source'};}
+/**
+ * PF2e-specific EffectSystemData8.6.1 serialized expired flag, not application.
+ * Reads only own data from public Item.toObject(false); no source fallback,
+ * activity/remainingDuration getter or expiry calculation. Missing is unknown.
+ * Pinned schema: src/module/item/effect/data.ts at the revision linked above.
+ */
+function effectExpiry(item){
+ const system=own(item.toObject(false),'system'),value=own(system,'expired');
+ const present=system!==null&&typeof system==='object'&&Object.hasOwn(system,'expired');
+ if(present&&typeof value!=='boolean')throw new TypeError('Serialized effect expiry must be boolean.');
+ return {document_uuid:item.uuid,path:'/system/expired',present,...(present?{value}:{}),basis:'transformed'};
+}
 /** PF2e-specific state DTO, never an effective application assertion. */
 function record(key,kind,concept,evidence,value,mapping,limitations){return {key,section:'state',kind,raw:evidence,mapped:{concept,value,unit:null},provenance:{contributors:evidence.map(({document_uuid,path,basis})=>({document_uuid,path,basis})),mapping,limitations:[...limitations]}};}
 
@@ -40,6 +55,8 @@ function record(key,kind,concept,evidence,value,mapping,limitations){return {key
  * effect context claims before any relationship resolution. Local conditions
  * and immediate effect context reuse existing permission-aware readers; targets'
  * source is never expanded. Caller retains this detached result in revisions.
+ * Selects each readable effect's serialized expiry with transformed provenance;
+ * false does not establish activity. Missing adds current_effect_expiry_unavailable.
  * Returns {records,reasons}; application is always unknown and reasons always
  * include effective_application_not_evaluated and affliction_reading_unsupported.
  */
@@ -56,15 +73,17 @@ export async function actorStateSnapshot(target){
   if(type!==item.type||typeof name!=='string')throw new TypeError('Stored state Item source identity is invalid.');
   const identity=embeddedIdentity(item,{document:actor,token:target.token});
   const fields=type==='condition'?conditionFields(source):effectFields(source),references=type==='condition'?conditionReferenceFields(source):effectReferenceFields(source);
-  count+=1+fields.length+(type==='condition'?references.filter(field=>!field.path.endsWith('/type')).length:5);
+  count+=1+fields.length+(type==='condition'?references.filter(field=>!field.path.endsWith('/type')).length:6);
   if(count>24000)throw new TypeError('Stored state exceeds 24000 selected records.');
   if(type==='effect'){claims+=references.filter(field=>field.present&&typeof field.value==='string'&&field.value!=='').length;if(claims>200)throw new TypeError('Stored state exceeds 200 external context claims.');}
-  snapshots.push({item,identity,sourceName:name,type,fields,references});
+  const expiry=type==='effect'?effectExpiry(item):null;
+  if(expiry&&!expiry.present)reasons.add('current_effect_expiry_unavailable');
+  snapshots.push({item,identity,sourceName:name,type,fields,references,expiry});
  }
  if(denied&&++count>24000)throw new TypeError('Stored state exceeds 24000 selected records.');
  const records=[];
  for(const snapshot of snapshots){
-  const {item,identity,sourceName,type,fields,references}=snapshot,uuid=identity.uuid;
+  const {item,identity,sourceName,type,fields,references,expiry}=snapshot,uuid=identity.uuid;
   const evidence=[raw(uuid,{path:'/name',present:true,value:sourceName}),raw(uuid,{path:'/type',present:true,value:type})];
   const name=[...sourceName];
   records.push(record(`state:item:${uuid}`,'relationship','state_item',evidence,{status:'resolved',target_uuid:uuid,document_name:'Item',type,name:name.slice(0,256).join(''),name_truncated:name.length>256,...(target.token?{token_uuid:target.token.uuid}:{}),application:'unknown'},'pf2e.actor.state-source.v1',STORED));
@@ -75,6 +94,7 @@ export async function actorStateSnapshot(target){
     records.push(record(`state:condition:${uuid}:${reference.path}`,'relationship',reference.concept,reference.raw.map(field=>raw(uuid,field)),reference.result,'pf2e.condition.reference.v1',CONDITION_REFERENCE_LIMIT));
    }
   }else{
+   records.push(record(`state:current:${uuid}:/system/expired`,'field','current_effect_expired',[expiry],expiry.present?expiry.value:null,'pf2e.effect.current.v1',['serialized_effect_expiry_not_application']));
    const evidence=references.map(field=>raw(uuid,field));
    for(const reference of await effectRelationships(references)){
     if(reference.present&&typeof reference.value==='string'&&reference.value!==''&&reference.result.status!=='resolved')reasons.add('unresolved_state_references');

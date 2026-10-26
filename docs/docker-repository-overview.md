@@ -128,6 +128,9 @@ see the [current contract](https://github.com/sesopenko/foundry-mcp/blob/main/do
 Explicit Actor state joins actual owned conditions/effects, their selected
 source and immediate provenance. Application stays unknown: stored presence,
 overrides and expiry timing do not prove activity, suppression or expiration.
+Owned effects separately expose the serialized `system.expired` boolean with
+transformed provenance. Missing expiry stays unavailable; `false` does not
+establish active application. No expiry calculation or activity getter is used.
 Every result reports unsupported affliction reading even when supported state
 Items are absent. Live state-view verification remains pending. See the
 [state contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/state-contract.md).

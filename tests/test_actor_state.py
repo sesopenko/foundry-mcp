@@ -5,8 +5,10 @@ from pathlib import Path
 import subprocess
 import unittest
 from unittest.mock import AsyncMock
+from fastmcp import Client
 from fastmcp.exceptions import ToolError
 from foundry_mcp_server.mcp_server.actors import read_actor
+from foundry_mcp_server.mcp_server.server import mcp
 from foundry_mcp_server.mcp_server.tools import register_foundry_manager
 from test_actor_casting import casting
 
@@ -47,6 +49,61 @@ class ActorStateTests(unittest.IsolatedAsyncioTestCase):
         return page
 
     def rows(self):return [r for p in self.fixture['pages'] for r in p['records']]
+
+    async def test_actual_mcp_discovery_publishes_effect_expiry_and_state_bounds(self):
+        async with Client(mcp) as client:
+            tools={tool.name:tool for tool in await client.list_tools()}
+        tool=tools['read_actor'];description=tool.description;schema=tool.inputSchema
+        for text in ('state:current:<owned Item UUID>:/system/expired','pf2e.effect.current.v1',
+                     'current_effect_expired','basis transformed','false is preserved',
+                     'present false, no raw value and mapped null','current_effect_expiry_unavailable',
+                     'serialized_effect_expiry_not_application','Item.toObject(false)'):
+            self.assertIn(text,description)
+        self.assertTrue(tool.annotations.readOnlyHint)
+        self.assertFalse(schema['additionalProperties'])
+        properties=schema['properties']
+        sections=properties['sections']
+        if 'anyOf' in sections:sections=next(choice for choice in sections['anyOf'] if choice.get('type')=='array')
+        self.assertIn('state',sections['items']['enum'])
+        self.assertEqual(properties['limit']['minimum'],1)
+        self.assertEqual(properties['limit']['maximum'],100)
+        self.assertEqual(properties['max_bytes']['minimum'],8000)
+        self.assertEqual(properties['max_bytes']['maximum'],48000)
+
+    def expiry(self, value=False, present=True):
+        raw=dict(document_uuid='Actor.a.Item.e',path='/system/expired',basis='transformed',present=present)
+        if present:raw['value']=value
+        return dict(key='state:current:Actor.a.Item.e:/system/expired',section='state',kind='field',raw=[raw],
+                    mapped=dict(concept='current_effect_expired',value=value if present else None,unit=None),
+                    provenance=dict(contributors=[{k:raw[k] for k in ('document_uuid','path','basis')}],mapping='pf2e.effect.current.v1',limitations=['serialized_effect_expiry_not_application']))
+
+    async def test_transformed_effect_expiry_preserves_false_true_and_missing(self):
+        for value in (False,True):
+            page=self.page([self.expiry(value)])
+            result=await self.read(page)
+            self.assertIs(result['records'][0]['mapped']['value'],value)
+        page=self.page([self.expiry(present=False)])
+        page['sections'][0]['reasons'].append('current_effect_expiry_unavailable')
+        await self.read(page)
+        page['sections'][0]['reasons'].remove('current_effect_expiry_unavailable')
+        with self.assertRaises(ToolError):await self.read(page)
+
+    async def test_transformed_expiry_strict_type_owner_path_and_source_boundary(self):
+        changes=[lambda r:r['raw'][0].update(value=0),lambda r:r['mapped'].update(value=0),
+                 lambda r:r['raw'][0].update(basis='source'),lambda r:r['raw'][0].update(path='/system/active'),
+                 lambda r:r['raw'][0].update(document_uuid='Actor.other.Item.e'),lambda r:r.update(kind='relationship'),
+                 lambda r:r['provenance'].update(limitations=[]),lambda r:r['mapped'].update(concept='effect_application'),
+                 lambda r:r.update(key='state:source:Actor.a.Item.e:/system/expired')]
+        for change in changes:
+            row=self.expiry();change(row)
+            with self.subTest(row=row),self.assertRaises(ToolError):await self.read(self.page([row]))
+        row=self.expiry();row['raw'][0]['document_uuid']='Actor.a.Item.c';row['key']=row['key'].replace('.Item.e:', '.Item.c:')
+        row['provenance']['contributors'][0]['document_uuid']='Actor.a.Item.c'
+        identity=next(r for r in self.rows() if r['key']=='state:item:Actor.a.Item.c')
+        with self.assertRaises(ToolError):await self.read(self.page([identity,row]))
+        source=copy.deepcopy(next(r for r in self.rows() if r['provenance']['mapping']=='pf2e.effect.source.v1'))
+        source['raw'][0]['basis']='transformed';source['provenance']['contributors'][0]['basis']='transformed'
+        with self.assertRaises(ToolError):await self.read(self.page([source]))
 
     async def test_actual_paginated_javascript_state_and_explicit_empty_capability(self):
         self.assertGreater(len(self.fixture['pages']),1)
