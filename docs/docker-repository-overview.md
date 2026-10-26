@@ -72,7 +72,9 @@ Actor inventory lists each actual possession once with stored container and
 selected-ammunition links. Quantity, price/per and carrying source remain
 independent; attachments and kit definitions do not create extra possessions.
 Formula/spell book source and explicit immediate content links have deterministic
-coverage; representative live book fixtures remain unavailable.
+coverage and live verification on genuine temporary world books, including
+populated compendium references, exact prose and confirmed cleanup. Content
+references never establish formula ownership, prepared spells or castability.
 Kit readers preserve nested bundle definitions and explicit immediate component
 links without importing inventory or recursively expanding referenced kits.
 Ancestry readers separate offered/selected/alternate choices and source benefits
@@ -132,7 +134,9 @@ Owned effects separately expose the serialized `system.expired` boolean with
 transformed provenance. Missing expiry stays unavailable; `false` does not
 establish active application. No expiry calculation or activity getter is used.
 Every result reports unsupported affliction reading even when supported state
-Items are absent. Live state-view verification remains pending. See the
+Items are absent. Live state checks cover two existing NPCs; their sampled effect
+omitted serialized expiry, so no current expiry value is live-verified. Other
+Actor/token state and effective application remain unverified. See the
 [state contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/state-contract.md).
 
 

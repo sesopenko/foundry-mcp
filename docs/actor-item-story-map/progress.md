@@ -529,3 +529,23 @@ values independently; it has not run against the GM world. See the
 [contract](creature-current-contract.md). Target detection, conditional damage
 application and representative live serialization remain unverified. Completed
 progress remains30/39 (76.9%).
+
+## Genuine books and existing NPC state — October 25, 2026
+
+ITEM-book is Complete after public creation and reading of two genuine marked
+world books (formula/spell), populated compendium links, duplicate/missing
+references, exact long Unicode prose and confirmed cleanup. The live harness
+verified 26 pages, 82 source witnesses, six relationships and 48 description
+fragments in 40 MCP calls with unchanged source fingerprints. Offline
+harness tests include deferred-creation cleanup and the actual exploration
+serializer budget regression. See [book verification](book-verification.md).
+
+The independent state verifier now distinguishes persisted Item names from
+prepared display labels, proven by a failing-then-passing offline regression.
+Two existing NPCs passed 54 MCP calls: 10 state pages, 56 records, 76 raw witnesses
+and two resolved relationships, with unchanged source fingerprints. The sampled
+effect omitted serialized expiry, so no current expiry value is live-verified.
+Character/familiar/token state, application and affliction gates remain open.
+
+Completed progress is **31/39 (79.5%)**. CORE-state remains In progress; its
+original acceptance criteria and dependencies are unchanged.

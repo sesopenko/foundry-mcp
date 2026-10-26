@@ -130,10 +130,19 @@ complete source fingerprints and exercise at least representative existing
 conditions/effects without gameplay writes. Unit coverage alone does not close
 the runtime gate.
 
-Authenticated `--discovery-only` verification passed after the server restart
-with one MCP discovery call and `runtime_checked: false`. The reusable runner is
-`scripts/actor-state-live-check.py`; its full read-only mode remains pending the
-existing GM browser connection.
+October 25 existing-world verification passed through
+`scripts/actor-state-live-check.py`: two existing NPCs, condition/effect coverage,
+10 state pages, 56 state records, 36 source/default pages, 76 raw witnesses and
+two resolved relationship checks across 54 MCP calls. Full source fingerprints
+were unchanged. The one effect omitted serialized expiry: zero present flags,
+one absent flag. The unavailable result was verified independently against
+public serialization; no current expiry value is live-verified. Character,
+familiar, synthetic-token state, effective application and afflictions remain
+unverified. These results do not close the original story requirements.
+
+The independent verifier distinguishes source identity names from PF2e display
+labels; an offline failing-then-passing test reproduces their difference. It
+uses source names for `state_item`, and display names for context relationships.
 
 The full story still requires supported evidence for suppressed-but-present
 effective state, live expiration verification/application and affliction tracked/out-of-range

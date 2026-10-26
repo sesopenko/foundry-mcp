@@ -151,6 +151,20 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 runtime gates: genuine temporary world formula and spell books passed
+40 MCP calls, 26 pages, 82 raw source witnesses, six content relationships and 48
+exact description fragments. Source fingerprints and exact-marker cleanup were
+confirmed. ITEM-book is Complete; total progress is 31/39 (79.5%). See
+[book verification](book-verification.md) for scope and remaining effective
+ownership/preparation exclusions.
+
+Two existing NPC state views also passed 54 MCP calls, 10 state pages, 56 records,
+76 raw witnesses and two resolved relationships with unchanged complete source
+fingerprints. The sampled effect omitted serialized expiry (zero present, one
+absent), so no current expiry value is live-verified. The verifier's source-name
+versus display-name correction has a failing-then-passing offline regression.
+CORE-state remains open; see [state contract](state-contract.md).
+
 October 25 state expiry checkpoint: explicit Actor `state` reads now select an
 owned effect's declared `EffectSystemData.expired` from public
 `Item.toObject(false)`, with transformed provenance separate from stored duration

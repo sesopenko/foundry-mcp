@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | In progress |
+| Implementation status | Complete |
 | Prerequisites | [CORE-physical](CORE-physical.md) |
 | Dependency reason | Uses common physical source rules and identity/bounds. |
 
@@ -33,7 +33,7 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 - [x] Baseline: add source fixtures and implement selected raw extraction plus the deterministic mappings above, using CORE-contract's response/continuation contract.
 - [x] Integration: expose named references to CORE joins and actor views; keep source-only reading usable before those joins exist. Referenced types are data relationships, not mandatory recursive reader dependencies.
 - [x] Document `PF2e-specific` dependencies and source/effective assumptions at implementation boundaries; test non-PF2e rejection and publish self-contained tool descriptions.
-- [ ] Resolve the evidence gates below before advertising the corresponding advanced capability; retain explicit unsupported/partial sections until then.
+- [x] Resolve the representative live source/content gate; retain explicit unsupported effective ownership/preparation/castability.
 
 ## Acceptance scenarios
 
@@ -44,23 +44,31 @@ Field paths below are relative to `system`. They are a **proposed allowlist**, c
 
 ## Evidence gates and exclusions
 
-Pinned source/template establishes fields; representative live book Items and content-resolution behavior remain unverified. Formula-specific interpretation beyond the read passages stays partial.
+Pinned source/template establishes fields. Genuine temporary world formula and
+spell books now pass representative live source/content verification with
+confirmed cleanup; owned/token contexts retain deterministic evidence.
+Formula-specific interpretation beyond the read passages stays partial.
 
-No live type-reader MCP implementation has been verified. PF2e 8.6.1 is the schema baseline; v13 system compatibility and future releases are unverified. See the [evidence ledger](../evidence.md) for dates, book revisions and inherited live gaps.
+PF2e 8.6.1 on Foundry14.369 is the verified runtime; v13 system compatibility
+and future releases are unverified. See the [evidence ledger](../evidence.md).
 
 
 Selected source and explicit immediate named-content links are implemented and
 deterministically verified; see [fields](../book-fields.md) and
 [verification](../book-verification.md). Duplicate indexes, canonical/token
 identity, exact descriptions, permissions and stale continuations are covered.
-The original representative live-book gate remains open: the existing world,
-all inspected Actor instances and26 Item compendiums contain no book Items.
-Standard blank books remain equipment. No fixture is fabricated or retyped and
-no live source/relationship support is claimed. Story completion awaits the
-specified evidence; formula ownership/preparation interpretation stays partial.
+The earlier runtime inventory found that the existing world,
+all inspected Actor instances and 26 Item compendiums contained no book Items.
+Standard blank books remain equipment. That inventory alone established no live
+source/relationship support; no equipment Item was retyped.
+The October 25 genuine-fixture run subsequently closed the source/relationship
+gate: two categories, 26 pages, 82 raw witnesses, six relationships and 48 exact
+description fragments across 40 MCP calls. Source fingerprints were unchanged
+and both run-marked books were removed. Formula ownership/preparation remains
+unsupported as required, rather than inferred from references.
 
 The October25 constructor audit distinguishes the hidden creation-dialog option
 from a production constructor rejection: book has no such guard. The absence
 of an existing fixture does not prohibit a genuine marked temporary book via
 documented public creation in the authorized development world. That route
-still needs actual runtime verification and cleanup; see the verification ledger.
+now has actual runtime verification and cleanup; see the verification ledger.

@@ -1,8 +1,8 @@
 # Book rulebook and runtime verification
 
-Verified 2026-10-22 against Foundry **14.369 / PF2e 8.6.1**. This ledger
+Verified 2026-10-22 and 2026-10-25 against Foundry **14.369 / PF2e 8.6.1**. This ledger
 separates rulebook interpretation, pinned source contracts and the available
-read-only runtime fixtures. It does not claim live acceptance of a book reader.
+read-only runtime inventory and subsequent genuine-fixture reader verification.
 
 ## Actual rulebook reads
 
@@ -86,12 +86,12 @@ encountered 778 token-Actor occurrences before deduplication. Counts describe
 this development world and installed content only, not all PF2e publications.
 The class/schema exists despite no representative book fixture being present.
 
-## Reader verification limits
+## Earlier reader verification gap
 
-No actual existing book Item was available to exercise paginated `read_item`,
+At the October 22 inventory, no actual existing book Item was available to exercise paginated `read_item`,
 exact source-description reconstruction or real book-to-content resolution.
 Existing spell/equipment reader results are not substitute book-reader evidence.
-Do not create or mutate game documents merely to hide this gap.
+The later constructor audit established the legitimate temporary-fixture route.
 
 Deterministic acceptance should independently cover formula/spell categories,
 capacity zero and non-default values, source omission/null/type errors, empty
@@ -101,8 +101,7 @@ relationship changes invalidating continuations, bounds and unsupported systems.
 Content references must preserve source-path evidence and occurrence order;
 resolving a reference must neither import a document nor recursively expand
 its rules or claim preparation, known-formula ownership or crafting eligibility.
-Live representative book and populated content-resolution behavior remain
-explicitly unverified until an existing permitted fixture becomes available.
+These were the original live gates, subsequently exercised below.
 
 
 ## Implemented deterministic checkpoint
@@ -120,3 +119,36 @@ false and `live=not_run`; existing delivered readers still pass live regression.
 The dedicated development tab is refreshed for the implementation. This confirms
 module loading and discovery, not actual book source/content behavior. The
 representative fixture gate remains open and ITEM-book remains In progress.
+
+## Genuine world-book verification — October 25
+
+`scripts/actor-book-live-check.py --world-id test` passed on the existing
+localhost development world and GM session: **two books, 26 pages, 82 raw source
+witnesses, six relationships, 48 description fragments and 40 MCP calls**. Cleanup
+and unchanged complete fixture source fingerprints were confirmed.
+
+The harness used documented public `Item.implementation.create` to create actual
+`book` Items, one formula and one spell category. Both preserved capacity 100,
+ordered duplicate compendium-definition references and a valid missing Item
+claim. Source values were independently compared with public `toObject(true)`;
+long Unicode HTML was reconstructed exactly through bounded pages. Immediate
+links resolved named actual equipment/spell definitions, duplicates retained
+their occurrence keys, and the missing reference returned `status: missing`
+with null target. Canonical target identity follow-ups passed. The effective
+section remained unsupported; references acquired no formula or prepared spell.
+
+Only those two unpredictable run-marked books were deleted through public
+`Item.delete`; existing Items, Actors and packs were not modified or imported.
+Cleanup verifies zero remaining marked Items and zero pending creations. An
+offline deferred-creation regression proves late creation self-deletes after a
+timeout closes the run, without starting a second creation or deleting unrelated
+documents. Lost responses and cleanup failures cannot report success. Another
+regression reproduces the exploration serializer's aggregate string budget and
+verifies compact fixture metadata avoids it; prose travels through `read_item`.
+
+World books and populated compendium target links are now live-verified.
+Owned/synthetic contexts, denied/unverified targets, empty/absent content and
+stale continuations retain deterministic coverage. No pack book was written,
+equipment retyped or constructor bypassed. ITEM-book's original source/content
+gate is complete. Formula knowledge, preparation, crafting eligibility and
+casting remain unsupported, consistent with the read rulebook passages.

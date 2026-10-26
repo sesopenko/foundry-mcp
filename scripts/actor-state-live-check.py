@@ -68,6 +68,15 @@ const result={samples,coverage:[...covered].sort()};
 """
 
 
+# PF2e-specific state_item names are persisted source identities; immediate
+# context references deliberately retain the resolved document display name.
+TARGET_CHECK = """
+const checks=[];
+for(const claim of claims){const doc=await foundry.utils.fromUuid(claim.target_uuid);if(!doc||!doc.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable relationship target');const selectedName=claim.source_identity?doc.toObject(true).name:doc.name;if(typeof selectedName!=='string')throw Error('Unavailable relationship name');const name=[...selectedName];checks.push({target_uuid:doc.uuid,document_name:doc.documentName,name:name.slice(0,256).join(''),name_truncated:name.length>256,...(Object.hasOwn(claim,'type')?{type:doc.type}:{})});}
+const result=checks;
+"""
+
+
 async def main(discovery_only=False):
     summary, calls, stage = {'passed': False}, 0, 'connection'
     try:
@@ -114,7 +123,8 @@ async def main(discovery_only=False):
             stage = 'selection'
             before = await js(SELECT)
             assert 1 <= len(before['samples']) <= 2
-            totals = {'pages': 0, 'records': 0, 'source_pages': 0, 'raw_witnesses': 0, 'resolved_relationships': 0}
+            totals = {'pages': 0, 'records': 0, 'source_pages': 0, 'raw_witnesses': 0, 'resolved_relationships': 0,
+                      'serialized_expiry_present': 0, 'serialized_expiry_absent': 0}
             for sample in before['samples']:
                 async def pages(sections):
                     rows, cursor, seen, revision = [], None, set(), None
@@ -163,12 +173,13 @@ async def main(discovery_only=False):
                         assert raw['document_uuid'] in allowed
                         if row['provenance']['mapping'] == 'pf2e.effect.current.v1':
                             assert raw['basis'] == 'transformed' and raw['path'] == '/system/expired'
+                            totals['serialized_expiry_present' if raw['present'] else 'serialized_expiry_absent'] += 1
                         else:
                             assert raw['basis'] == 'source'
                         witnesses.append(raw)
                     value = row['mapped']['value']
                     if row['kind'] == 'relationship' and isinstance(value, dict) and value.get('status') == 'resolved':
-                        targets.append(value)
+                        targets.append({**value, 'source_identity': row['key'].startswith('state:item:')})
                 stage = 'independent_source_and_target_checks'
                 # Request only selected source witnesses in batches, never whole prose snapshots.
                 for offset in range(0, len(witnesses), 40):
@@ -180,11 +191,7 @@ const result=checks;
 """)
                     assert result == [{key: raw[key] for key in ('present', 'value') if key in raw} for raw in batch]
                 for offset in range(0, len(targets), 30):
-                    result = await js('const claims=' + json.dumps(targets[offset:offset + 30]) + ';' + """
-const checks=[];
-for(const claim of claims){const doc=await foundry.utils.fromUuid(claim.target_uuid);if(!doc||!doc.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable relationship target');const name=[...doc.name];checks.push({target_uuid:doc.uuid,document_name:doc.documentName,name:name.slice(0,256).join(''),name_truncated:name.length>256,...(Object.hasOwn(claim,'type')?{type:doc.type}:{})});}
-const result=checks;
-""")
+                    result = await js('const claims=' + json.dumps(targets[offset:offset + 30]) + ';' + TARGET_CHECK)
                     expected = [{key: value[key] for key in ('target_uuid', 'document_name', 'name', 'name_truncated', 'type') if key in value} for value in targets[offset:offset + 30]]
                     assert result == expected
                 totals['raw_witnesses'] += len(witnesses)

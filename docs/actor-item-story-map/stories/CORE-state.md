@@ -31,7 +31,9 @@ affliction reading, including an empty supported collection.
 This partial implementation does not pass the remaining affliction dependency
 or complete the story. Production PF2e8.6.1 disables affliction construction;
 tracked/out-of-range-stage acceptance remains open. Effective suppression,
-application and live state-view verification also remain open. Serialized owned
+application and expanded live state-view verification also remain open. Two
+existing NPC source-state views now pass independent read-only verification;
+see the state contract for exact scope. Serialized owned
 effect expiry is selected separately through public `Item.toObject(false)`;
 its boolean retains transformed provenance and never establishes application.
 Missing serialization remains unknown. Deterministic expiry and stale-cursor
