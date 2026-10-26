@@ -11,6 +11,27 @@ from pathlib import Path
 
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from mcp.shared.exceptions import McpError
+
+REQUEST_TIMEOUT_SECONDS = 30
+INIT_TIMEOUT_SECONDS = 10
+SESSION_TIMEOUT_SECONDS = 180
+
+
+def timeout_failure(error):
+    """Classify pinned client deadlines without exposing transport/error text."""
+    if isinstance(error, TimeoutError):
+        return 'probe_session_timeout'
+    if isinstance(error, McpError) and error.error.code == 408:
+        return 'probe_request_timeout'
+    # Pinned FastMCP 2.14.1 emits these exact messages only for its handshake
+    # TimeoutError (the outer Client connection wrapper preserves the message).
+    if isinstance(error, RuntimeError) and str(error) in (
+        'Failed to initialize server session',
+        'Client failed to connect: Failed to initialize server session',
+    ):
+        return 'probe_initialization_timeout'
+    return None
 
 
 def payload(result):
@@ -196,7 +217,7 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
     print(json.dumps(javascript_payload(await client.call_tool('execute_javascript', {'code': diagnostic}))))
 
 
-async def main(verify_mode=False, diagnose_mode=False):
+async def _main(verify_mode=False, diagnose_mode=False):
     root = Path(__file__).resolve().parent.parent
     token = None
     for line in (root / '.env.mcp').read_text().splitlines():
@@ -260,7 +281,12 @@ const samples=selected.map(({actor,context,adjustment})=>{
 const report=JSON.stringify({version:game.version,system:game.system.version,inspectedWorldNpcs:Math.min(inspectedWorldNpcs,200),adjustedFound,samples});
 return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
 """
-    async with Client(transport) as client:
+    # Bound requests and the initialization handshake independently. The outer
+    # budget also covers transport startup and repeated pages. FastMCP's context
+    # exit has its own five-second cleanup grace; do not replace it with close().
+    async with asyncio.timeout(SESSION_TIMEOUT_SECONDS), Client(
+        transport, timeout=REQUEST_TIMEOUT_SECONDS, init_timeout=INIT_TIMEOUT_SECONDS,
+    ) as client:
         if diagnose_mode:
             await diagnose(client, code)
             return
@@ -280,10 +306,24 @@ return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*80
     print(json.dumps(report))
 
 
+async def main(verify_mode=False, diagnose_mode=False):
+    try:
+        return await _main(verify_mode, diagnose_mode)
+    except Exception as error:
+        failure = timeout_failure(error)
+        if failure is None:
+            raise
+        print(json.dumps({
+            'passed': False, 'failure_kind': failure, 'runtime_checked': False,
+            'recovery': 'The read-only probe exceeded a client deadline; this does not establish a Foundry API or world failure. No game data was written.',
+        }))
+        return 1
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--verify', action='store_true', help='Verify actual paginated MCP statistics, printing counts only.')
     parser.add_argument('--diagnose', action='store_true', help='Diagnose selected serialized container admission without values.')
     arguments = parser.parse_args()
     assert not (arguments.verify and arguments.diagnose), 'Choose one probe mode.'
-    asyncio.run(main(arguments.verify, arguments.diagnose))
+    raise SystemExit(asyncio.run(main(arguments.verify, arguments.diagnose)))

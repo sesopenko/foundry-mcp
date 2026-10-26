@@ -266,6 +266,12 @@ browser or use it during game sessions. After meaningful module changes, run
 focused local tests, refresh the development tab, wait for bridge connectivity,
 and check console errors and live behavior. See `docs/browser-development.md`.
 
+For unattended local development, `scripts/dev-browser-connect.py --join-gm`
+reads the existing test world's GM credential from the git-ignored
+`.local/dev-login.json`. Reuse that local credential without displaying it or
+copying it into tracked files. The helper is restricted to the dedicated
+localhost development profile and world `test`; it uses the normal login form.
+
 Repository-local skills capture recurring workflows:
 
 - `.agents/skills/foundry-dev-connect/SKILL.md`: development browser setup,

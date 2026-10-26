@@ -17,6 +17,27 @@ from pathlib import Path
 
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from mcp.shared.exceptions import McpError
+
+REQUEST_TIMEOUT_SECONDS = 30
+INIT_TIMEOUT_SECONDS = 10
+SESSION_TIMEOUT_SECONDS = 180
+
+
+def timeout_failure(error):
+    """Classify pinned client deadlines without exposing transport/error text."""
+    if isinstance(error, TimeoutError):
+        return 'probe_session_timeout'
+    if isinstance(error, McpError) and error.error.code == 408:
+        return 'probe_request_timeout'
+    # Pinned FastMCP 2.14.1 emits these exact messages only for its handshake
+    # TimeoutError (the outer Client connection wrapper preserves the message).
+    if isinstance(error, RuntimeError) and str(error) in (
+        'Failed to initialize server session',
+        'Client failed to connect: Failed to initialize server session',
+    ):
+        return 'probe_initialization_timeout'
+    return None
 
 
 def payload(result):
@@ -77,7 +98,10 @@ async def main(discovery_only=False):
         if not token:
             raise RuntimeError('Missing local caller credential')
         transport = StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp', headers={'Authorization': 'Bearer ' + token})
-        async with Client(transport) as client:
+        # FastMCP bounds context cleanup separately with a five-second grace.
+        async with asyncio.timeout(SESSION_TIMEOUT_SECONDS), Client(
+            transport, timeout=REQUEST_TIMEOUT_SECONDS, init_timeout=INIT_TIMEOUT_SECONDS,
+        ) as client:
             stage = 'discovery'
             tools = {tool.name: tool for tool in await client.list_tools()}
             calls += 1
@@ -93,6 +117,7 @@ async def main(discovery_only=False):
             if discovery_only:
                 print(json.dumps({'passed': True, 'discovery_verified': True, 'mcp_calls': calls, 'runtime_checked': False}))
                 return 0
+            stage = 'registry'
             registry = payload(await client.call_tool('get_actor_types', {}))
             calls += 1
             assert any(row['name'] == 'spellcasting' for row in registry['actor_sections'])
@@ -169,7 +194,9 @@ async def main(discovery_only=False):
             missing = sorted(set(['prepared', 'spontaneous', 'innate', 'focus', 'current_focus', 'spell_cost']) - set(before['coverage']))
             summary.update(passed=True, samples=len(before['samples']), coverage=before['coverage'], missing_coverage=missing, unverified_actor_types=['character', 'familiar'], fingerprint_unchanged=True, **totals)
     except Exception as error:
-        summary.update(failure_stage=stage, exception_type=type(error).__name__, recovery='Run ./scripts/server.sh status and ./scripts/codex-dev.sh; open the existing localhost:30000 test world as GM, connect its development bridge, then retry. No world data was written.')
+        summary.update(failure_stage=stage, exception_type=type(error).__name__, recovery='Read-only verification did not complete; a probe deadline or transport failure does not establish a Foundry API or world failure. No world data was written.')
+        if failure := timeout_failure(error):
+            summary['failure_kind'] = failure
     summary['mcp_calls'] = calls
     print(json.dumps(summary))
     return 0 if summary['passed'] else 1

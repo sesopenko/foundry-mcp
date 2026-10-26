@@ -102,6 +102,28 @@ on ordinary refreshes. Local `.env.mcp` and browser state are deliberately
 gitignored; preserve them when clearing chat context, and never copy their
 secrets into developer docs.
 
+For unattended recovery in this dedicated profile, use
+`.venv/bin/python scripts/dev-browser-inspect.py` to inspect login metadata
+without displaying password values or raw console messages. The scoped helper
+`scripts/dev-browser-connect.py` supports `--authenticate-admin` using the
+existing Compose admin key, `--launch-world test` for the existing world, and
+`--join-gm` using `.local/dev-login.json`. The ignored credential file contains
+`world_id`, `user_name`, and `password`; restrict it to the existing `test`
+world and `Gamemaster` account and keep its permissions at 0600. Never copy it
+into tracked files. These actions submit normal forms without changing
+credentials or creating worlds. Launch may return `retry_launch: true` after
+declining the optional sharing dialog; repeat the same launch action then.
+The helpers reject foreign tabs and debugger endpoints and report sanitized
+failure metadata. Test their failure handling offline rather than repeatedly
+logging the GM out or requesting manual setup.
+
+The current-statistics, Actor-state, and casting-current read-only probes use
+30-second request, 10-second initialization, and 180-second session deadlines.
+Client cleanup may add up to five seconds. A timeout leaves runtime verification
+incomplete; it does not establish a game-data or Foundry API failure. Offline
+in-memory tests exercise each deadline independently, without browser login or
+host-network diagnostics.
+
 ## Validation
 
 `./scripts/test.sh` runs all offline tests, including development opt-in,
