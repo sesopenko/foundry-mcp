@@ -24,11 +24,16 @@ function actor(uuid,hp,label){
  const source={_id:'base',name:'Creature',type,system:{attributes:{hp:{value:hp}}}};
  const itemSource={_id:scenario==='cosmeticOnly'?uuid:'shared',flags:{cosmetic:uuid},name:label,type:'action',system:{description:{value:'<p>'+label+'</p>'},actionType:{value:'passive'}}};
  const owner={uuid,type,items:new Map(),testUserPermission:()=>true,toObject:flag=>{reads++;return structuredClone(source);},update:write,prepareData:write};
- const item={id:'shared',uuid:uuid+'.Item.shared',type:'action',testUserPermission:()=>true,toObject:flag=>{reads++;return structuredClone(itemSource);},update:write};owner.items.set(item.id,item);return owner;
+ const item={id:'shared',uuid:uuid+'.Item.shared',type:'action',parent:owner,testUserPermission:()=>true,toObject:flag=>{reads++;return structuredClone(itemSource);},update:write};owner.items.set(item.id,item);return owner;
 }
 const base=actor('Actor.base',30,'Base');
 const a=actor('Scene.inactive.Token.first.Actor.base',7,'First');
-const b=actor('Scene.inactive.Token.second.Actor.base',19,['sameItems','cosmeticOnly'].includes(scenario)?'First':'Second');
+const b=actor('Scene.inactive.Token.second.Actor.base',19,['sameItems','cosmeticOnly','equalStored'].includes(scenario)?'First':'Second');
+if(scenario==='equalStored')b.toObject=flag=>{const data=a.toObject(true);if(!flag)data.system.attributes.hp.value=19;return data;};
+if(scenario==='foreignItems')b.items.set('shared',a.items.get('shared'));
+if(scenario==='foreignUUID')b.items.get('shared').uuid=a.items.get('shared').uuid;
+if(scenario==='noItems')b.items.clear();
+if(scenario==='nonfiniteHP')b.toObject=()=>({system:{attributes:{hp:{value:NaN}}}});
 if(scenario==='sameHP')b.toObject=()=>({...a.toObject(true)});
 const token=(id,owner,linked=false)=>({uuid:'Scene.inactive.Token.'+id,actor:owner,baseActor:base,isLinked:linked,testUserPermission:()=>true,toObject:()=>({_id:id,actorLink:linked}),update:write,delete:write});
 scene.tokens.push(token('first',a),token('second',b));
@@ -70,8 +75,19 @@ class TokenSelectionTests(unittest.TestCase):
         self.assertEqual(observation['writes'], 0)
         self.assertEqual(observation['canvasReads'], 0)
 
-    def test_uuid_prefix_difference_alone_and_hp_or_items_only_do_not_close_gate(self):
-        for scenario in ('sameItems', 'cosmeticOnly', 'sameHP', 'noLinked', 'activeOnly'):
+    def test_identical_definitions_and_equal_source_hp_preserve_actual_instances(self):
+        for scenario in ('sameItems','cosmeticOnly','equalStored'):
+            observation=self.run_selection(scenario)
+            self.assertIsNone(observation['error'])
+            self.assertEqual(observation['result']['gaps'],[])
+            first,second,_=observation['result']['samples']
+            self.assertNotEqual(first['items'][0]['uuid'],second['items'][0]['uuid'])
+            self.assertNotEqual(first['currentHP'],second['currentHP'])
+            self.assertEqual(first['itemsHash'],second['itemsHash'])
+            if scenario=='equalStored':self.assertEqual(first['hp'],second['hp'])
+
+    def test_current_hp_and_actual_owned_membership_remain_required(self):
+        for scenario in ('sameHP', 'noLinked', 'activeOnly','foreignItems','foreignUUID'):
             with self.subTest(scenario=scenario):
                 observation = self.run_selection(scenario)
                 self.assertIsNone(observation['error'])
@@ -85,6 +101,22 @@ class TokenSelectionTests(unittest.TestCase):
         self.assertEqual(observation['result']['gaps'], [])
         self.assertEqual(observation['result']['inactive_scene'], 'Scene.other')
         self.assertTrue(all(not row['inactive'] for row in observation['result']['samples']))
+
+    def test_aggregate_census_distinguishes_candidate_exclusions_without_selectors(self):
+        valid=self.run_selection('valid')['result']['census']
+        self.assertEqual(valid,dict(readable_supported_linked=1,readable_supported_unlinked=2,with_readable_items=3,excluded_no_readable_items=0,excluded_nonfinite_hp=0,excluded_invalid_owned_membership=0,excluded_invalid_owned_uuid=0,candidate_unlinked_base_groups=1,groups_with_distinct_current_hp=1))
+        for scenario,counter in [('noItems','excluded_no_readable_items'),('nonfiniteHP','excluded_nonfinite_hp'),('foreignItems','excluded_invalid_owned_membership'),('foreignUUID','excluded_invalid_owned_uuid')]:
+            observation=self.run_selection(scenario)
+            self.assertIsNone(observation['error'])
+            census=observation['result']['census']
+            self.assertEqual(census[counter],1)
+            self.assertEqual(census['readable_supported_unlinked'],2)
+            self.assertEqual(census['groups_with_distinct_current_hp'],0)
+            self.assertTrue(all(type(value) is int and value>=0 for value in census.values()))
+            self.assertNotIn('Actor.',json.dumps(census))
+        same_hp=self.run_selection('sameHP')['result']['census']
+        self.assertEqual(same_hp['candidate_unlinked_base_groups'],1)
+        self.assertEqual(same_hp['groups_with_distinct_current_hp'],0)
 
     def test_character_pair_uses_same_source_and_current_hp_identity_contract(self):
         observation = self.run_selection('character')
@@ -219,7 +251,7 @@ class TokenVerifyTests(unittest.IsolatedAsyncioTestCase):
                 if name != 'execute_javascript':
                     raise AssertionError('No reader call when selection gate is unmet')
                 return SimpleNamespace(structured_content={'value': json.dumps(dict(
-                    gaps=['same_base_unlinked_pair_with_distinct_hp_items_and_inactive_scene'], samples=[]))})
+                    gaps=['same_base_unlinked_pair_with_distinct_hp_items_and_inactive_scene'], samples=[], census={'readable_supported_unlinked':2,'groups_with_distinct_current_hp':0}))})
 
         report = await harness.verify(Client(), 'test')
         self.assertFalse(report['passed'])

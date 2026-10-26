@@ -151,8 +151,10 @@ Every result reports unsupported affliction reading even when supported state
 Items are absent. Live state checks cover two existing NPCs and a marked world
 character, including true/false expiry, distinct overlapping-effect origins,
 an unevaluated encounter formula badge and condition source. Read fingerprints
-and fixture cleanup passed. Familiar/token state and effective suppression or
-application remain unverified. See the
+and fixture cleanup passed. Two existing unlinked tokens also passed state,
+owned Item follow-ups and a false expiry flag with unchanged source/current
+fingerprints. Familiar state and effective suppression or application remain
+unverified. See the
 [state contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/state-contract.md).
 
 

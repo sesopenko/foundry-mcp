@@ -691,3 +691,34 @@ Progress remains **32/39 (82.1%)**. See the
 Full suites passed: 478 Python tests (one skipped) and 576 JavaScript tests.
 Fresh-client discovery also passed; the refreshed GM browser showed only the
 previously known window-size notification.
+
+## Existing token-state proof and acceptance blocker audit — October 25, 2026
+
+The read-only state adapter now verifies existing unlinked token instances:
+two samples, 10 state pages/51 records, 71 raw witnesses and two owned Item
+follow-ups in 67 MCP calls. It checks each page's actual Actor/Scene/token/base
+identity, exact source/current provenance, origin token context and unchanged
+source/current fingerprints. No documents were created or modified. The sample
+covers conditions/effects and a present false expiry flag; full effective state
+and token expired-true remain unverified.
+
+The CORE-token probe incorrectly required both stored/current HP differences
+and different Item definition contents. These extra requirements have been
+removed, with fail-first regressions retaining actual owned membership and
+canonical document separation even when definitions match. The corrected live
+census still cannot satisfy the original distinct-current-HP pair: 50 Scenes,
+778 tokens, 559 readable supported unlinked Actors and 117 eligible base groups
+contain zero groups with distinct current HP. No ownership/UUID invalidity or
+nonfinite HP caused the gap.
+
+CORE-token is now explicitly Blocked on existing fixture configuration.
+ITEM-affliction is Blocked on PF2e8.6.1's production constructor. Their original
+acceptance criteria and the prerequisite graph remain intact; no unsupported
+capability has been counted Complete. A capability decision was requested for
+afflictions while independent work continued; no answer or reduction is assumed.
+Completed progress remains **32/39 (82.1%)**. See
+[token verification](token-verification.md) and
+[state verification](state-contract.md#existing-unlinked-token-state-verification--october-25).
+Full regression checks passed: 484 Python tests (one skipped), 576 JavaScript
+tests, dependency/diagram validation and fresh-client discovery. The refreshed
+GM browser retained only its known window-size notification.

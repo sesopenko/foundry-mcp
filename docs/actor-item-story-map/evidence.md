@@ -151,6 +151,17 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 existing-token follow-up: state reading passed two unlinked instances,
+10 state pages/51 records, 71 raw witnesses and two owned Item follow-ups in 67
+calls with unchanged source/current fingerprints. The CORE-token verifier was
+corrected to remove extra Item-content/stored-HP inequality gates. Its aggregate
+census still found zero distinct-current-HP groups among 117 eligible bases
+(559 unlinked Actors, 50 Scenes/778 tokens). CORE-token is Blocked on existing
+fixture configuration. ITEM-affliction is separately Blocked on its production
+constructor; no capability reduction has been inferred. Progress stays
+**32/39 (82.1%)**. See [token evidence](token-verification.md) and
+[state evidence](state-contract.md#existing-unlinked-token-state-verification--october-25).
+
 October 25 character state checkpoint: the marked temporary character passed
 27 pages/173 records, 238 raw witnesses and 12 resolved relationships in 40 MCP
 calls. Both own public-model expiry flags, separate overlapping-effect origins,

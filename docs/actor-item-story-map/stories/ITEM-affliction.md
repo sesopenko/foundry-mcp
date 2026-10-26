@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 2 |
 | Planning readiness | Source ready; advanced gated |
-| Implementation status | In progress |
+| Implementation status | Blocked |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -40,6 +40,13 @@ construct speculative fixtures. Original poison/disease/curse descriptions remai
 readable through their actual supported Item types. Resume runtime integration
 only after a supported system version and representative existing fixtures are
 available and audited.
+
+This is a runtime capability blocker, not an absent unit-test fixture: ordinary
+public hydration uses the registered class whose production constructor throws.
+Offline stage tests cannot satisfy genuine Item reading. The original acceptance
+remains intact. Any acceptance of an explicitly unsupported affliction boundary
+requires the capability decision specified by CORE-acceptance; no such reduction
+is inferred from this blocked status.
 
 ## Implementation checklist
 

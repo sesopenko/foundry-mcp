@@ -12,6 +12,8 @@ Default mode makes no fixtures or document writes. Explicit --state-fixture
 updates only its timed effect's start, verifies without further writes, and
 always attempts exact-marker cleanup. No gameplay, preparation, clock changes,
 formula evaluation or production selector imports are performed by this probe.
+--token-state --world-id test instead checks existing unlinked token state
+without creating or changing documents; an absent eligible instance is a gap.
 """
 
 import argparse
@@ -93,6 +95,20 @@ const timed=items[1];if(timed.parent!==actor||timed.type!=='effect')throw Error(
 GUARD;await actor.updateEmbeddedDocuments('Item',[{_id:timed.id,'system.start.value':game.time.worldTime-600,'system.start.initiative':null}]);await open();
 result={uuid:actor.uuid,origins:origins.map(i=>i.uuid),items:items.map(i=>({uuid:i.uuid,type:i.type})),unlimited:items[0].uuid,timed:timed.uuid,formula:items[2].uuid,valued:items[3].uuid,unvalued:items[4].uuid,persistent:items[5].uuid};
 }finally{state.pending--;}
+"""
+TOKEN_SELECT = """
+const stats={scenes:0,tokens:0,readable_unlinked_actors:0,unlinked_with_state:0},candidates=[];
+const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value)))),b=>b.toString(16).padStart(2,'0')).join('');
+for(const scene of game.scenes.values()){if(++stats.scenes>200)throw Error('Scene census bound');if(!scene.testUserPermission(game.user,'OBSERVER'))continue;
+for(const token of scene.tokens.values()){if(++stats.tokens>2000)throw Error('Token census bound');if(token.isLinked||!token.testUserPermission(game.user,'OBSERVER'))continue;const actor=token.actor;if(!actor||!['character','npc','familiar'].includes(actor.type)||!actor.testUserPermission(game.user,'OBSERVER'))continue;stats.readable_unlinked_actors++;if(actor.items.size>12000)throw Error('Owned Item census bound');
+const items=[...actor.items.values()].filter(i=>['condition','effect'].includes(i.type)&&i.testUserPermission(game.user,'OBSERVER'));if(!items.length)continue;stats.unlinked_with_state++;
+const coverage=[...new Set(items.map(i=>i.type))],expiry=[];
+for(const item of items.filter(i=>i.type==='effect')){const system=Object.getOwnPropertyDescriptor(item,'system'),d=system&&Object.hasOwn(system,'value')&&system.value&&typeof system.value==='object'?Object.getOwnPropertyDescriptor(system.value,'expired'):null;const present=!!d&&Object.hasOwn(d,'value')&&typeof d.value==='boolean';expiry.push({uuid:item.uuid,present,...(present?{value:d.value}:{})});}if(expiry.some(e=>e.present))coverage.push('effect_expiry');
+candidates.push({actor,token,scene,items,expiry,coverage});}}
+const selected=[],covered=new Set();for(let n=0;n<2;n++){let best=null,score=0;for(const c of candidates){if(selected.includes(c))continue;const gain=c.coverage.filter(k=>!covered.has(k)).length;if(gain>score){best=c;score=gain;}}if(!best)break;selected.push(best);for(const key of best.coverage)covered.add(key);}
+const samples=[];for(const {actor,token,scene,items,expiry,coverage}of selected){const base=token.baseActor;const base_uuid=base?.testUserPermission(game.user,'OBSERVER')?base.uuid:null;samples.push({uuid:actor.uuid,selector:{token_uuid:token.uuid},scene_uuid:scene.uuid,base_uuid,coverage,items:items.map(i=>({uuid:i.uuid,type:i.type})),source_hash:await hash([token.toObject(true),actor.toObject(true),...items.map(i=>i.toObject(true))]),current_hash:await hash(expiry)});}
+const result={stats,samples,coverage:[...covered].sort(),coverage_gaps:samples.length?[]:['existing_readable_unlinked_token_with_owned_condition_or_effect']};
+if(new TextEncoder().encode(JSON.stringify(result)).length>16000)throw Error('Token state metadata bound');
 """
 CLEANUP_STATE = """
 globalThis.__mcpStateProbes??=new Map();const state=globalThis.__mcpStateProbes.get(RUN)??{closed:false,pending:0};globalThis.__mcpStateProbes.set(RUN,state);state.closed=true;
@@ -403,12 +419,149 @@ const result=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',byte
     return summary
 
 
-async def main(discovery_only=False, state_fixture=False, world_id=None):
-    if state_fixture and (world_id != 'test' or discovery_only) or not state_fixture and world_id is not None:
-        raise ValueError('Use --state-fixture with --world-id test; discovery-only cannot create fixtures')
-    if not state_fixture:
+async def run_token_state(client, world_id):
+    """PF2e-specific existing synthetic state, canonical selectors, no writes."""
+    if world_id != 'test':
+        raise ValueError('Explicit existing test world required')
+    summary = dict(passed=False, pages=0, records=0, raw_witnesses=0, item_followups=0,
+                   current_expiry_present=0, current_expiry_absent=0, expired_true=0, expired_false=0)
+    requested, completed, stage = 0, 0, 'token_state_selection'
+
+    async def call(name, arguments):
+        nonlocal requested, completed
+        requested += 1
+        response = await client.call_tool(name, arguments)
+        completed += 1
+        return payload(response)
+
+    async def js(body):
+        code = GUARD + body + CHUNKS
+        assert len(code.encode()) <= 32768
+        value = (await call('execute_javascript', {'code': code}))['value']
+        if isinstance(value, dict) and value.get('$type') == 'Array':
+            assert value.get('truncated') is False
+            value = ''.join(value['values'])
+        return json.loads(value)
+
+    try:
+        before = await js(TOKEN_SELECT)
+        summary.update(census=before['stats'], coverage=before['coverage'], coverage_gaps=before['coverage_gaps'])
+        if before['coverage_gaps']:
+            return dict(summary, mcp_calls=completed, requested_calls=requested, completed_calls=completed)
+        assert 1 <= len(before['samples']) <= 2
+        for sample in before['samples']:
+            rows, cursor, revision, seen = [], None, None, set()
+            stage = 'token_state_read'
+            for _ in range(200):
+                args = dict(sample['selector'], sections=['state'], limit=7, max_bytes=8000)
+                if cursor:
+                    args['cursor'] = cursor
+                page = await call('read_actor', args)
+                identity = page['identity']
+                assert identity['uuid'] == sample['uuid'] and identity['source_kind'] == 'token'
+                instance = identity['instance']
+                assert instance['token_uuid'] == sample['selector']['token_uuid'] and instance['scene_uuid'] == sample['scene_uuid'] and instance['actor_link'] is False
+                assert (instance['base_actor']['uuid'] if instance['base_actor'] is not None else None) == sample['base_uuid']
+                assert page['runtime'] == dict(core_version='14.369', system_id='pf2e', system_version='8.6.1')
+                assert len(json.dumps(page, ensure_ascii=False, separators=(',', ':')).encode()) <= 8000
+                section = page['sections'][0]
+                assert section['status'] == 'partial' and {'effective_application_not_evaluated', 'affliction_reading_unsupported'} <= set(section['reasons'])
+                revision = revision or page['revision']
+                assert page['revision'] == revision
+                rows.extend(page['records'])
+                summary['pages'] += 1
+                cursor = page['pagination']['next_cursor']
+                if cursor is None:
+                    break
+                assert cursor not in seen
+                seen.add(cursor)
+            else:
+                raise AssertionError('Token state page bound')
+            assert len({row['key'] for row in rows}) == len(rows)
+            identities = [row for row in rows if row['key'].startswith('state:item:')]
+            assert {row['mapped']['value']['target_uuid'] for row in identities} == {item['uuid'] for item in sample['items']}
+            assert all(row['mapped']['value']['token_uuid'] == sample['selector']['token_uuid'] and row['mapped']['value']['application'] == 'unknown' for row in identities)
+            capability = next(row for row in rows if row['key'] == 'state:capability:affliction')
+            assert capability['mapped']['value'] == {'status': 'unsupported', 'reason': 'pf2e_8_6_1_affliction_disabled'}
+            allowed = {item['uuid'] for item in sample['items']}
+            witnesses, targets = [], []
+            for row in rows:
+                assert row['provenance']['contributors'] == [{key: raw[key] for key in ('document_uuid', 'path', 'basis')} for raw in row['raw']]
+                for raw in row['raw']:
+                    assert raw['document_uuid'] in allowed
+                    if row['provenance']['mapping'] == 'pf2e.effect.current.v1':
+                        assert raw['path'] == '/system/expired' and raw['basis'] == 'transformed'
+                        summary['current_expiry_present' if raw['present'] else 'current_expiry_absent'] += 1
+                        if raw['present']:
+                            assert type(raw['value']) is bool
+                            summary['expired_true' if raw['value'] else 'expired_false'] += 1
+                    else:
+                        assert raw['basis'] == 'source'
+                witnesses.extend(row['raw'])
+                value = row['mapped']['value']
+                if row['kind'] == 'relationship' and isinstance(value, dict) and value.get('status') == 'resolved':
+                    targets.append({**value, 'source_identity': row['key'].startswith('state:item:')})
+            stage = 'token_state_independent_witnesses'
+            for start in range(0, len(witnesses), 20):
+                batch = witnesses[start:start + 20]
+                actual = await js('const claims=' + json.dumps(batch) + ';' + WITNESS_CHECK)
+                assert actual == [{key: raw[key] for key in ('present', 'value') if key in raw} for raw in batch]
+            for start in range(0, len(targets), 15):
+                batch = targets[start:start + 15]
+                actual = await js('const claims=' + json.dumps(batch) + ';' + TARGET_CHECK)
+                assert actual == [{key: value[key] for key in ('target_uuid', 'document_name', 'name', 'name_truncated', 'type') if key in value} for value in batch]
+                contexts = await js('const claims=' + json.dumps(batch) + ';' + """
+const result=[];for(const claim of claims){if(!claim.token_uuid){result.push(!claim.target_uuid.startsWith('Scene.'));continue;}const token=await foundry.utils.fromUuid(claim.token_uuid),target=await foundry.utils.fromUuid(claim.target_uuid);if(!token||!token.testUserPermission(game.user,'OBSERVER')||!token.parent?.testUserPermission(game.user,'OBSERVER')||!token.actor||!token.actor.testUserPermission(game.user,'OBSERVER'))throw Error('Unavailable context');result.push(target?.documentName==='Token'?target.uuid===token.uuid:target?.documentName==='Actor'?target.uuid===token.actor.uuid:target?.documentName==='Item'?target.parent===token.actor&&[...token.actor.items.values()].some(i=>i===target):false);}
+""")
+                assert len(contexts) == len(batch) and all(value is True for value in contexts)
+            stage = 'token_state_item_followup'
+            owned = identities[0]['mapped']['value']
+            follow = await call('read_item', dict(item_uuid=owned['target_uuid'], token_uuid=owned['token_uuid'], sections=['identity']))
+            assert follow['identity']['uuid'] == owned['target_uuid'] and follow['identity']['actor']['uuid'] == sample['uuid']
+            assert follow['identity']['instance']['token_uuid'] == sample['selector']['token_uuid']
+            summary['item_followups'] += 1
+            summary['raw_witnesses'] += len(witnesses)
+            summary['records'] += len(rows)
+            stage = 'token_state_source_default_exclusion'
+            for sections in (['source'], None):
+                cursor, seen, source_revision = None, set(), None
+                for _ in range(200):
+                    args = dict(sample['selector'], limit=7, max_bytes=8000)
+                    if sections is not None:
+                        args['sections'] = sections
+                    if cursor:
+                        args['cursor'] = cursor
+                    page = await call('read_actor', args)
+                    assert page['identity']['uuid'] == sample['uuid'] and page['identity']['instance']['token_uuid'] == sample['selector']['token_uuid']
+                    assert len(json.dumps(page, ensure_ascii=False, separators=(',', ':')).encode()) <= 8000
+                    source_revision = source_revision or page['revision']
+                    assert page['revision'] == source_revision
+                    assert not any(row['section'] == 'state' for row in page['records'])
+                    cursor = page['pagination']['next_cursor']
+                    if cursor is None:
+                        break
+                    assert cursor not in seen
+                    seen.add(cursor)
+                else:
+                    raise AssertionError('Token source page bound')
+        stage = 'token_state_unchanged_fingerprints'
+        assert await js(TOKEN_SELECT) == before
+        summary.update(passed=True, samples=len(before['samples']), fingerprint_unchanged=True,
+                       missing_coverage=sorted({'condition', 'effect', 'effect_expiry'} - set(before['coverage'])),
+                       application_evaluated=False, suppression_evaluated=False, affliction_supported=False)
+    except Exception as error:
+        summary.update(passed=False, failure_stage=stage, exception_type=type(error).__name__)
+    summary.update(mcp_calls=completed, requested_calls=requested, completed_calls=completed)
+    return summary
+
+
+async def main(discovery_only=False, state_fixture=False, world_id=None, token_state=False):
+    if (state_fixture and token_state or (state_fixture or token_state) and (world_id != 'test' or discovery_only)
+            or not (state_fixture or token_state) and world_id is not None):
+        raise ValueError('Select one explicit test-world state mode; discovery-only cannot select fixtures or tokens')
+    if not (state_fixture or token_state):
         return await _existing_main(discovery_only)
-    summary = dict(passed=False, cleanup_verified=False)
+    summary = dict(passed=False) if token_state else dict(passed=False, cleanup_verified=False)
     try:
         token = next(line.partition('=')[2].strip() for line in (Path(__file__).resolve().parents[1] / '.env.mcp').read_text().splitlines()
                      if line.partition('=')[0].strip() == 'FOUNDRY_MCP_CALLER_TOKEN')
@@ -417,7 +570,10 @@ async def main(discovery_only=False, state_fixture=False, world_id=None):
         transport = StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp', headers={'Authorization': 'Bearer ' + token})
         async with Client(transport, timeout=REQUEST_TIMEOUT_SECONDS, init_timeout=INIT_TIMEOUT_SECONDS) as client:
             async with asyncio.timeout(SESSION_TIMEOUT_SECONDS):
-                await run_state_fixture(client, world_id, uuid4().hex, summary)
+                if token_state:
+                    summary = await run_token_state(client, world_id)
+                else:
+                    await run_state_fixture(client, world_id, uuid4().hex, summary)
     except Exception as error:
         summary.update(passed=False, exception_type=type(error).__name__)
     print(json.dumps(summary))
@@ -428,6 +584,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--discovery-only', action='store_true', help='Inspect actual MCP discovery without requiring a browser or calling get_actor_types.')
     parser.add_argument('--state-fixture', action='store_true', help='Create one exact-marked character with inert state Items and always attempt cleanup.')
-    parser.add_argument('--world-id', choices=['test'], help='Required only with --state-fixture.')
+    parser.add_argument('--world-id', choices=['test'], help='Required with --state-fixture or --token-state.')
+    parser.add_argument('--token-state', action='store_true', help='Read existing unlinked token state only; requires --world-id test and creates no fixtures.')
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(main(args.discovery_only, args.state_fixture, args.world_id)))
+    raise SystemExit(asyncio.run(main(args.discovery_only, args.state_fixture, args.world_id, args.token_state)))

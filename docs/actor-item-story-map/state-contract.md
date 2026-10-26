@@ -203,3 +203,30 @@ effective condition suppression/application and genuine affliction documents
 remain unverified or unsupported. This checkpoint supersedes the earlier
 expired-true/character fixture gaps, but does not close CORE-state or its
 affliction prerequisite.
+
+## Existing unlinked-token state verification — October 25
+
+The read-only `--token-state --world-id test` check scanned 50 Scenes and 778
+tokens, finding 559 readable supported unlinked Actor instances and eight with
+readable condition/effect Items. Two selected instances covered both Item types
+and a present false own-model expiry flag. Actual MCP passed **10 state pages,
+51 records, 71 raw witnesses and two canonical Item follow-ups in 67 calls**.
+
+Every state page retained its actual token Actor, Scene/token selectors and
+separate base identity. Owned Item UUID sets, source/current witnesses and
+immediate origin token context matched independent public documents. The Item
+follow-ups retained their selected instance. Source/default continuations did
+not expand state. Full token/Actor/owned Item source hashes and selected current
+expiry hashes stayed unchanged. No documents, Scenes, world time or settings
+were changed, and no canvas objects were required.
+
+The census is bounded to 200 Scenes, 2,000 tokens and 12,000 owned Items per
+Actor. Missing eligible instances produce a precise coverage gap rather than a
+passing empty check. Nine normal harness tests plus nine fixture-safety tests
+cover current/default/fixture/token dispatch and independent checks; strict DTO
+boundary tests remain separate. Token checks reject changed identity/current
+fingerprints, empty witness results and false origin-context checks.
+
+This closes the earlier selected token-state source/expiry-false verification
+gap. It does not establish token expired-true behavior, familiar state, effective
+suppression/application, afflictions, or CORE-token's distinct-HP pair acceptance.

@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 1 |
 | Planning readiness | Planned |
-| Implementation status | In progress |
+| Implementation status | Blocked |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Adds instance-correct resolution to the shared extraction pipeline. |
 
@@ -52,3 +52,18 @@ does not close this story. See [token verification](../token-verification.md) fo
 the bounded selection, deterministic harness checks and unchanged original gate.
 
 `list_scene_actors` now navigates readable scenes and placed linked/synthetic tokens without canvas access. Missing Actors/base Actors, unsupported counts, permissions and stale continuations are explicit. Focused JavaScript and Python cross-language tests plus existing-runtime MCP navigation passed. Full acceptance remains open: type-specific readers must demonstrate distinct synthetic HP/Items and any relevant master dependencies; identity-only tests do not establish those values.
+
+### Original-criteria correction and concrete fixture blocker — October 25
+
+The verifier no longer requires different Item definition contents or unequal
+stored and current HP simultaneously. Those were extra probe conditions, not
+original acceptance requirements. Distinct actual owned Item UUIDs, membership,
+source follow-ups and cross-token rejection establish document separation even
+when definitions match. Current HP must still differ for the required pair.
+
+The corrected read-only census found 559 supported unlinked token Actors across
+117 eligible base-Actor groups, with **zero groups containing distinct current
+HP**. Owned membership/UUID checks excluded no candidates. The original live
+pair is therefore unavailable; no token or Actor was created or changed.
+CORE-token is Blocked on that fixture, not on different Item contents. Existing
+unlinked-token state reads separately passed; see [token verification](../token-verification.md).

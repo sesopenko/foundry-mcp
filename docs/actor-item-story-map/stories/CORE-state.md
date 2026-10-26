@@ -55,3 +55,14 @@ document reads. Read fingerprints and exact fixture cleanup passed; see the
 This closes the earlier expired-true/character fixture gap. Effective suppression,
 application, familiar/token state and the original affliction prerequisite remain
 open. CORE-state stays In progress.
+
+## Existing token-state checkpoint — October 25, 2026
+
+Two existing unlinked token instances passed 10 state pages/51 records, 71 raw
+witnesses and two owned Item follow-ups in 67 MCP calls. Actual Actor/base/token
+identity, source/current witnesses and origin token context matched independent
+public documents; source/current fingerprints stayed unchanged. The sample
+included condition/effect Items and a present false expiry flag. See the
+[token-state record](../state-contract.md#existing-unlinked-token-state-verification--october-25).
+This supersedes the earlier selected token-state source gap, without claiming
+effective suppression/application, token expired-true, familiar or affliction support.

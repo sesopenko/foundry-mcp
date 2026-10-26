@@ -27,14 +27,22 @@ SELECT="""
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value)))),b=>b.toString(16).padStart(2,'0')).join('');
 const supported=new Set(['action','melee','lore','effect','condition','weapon','armor','shield','equipment','treasure','backpack','ammo','consumable','spell','spellcastingEntry','book','kit','feat','ancestry','heritage','background','class','deity']);
 const candidates=[];let scenes=0,tokens=0;
+const census={readable_supported_linked:0,readable_supported_unlinked:0,with_readable_items:0,excluded_no_readable_items:0,excluded_nonfinite_hp:0,excluded_invalid_owned_membership:0,excluded_invalid_owned_uuid:0,candidate_unlinked_base_groups:0,groups_with_distinct_current_hp:0};
 for(const scene of game.scenes.values()){if(++scenes>200)throw Error('Scene bound');if(!scene.testUserPermission(game.user,'OBSERVER'))continue;
 for(const token of scene.tokens.values()){if(++tokens>2000)throw Error('Token bound');const actor=token.actor,base=token.baseActor;
 if(!actor||!['npc','character'].includes(actor.type)||!base||!token.testUserPermission(game.user,'OBSERVER')||!actor.testUserPermission(game.user,'OBSERVER'))continue;
-if(actor.items.size>12000)throw Error('Item bound');const items=[...actor.items.values()].filter(i=>supported.has(i.type)&&i.testUserPermission(game.user,'OBSERVER'));if(!items.length)continue;
-const source=actor.toObject(true),hp=source.system?.attributes?.hp?.value,currentHP=actor.toObject(false).system?.attributes?.hp?.value;if(!Number.isFinite(hp)||!Number.isFinite(currentHP))continue;
+census[token.isLinked?'readable_supported_linked':'readable_supported_unlinked']++;
+if(actor.items.size>12000)throw Error('Item bound');const items=[...actor.items.values()].filter(i=>supported.has(i.type)&&i.testUserPermission(game.user,'OBSERVER'));
+if(!items.length){census.excluded_no_readable_items++;continue;}census.with_readable_items++;
+if(items.some(i=>i.parent!==actor||actor.items.get(i.id)!==i)){census.excluded_invalid_owned_membership++;continue;}
+if(items.some(i=>typeof i.uuid!=='string'||!i.uuid.startsWith(actor.uuid+'.Item.'))||new Set(items.map(i=>i.uuid)).size!==items.length){census.excluded_invalid_owned_uuid++;continue;}
+const source=actor.toObject(true),hp=source.system?.attributes?.hp?.value,currentHP=actor.toObject(false).system?.attributes?.hp?.value;if(!Number.isFinite(hp)||!Number.isFinite(currentHP)){census.excluded_nonfinite_hp++;continue;}
 const itemSources=items.map(i=>{const s=i.toObject(true);return {name:s.name,type:s.type,system:s.system};}).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
-candidates.push({token,actor,base,scene,hp,currentHP,itemHash:await hash(itemSources)});}}
-let pair=null;for(let i=0;i<candidates.length&&!pair;i++)for(let j=i+1;j<candidates.length;j++){const a=candidates[i],b=candidates[j];if(!a.token.isLinked&&!b.token.isLinked&&a.base.uuid===b.base.uuid&&a.actor.uuid!==b.actor.uuid&&a.actor.uuid!==a.base.uuid&&b.actor.uuid!==b.base.uuid&&a.hp!==b.hp&&a.currentHP!==b.currentHP&&a.itemHash!==b.itemHash){pair=[a,b];break;}}
+candidates.push({token,actor,base,scene,hp,currentHP,itemUUIDs:items.map(i=>i.uuid),itemHash:await hash(itemSources)});}}
+const groups=new Map();for(const candidate of candidates){if(candidate.token.isLinked)continue;const group=groups.get(candidate.base.uuid)??[];group.push(candidate);groups.set(candidate.base.uuid,group);}
+census.candidate_unlinked_base_groups=groups.size;
+census.groups_with_distinct_current_hp=[...groups.values()].filter(group=>new Set(group.map(c=>c.currentHP)).size>1).length;
+let pair=null;for(let i=0;i<candidates.length&&!pair;i++)for(let j=i+1;j<candidates.length;j++){const a=candidates[i],b=candidates[j];if(!a.token.isLinked&&!b.token.isLinked&&a.base.uuid===b.base.uuid&&a.actor.uuid!==b.actor.uuid&&a.actor.uuid!==a.base.uuid&&b.actor.uuid!==b.base.uuid&&a.currentHP!==b.currentHP&&a.itemUUIDs.every(uuid=>!b.itemUUIDs.includes(uuid))){pair=[a,b];break;}}
 const inactiveScene=[...game.scenes.values()].find(scene=>scene.active===false&&scene.testUserPermission(game.user,'OBSERVER'));
 const linked=candidates.find(c=>c.token.isLinked);const gaps=[];if(!pair)gaps.push('same_base_unlinked_pair_with_distinct_hp_items');if(!linked)gaps.push('linked_control');if(!inactiveScene)gaps.push('inactive_scene');
 const samples=[];if(!gaps.length)for(const c of [...pair,linked]){const {token,actor,base,scene}=c;
@@ -45,8 +53,8 @@ const otherItems=other?[...other.actor.items.values()].filter(i=>supported.has(i
 const item=readable.find(i=>other&&!otherItems.some(j=>meaningful(i)===meaningful(j)))??readable[0];
 if(!item){gaps.push('readable_supported_item');break;}
 samples.push({token:token.uuid,actor:actor.uuid,base:base.uuid,scene:scene.uuid,linked:token.isLinked,inactive:!scene.active,hp:c.hp,currentHP:actor.toObject(false).system?.attributes?.hp?.value,item:{uuid:item.uuid,id:item.id,type:item.type},items:[...actor.items.values()].filter(i=>supported.has(i.type)&&i.testUserPermission(game.user,'OBSERVER')).map(i=>({uuid:i.uuid,id:i.id,type:i.type})),actorHash:await hash(actor.toObject(true)),tokenHash:await hash(token.toObject(true)),itemsHash:c.itemHash});}
-for(const sample of samples){const item=await foundry.utils.fromUuid(sample.item.uuid);sample.item.source_hash=await hash(item.toObject(true));}
-const result={gaps,samples,inactive_scene:inactiveScene?.uuid??null,scenes_scanned:scenes,tokens_scanned:tokens};
+for(const sample of samples){const item=await foundry.utils.fromUuid(sample.item.uuid);if(!item||item.uuid!==sample.item.uuid||item.parent?.uuid!==sample.actor||item.parent.items.get(item.id)!==item)throw Error('Selected Item owner mismatch');sample.item.source_hash=await hash(item.toObject(true));}
+const result={gaps,samples,census,inactive_scene:inactiveScene?.uuid??null,scenes_scanned:scenes,tokens_scanned:tokens};
 """
 
 
@@ -109,10 +117,12 @@ async def verify(client, world_id):
         before = await js(SELECT)
         if before['gaps']:
             return dict(passed=False, coverage_gaps=before['gaps'], mcp_calls=calls,
+                        census=before['census'],
                         scenes_scanned=before.get('scenes_scanned'),
                         tokens_scanned=before.get('tokens_scanned'))
         samples=before['samples'];assert len(samples)==3
-        assert samples[0]['base']==samples[1]['base'] and samples[0]['hp']!=samples[1]['hp'] and samples[0]['itemsHash']!=samples[1]['itemsHash']
+        assert samples[0]['base']==samples[1]['base']
+        assert {i['uuid'] for i in samples[0]['items']}.isdisjoint({i['uuid'] for i in samples[1]['items']})
         assert samples[0]['currentHP'] != samples[1]['currentHP']
         assert len({samples[0]['actor'], samples[1]['actor'], samples[0]['base']}) == 3
         assert all(not s['linked'] for s in samples[:2]) and samples[2]['linked']
@@ -166,7 +176,7 @@ const result=[];for(const claim of claims){const item=await foundry.utils.fromUu
         assert response.is_error and 'DocumentNotFound' in ''.join(getattr(block,'text','') for block in response.content)
         stage = 'unchanged_source_fingerprints'
         assert await js(SELECT) == before
-        summary.update(passed=True,source_unchanged=True,unlinked_tokens=2,linked_controls=1,inactive_scene_verified=True,coverage_gaps=[])
+        summary.update(passed=True,source_unchanged=True,unlinked_tokens=2,linked_controls=1,inactive_scene_verified=True,coverage_gaps=[],census=before['census'],distinct_source_hp=samples[0]['hp']!=samples[1]['hp'],distinct_item_content=samples[0]['itemsHash']!=samples[1]['itemsHash'])
     except Exception as error:
         summary.update(failure_stage=stage, exception_type=type(error).__name__)
     summary.update(mcp_calls=calls,**totals)
