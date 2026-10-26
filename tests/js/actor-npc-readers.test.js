@@ -83,7 +83,8 @@ test('denied NPC attack references hide source and identity while unsupported Ac
  assert.equal(page.records.find(row=>row.mapped.concept==='current_strike_collection').raw[0].present,false);
  assert.ok(!JSON.stringify(page).includes('Item.secret'));assert.ok(page.sections[0].reasons.includes('related_items_denied'));
  f.actor.type='character';f.source.type='character';
- const character=await readActor({actor_uuid:f.actor.uuid,sections:['strikes','abilities']});assert.equal(character.sections.find(s=>s.name==='strikes').status,'partial');assert.equal(character.sections.find(s=>s.name==='abilities').status,'unsupported');
+ const character=await readActor({actor_uuid:f.actor.uuid,sections:['strikes','abilities']});assert.equal(character.sections.find(s=>s.name==='strikes').status,'partial');assert.equal(character.sections.find(s=>s.name==='abilities').status,'partial');
+ assert.ok(character.sections.find(s=>s.name==='abilities').reasons.includes('other_abilities_not_enumerated'));
  assert.equal(character.records[0].mapped.concept,'current_strike_collection');assert.equal(character.records[0].raw[0].present,false);
  f.actor.type='familiar';f.source.type='familiar';const unsupported=await readActor({actor_uuid:f.actor.uuid,sections:['strikes']});assert.equal(unsupported.sections[0].status,'unsupported');assert.deepEqual(unsupported.records,[]);
 });

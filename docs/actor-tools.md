@@ -386,6 +386,16 @@ and `npc_ability_item`. Each resolved mapped value contains `target_uuid`,
 Both sections remain partial (`other_attacks_pending`/`other_abilities_pending`);
 these references do not claim complete effective attack or acquired ability lists.
 
+Character explicit `abilities` enumerates actual owned action and feat/feature
+Items once, with persisted name/type provenance, clipped mapped names and exact
+token ownership. Follow returned canonical targets through `read_item` source
+and description for activation/category and requirements. This section stays
+partial even when empty; basic actions, generated capabilities, equipment-only
+prose and active benefits are not inferred. Denied Items expose one aggregate
+without source/name disclosure. See the
+[character ability contract](actor-item-story-map/character-abilities-contract.md)
+for exact records, reasons, bounds and continuation behavior.
+
 Explicit character/NPC `strikes` additionally selects declared own current
 `Actor.system.actions` data. It separates attack modifiers, readiness flags,
 traits, variants and alternative usages from source Item definitions. Origins

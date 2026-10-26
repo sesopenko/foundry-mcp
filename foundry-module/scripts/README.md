@@ -92,6 +92,12 @@ NPC explicit `strikes`/`abilities` select actual owned melee/action references,
 with source-name/type provenance and preserved linked/synthetic token selectors.
 Denied Items are not read or named; effective completeness remains unsupported.
 
+`actorCharacterAbilities.js` selects actual permitted character-owned action/feat
+identities with exact source witnesses and bounded mapped names. It verifies
+parent/membership and never reads denied names or source. The section stays
+partial for basic/generated/prose-only abilities and active benefits; callers
+follow canonical Item identities for typed activation/category and description.
+
 `actorEffect.js` selects persisted PF2e effect source with discriminated badge
 branches and primitive context leaves. It never evaluates formulas, applies
 source defaults, reads prepared expiry or resolves source UUID references.

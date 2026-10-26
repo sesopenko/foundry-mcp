@@ -56,6 +56,9 @@ deferred outside this delivery until PF2e maintainers complete it. Discovery
 reports `in_scope: false` and all reading support flags false; readable-type
 filters omit the type. No affliction source/stage/timer interface is offered.
 Poison/disease/curse descriptions on supported source Items remain readable.
+Character ability navigation lists owned actions and feats/features with
+canonical Item follow-ups for activation and prose. It remains partial; ownership
+does not establish active benefits or an exhaustive list of available actions.
 Weapon source includes damage, runes, range and ammunition configuration;
 carried weapons are not automatically effective Strikes or usable attacks.
 Ammunition reading preserves separate stock/uses and crafting categories. Only

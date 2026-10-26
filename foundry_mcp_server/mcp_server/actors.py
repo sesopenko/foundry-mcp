@@ -814,6 +814,38 @@ def _lore_specialty(row: dict[str, Any], identity: dict[str, Any]) -> bool:
             all(provenance['limitations']) and provenance['contributors'] == [{k:r[k] for k in ('document_uuid','path','basis')} for r in raw])
 
 
+def _character_ability_reference(row, identity):
+    """PF2e-specific8.6.1 character-owned action/feat source navigation.
+
+    Item type/name and actual owner establish identities, never activation,
+    feature category or effective benefits. Pinned item/{ability,feat}/data.ts:
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module
+    """
+    if identity['type']!='character' or set(row)!={'key','section','kind','raw','mapped','provenance'} or row['kind']!='relationship':return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['concept']!='character_ability_item' or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'} or provenance['mapping']!='pf2e.character.ability-reference.v1' or provenance['limitations']!=['owned_item_reference_not_complete_or_active_ability']:return False
+    if row['key']=='abilities:items:denied':return raw==[] and provenance['contributors']==[] and mapped['value']==dict(status='denied',target_uuid=None)
+    if len(raw)!=2 or type(mapped['value']) is not dict:return False
+    for field in raw:
+        if type(field) is not dict or set(field)!={'document_uuid','path','present','basis','value'} or field['present'] is not True or field['basis']!='source':return False
+    uuid=raw[0]['document_uuid'];name=raw[0]['value'];typ=raw[1]['value']
+    if not _casting_owned(uuid,identity) or row['key']!='abilities:item:'+uuid or raw[1]['document_uuid']!=uuid or [field['path'] for field in raw]!=['/name','/type'] or type(name) is not str or len(name.encode('utf-16-le','surrogatepass'))//2>6000 or typ not in ('action','feat'):return False
+    expected=dict(status='resolved',target_uuid=uuid,type=typ,name=name[:256],name_truncated=len(name)>256)
+    if identity['instance'] is not None:expected['token_uuid']=identity['instance']['token_uuid']
+    return (type(mapped['value'].get('name_truncated')) is bool and mapped['value']==expected
+            and provenance['contributors']==[{k:field[k] for k in ('document_uuid','path','basis')} for field in raw])
+
+
+def _character_ability_section(records, section, identity):
+    """PF2e-specific partial character Item navigation, including empty scope."""
+    if identity['type']!='character':return True
+    reasons=set(section['reasons'])
+    return (section['status']=='partial' and 'other_abilities_not_enumerated' in reasons
+            and reasons<={'other_abilities_not_enumerated','ability_items_denied','pagination'}
+            and (not any(row['section']=='abilities' and row['key']=='abilities:items:denied' for row in records) or 'ability_items_denied' in reasons))
+
+
 def _npc_item_reference(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     """PF2e-specific NPC8.6.1 owned melee/action source references only.
 
@@ -3644,6 +3676,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return _actor_current_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='strikes' and type(row['provenance']) is dict and row['provenance'].get('mapping') in ('pf2e.actor.strike-current.v1','pf2e.actor.strike-origin.v1','pf2e.actor.strike-capability.v1'):
         return _strike_current_record(row,identity)
+    if identity['document_name']=='Actor' and identity['type']=='character' and row['section']=='abilities':
+        return _character_ability_reference(row,identity)
     if identity['document_name']=='Item' and identity['type']=='feat' and row['section']=='relationships':
         return _feat_relationship(row,identity)
     if identity['document_name']=='Item' and identity['type']=='deity' and row['section']=='relationships':
@@ -3828,6 +3862,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                         valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
                         valid = valid and all(_current_section(result['records'], row, result['identity']) for row in rows if row['name']=='statistics')
                         valid = valid and all(_strike_section(result['records'], row, result['identity']) for row in rows if row['name']=='strikes')
+                        valid = valid and all(_character_ability_section(result['records'], row, result['identity']) for row in rows if row['name']=='abilities')
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -4194,6 +4229,29 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate
     specialty names remain separate Items, never merged skill totals.
+    Character abilities enumerates actual readable owned action and feat Items
+    (including feats/features) once each. This is Item navigation, not exhaustive
+    actions or active benefits; no activation/feature category is inferred.
+    Follow read_item source and description with returned target_uuid/token_uuid
+    to classify each definition. Basic/core actions, equipment prose and generated
+    capabilities are not synthesized; duplicate names remain separate Items.
+    Each relationship has key abilities:item:<actual Item UUID>, concept
+    character_ability_item, mapping pf2e.character.ability-reference.v1, unit null,
+    limitation owned_item_reference_not_complete_or_active_ability and exact
+    /name,/type source witnesses/contributors for that actual owner-local Item.
+    Source names admit at most6000 UTF-16 units, with mapped names clipped to256
+    Unicode codepoints and name_truncated boolean. Resolved values contain status,
+    target_uuid,type (action/feat),name,name_truncated and selected token_uuid when
+    applicable. Permission is checked before source/identity; denied Items expose
+    only abilities:items:denied with the same mapping/concept/limitation, empty
+    raw/contributors and {status:denied,target_uuid:null}. Always partial, including
+    an empty collection: other_abilities_not_enumerated is mandatory; aggregate
+    denial adds ability_items_denied; shared pagination may add pagination.
+    At most12000 owned Items are inspected, yielding at most12000 ability records
+    including any denial aggregate; these bounds differ from page count/bytes.
+    source/getter/membership violations fail ReadFailed. Source-only/default reads
+    never select this section; Item identities/source/permissions participate in
+    revision checks. No importing, rolling, preparing or applying benefits occurs.
     NPC authored strikes/abilities retain actual owned melee/action Item references:
     npc_attack_item/npc_ability_item values have resolved target_uuid and selected
     token_uuid when applicable; follow with read_item. Both sections remain partial

@@ -42,6 +42,7 @@ import { meleeFields, meleeEffectFields } from './actorMelee.js';
 import { loreFields } from './actorLore.js';
 import { npcFields, npcNoteFields } from './actorNpc.js';
 import { characterFields, characterNoteFields } from './actorCharacter.js';
+import { characterAbilityRecords } from './actorCharacterAbilities.js';
 import { currentStatisticFields } from './actorCurrent.js';
 import { familiarFields, familiarNoteFields, familiarMasterField, familiarMasterContextFields } from './actorFamiliar.js';
 import {familiarCurrentFields} from './actorFamiliarCurrent.js';
@@ -495,6 +496,12 @@ async function actionRelationship(target,selected) {
  */
 async function snapshot(target,sections) {
   const selected=selection(target,sections);
+  // PF2e-specific character8.6.1 owned action/feat identities are source
+  // navigation only; basic/prose abilities and active benefits are not inferred.
+  if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('abilities')){
+    try{selected.characterAbilities=characterAbilityRecords(target);}
+    catch{fail('ReadFailed','Selected character ability references exceed their bounds or do not match owned source identities.','Inspect actual owned action/feat Items with list_actor_items and read_item. Abilities admits at most12000 owned Items and source names up to6000 UTF-16 units; no activation, grants or effective benefits are evaluated.');}
+  }
   // PF2e-specific Character/NPCSystemData8.6.1 compiled actions are declared
   // public model data, separate from authored NPC melee Item references.
   if(target.document.documentName==='Actor'&&['character','npc'].includes(target.document.type)&&sections.includes('strikes')){
@@ -768,7 +775,10 @@ export async function getActorTypes(params = {}) {
     familiar.effective_supported=true;
     familiar.limitations=['Selected persisted master ID/attribute and HP plus explicit creature description are delivered. Identity resolves the nullable world-character master claim with explicit unresolved statuses. Statistics reads declared public Actor.system own-data defenses, movement and ordinary skills only after master permission checks; unavailable master returns no current values. Values are read, not recalculated; independent attributes, normal Strikes, Item-linked skill totals, benefit activation and full integrated views remain unsupported. A marked world familiar passed 127 present current fields, no current rows after master unassignment, source/prose checks and confirmed cleanup. Compendium/token current fixtures and integrated casting/state remain unverified.'];
     familiar.verification={deterministic:{status:'passed',evidence:['tests/js/actor-familiar.test.js','tests/js/actor-familiar-relationships.test.js','tests/js/actor-familiar-readers.test.js','tests/test_actor_familiar.py','tests/js/actor-familiar-current.test.js','tests/js/actor-familiar-current-readers.test.js','tests/test_actor_familiar_current.py','tests/test_actor_familiar_live_check.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/familiar-verification.md','docs/actor-item-story-map/familiar-current-contract.md','scripts/actor-familiar-live-check.py']}};
-    result.actor_sections.find(entry=>entry.name==='abilities').limitations=['NPC actual owned action Item references and familiar owned action references are delivered; familiar/master benefit scope requires reading Item prose. Sections remain partial; active benefits and other Actor ability lists remain unsupported.'];
+    const abilities=result.actor_sections.find(entry=>entry.name==='abilities');
+    abilities.limitations=['Character actual owned action and feat/feature Item references, NPC owned actions and familiar owned actions are delivered. Character names/types use exact persisted witnesses; feat classification and activation/familiar-master benefit details require read_item source and description. Always partial: basic actions, generated capabilities, equipment-prose abilities, active benefits and usability are not enumerated. Character source names are bounded to6000 UTF-16 units and mapped names to256 Unicode codepoints. A marked world character passed three distinct ability references, exact Item source/prose follow-ups, unchanged fingerprints and cleanup; character compendium/token live fixtures remain unverified. Existing live evidence covers NPC/familiar action references.'];
+    abilities.verification.deterministic.evidence.push('tests/js/actor-character-abilities.test.js','tests/js/actor-character-abilities-readers.test.js','tests/test_actor_character_abilities.py');
+    abilities.verification.live.evidence.push('docs/actor-item-story-map/character-abilities-contract.md','scripts/actor-character-abilities-live-check.py');
     const npc=result.actor_types.find(entry=>entry.type==='npc');
     npc.effective_supported=true;
     npc.limitations=['Authored NPC source statistics and Lore references are delivered. Explicit statistics selects bounded transformed attributes, defenses, Perception/vision and movement; live elite adjustments reflect Foundry data, not local arithmetic. This section remains partial, and full integrated/current views and target-context calculations are unfinished. Explicit description retains bounded biography notes.'];
@@ -829,6 +839,7 @@ async function read(target,params,sections,tool) {
   if(target.document.documentName==='Actor'&&sections.includes('spellcasting'))records.push(...selected.castingView.records);
   if(target.document.documentName==='Actor'&&sections.includes('state'))records.push(...selected.stateView.records);
   if(selected.strikeView)records.push(...selected.strikeView.records);
+  if(selected.characterAbilities)records.push(...selected.characterAbilities.records);
   if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('abilities'))records.push(...selected.familiarAbilities.records);
   // PF2e-specific8.6.1 current document-data leaves retain transformed basis;
   // source fields at the same path remain separate source-section records.
@@ -991,6 +1002,11 @@ async function read(target,params,sections,tool) {
     section.status='partial';section.reasons=[...new Set([...selected.currentSkills.reasons,...(selected.deniedLore.length?['related_items_denied']:[])])];
     base.limitations=base.limitations.filter(message=>message!=='Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.');
     base.limitations.push('Skills preserves independent owned Lore source references and selected character/NPC transformed skill fields. Lore joins use actual owner-local itemId claims, never names or generated skill keys; denied linked skills are withheld. Serialized totals are not target-context rolls. NPC special variants/predicates and full skill applicability remain unevaluated; familiar current skills remain unsupported here.');
+  }
+  if(selected.characterAbilities){
+    const section=base.sections.find(row=>row.name==='abilities');
+    section.status='partial';section.reasons=[...selected.characterAbilities.reasons];
+    base.limitations.push('Character abilities lists actual permitted owned action and feat Items as source references, including feat/feature documents without inferring active benefits. Names/types retain exact persisted witnesses; mapped names are clipped to256 Unicode codepoints and source names are bounded to6000 UTF-16 units. Follow read_item(item_uuid=target_uuid, token_uuid when returned), selecting source and description for feat/feature classification, activation, requirements and prose. Basic actions, generated capabilities and equipment-only prose abilities are not enumerated; this is not an exhaustive or usable-action list.');
   }
   if(target.document.documentName==='Actor'&&target.document.type==='familiar'){
     for(const section of base.sections){

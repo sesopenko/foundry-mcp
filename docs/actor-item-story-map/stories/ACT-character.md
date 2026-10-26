@@ -7,6 +7,7 @@
 | Stage | 2 |
 | Planning readiness | Source ready; effective views gated |
 | Implementation status | Source implemented |
+| Integrated status | In progress |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -89,3 +90,19 @@ their getters or inventing an Item UUID. Source fingerprints and cleanup passed.
 See the [current Strike contract](../strike-current-contract.md). Current damage,
 target eligibility and non-Strike kinds remain unsupported; shared casting/state
 dependencies and full M-PC acceptance remain open.
+
+## Owned ability navigation checkpoint — October 25, 2026
+
+Explicit abilities now joins actual owned action and feat/feature Item identities
+with exact persisted name/type provenance and canonical follow-ups. Duplicate
+names remain distinct; denied Items expose one aggregate without source/name
+access. Basic/generated/prose-only abilities and active benefits remain outside
+this partial list. See the [contract](../character-abilities-contract.md).
+
+A genuine marked world character passed three references and all source/prose
+follow-ups across one Actor page and 13 Item pages, with 75 independent source
+checks in 24 MCP calls. Fingerprints and exact cleanup passed. Strict Python
+validation covers actual paginated JS responses and self-contained discovery.
+This delivers the previously missing ability-navigation join. It does not close
+M-PC: combined-section integration acceptance remains required. Casting and
+condition/effect shared prerequisites are now Complete; affliction is Deferred.

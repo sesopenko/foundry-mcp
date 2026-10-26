@@ -774,3 +774,28 @@ their own combined-section acceptance and character ability-navigation gap still
 require work. CORE-token's missing existing distinct-HP pair remains Blocked.
 Full regression checks passed: 497 Python tests (one skipped) and 578 JavaScript
 tests. Dependency/diagram and whitespace checks also passed.
+
+## Character owned ability navigation — October 25, 2026
+
+Character abilities now lists permitted actual owned action and feat/feature
+Items with exact name/type source provenance, bounded named identities and
+canonical Item follow-ups. Permission and exact parent/membership checks precede
+source/identity extraction; denial is an aggregate with no name/ID disclosure.
+The list remains partial for basic/generated/prose-only capabilities and active
+benefits. Defaults/source-only reads never select owned abilities.
+
+Actual MCP verified a genuine marked character's action, feat and class feature:
+three references, one Actor page, 13 source/prose Item pages and 75 independent
+source checks in 24 requested/completed calls. Exact prose and full fingerprints
+matched; cleanup confirmed zero pending creations and remaining marked Actors.
+Two diagnostic runs also cleaned up. Their verifier mismatch was reproduced
+with optional own undefined source properties and fixed using canonical source
+serialization; 14 absences were independently confirmed. Production reading
+did not require a correction for that mismatch.
+
+This closes the missing character ability-navigation implementation. ACT-character
+and its M-PC checkpoint remain open for combined-section integration acceptance.
+Progress remains **33/38 (86.8%)**; dedicated affliction functionality stays Deferred.
+Full suites passed: 511 Python tests (one skipped) and 589 JavaScript tests.
+Fresh-client discovery and the refreshed GM browser checks passed. M-PC is now
+tracked In progress; no full Actor story completion is claimed by this unit.

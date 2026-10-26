@@ -151,6 +151,15 @@ other gates above remain separate; this does not claim ACT-character complete.
 
 ## Documentation validation
 
+October 25 character abilities: actual owned action/feat/feature navigation now
+retains exact source identity and canonical follow-ups without an exhaustive or
+active-benefit claim. The marked world fixture passed three references, one
+Actor page/13 Item pages, 75 source checks and unchanged source fingerprints in
+24 MCP calls; cleanup passed. A fail-first verifier regression fixed optional
+own undefined versus serialized absence (14 observed), not production reading.
+See the [character ability contract](character-abilities-contract.md). Actor
+integration acceptance remains open; progress stays **33/38 (86.8%)**.
+
 October 25 condition/effect acceptance: after the explicit affliction deferral,
 the [requirement audit](state-acceptance.md) verifies current CORE-state source,
 origins, duration/badge/override, supported expiry, privacy and continuation
