@@ -117,13 +117,15 @@ console.log(JSON.stringify({items,skills,tokenSkills}));
         for page in fixture['skills']:
             self.manager.call.return_value=page
             await read_actor.fn(actor_uuid=page['identity']['uuid'],sections=['skills'])
-            self.assertEqual(len(page['records']),2)
-            self.assertEqual(len({r['mapped']['value']['target_uuid'] for r in page['records']}),2)
+            source_lore=[r for r in page['records'] if r['provenance']['mapping']=='pf2e.lore.specialty.v1']
+            self.assertEqual(len(source_lore),2)
+            self.assertEqual(len({r['mapped']['value']['target_uuid'] for r in source_lore}),2)
             self.assertEqual(page['sections'][0]['status'],'partial')
 
         for page in fixture['tokenSkills']:
             token=page['identity']['instance']['token_uuid']
             self.manager.call.return_value=page
             await read_actor.fn(token_uuid=token,sections=['skills'])
-            self.assertEqual(len(page['records']),2)
-            for row in page['records']:self.assertEqual(row['mapped']['value']['token_uuid'],token)
+            source_lore=[r for r in page['records'] if r['provenance']['mapping']=='pf2e.lore.specialty.v1']
+            self.assertEqual(len(source_lore),2)
+            for row in source_lore:self.assertEqual(row['mapped']['value']['token_uuid'],token)

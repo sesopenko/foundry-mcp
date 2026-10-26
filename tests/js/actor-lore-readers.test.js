@@ -32,9 +32,10 @@ test('Lore owner semantics retain rank labels and never invent a calculated modi
 test('duplicate Lore specialties remain separate partial Skills references with usable selectors',async()=>{
  const f=fixture();const page=await readActor({actor_uuid:f.owner.uuid,sections:['skills','effective']});
  assert.equal(page.sections[0].status,'partial');assert.ok(page.sections[0].reasons.includes('other_skills_pending'));
- assert.equal(page.sections[1].status,'unsupported');assert.equal(page.records.length,2);
- const uuids=page.records.map(row=>row.mapped.value.target_uuid);assert.equal(new Set(uuids).size,2);
- for(const row of page.records) {
+ assert.equal(page.sections[1].status,'unsupported');const sourceRows=page.records.filter(row=>row.provenance.mapping==='pf2e.lore.specialty.v1');assert.equal(sourceRows.length,2);
+ const current=page.records.find(row=>row.mapped.concept==='current_skill_collection');assert.equal(current.raw[0].present,false);assert.equal(current.mapped.value,null);
+ const uuids=sourceRows.map(row=>row.mapped.value.target_uuid);assert.equal(new Set(uuids).size,2);
+ for(const row of sourceRows) {
   assert.equal(row.raw[0].value,'Sailing Lore');assert.equal(row.raw[1].value,'lore');
   const item=await readItem({item_uuid:row.mapped.value.target_uuid});assert.equal(item.identity.actor.uuid,f.owner.uuid);
  }
@@ -54,7 +55,8 @@ test('linked and synthetic Skills references preserve the selected token instanc
   const token={documentName:'Token',uuid:'Scene.s.Token.t',name:'Placed',parent:scene,isLinked:linked,actor:f.owner,baseActor:null,testUserPermission:()=>true};
   f.docs.set(token.uuid,token);
   const page=await readActor({token_uuid:token.uuid,sections:['skills']});
-  for(const row of page.records) {
+  const current=page.records.find(row=>row.mapped.concept==='current_skill_collection');assert.equal(current.raw[0].present,false);
+  for(const row of page.records.filter(row=>row.provenance.mapping==='pf2e.lore.specialty.v1')) {
    assert.equal(row.mapped.value.token_uuid,token.uuid);
    const followed=await readItem({item_uuid:row.mapped.value.target_uuid,token_uuid:row.mapped.value.token_uuid});
    assert.equal(followed.identity.instance.token_uuid,token.uuid);assert.equal(followed.identity.actor.type,'character');
@@ -66,7 +68,7 @@ test('unreadable Lore stays private and source fields keep independent limits an
  const f=fixture();f.second.item.name='Private specialty';f.second.item.testUserPermission=()=>false;
  f.second.item.toObject=()=>{throw Error('Denied source must not be touched');};
  let page=await readActor({actor_uuid:f.owner.uuid,sections:['skills']});
- const marker=page.records.find(row=>row.mapped.value.status==='denied');assert.ok(marker);
+ const marker=page.records.find(row=>row.provenance.mapping==='pf2e.lore.specialty.v1'&&row.mapped.value.status==='denied');assert.ok(marker);
  assert.deepEqual(marker.raw,[]);assert.ok(!JSON.stringify(page).includes(f.second.item.uuid));assert.ok(!JSON.stringify(page).includes('Private specialty'));
  f.first.source.system.variants['a/~'].options='🙂'.repeat(10000);
  await assert.rejects(async()=>{let cursor;do {

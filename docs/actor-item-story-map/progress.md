@@ -478,3 +478,19 @@ owners, activity claims and contradictory page witnesses. See the
 [contract](state-contract.md). CORE-state is In progress; affliction stages,
 effective suppression/expiry/application and live state-view verification retain
 their original gates. Completed progress remains30/39 (76.9%).
+
+## Current skill and Lore integration — October 25, 2026
+
+Explicit skills now adds selected transformed character/NPC skill fields,
+character proficiency labels, NPC qualification notes and actual itemId-based
+Lore contributor joins. Owned Lore source rows remain independent, including
+duplicate names and prepared-map collisions. Denied Lore skills withhold their
+keys, labels and totals; current-only and target-identity changes invalidate
+continuations. Missing fields never fall back to source or runtime getters.
+
+Deterministic helper/reader/Python tests cover world, pack and token contexts,
+raw provenance, bounds, rank/modifier/DC distinctions and permission privacy.
+Authenticated discovery passed without game data. See the
+[contract](skills-current-contract.md). NPC conditional variants, familiar
+skills and current-skill live verification remain open; this checkpoint does
+not close the full Actor stories. Completed progress stays30/39 (76.9%).

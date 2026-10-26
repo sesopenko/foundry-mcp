@@ -695,6 +695,96 @@ def _lore_record(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     return type(row['mapped']['value']) is type(expected) and row['mapped']['value'] == expected
 
 
+def _skill_current_spec(path, actor_type):
+    """PF2e-specific8.6.1 character/NPC serialized SkillData leaf contracts.
+
+    Source skill ranks and NPC authored variants remain separate. Schema:
+    https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor
+    creature/character/npc/data.ts and system/statistic/data.ts define these
+    transformed primitives; no methods, predicates or target math are evaluated.
+    """
+    if actor_type not in ('character','npc') or type(path) is not str:return None
+    if path=='/system/skills':return ('current_skill_collection','collection')
+    match=re.fullmatch(r'/system/skills/((?:[^~/]|~[01])*)/([^/]+)',path)
+    if not match:return None
+    key=match[1].replace('~1','/').replace('~0','~')
+    if len(key)>256:return None
+    leaf=match[2]
+    kinds=dict(slug='string',label='string',attribute='attribute',value='number',totalModifier='number',dc='number',breakdown='string',lore='boolean',itemId='nullable_string')
+    kinds.update(dict(rank='rank',armor='boolean') if actor_type=='character' else dict(base='number',mod='number',visible='boolean',note='string'))
+    if leaf not in kinds:return None
+    return ('current_skill_'+{'itemId':'item_id','totalModifier':'total_modifier'}.get(leaf,leaf),kinds[leaf])
+
+
+def _actor_skill_current_record(row, identity):
+    """PF2e-specific8.6.1 exact transformed skill fields and owner-local Lore.
+
+    _skill_current_spec pins the document-data schema. Lore claims reference
+    actual owned Lore Items; no name/slug join or exhaustive Lore claim is made.
+    Familiar master-derived skills remain unsupported by this boundary.
+    """
+    if identity['type'] not in ('character','npc') or set(row)!={'key','section','kind','raw','mapped','provenance'}:return False
+    raw=row['raw'];mapped=row['mapped'];provenance=row['provenance']
+    if type(mapped) is not dict or set(mapped)!={'concept','value','unit'} or mapped['unit'] is not None:return False
+    if type(provenance) is not dict or set(provenance)!={'contributors','mapping','limitations'}:return False
+    for field in raw:
+        if type(field) is not dict or not {'document_uuid','path','present','basis'}<=set(field) or not set(field)<={'document_uuid','path','present','basis','value'}:return False
+        if field['document_uuid']!=identity['uuid'] or field['basis']!='transformed' or type(field['present']) is not bool or field['present']!=('value' in field):return False
+    if provenance['contributors']!=[{k:r[k] for k in ('document_uuid','path','basis')} for r in raw]:return False
+    mapping=provenance['mapping']
+    if mapping=='pf2e.actor.skills-current.v1':
+        if provenance['limitations']!=['serialized_current_skill_not_target_context']:return False
+        if row['key']=='skills:current:denied':return row['kind']=='relationship' and raw==[] and mapped==dict(concept='current_skill_item_reference',value=dict(status='denied',target_uuid=None),unit=None)
+        if len(raw)!=1 or row['kind']!='field':return False
+        field=raw[0];path=field['path'];spec=_skill_current_spec(path,identity['type'])
+        if spec is None or row['key']!='skills:current:'+path:return False
+        concept,kind=spec;value=field.get('value')
+        if field['present']:
+            valid={'number':type(value) in (int,float) and math.isfinite(value),'string':type(value) is str,
+                   'attribute':type(value) is str and value in ('str','dex','con','int','wis','cha'),'boolean':type(value) is bool,
+                   'rank':type(value) is int and 0<=value<=4,'nullable_string':value is None or type(value) is str,
+                   'collection':type(value) is dict and value=={}}
+            if not valid[kind]:return False
+        expected=None if kind=='collection' else dict(rank=value,label=LORE_RANKS[value]) if kind=='rank' and field['present'] else value
+        return json.dumps(mapped,sort_keys=True,allow_nan=False)==json.dumps(dict(concept=concept,value=expected,unit=None),sort_keys=True,allow_nan=False)
+    if mapping!='pf2e.actor.skills-lore.v1' or provenance['limitations']!=['serialized_lore_claim_not_exhaustive_owned_lore'] or row['kind']!='relationship' or len(raw)!=2:return False
+    path=raw[0]['path'];spec=_skill_current_spec(path,identity['type'])
+    if spec!=('current_skill_lore','boolean') or not raw[0]['present'] or raw[0]['value'] is not True or raw[1]['path']!=path[:-4]+'itemId':return False
+    item_id=raw[1].get('value')
+    if raw[1]['present'] and item_id is not None and type(item_id) is not str:return False
+    escaped=path[len('/system/skills/'):-len('/lore')]
+    if row['key']!='skills:current-lore:'+escaped or mapped['concept']!='current_skill_lore_reference' or type(mapped['value']) is not dict:return False
+    value=mapped['value'];status=value.get('status')
+    if status in ('missing','unsupported'):
+        return value==dict(status=status,target_uuid=None) and (bool(item_id) or status=='missing')
+    if status!='resolved' or not item_id or not _casting_owned(identity['uuid']+'.Item.'+item_id,identity):return False
+    expected={'status','target_uuid','document_name','type','name','name_truncated'}|({'token_uuid'} if identity['instance'] is not None else set())
+    return (set(value)==expected and value['target_uuid']==identity['uuid']+'.Item.'+item_id and value['document_name']=='Item' and value['type']=='lore'
+            and type(value['name']) is str and len(value['name'])<=256 and type(value['name_truncated']) is bool
+            and (identity['instance'] is None or value['token_uuid']==identity['instance']['token_uuid']))
+
+
+def _skills_section(records, section, identity):
+    """PF2e-specific8.6.1 page-local skill claims, never exhaustive skills."""
+    rows=[r for r in records if r['section']=='skills'];current=[r for r in rows if r['provenance']['mapping'] in ('pf2e.actor.skills-current.v1','pf2e.actor.skills-lore.v1')]
+    reasons=set(section['reasons'])
+    if section['status']!='partial' or 'other_skills_pending' not in reasons:return False
+    if not reasons<={'other_skills_pending','related_items_denied','conditional_skill_variants_not_evaluated','current_skill_fields_unavailable','current_skill_items_denied','pagination'}:return False
+    if not current:return True
+    if identity['type']=='npc' and 'conditional_skill_variants_not_evaluated' not in reasons:return False
+    if any(r['key']=='skills:current:denied' for r in current) and 'current_skill_items_denied' not in reasons:return False
+    fields={};root=False
+    for row in current:
+        for field in row['raw']:
+            path=field['path']
+            if not field['present'] and not (identity['type']=='npc' and path.endswith('/note')) and 'current_skill_fields_unavailable' not in reasons:return False
+            if path in fields and json.dumps(fields[path],sort_keys=True)!=json.dumps(field,sort_keys=True):return False
+            fields[path]=field
+            if path=='/system/skills':root=True
+    if root and any(path!='/system/skills' for path in fields):return False
+    return True
+
+
 def _lore_specialty(row: dict[str, Any], identity: dict[str, Any]) -> bool:
     """PF2e-specific Actor skills contain actual owned Lore references only.
 
@@ -3221,6 +3311,8 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return _actor_casting_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='state':
         return _actor_state_record(row,identity)
+    if identity['document_name']=='Actor' and row['section']=='skills' and type(row['provenance']) is dict and row['provenance'].get('mapping') in ('pf2e.actor.skills-current.v1','pf2e.actor.skills-lore.v1'):
+        return _actor_skill_current_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='inventory':
         return _actor_inventory_record(row,identity)
     if identity['document_name']=='Actor' and row['section']=='build':
@@ -3374,6 +3466,7 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     if valid and result['identity']['document_name']=='Item' and result['identity']['type']=='effect':
                         valid = _effect_source_page(result['records'])
                     if valid and result['identity']['document_name']=='Actor':
+                        valid = valid and all(_skills_section(result['records'], row, result['identity']) for row in rows if row['name']=='skills')
                         valid = valid and all(_state_section(result['records'], row, result['identity']) for row in rows if row['name']=='state')
                         valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting')
                         valid = valid and all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
@@ -3607,8 +3700,48 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     values or unresolved claims; NPC/familiar Build is unsupported. Build rejects
     over 12000 owned Items or 24000 selected records with ReadFailed; narrow with
     list_actor_items/read_item. Multiple claims retain one owned benefit identity.
-    Skills currently contains owned Lore specialty references only, with partial
-    other_skills_pending. Each lore_specialty mapped value has resolved target_uuid
+    Explicit skills additionally selects character/NPC transformed skill data
+    from public serialization; familiar skills retain owned Lore references only
+    and never request transformed data. Field keys skills:current:<JSON Pointer>
+    use mapping pf2e.actor.skills-current.v1 and limitation
+    serialized_current_skill_not_target_context. Each raw/contributor contains
+    the selected Actor UUID, /system/skills/<escaped own map key>/<leaf> and basis
+    transformed. Keys escape ~ as ~0 and / as ~1; generated keys are not document
+    selectors. Common leaves slug/label/attribute/value/totalModifier/dc/breakdown/
+    lore/itemId map to current_skill_<leaf>, except itemId becomes item_id and
+    totalModifier becomes total_modifier. Strings remain text; attribute is one
+    of str/dex/con/int/wis/cha; value/totalModifier/dc are independent finite
+    numbers; lore is boolean and itemId is a nullable owner-local Item ID claim.
+    Character-only rank is an integer 0–4 mapped to {rank,label} with TEML labels,
+    and armor is boolean. NPC-only base/mod are independent finite numbers,
+    visible is boolean and optional note is string; absent note alone does not
+    add an unavailable reason. No NPC rank or conditional special/predicate
+    evaluation is supplied. Absent selected fields have present false, no raw
+    value and mapped null, with current_skill_fields_unavailable. An absent or
+    empty skill map has /system/skills as its raw path, concept
+    current_skill_collection and mapped null; raw present false differs from
+    present true/value {}. Missing values never fall back to source or zero.
+    A true serialized lore flag adds skills:current-lore:<escaped key>, mapping
+    pf2e.actor.skills-lore.v1, concept current_skill_lore_reference and limitation
+    serialized_lore_claim_not_exhaustive_owned_lore. Its two exact transformed
+    contributors are that Actor's lore and itemId leaves. Resolved values contain
+    status/target_uuid/document_name Item/type lore/name/name_truncated and
+    token_uuid in token context; follow read_item with returned selectors. Missing
+    or wrong-type claims contain only status missing/unsupported and target_uuid
+    null. An unreadable linked Item withholds the entire current skill, including
+    generated key/labels/totals, before one generic skills:current:denied
+    relationship exposes only status denied/target_uuid null and adds
+    current_skill_items_denied. This marker has the current-field mapping,
+    concept current_skill_item_reference and no raw/contributors.
+    Skills always remains partial with other_skills_pending; NPC current reads
+    also report conditional_skill_variants_not_evaluated. Target-dependent checks,
+    conditional variants, exhaustive skills and familiar/master derivation remain
+    unsupported. Current selection bounds are 512 own map keys, 256 Unicode code
+    points per key, 12000 owned Items and 24000 records; exceeding them returns
+    ReadFailed. Page count/bytes remain independent. Default identity/source reads
+    do not request current skills. Existing owned Lore source listings remain
+    separate because serialized skill keys may collapse duplicate owned Items.
+    Each lore_specialty mapped value has resolved target_uuid
     and token_uuid for token-context ownership; follow with read_item. Duplicate
     specialty names remain separate Items, never merged skill totals.
     NPC strikes/abilities contain actual owned melee/action Item references only:

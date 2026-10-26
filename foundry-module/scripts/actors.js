@@ -45,6 +45,7 @@ import { currentStatisticFields } from './actorCurrent.js';
 import { familiarFields, familiarNoteFields, familiarMasterField } from './actorFamiliar.js';
 import { familiarMasterRelationship, familiarAbilityRecords } from './actorFamiliarRelationships.js';
 import {actorStateSnapshot} from './actorState.js';
+import {actorSkillsSnapshot} from './actorSkills.js';
 import { effectFields } from './actorEffect.js';
 import { conditionFields } from './actorCondition.js';
 import { conditionReferenceFields,conditionRelationships } from './actorConditionRelationships.js';
@@ -96,6 +97,7 @@ function selection(target, sections) {
   let familiar=[];let familiarNotes=[];let familiarMaster=null;
   let familiarAbilities={records:[],reasons:[]};
   let currentStatistics={fields:[],reasons:[]};
+  let currentSkills={records:[],reasons:[]};
   let effect=[];
   let condition=[];
   let conditionReferences=[];
@@ -399,6 +401,10 @@ function selection(target, sections) {
   // PF2e-specific Lore specialties are actual owned Item references only.
   // Source contract: src/module/item/lore.ts at the actorLore.js pinned revision.
   if (target.document.documentName==='Actor' && sections.includes('skills')) {
+    // PF2e-specific SkillData8.6.1 transformed values stay separate from the
+    // owned Lore source listing, whose duplicate Items may share a skill key.
+    try{currentSkills=actorSkillsSnapshot(target);}
+    catch{fail('ReadFailed','Selected current skills do not match the verified schema or snapshot bounds.','Inspect the supported Actor serialization; missing current fields are not replaced with source or getters. Skills admits at most512 keys of256 codepoints,12000 owned Items and24000 selected records.');}
     for (const item of target.document.items.values()) {
       if (item.type!=='lore') continue;
       if (!permitted(item)) {deniedLore.push(item.uuid);continue;}
@@ -435,7 +441,7 @@ function selection(target, sections) {
     const data=source.system?.identification?.unidentified?.data?.description;
     if (data&&Object.hasOwn(data,'value')) selected['/system/identification/unidentified/data/description/value']=data.value;
   }
-  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, familiar, familiarNotes, familiarMaster, familiarAbilities, currentStatistics, npcItemSections, specialties, deniedLore, runtime: runtime() };
+  return { identity: target.identity, selected, physical, weapon, ammo, armor, treasure, container, containment, shield, equipment, consumable, containedSpell, containedDescriptions, spell, spellReference, spellDescriptions, castingEntry, castingIssues, castingView, inventoryView, buildView, book, kit, ancestry, background, heritage, classSource, deity, feat, featSelectionIssues, weaponReference, action, melee, lore, effect, condition, conditionReferences, effectReferences, npc, npcNotes, character, characterNotes, familiar, familiarNotes, familiarMaster, familiarAbilities, currentStatistics, currentSkills, npcItemSections, specialties, deniedLore, runtime: runtime() };
 }
 
 /** PF2e-specific action8.6.1 selfEffect reference, resolved only on explicit
@@ -685,9 +691,9 @@ export async function getActorTypes(params = {}) {
     lore.limitations=['Stored Lore modifier and labelled rank use actual owner type; no character or NPC effective check total. Standalone Items retain neutral stored semantics.'];
     lore.verification={deterministic:{status:'passed',evidence:['tests/js/actor-lore.test.js','tests/js/actor-lore-readers.test.js','tests/test_actor_lore.py']},live:{status:'passed',evidence:['docs/actor-item-story-map/lore-fields.md','scripts/actor-live-check.py']}};
     const skills=result.actor_sections.find(entry=>entry.name==='skills');
-    skills.source_supported=true;skills.mapped_supported=true;
-    skills.verification=structuredClone(lore.verification);
-    skills.limitations=['Lore specialty Item references only; all other Skills and effective totals remain pending.'];
+    skills.source_supported=true;skills.mapped_supported=true;skills.effective_supported=true;
+    skills.verification={deterministic:{status:'passed',evidence:['tests/js/actor-lore-readers.test.js','tests/test_actor_lore.py','tests/js/actor-skills.test.js','tests/js/actor-skills-readers.test.js','tests/test_actor_skills.py']},live:{status:'not_run',evidence:['docs/actor-item-story-map/lore-fields.md','docs/actor-item-story-map/skills-current-contract.md']}};
+    skills.limitations=['Independent owned Lore source references plus character/NPC selected transformed skill modifiers, DC, labels and provenance. Character ranks and NPC base/mod/visibility remain distinct values; no arithmetic or target-context roll is inferred. Lore links use owner-local itemId; denied linked skills are withheld. NPC special variants/predicates and familiar current skills remain unsupported. Current-skill live verification is pending; prior live evidence covers owned Lore source references.'];
     for (const actor of result.actor_types.filter(entry=>entry.in_scope)) {
       actor.mapped_supported=true;
       actor.limitations=['Only Lore specialty references in skills are mapped so far; full type-specific source/statistics and effective views remain pending.'];
@@ -771,6 +777,7 @@ async function read(target,params,sections,tool) {
   if(target.document.documentName==='Actor'&&sections.includes('inventory'))records.push(...selected.inventoryView.records);
   if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build'))records.push(...selected.buildView.records);
   if (target.document.documentName==='Actor'&&sections.includes('skills')) {
+    records.push(...selected.currentSkills.records);
     for (const specialty of selected.specialties) {
       const raw=[['/name',specialty.name],['/type',specialty.type]].map(([path,value])=>({document_uuid:specialty.identity.uuid,path,present:true,value,basis:'source'}));
       records.push({key:`skills:lore:${specialty.identity.uuid}`,section:'skills',kind:'relationship',raw,
@@ -908,6 +915,12 @@ async function read(target,params,sections,tool) {
     const section=base.sections.find(row=>row.name==='state');
     section.status='partial';section.reasons=[...selected.stateView.reasons];
     base.limitations.push('State joins actual owned condition/effect source and immediate provenance without deduplicating overlapping Items. Application is unknown: stored presence and overrides do not prove activity or suppression; duration and expiry timing are source configuration, not remaining time. Affliction reading is explicitly unsupported even when no state Items are listed. Follow canonical Item identities with read_item for descriptions.');
+  }
+  if(loreSkills){
+    const section=base.sections.find(row=>row.name==='skills');
+    section.status='partial';section.reasons=[...new Set([...selected.currentSkills.reasons,...(selected.deniedLore.length?['related_items_denied']:[])])];
+    base.limitations=base.limitations.filter(message=>message!=='Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.');
+    base.limitations.push('Skills preserves independent owned Lore source references and selected character/NPC transformed skill fields. Lore joins use actual owner-local itemId claims, never names or generated skill keys; denied linked skills are withheld. Serialized totals are not target-context rolls. NPC special variants/predicates and full skill applicability remain unevaluated; familiar current skills remain unsupported here.');
   }
   if(target.document.documentName==='Actor'&&target.document.type==='familiar'){
     for(const section of base.sections){

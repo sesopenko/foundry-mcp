@@ -92,6 +92,13 @@ language notes require explicit description reads. Explicit statistics adds sele
 transformed attributes, AC/HP, saves, Perception/vision and movement for characters
 and NPCs, retaining a separate basis from source. The section remains partial;
 full current views, skill totals, generated Strikes and familiar derivation remain gated.
+Explicit skills now adds selected transformed character/NPC modifiers, DCs,
+labels and proficiency data alongside the independent owned-Lore source list.
+Lore joins use actual owner-local Item IDs; unreadable linked Lore withholds
+the prepared skill's key, label and totals. NPC notes retain qualifications;
+conditional variants and target-specific modifiers remain unevaluated. Current
+skill live verification is pending. See the
+[skills contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/skills-current-contract.md).
 Explicit spellcasting also includes separate transformed character/NPC focus
 pool values and owned-spell focus costs. Missing serialized fields remain
 unavailable; current-resource live verification is pending. These records do
