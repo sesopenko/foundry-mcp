@@ -41,6 +41,13 @@ class LibraryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.library.status(identifier)['status'],'ready')
         result=self.library.search('Sure Strike',locate=True)
         self.assertEqual(result['candidates'][0]['document_id'],identifier)
+        compact=self.library.search('Sure Strike',select={})
+        self.assertNotIn('entries',compact['candidates'][0])
+        self.assertNotIn('snippet',compact['candidates'][0])
+        selected=self.library.search('Sure Strike',select={'entries':True,'snippet':True})
+        self.assertTrue(selected['candidates'][0]['entries'])
+        self.assertNotIn('context',selected['candidates'][0]['entries'][0])
+        self.assertEqual(compact['candidates'][0]['revision'],selected['candidates'][0]['revision'])
         source=self.library.read(identifier,1,max_chars=12)
         self.assertIn('table_structure_unverified',source['warnings'])
         full=source['text']; offset=source['next_offset']

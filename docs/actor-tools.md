@@ -1,5 +1,11 @@
 # Actor and Item reading contracts
 
+**Version 2.0.0 update:** [WISH-003 version-two selective reads](selective-reads.md)
+supersede the public defaults/envelopes below for read_actor, read_item,
+list_actor_items, list_actor_compendiums and get_actor_types. The v1 record
+definitions below remain the internal validated evidence contract; other tools
+retain v1. Request evidence explicitly when raw witnesses are needed.
+
 **Contract version 1, reconciled October 28, 2026.** This document describes
 the delivered Actor/Item tools and their explicit capability limits. The
 [story map](actor-item-story-map/index.md) owns

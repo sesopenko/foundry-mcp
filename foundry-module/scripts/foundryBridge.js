@@ -3,7 +3,7 @@ import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage, resolveJournalReference } from "./journals.js";
-import { getActorTypes, readActor, readItem, listActorItems } from "./actors.js";
+import { getActorTypes, readActor, readItem, listActorItems, readActorSelected, readItemSelected } from "./actors.js";
 import { getActorTree, searchActors } from "./actorWorld.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
@@ -51,6 +51,8 @@ function reportStatus(state, message) {
  * or a Promise resolving to a value.
  */
 const rpcHandlers = {
+  readActorSelected,
+  readItemSelected,
   getModuleBuildInfo,
   executeJavaScript,
   getJournalTree,

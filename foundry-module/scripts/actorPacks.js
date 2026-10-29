@@ -6,6 +6,7 @@
  * https://foundryvtt.com/api/v14/classes/foundry.documents.collections.CompendiumCollection.html
  */
 import { fail, validateParams, integer, digest, paginate } from './actorReadUtils.js';
+import { compactNode } from './selectiveReads.js';
 import { ACTOR_TYPES, ITEM_TYPES, ready, runtime, permitted, named } from './actorDocuments.js';
 
 const compare=(a,b)=>a<b?-1:a>b?1:0;
@@ -32,8 +33,8 @@ function title(pack) {
 
 async function page(build,params,scope) {
   const snapshot=await build();const revision=await digest(snapshot);
-  const base={contract_version:1,runtime:snapshot.runtime,revision,scopes:snapshot.scopes,limitations:snapshot.limitations};
-  const result=await paginate(snapshot.nodes,base,params,scope);
+  const base={contract_version:params.select?2:1,runtime:snapshot.runtime,revision,scopes:snapshot.scopes,limitations:snapshot.limitations};
+  const result=await paginate(params.select?snapshot.nodes.map(n=>compactNode(n,params.select)):snapshot.nodes,base,params,{...scope,...(params.select?{select:params.select}:{})});
   if (await digest(await build())!==revision) fail('ContentChanged','Selected pack indexes, identities or permissions changed.','Discard accumulated pages and restart without cursor.');
   const {records,...rest}=result;return {...rest,nodes:records};
 }
@@ -43,7 +44,7 @@ async function page(build,params,scope) {
  * No system field calculations or type inference from pack titles occur.
  */
 export async function listActorCompendiums(params={}) {
-  const documentType=inputs(params,['document_type','query','limit','max_bytes','cursor']);const query=queryInput(params.query,false);
+  const documentType=inputs(params,['document_type','query','limit','max_bytes','cursor','select']);const query=queryInput(params.query,false);
   const build=()=>{
     ready();const nodes=[];let denied=false;
     for (const pack of [...game.packs.values()].sort((a,b)=>compare(a.collection,b.collection))) {

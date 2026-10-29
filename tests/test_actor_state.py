@@ -54,10 +54,7 @@ class ActorStateTests(unittest.IsolatedAsyncioTestCase):
         async with Client(mcp) as client:
             tools={tool.name:tool for tool in await client.list_tools()}
         tool=tools['read_actor'];description=tool.description;schema=tool.inputSchema
-        for text in ('state:current:<owned Item UUID>:/system/expired','pf2e.effect.current.v1',
-                     'current_effect_expired','basis transformed','false is preserved',
-                     'present false, no raw value and mapped null','current_effect_expiry_unavailable',
-                     'effect_expiry_not_application','public Item.system','own data','EffectSystemData.expired'):
+        for text in ('expiry is not effect application','false is preserved','unavailable expiry remains explicit'):
             self.assertIn(text,description)
         self.assertTrue(tool.annotations.readOnlyHint)
         self.assertFalse(schema['additionalProperties'])

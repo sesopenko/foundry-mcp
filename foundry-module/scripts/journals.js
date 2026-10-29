@@ -156,7 +156,7 @@ function paginate(items, start, limit, base, field, tool, scope, rev,
     result[field].push(items[end]);
     result.next_cursor = cursor(tool, scope, rev, offsetBase + end + 1);
     decorate(result);
-    if (bytes(result) > MAX_BYTES) {
+    if (bytes(result) > (scope.max_bytes??MAX_BYTES)) {
       result[field].pop();
       break;
     }
@@ -245,7 +245,14 @@ function headings(page) {
   });
 }
 
-function pageNode(page, groups) {
+function pageNode(page, groups, select=null) {
+  if(select){
+    const node={kind:'page',page_id:page.id,page_uuid:page.uuid,...name(page),type:page.type,readable:page.type==='text'};
+    if(select.presentation)Object.assign(node,{sort:page.sort,title_level:page.title.level,title_show:page.title.show});
+    if(select.presentation||select.categories)node.category=groups.find(c=>c.id===page.category)?{category_id:page.category}:null;
+    if(select.headings){const outline=headings(page);Object.assign(node,{heading_outline:outline.slice(0,20),heading_count:outline.length,headings_complete:outline.length<=20,headings_next_call:outline.length>20?{journal_id:page.parent.id,page_id:page.id}:null});}
+    return node;
+  }
   const outline = headings(page);
   const group = groups.find(c => c.id === page.category);
   return { kind: "page", page_id: page.id, page_uuid: page.uuid, ...name(page), type: page.type,
@@ -266,9 +273,10 @@ export async function getJournalContents(params = {}) {
   }
   const rev = await revision([entry.name, entry.folder?.id, groups.map(c => [c.id, c.name, c.sort]),
     entry.pages.contents.map(p => [p.id, p.name, p.type, p.sort, p.title, p.category, p.text?.content])]);
-  const scope = { journal_id: entry.id, page_id: params.page_id ?? null, categories_only: categoriesOnly };
+  const scope = { journal_id: entry.id, page_id: params.page_id ?? null, categories_only: categoriesOnly,...(params.select?{select:params.select,max_bytes:integer(params.max_bytes,8000,8000,48000,'max_bytes'),limit}:{}) };
   const base = { foundry_version: game.version, journal_id: entry.id, journal_uuid: entry.uuid,
     ...name(entry), folder_path: path(entry.folder) };
+  if(params.select){base.contract_version=2;if(!params.select.folder_path)delete base.folder_path;}
   if (categoriesOnly) {
     const items = groups.map(c => ({ kind: "category", category_id: c.id, ...name(c), sort: c.sort,
       page_count: entry.pages.contents.filter(p => p.category === c.id).length }));
@@ -284,9 +292,10 @@ export async function getJournalContents(params = {}) {
     return paginate(outline, start, limit, { ...base, page_id: page.id, page_uuid: page.uuid, mode: "headings" },
       "heading_outline", "contents", scope, rev);
   }
-  const pages = orderedPages(entry).map(p => pageNode(p, groups));
+  const pages = orderedPages(entry).map(p => pageNode(p, groups,params.select));
   const start = position(params.cursor, "contents", scope, rev, pages.length);
   const decorate = result => {
+    if(params.select&&!params.select.categories)return;
     const present = new Set(result.pages.map(p => p.category?.category_id ?? null));
     const empty = groups.filter(c => !entry.pages.contents.some(p => p.category === c.id));
     const preview = new Set(empty.slice(0, 20).map(c => c.id));
@@ -334,7 +343,7 @@ export async function searchJournals(params = {}) {
   const selectedFolder = folder(params.folder_id);
   const selectedEntry = params.journal_id == null ? null : journal(params.journal_id);
   const limit = integer(params.limit, 20, 1, 50, "limit");
-  const scope = { query, folder_id: selectedFolder?.id ?? null, journal_id: selectedEntry?.id ?? null };
+  const scope = { query, folder_id: selectedFolder?.id ?? null, journal_id: selectedEntry?.id ?? null,...(params.select?{select:params.select,max_bytes:integer(params.max_bytes,8000,8000,48000,'max_bytes'),limit}:{}) };
   const entries = game.journal.contents.filter(e => (!selectedEntry || e.id === selectedEntry.id)
     && (!selectedFolder || path(e.folder).some(f => f.folder_id === selectedFolder.id)))
     .sort(compare("a"));
@@ -353,11 +362,16 @@ export async function searchJournals(params = {}) {
       page_id: p.id, page_uuid: p.uuid, page_name: name(p).name, page_name_truncated: name(p).name_truncated,
       folder_path: path(e.folder), matched_fields: [titleMatch ? "page_name" : null, offsets.length ? "text" : null].filter(Boolean),
       text_match_count: offsets.length, excerpts_derived: true,
-      excerpts: offsets.slice(0, 3).map(n => scalarSlice(text, Math.max(0, n - 100), n + query.length + 200)),
+      excerpts: params.select&&!params.select.excerpts?[]:offsets.slice(0, 3).map(n => scalarSlice(text, Math.max(0, n - 100), n + query.length + 200)),
       excerpts_complete: offsets.length <= 3 });
   }
+  if(params.select)for(const match of matches){
+    if(!params.select.folder_path)delete match.folder_path;
+    if(!params.select.counts)delete match.text_match_count;
+    if(!params.select.excerpts){delete match.excerpts;delete match.excerpts_derived;delete match.excerpts_complete;}
+  }
   const start = position(params.cursor, "search", scope, rev, matches.length);
-  return paginate(matches, start, limit, { foundry_version: game.version, scope, searched_text_pages: sources.length },
+  return paginate(matches, start, limit, { ...(params.select?{contract_version:2}:{}),foundry_version: game.version, scope:{query,folder_id:scope.folder_id,journal_id:scope.journal_id}, searched_text_pages: sources.length },
     "matches", "search", scope, rev);
 }
 
@@ -495,7 +509,7 @@ export async function readJournalPage(params = {}) {
   if (source === "markdown" && !available.includes(source)) fail("SourceUnavailable", "Original Markdown is not stored for this page. Read source=html instead.");
   const content = (source === "html" ? page.text.content : page.text.markdown) ?? "";
   const rev = await revision([page.uuid, page.text]);
-  const scope = { page_uuid: page.uuid, source };
+  const scope = { page_uuid: page.uuid, source,...(params.select?{select:params.select,max_bytes:integer(params.max_bytes,8000,8000,48000,'max_bytes'),max_chars:limit}:{}) };
   const start = position(params.cursor, "read", scope, rev, content.length);
   if (start > 0 && /[\uDC00-\uDFFF]/.test(content[start]) && /[\uD800-\uDBFF]/.test(content[start - 1])) {
     fail("InvalidCursor", "Continuation splits a Unicode character. Restart without cursor.");
@@ -504,17 +518,18 @@ export async function readJournalPage(params = {}) {
   // Avoid splitting UTF-16 surrogate pairs, even if max_chars is one.
   if (end < content.length && /[\uD800-\uDBFF]/.test(content[end - 1]) && /[\uDC00-\uDFFF]/.test(content[end])) end--;
   if (end === start && end < content.length) end = Math.min(content.length, start + 2);
-  const make = () => ({ foundry_version: game.version, revision: rev, journal_id: entry.id,
+  const make = () => {const result={ ...(params.select?{contract_version:2}:{}),foundry_version: game.version, revision: rev, journal_id: entry.id,
     journal_name: name(entry).name, journal_name_truncated: name(entry).name_truncated,
     page_id: page.id, page_uuid: page.uuid, page_name: name(page).name, page_name_truncated: name(page).name_truncated,
     folder_path: path(entry.folder), source, stored_format: page.text.format, available_sources: available,
     content: content.slice(start, end), source_present: typeof (source === "html" ? page.text.content : page.text.markdown) === "string",
     offset: start, end_offset: end, total_chars: content.length, offset_units: "UTF-16 code units",
     fragment: start > 0 || end < content.length, complete: end === content.length,
-    ...references(content.slice(start, end), page, source),
-    next_cursor: end === content.length ? null : cursor("read", scope, rev, end) });
+    ...(!params.select||params.select.references?references(content.slice(start, end), page, source):{}),
+    next_cursor: end === content.length ? null : cursor("read", scope, rev, end) };
+    if(params.select){if(!params.select.folder_path)delete result.folder_path;if(!params.select.source_metadata){delete result.stored_format;delete result.available_sources;}}return result;};
   let result = make();
-  while (bytes(result) > MAX_BYTES && end > start) {
+  while (bytes(result) > (scope.max_bytes??MAX_BYTES) && end > start) {
     end = start + Math.floor((end - start) / 2);
     if (end < content.length && /[\uD800-\uDBFF]/.test(content[end - 1]) && /[\uDC00-\uDFFF]/.test(content[end])) end--;
     result = make();

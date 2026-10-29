@@ -1,5 +1,6 @@
 /** Read-only Actor/Item extraction foundation; contract: docs/actor-tools.md. */
 import { fail, validateParams, integer, selector, selectSections, digest, textFragments, paginate } from './actorReadUtils.js';
+import { selectivePage, compactNode } from './selectiveReads.js';
 import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
 import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { weaponFields } from './actorWeapon.js';
@@ -808,7 +809,7 @@ export async function getActorTypes(params = {}) {
  * effective meaning through relabelling; each raw contributor keeps its basis.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
-async function read(target,params,sections,tool) {
+async function read(target,params,sections,tool,selection=null) {
   const selected = await snapshot(target,sections); const revision = await digest(selected);
   const records = [];
   if(selected.familiarMaster?.record&&sections.includes('identity'))records.push(selected.familiarMaster.record);
@@ -1047,7 +1048,8 @@ async function read(target,params,sections,tool) {
   if(inventorySection)base.limitations.push('Stored possessions and same-owner containment/ammunition claims only. Each owned physical Item appears once; serialized attachments and kit definitions are separate. No total Bulk, sale proceeds, effective benefits or activation eligibility is calculated. Follow read_item for concrete source and exact activation prose.');
   if(castingSection)base.limitations.push('Actor casting is a source join only. Availability remains not_evaluated; ritual, flexible and item-casting semantics remain partial. Follow canonical group/spell selectors with read_item for exact definition/prose.');
   if(isCastingEntry)base.limitations.push(...selected.castingIssues.map(issue=>`Uninterpreted casting source at ${issue.path}: ${issue.reason}.`));
-  const result=await paginate(records,base,params,{tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections});
+  const scope={tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections};
+  const result=selection?await selectivePage(records,base,{...params,select:selection},scope):await paginate(records,base,params,scope);
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);
   if (await digest(await snapshot(fresh,sections))!==revision) fail('ContentChanged','Selected data changed during the read.','Discard accumulated pages and restart without cursor.');
@@ -1067,6 +1069,25 @@ export async function readItem(params={}) {
   return read(await itemTarget(params),params,sections,'read_item');
 }
 
+/** PF2e-specific selected v2 reads reuse the audited v1 source/current witnesses.
+ * No new schema/API dependency; core14.369/PF2e8.6.1 boundary remains unchanged.
+ */
+async function selectedRead(params,item) {
+  validateParams(params,['actor_uuid','item_uuid','token_uuid','select','limit','max_bytes','cursor']);
+  const selection=params.select;
+  if(!selection||typeof selection!=='object'||!Array.isArray(selection.details)||selection.details.some(d=>typeof d!=='string'))fail('InvalidRequest','A normalized detail selection is required.');
+  const sections=[...new Set(selection.details.map(d=>d.split('.')[0]))];
+  if(!sections.length)sections.push('identity');
+  const ordinary={...params,sections};delete ordinary.select;
+  // Actor and Item selectors differ; do not silently accept the other kind.
+  if(Object.hasOwn(ordinary,item?'actor_uuid':'item_uuid'))fail('InvalidRequest','Selector belongs to the other document type.');
+  bounds(ordinary,item?['item_uuid','token_uuid','sections','limit','max_bytes','cursor']:['actor_uuid','token_uuid','sections','limit','max_bytes','cursor'],item?ITEM_SECTIONS:ACTOR_SECTIONS);
+  ready();
+  return read(item?await itemTarget(ordinary):await actorTarget(ordinary),ordinary,sections,item?'read_item':'read_actor',selection);
+}
+export const readActorSelected=params=>selectedRead(params,false);
+export const readItemSelected=params=>selectedRead(params,true);
+
 /**
  * PF2e-specific embedded Item boundary for the 24 in-scope source types on
  * character/npc/familiar Actors. Source relationships beyond canonical parent
@@ -1074,7 +1095,7 @@ export async function readItem(params={}) {
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/static/template.json
  */
 export async function listActorItems(params={}) {
-  bounds(params,['actor_uuid','token_uuid','types','query','limit','max_bytes','cursor']);ready();
+  bounds(params,['actor_uuid','token_uuid','types','query','limit','max_bytes','cursor','select']);ready();
   const readableTypes=ITEM_TYPES.filter(type=>type!=='affliction');let types=readableTypes;
   if (params.types!==undefined && params.types!==null) {
     if (!Array.isArray(params.types)||!params.types.length||params.types.length>readableTypes.length||new Set(params.types).size!==params.types.length||params.types.some(type=>!readableTypes.includes(type))) fail('InvalidRequest','types must be a nonempty unique list of readable Item types; dedicated affliction Items have no reader.');
@@ -1098,8 +1119,8 @@ export async function listActorItems(params={}) {
     return {owner:owner.identity,nodes,unsupported_count,runtime:runtime()};
   };
   const snapshot=await build();const revision=await digest(snapshot);
-  const base={contract_version:1,runtime:snapshot.runtime,revision,scopes:[{id:snapshot.owner.uuid,status:'searched',reason:null}],unsupported_count:snapshot.unsupported_count,limitations:['Embedded Items do not enumerate all possible actions.']};
-  const result=await paginate(snapshot.nodes,base,params,{tool:'list_actor_items',actor_uuid:params.actor_uuid??null,token_uuid:params.token_uuid??null,types,query});
+  const base={contract_version:params.select?2:1,runtime:snapshot.runtime,revision,scopes:[{id:snapshot.owner.uuid,status:'searched',reason:null}],unsupported_count:snapshot.unsupported_count,limitations:['Embedded Items do not enumerate all possible actions.']};
+  const result=await paginate(params.select?snapshot.nodes.map(n=>compactNode(n,params.select)):snapshot.nodes,base,params,{tool:'list_actor_items',actor_uuid:params.actor_uuid??null,token_uuid:params.token_uuid??null,types,query,...(params.select?{select:params.select}:{})});
   if (await digest(await build())!==revision) fail('ContentChanged','Owned Item membership or identity changed.','Restart list_actor_items without cursor.');
   const {records,...rest}=result;return {...rest,nodes:records};
 }

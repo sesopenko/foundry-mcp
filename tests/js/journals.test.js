@@ -49,6 +49,28 @@ function fixture() {
 }
 
 test("journal retrieval", async t => {
+  await t.test("selective defaults omit outlines, excerpts and references, with bound continuations", async () => {
+    fixture();
+    const contents=await getJournalContents({journal_id:'j',limit:1,max_bytes:8000,select:{}});
+    assert.equal(contents.contract_version,2);
+    assert.equal(contents.pages.length,1);
+    assert.ok(!Object.hasOwn(contents.pages[0],'heading_outline'));
+    assert.ok(!Object.hasOwn(contents,'folder_path'));
+    const categories=await getJournalContents({journal_id:'j',max_bytes:8000,select:{categories:true}});
+    assert.equal(categories.groups.find(group=>group.category_id==='c').page_uuids[0],'JournalEntry.j.JournalEntryPage.early');
+    assert.ok(contents.next_cursor);
+    await assert.rejects(getJournalContents({journal_id:'j',limit:1,max_bytes:8000,select:{headings:true},cursor:contents.next_cursor}));
+    const results=await searchJournals({query:'Ripnugget',limit:10,max_bytes:8000,select:{}});
+    assert.ok(results.matches.length);
+    assert.ok(results.matches.every(row=>!Object.hasOwn(row,'excerpts')));
+    const selected=await searchJournals({query:'Ripnugget',limit:10,max_bytes:8000,select:{excerpts:true}});
+    assert.ok(selected.matches.some(row=>row.excerpts.length));
+    const page=await readJournalPage({page_uuid:'JournalEntry.j.JournalEntryPage.early',max_chars:20,max_bytes:8000,select:{}});
+    assert.equal(page.content,markup.slice(0,20));
+    assert.ok(!Object.hasOwn(page,'references'));
+    const rest=await readJournalPage({page_uuid:page.page_uuid,max_chars:20,max_bytes:8000,select:{},cursor:page.next_cursor});
+    assert.equal(rest.offset,20);
+  });
   await t.test("nested navigation includes unfiled entries and marks empty vs collapsed folders", async () => {
     fixture();
     const tree = await getJournalTree();

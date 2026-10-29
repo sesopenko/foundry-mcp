@@ -1,5 +1,10 @@
 # Journal preparation tools
 
+Version 2.0.0's [version-two selective reads](selective-reads.md) change
+get_journal_contents, search_journals and read_journal_page to compact defaults.
+Outlines, excerpts and references now require explicit `select` fields. Existing
+source, search and resolution semantics below still apply.
+
 Five read-only MCP tools let a fresh LLM navigate and investigate world journals
 through the connected GM browser. They include GM-only text. Compendium journals
 and reading images, maps, PDFs, or video are outside this version's scope.

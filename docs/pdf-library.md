@@ -1,5 +1,9 @@
 # GM-private PDF reference library
 
+In version 2.0.0, search_pdf_documents uses the [version-two selective
+contract](selective-reads.md). Snippets and entry context are opt-in; exact-page
+reading and the other PDF tools retain their existing contracts.
+
 This opt-in library runs inside the existing Python process. SQLite FTS5 and
 pypdf supply lexical candidates and canonical extracted text; there is no
 cloud model, semantic embedding, OCR, or additional database/server. Retrieval

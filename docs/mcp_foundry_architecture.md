@@ -2,6 +2,11 @@
 
 ## Overview
 
+The nine [selective read tools](selective-reads.md) use explicit Pydantic request
+and response validation at FastMCP. Actor/Item projections retain private validated
+source witnesses between browser and Python, then publish only the checked compact
+result. No extra agent/model call or new game-state cache is involved.
+
 This document describes the architecture and design of a system that allows a Large Language Model (LLM) to interact synchronously with a Foundry VTT game via the Model Context Protocol (MCP).
 
 The system consists of:

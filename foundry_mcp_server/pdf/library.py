@@ -344,7 +344,7 @@ class Library:
                     next_offset=offset+len(text) if offset+len(text)<len(row['text']) else None,
                     total_characters=len(row['text']))
 
-    def search(self, query, identifier=None, offset=0, limit=10, locate=False):
+    def search(self, query, identifier=None, offset=0, limit=10, locate=False, *, select=None, max_bytes=48000):
         words = re.findall(r'\w+',query, re.UNICODE)
         if not words or len(query)>300 or len(words)>30: raise LibraryError('Use a nonempty query of at most 300 characters and 30 words')
         if identifier: self.status(identifier)
@@ -358,7 +358,7 @@ class Library:
                  ORDER BY rank,d.id,f.page LIMIT 2000''',(match,identifier,identifier)).fetchall()
             results = []
             for r in rows:
-                entries = [dict(e) for e in db.execute('SELECT title,context,provenance FROM entries WHERE document_id=? AND page=?',(r['document_id'],r['page']))]
+                entries = [dict(e) for e in db.execute('SELECT title,context,provenance FROM entries WHERE document_id=? AND page=?',(r['document_id'],r['page']))] if select is None or select.get('entries') else []
                 exact = [e for e in entries if normalized(e['title'])==normalized(query)]
                 chosen = exact or entries[:5]
                 for e in chosen:
@@ -366,6 +366,12 @@ class Library:
                     e['optional_variant_evidence']=any('variant' in s.casefold() for s in e['context'])
                 results.append(dict(document_id=r['document_id'],name=r['name'],revision=r['revision'],physical_page=r['page'],page_label=r['label'],
                     snippet=r['snippet'],entries=chosen,warnings=json.loads(r['warnings']),exact_heading_candidate=bool(exact)))
+                if select is not None:
+                    row=results[-1]
+                    if not select.get('snippet'): row.pop('snippet')
+                    if not select.get('entries'): row.pop('entries');row.pop('exact_heading_candidate')
+                    elif not select.get('context'):
+                        for entry in row['entries']: entry.pop('context');entry.pop('optional_variant_evidence')
             if locate:
                 # Exact headings/bookmarks can exist even when extracted page text is empty.
                 for e in db.execute('''SELECT e.*,d.name,d.revision,p.label,p.warnings FROM entries e JOIN documents d ON d.id=e.document_id
@@ -378,8 +384,14 @@ class Library:
                         entries=[dict(title=e['title'],context=context,provenance=e['provenance'],optional_variant_evidence=any('variant' in s.casefold() for s in context))],
                         warnings=json.loads(e['warnings']),exact_heading_candidate=True))
                 results.sort(key=lambda r:not r['exact_heading_candidate'])
-        return dict(candidates=results[offset:offset+limit],next_offset=offset+limit if offset+limit<len(results) else None,
-                    candidate_cap_reached=len(rows)==2000,message='Candidates are not proof. Read physical pages with read_pdf_pages before mechanical claims. Tables and heading roles require verification; no similarity confidence is reported.')
+        message='Candidates are not proof. Read physical pages with read_pdf_pages before mechanical claims. Tables and heading roles require verification; no similarity confidence is reported.'
+        def page(end):
+            return dict(candidates=results[offset:end],next_offset=end if end<len(results) else None,candidate_cap_reached=len(rows)==2000,message=message)
+        end=min(offset+limit,len(results))
+        if select is not None:
+            while end>offset and len(json.dumps(dict(page(end),contract_version=2),ensure_ascii=False,separators=(',',':')).encode())>max_bytes: end-=1
+            if end==offset and offset<len(results): raise LibraryError('ResponseTooLarge: narrow select or increase max_bytes')
+        return page(end)
 
 def normalized(value): return ' '.join(value.casefold().split())
 

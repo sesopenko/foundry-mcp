@@ -193,6 +193,54 @@ and input schemas as well as their runtime behavior. A fresh client should be
 able to discover, navigate, search, read, and continue results using only the
 published tool contracts and returned data.
 
+## MCP response size and selective retrieval
+
+Treat token consumption as part of the interface contract for every new or
+modified MCP tool. Follow [the selective-read design](docs/selective-reads.md)
+and [budgeted evaluation](docs/mcp-tool-evaluation.md).
+
+- Before changing a tool, establish a bounded baseline for its actual published
+  discovery description/input/output schemas and representative responses. After
+  the change, measure the same scenarios, including default requests, selective
+  requests, explicit evidence/detail expansion and a complete paginated workflow.
+  Record call counts, compact UTF-8 JSON bytes, completion status and catalog size.
+  Separate smaller first pages from equal-content savings. Bytes are not billed
+  tokens; report token usage only when measured by the client/provider.
+- Use bounded Python scripts or equivalent deterministic harnesses to call the
+  tools and count results. Keep bulk game data outside the LLM context and tracked
+  files; print aggregate measurements and concise failures. Set call/time limits
+  in advance. Reuse the existing test runtime and safe marked fixtures after
+  offline checks; never mutate production or existing game documents for profiling.
+- Default to the smallest useful response: named canonical identity for object
+  discovery, compact collection entries and bounded text fragments. The current
+  selective interfaces use ten entries, 2,000 journal UTF-16 units and 8,000 JSON
+  bytes by default, with an explicit maximum of 48,000 bytes. Use these defaults
+  for comparable tools; document and measure any different bounds.
+- If measured responses are heavy, add or refine an à la carte `select` interface
+  before accepting broad defaults. Separate optional descriptions, snippets,
+  outlines, references, source evidence and repeated contextual metadata. Select
+  before pagination; group related values into meaningful units and page large
+  collections without forcing unrelated reads. An AC example is not the scope
+  limit: assess all affected object/collection families and realistic heavy cases.
+- For à la carte tools, publish typed Pydantic requests **and responses** through
+  the existing FastMCP boundary and validate both directions there. Describe
+  choices/defaults/bounds in schema fields so a fresh LLM can discover them.
+  Reject unknown fields and conflicting combinations before reads. Do not add a
+  model call for validation or spread these types to unrelated tools solely for
+  consistency. Avoid replacing output bloat with oversized discovery schemas.
+- Preserve permission/runtime checks, canonical and token identity, source versus
+  current meaning, missing/null/zero/false distinctions, and essential limitations.
+  Optional evidence must not make an unsupported or incomplete result appear
+  complete. Bind continuations to selections, bounds and revisions where supported;
+  document offset-only stability limitations. Test stale/changed selections,
+  empty/denied/unsupported results, large entries and exact text reconstruction.
+- Validate actual MCP discovery and tool invocation, not just direct Python/JS
+  helpers. Add focused tests for default omissions, requested details, invalid
+  inputs, response validation, semantic pagination and payload budgets. Verify
+  relevant runtime behavior live after offline tests pass. Report regressions
+  and verification gaps explicitly; update contracts and migration guidance when
+  defaults, fields or continuation semantics change.
+
 ## Required reading
 
 Before doing work in this repository, read these files in full:

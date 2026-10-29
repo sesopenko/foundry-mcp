@@ -173,9 +173,12 @@ console.log(JSON.stringify([await getActorTypes(),await readActor({actor_uuid:ac
             schema=tools['read_actor'].inputSchema['properties']
             self.assertEqual(schema['limit']['maximum'],100)
             self.assertEqual(schema['max_bytes']['minimum'],8000)
-            self.assertEqual(schema['sections']['default'],['identity','source'])
+            self.assertIsNone(schema['sections']['default'])
+            self.assertIsNone(schema['select']['default'])
             self.assertEqual(tools['read_item'].inputSchema['required'],['item_uuid'])
-            self.manager.call.return_value=reader()
+            from foundry_mcp_server.mcp_server.selective import compact_read
+            proof=reader(sections=['identity'])
+            self.manager.call.return_value=dict(proof=proof,group_lengths=[],result=compact_read(proof,[],False))
             result=await client.call_tool('read_actor',{'actor_uuid':'Actor.a'})
             self.assertFalse(result.is_error)
             for args in [dict(actor_uuid='Actor.a',unknown='no'),dict(actor_uuid='Actor.a',limit=True),dict(actor_uuid='Actor.a',limit='2'),dict(actor_uuid=4),dict(actor_uuid='Actor.a',sections=['source','source']),dict(actor_uuid='Actor.a',sections=['bad']),dict(actor_uuid='Actor.a',cursor='é')]:

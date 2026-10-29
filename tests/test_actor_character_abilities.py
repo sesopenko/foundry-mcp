@@ -98,5 +98,6 @@ console.log(JSON.stringify({pages,defaults}));
 
     async def test_actual_discovery_describes_navigation_and_exclusions(self):
         async with Client(mcp) as client:tool=next(tool for tool in await client.list_tools() if tool.name=='read_actor')
-        for text in ('pf2e.character.ability-reference.v1','character_ability_item','other_abilities_not_enumerated','ability_items_denied','6000 UTF-16','read_item source and description'):
+        for text in ('owned references','not every possible action','read_item source and description'):
             self.assertIn(text,tool.description)
+        self.assertIn('abilities',tool.inputSchema['$defs']['ActorSelect']['properties']['details']['items']['enum'])

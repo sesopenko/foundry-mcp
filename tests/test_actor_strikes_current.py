@@ -142,5 +142,6 @@ console.log(JSON.stringify(results));
     async def test_actual_discovery_publishes_complete_current_contract(self):
         async with Client(mcp) as client:
             tool=next(tool for tool in await client.list_tools() if tool.name=='read_actor')
-        for text in ('pf2e.actor.strike-current.v1','pf2e.actor.strike-origin.v1','pf2e.actor.strike-capability.v1','strikes:unavailable:<path>','current_strike_damage_unsupported','300000 UTF-16','target_uuid:null','never invented UUIDs'):
+        for text in ('Strikes are current','damage is unsupported','never invent UUIDs'):
             self.assertIn(text,tool.description)
+        self.assertIn('strikes',tool.inputSchema['$defs']['ActorSelect']['properties']['details']['items']['enum'])

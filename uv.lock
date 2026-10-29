@@ -341,11 +341,12 @@ wheels = [
 
 [[package]]
 name = "foundry-mcp"
-version = "1.6.0"
+version = "2.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "fastmcp" },
+    { name = "pydantic" },
     { name = "pypdf" },
     { name = "uvicorn" },
 ]
@@ -354,6 +355,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = "==0.128.0" },
     { name = "fastmcp", specifier = "==2.14.1" },
+    { name = "pydantic", specifier = "==2.12.5" },
     { name = "pypdf", specifier = "==6.21.1" },
     { name = "uvicorn", specifier = "==0.40.0" },
 ]
