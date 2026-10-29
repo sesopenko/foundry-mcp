@@ -15,7 +15,16 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 import websockets
 
-TOOLS = {'get_bridge_versions', 'get_player_names', 'get_journal_tree', 'get_journal_contents', 'search_journals', 'read_journal_page', 'list_pdf_documents', 'locate_pdf_entry', 'search_pdf_documents', 'read_pdf_pages', 'refresh_pdf_index'}
+TOOLS = {
+    'get_bridge_versions', 'get_player_names',
+    'get_journal_tree', 'get_journal_contents', 'search_journals',
+    'read_journal_page', 'resolve_journal_reference',
+    'get_actor_types', 'get_actor_tree', 'search_actors', 'list_scene_actors',
+    'list_actor_compendiums', 'search_compendium_actors',
+    'read_actor', 'read_item', 'list_actor_items',
+    'list_pdf_documents', 'locate_pdf_entry', 'search_pdf_documents',
+    'read_pdf_pages', 'refresh_pdf_index',
+}
 
 
 def health(base):
@@ -46,7 +55,10 @@ async def smoke(base):
         return welcome['server_build']
     async with Client(StreamableHttpTransport(base + '/mcp/mcp', auth=httpx.BasicAuth(username, password))) as client:
         tools = await client.list_tools()
-        assert {t.name for t in tools} == TOOLS, 'Unexpected production discovery catalog'
+        actual_tools = {t.name for t in tools}
+        assert actual_tools == TOOLS, (
+            f'Unexpected production discovery catalog: '
+            f'missing={sorted(TOOLS - actual_tools)}, extra={sorted(actual_tools - TOOLS)}')
         for tool in tools:
             assert tool.description and tool.inputSchema.get('type') == 'object'
         diagnostic = (await client.call_tool('get_bridge_versions', {})).structured_content
