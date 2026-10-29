@@ -22,5 +22,7 @@ case "${1:-status}" in
   skills-live) exec .venv/bin/python scripts/actor-skills-live-check.py --world-id test ;;
   character-current-live) exec .venv/bin/python scripts/actor-character-current-live-check.py --world-id test ;;
   affliction-interface) exec .venv/bin/python scripts/affliction-interface-check.py ;;
-  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface]' >&2; exit 2 ;;
+  token-live) exec .venv/bin/python scripts/actor-token-live-check.py --world-id test ;;
+  journal-live) exec .venv/bin/python scripts/actor-journal-live-check.py ;;
+  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface|token-live|journal-live]' >&2; exit 2 ;;
 esac

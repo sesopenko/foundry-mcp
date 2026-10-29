@@ -77,6 +77,9 @@ class JournalToolTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("cursor", tool.inputSchema["properties"])
                 self.assertIn("next_cursor", tool.description)
                 self.assertIn("GM", tool.description)
+                self.assertIsNotNone(tool.annotations, name)
+                self.assertTrue(tool.annotations.readOnlyHint, name)
+                self.assertFalse(tool.annotations.destructiveHint, name)
             schema = discovered["read_journal_page"].inputSchema
             self.assertEqual(schema["required"], ["page_uuid"])
             self.assertEqual(schema["properties"]["source"]["enum"], ["html", "markdown"])

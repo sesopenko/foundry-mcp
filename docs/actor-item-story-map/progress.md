@@ -15,6 +15,8 @@ The 39 stories retain the full agreed scope. Source checkpoints, integrated Acto
 ./scripts/actor-tools.sh skills-live
 ./scripts/actor-tools.sh character-current-live
 ./scripts/actor-tools.sh affliction-interface
+./scripts/actor-tools.sh journal-live
+./scripts/actor-tools.sh token-live
 ```
 
 The fixed runner accepts only those commands and rejects extra arguments.
@@ -23,6 +25,9 @@ The fixed runner accepts only those commands and rejects extra arguments.
 reads. `character-current-live` creates one marked character and inert Lore in
 the existing localhost test world, checks character/NPC Skills and character
 statistics, and removes only that run's fixture with exact-marker cleanup.
+`journal-live` checks the existing journal→Actor→owned action/spell path without
+writes; `token-live` checks existing same-base instances and reports absent
+coverage without manufacturing it.
 `refresh` reloads only the existing dedicated development tab; it does not change game documents. `live` exercises the existing development MCP server using its caller credential from `.env.mcp`, with read-only selectors and no secret/document-ID output. `browser` inspects readiness and console-error counts in the dedicated development profile; neither command creates worlds or changes game documents. It uses installed Python/Node dependencies, performs no network setup or release, and can be approved by its script prefix for unattended checks. The full runner uses the existing repository test script. PDF subprocess tests need host execution when sandboxed child-process waiting stalls; do not repeatedly run them in the known-failing sandbox environment.
 
 ## Verified increments
@@ -924,3 +929,31 @@ Neither an unspecified Item follow-up nor source-only coverage closes those
 requirements. Affliction remains Deferred, not readable or counted Complete.
 Focused discovery/response tests, dependency/Mermaid checks, whitespace checks
 and the full Python/JavaScript suites passed before commit.
+
+## Typed journal workflow and remaining fixture constraint — October 28, 2026
+
+`journal-live` passed **21 requested/completed calls**: exact journal source,
+its returned world-Actor resolver/reader, typed owned action/spell discovery,
+and an actual owned action's source/prose. Three Item pages retained 16 records
+and one exact description fragment. Independent prose hashes and source
+fingerprints, plus journal content/revision, matched before and after.
+No fixture or existing document was changed.
+
+Two fail-first corrections were made before the final pass. A unit test proved
+the draft verifier could accept prose without source rows; the verifier now
+requires both. The initial one-call live attempt exposed absent read-only
+metadata on journal tools. Actual MCP discovery reproduced it offline before
+the four reader registrations were annotated; the successful live retry
+confirmed the metadata and full workflow. Focused tests cover type/owner errors,
+forged/missing prose, staleness, bounds, safe diagnostics and precise call counts.
+
+The existing-data token recheck used two calls and scanned 50 Scenes/778 tokens:
+559 supported unlinked Actors, 117 eligible base groups, zero with distinct
+current HP. No further independent acceptance gap was found in the
+[final inventory](delivery-acceptance.md). CORE-token remains Blocked and
+CORE-acceptance In progress. Progress remains **36/38 (94.7%)**, with affliction
+separately Deferred. Any temporary token-fixture exception needs the user's
+explicit decision; none was created or silently authorized.
+
+Full suites passed: 536 Python tests (one skipped), 594 JavaScript tests.
+Dependency/Mermaid, runner argument rejection and whitespace checks passed.

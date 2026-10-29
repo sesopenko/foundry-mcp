@@ -73,3 +73,17 @@ Source/current fingerprints remained unchanged. See the
 [state evidence](state-contract.md#existing-unlinked-token-state-verification--october-25).
 This establishes those selected instance reads, not the unavailable same-base
 distinct-HP pair or complete effective state. CORE-token remains Blocked.
+
+## Existing-data recheck — October 28, 2026
+
+`actor-tools.sh token-live` repeated only the bounded read-only selection check:
+two MCP calls, 50 Scenes and 778 tokens. It found six readable supported linked
+and 559 unlinked Actors, 564 with readable Items, and 117 eligible unlinked base
+groups. **Zero groups had distinct current HP.** One candidate lacked readable
+Items; none were excluded for nonfinite HP or invalid owned membership/UUIDs.
+The only reported coverage gap remains the required same-base unlinked pair.
+No reader pages or writes followed the unmet selection gate.
+
+The original story explicitly prohibits synthetic creation/document updates.
+Using a marked temporary fixture would require an explicit user exception;
+the other character/familiar fixture permissions do not silently override it.

@@ -56,7 +56,7 @@ async def _call(method: str, params: dict[str, Any], field: str) -> dict[str, An
     return result
 
 
-@mcp.tool
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def get_journal_tree(
     folder_id: Identifier | None = None,
     max_depth: Annotated[int, Field(ge=0, le=8, strict=True)] = 3,
@@ -94,7 +94,7 @@ async def get_journal_tree(
     return await _call("getJournalTree", dict(folder_id=folder_id, max_depth=max_depth, limit=limit, cursor=cursor), "children")
 
 
-@mcp.tool
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def get_journal_contents(
     journal_id: Identifier,
     page_id: Identifier | None = None,
@@ -138,7 +138,7 @@ async def get_journal_contents(
                        "groups" if categories_only else "heading_outline" if page_id is not None else "pages")
 
 
-@mcp.tool
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def search_journals(
     query: Annotated[str, Field(min_length=1, max_length=512)],
     folder_id: Identifier | None = None,
@@ -178,7 +178,7 @@ async def search_journals(
     return await _call("searchJournals", dict(query=query, folder_id=folder_id, journal_id=journal_id, limit=limit, cursor=cursor), "matches")
 
 
-@mcp.tool
+@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 async def read_journal_page(
     page_uuid: Identifier,
     source: Literal["html", "markdown"] = "html",

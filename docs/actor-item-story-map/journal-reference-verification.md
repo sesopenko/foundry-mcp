@@ -52,3 +52,29 @@ remain unverified. This does not claim complete Actor statistics or acquisition.
 
 Final regression suites passed:322 Python tests (one skipped),396 JavaScript
 tests. Story-map dependency/status validation and whitespace checks passed.
+
+## Typed ability follow-up — October 28, 2026
+
+The narrow `actor-tools.sh journal-live` check passed **21 requested/completed
+calls** in the same existing world. It consumed the selected journal's exact
+source, followed its returned Actor resolver and reader calls, requested owned
+`action`/`spell` candidates, and followed an actual owned **action** Item.
+The Item's selected source and exact description occupied three pages and
+16 records, including one description fragment. Exact prose SHA-256/UTF-16
+length, Actor/Item source fingerprints, and journal content/revision matched
+independent reads before and after. No fixture or game document was changed.
+
+This establishes the previously unspecified journal → Actor → ability path;
+it does not claim an additional live spell example or synthetic journal target.
+The verifier is deliberately narrow rather than repeating the full smoke suite.
+Offline tests reject wrong types/owners, missing source or prose, forged text,
+changed fingerprints/revisions, repeated cursors and oversized pages.
+
+The first live attempt stopped after one discovery call: four existing journal
+tools lacked read-only annotations. An actual in-memory MCP discovery test
+reproduced that omission before their registrations were corrected to publish
+`readOnlyHint: true` and `destructiveHint: false`. The subsequent successful
+workflow verified those annotations against the restarted service. Separately,
+a failing verifier test proved that prose-only pages could falsely pass; the
+verifier now requires source records too. Neither correction weakens a reader
+or introduces gameplay behavior.

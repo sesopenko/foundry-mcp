@@ -54,8 +54,24 @@ Three fresh one-call discovery checks passed after service recovery, including
 the final Item token-instance recovery wording; no game documents were
 read or changed by those discovery checks.
 
-Remaining acceptance evidence is explicit: the journal workflow record needs a
-typed ability/spell follow-up rather than an unspecified owned Item, and
-CORE-token still lacks its required existing same-base unlinked pair with
-distinct current HP. This story remains In progress and cannot be closed by
-the contract corrections alone. Affliction stays Deferred outside delivery.
+At this checkpoint the typed journal follow-up was still pending; its subsequent
+proof is recorded below. CORE-token still lacks its required existing same-base
+unlinked pair with distinct current HP. This story remains In progress and
+cannot be closed by contract corrections alone. Affliction stays Deferred.
+
+## Typed workflow and final inventory audit — October 28, 2026
+
+The narrow journal verifier passed 21 requested/completed calls, following the
+returned journal reference to a world Actor and an actual owned action Item.
+Three source/description pages retained 16 records and exact nonempty prose;
+journal revision/content and Actor/Item fingerprints stayed unchanged.
+The [workflow record](../journal-reference-verification.md) distinguishes this
+specific ability proof from earlier unspecified Item navigation.
+
+The [delivery acceptance inventory](../delivery-acceptance.md) maps every
+original requirement to current evidence. All three integrated Actor checkpoints
+and 23 in-scope Item stories have their declared acceptance; no further mandatory
+gap was found beyond CORE-token's live pair. The latest existing-data census
+again found zero distinct-current-HP groups among 117 eligible base groups.
+The original no-fixture restriction remains in force pending a user decision.
+No synthetic Actor or token was created or modified by these checks.
