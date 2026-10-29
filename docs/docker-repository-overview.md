@@ -8,13 +8,13 @@ Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance thr
 
 **[Source code and issues](https://github.com/sesopenko/foundry-mcp)** · **[Releases](https://github.com/sesopenko/foundry-mcp/releases)** · **[Operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/operations.md)** · **[License](https://github.com/sesopenko/foundry-mcp/blob/main/LICENSE.txt)**
 
-This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide server/module version diagnostics, active player names, and journal navigation, search, and reading, with room for additional GM assistance features.
+This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide server/module version diagnostics, active player names, journal navigation, search and reading, and the Actor/Item discovery and reading capabilities described below.
 
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
-## Unreleased source capability
+## Actor and Item reading in v1.6.0
 
-The source branch adds GM-only Actor/Item capability discovery, selected-source
+Version 1.6.0 adds GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item pack index search on the verified
 Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and
@@ -26,8 +26,7 @@ map activation kind/count, stored frequency, traits and named self-effects;
 explicit immediate relationship reads do not apply them. NPC attack Items retain
 authored modes, bonus/damage and additional-effect labels, including explicit
 null-range/thrown limitations. The delivered registry identifies verified
-per-type support and partial or unsupported Actor sections. These are
-unreleased source capabilities; inspect the delivered registry and the
+per-type support and partial or unsupported Actor sections. Inspect the delivered registry and the
 [Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
 Lore Items expose owner-aware stored modifiers and labelled ranks. Actor Skills
 combines independent Lore specialty references with selected transformed

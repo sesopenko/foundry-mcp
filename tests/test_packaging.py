@@ -26,8 +26,8 @@ class PackagingTests(unittest.TestCase):
             p.parent.mkdir(exist_ok=True, parents=True)
             p.write_text('private fixture')
         output = self.root / 'output'
-        version = packager.package(output, root=self.root, tag='v1.5.0')
-        self.assertEqual(version, '1.5.0')
+        version = packager.package(output, root=self.root, tag='v1.6.0')
+        self.assertEqual(version, '1.6.0')
         with zipfile.ZipFile(output / 'foundry-mcp.zip') as archive:
             self.assertIn('module.json', archive.namelist())
             self.assertIn('scripts/connectionConfig.js', archive.namelist())

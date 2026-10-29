@@ -39,7 +39,7 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-1.5.0 migration instructions in the operations guide.
+1.6.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -68,7 +68,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v1.5.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v1.6.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -251,9 +251,9 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (unreleased)
+## Actor and Item source reading (v1.6.0)
 
-The source branch adds GM-only Actor/Item capability discovery, selected-source
+Version 1.6.0 adds GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and
