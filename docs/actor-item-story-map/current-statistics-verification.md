@@ -83,3 +83,21 @@ unknown. Non-null movement source strings have deterministic coverage;
 additional conditional-effect configurations remain unverified.
 No v13 or future-version compatibility is established. ACT-character and
 ACT-npc remain Source implemented; this unit does not add completed stories.
+
+## Subsequent selected-data verification — October 28, 2026
+
+The historical gates above now have additional scoped proof. Familiar selected
+master-linked values and generated character/NPC Strikes are verified in their
+respective contracts. The current Skills verifier independently checked world
+character/NPC values and actual owner-local Lore joins (408 current rows over
+42 pages, two source Lore references and current joins). The same marked
+character returned 47 core and six supplement rows over eight statistics pages:
+language code/qualification and empty sense/IWR collections. The full run passed
+78 requested/completed calls, unchanged source/current fingerprints and exact
+fixture cleanup. See the [Skills](skills-current-contract.md) and
+[supplement](creature-current-contract.md) contracts for proof boundaries.
+
+Populated character sense/IWR configurations, live pack/token current Skills,
+target-dependent results and complete current mechanics remain unverified or
+unsupported. No source fallback, local rules engine or broader version claim is
+introduced by this verification.

@@ -3,9 +3,9 @@
 Implemented integration: explicit character/NPC `read_actor(sections=['statistics'])`
 on Foundry 14.369 / PF2e 8.6.1, upstream revision
 `28d9d156f252d084371d994dc359509b49eadf18`. This extends selected current
-statistics rather than creating a separate unused reader. Live serialization
-verification remains pending the existing GM connection. No complete Actor
-story, target-dependent perception or damage application is certified.
+statistics rather than creating a separate unused reader. Representative NPC
+and limited character serialization verification is recorded below. This
+component proof does not certify target-dependent perception or damage application.
 
 ## Public document-data boundary
 
@@ -172,3 +172,19 @@ and 10 supplemental). Every returned supplemental path/presence/value matched
 independent public serialization; selected current snapshots and complete source
 fingerprints were unchanged. This verifies those NPC samples, without proving
 every optional predicate/IWR configuration or character/familiar supplements.
+
+October 28 character serialization check: the same marked character/Lore fixture
+used for current Skills returned 47 core and **six supplemental records over
+eight statistics pages**. The supplemental records preserved a present `common`
+language code and qualification text, plus empty sense/immunity/weakness/resistance
+collections. Every raw witness matched an independent own-property read of
+`Actor.toObject(false)`, with unchanged complete source/current fingerprints.
+The full same-client run made 78 requested/completed calls and confirmed exact
+fixture cleanup. Use `actor-tools.sh character-current-live` to repeat this
+specific check only when a changed dependency warrants it.
+
+This closes the representative character serialization boundary; it does not
+verify populated character senses/IWR, optional predicates, target application,
+or familiar supplements. Those configurations retain deterministic coverage or
+explicit unsupported status as appropriate. No extra production rule elements,
+preparation calls or local arithmetic were used to manufacture populated data.

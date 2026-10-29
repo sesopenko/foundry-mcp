@@ -4,8 +4,9 @@ Explicit `read_actor(sections=['skills'])` combines selected current
 character/NPC skill document data with the independent owned-Lore source
 listing. Target: Foundry 14.369 / PF2e 8.6.1, upstream revision
 `28d9d156f252d084371d994dc359509b49eadf18`. Deterministic implementation and
-runtime evidence are separate: live verification remains pending the existing
-GM connection. This checkpoint does not complete an Actor story.
+runtime evidence are separate. Representative world character/NPC current
+values and owner-local Lore joins are now verified below. This component
+checkpoint alone does not complete an Actor story.
 
 ## Public boundary and selected fields
 
@@ -108,10 +109,34 @@ escaped/nonstandard keys, duplicate Lore source collisions, actual itemId joins,
 missing/wrong-type/denied targets, key/label/total privacy, synthetic identities,
 bounds, continuation and current-only stale revisions. Validate actual published
 MCP descriptions/input schemas and strict Python DTO validation. Existing owned
-Lore live evidence does not establish current-skill serialization; representative
-current-skill live checks remain pending the GM development connection.
+Lore source evidence alone does not establish current-skill serialization;
+the independent current-skill checks below supply that separate proof.
 
 Authenticated discovery passed using `scripts/actor-discovery-check.py` with
 section `skills` and required mapping/concept/denial terms. It checked the
 published description, input schema and read-only annotation with one MCP call,
 explicitly reporting `runtime_checked: false`.
+
+## Representative current Skills verification — October 28, 2026
+
+`actor-tools.sh skills-live` verified an existing world NPC: 221 current records
+across 23 pages, one source Lore identity and its actual current owner-local
+`itemId` join, in 36 requested/completed calls. The bounded census found 172
+readable NPCs with current skills and 12 with resolved Lore; only one was
+selected for the verification, without changing any documents.
+
+`actor-tools.sh character-current-live` then reused that NPC and one marked
+character with one inert Lore Item. Its nested Skills check passed 408 current
+records across 42 pages, two source Lore identities and two resolved current
+joins in 64 requested/completed calls. Each returned current/source witness
+matched an independent public serialization read; exact path coverage, labels,
+rank mappings, contributor ownership and canonical Item follow-ups passed.
+Source and selected current fingerprints remained unchanged. The enclosing
+78-call run also checked character statistics and confirmed exact fixture cleanup.
+
+The checker requires present numeric current values, ordinary skills and a
+resolved owner-local Lore join for each Actor; missing coverage cannot pass.
+Offline actual-reader tests reject forged totals, incomplete witness checks,
+missing samples and substituted character selection. These are world-sample
+results, not live pack/token current-skill verification or target-context rolls.
+Duplicate/colliding Lore and denied-Item privacy retain deterministic coverage.

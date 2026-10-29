@@ -5,9 +5,9 @@
 | Tracking | Value |
 | --- | --- |
 | Stage | 2 |
-| Planning readiness | Source ready; effective views gated |
-| Implementation status | Source implemented |
-| Integrated status | In progress |
+| Planning readiness | Declared views verified; advanced limits explicit |
+| Implementation status | Complete |
+| Integrated status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Uses shared selected-source extraction; referenced types can remain unresolved until their readers are available. |
 
@@ -31,10 +31,10 @@ Required book views: identity/build; attributes and defenses (AC, saves, HP); Pe
 
 Prerequisites beyond the source checkpoint: [CORE-build](CORE-build.md), [CORE-casting](CORE-casting.md), [CORE-inventory](CORE-inventory.md), [CORE-state](CORE-state.md), [ITEM-action](ITEM-action.md).
 
-- [ ] Join build selections/features, abilities, Lore, weapons, inventory, spellcasting and state. Preserve total-versus-contribution and source-versus-effective distinctions. Generated Strikes, including basic unarmed, may have no Item UUID. An owned weapon is neither an effective Strike nor an exhaustive action list.
-- [ ] Support world, compendium and token-instance contexts through CORE-packs/CORE-token adapters when available. Their end-to-end acceptance belongs to CORE-acceptance; they do not block basic world reading.
-- [ ] Preserve selected raw fields, mapped sections and contributor/source paths side by side, with bounded continuations and explicit unsupported/unread sections.
-- [ ] Verify supported effective interfaces and existing live fixtures before claiming full current statistics. Source-only delivery does not close this advanced gate.
+- [x] Join build selections/features, abilities, Lore, weapons, inventory, spellcasting and state. Preserve total-versus-contribution and source-versus-effective distinctions. Generated Strikes, including basic unarmed, may have no Item UUID. An owned weapon is neither an effective Strike nor an exhaustive action list.
+- [x] Support world, compendium and token-instance contexts through CORE-packs/CORE-token adapters when available. Their end-to-end acceptance belongs to CORE-acceptance; they do not block basic world reading.
+- [x] Preserve selected raw fields, mapped sections and contributor/source paths side by side, with bounded continuations and explicit unsupported/unread sections.
+- [x] Verify supported effective interfaces and existing live fixtures before claiming full current statistics. Source-only delivery does not close this advanced gate. Selected current interfaces now have representative proof; full current statistics is not claimed, as detailed in the acceptance audit.
 
 ## Acceptance scenarios
 
@@ -46,7 +46,12 @@ Prerequisites beyond the source checkpoint: [CORE-build](CORE-build.md), [CORE-c
 
 ## Readiness and outstanding gates
 
-Source checkpoint is ready after shared contracts/extraction. Integrated source joins are specified; effective statistics remain gated by supported-interface evidence and representative live fixtures. No populated character/familiar was live-verified in the original research, and no browser is connected in this audit. v13 PF2e support is unverified. See [evidence](../evidence.md#open-verification-gates).
+The [character acceptance audit](../character-acceptance.md) closes the declared
+source/current/partial views using shared scoped prerequisites, combined-section
+tests and representative runtime checks. Full current statistics and remaining
+advanced limitations stay explicit; v13/future-version support is unverified.
+The dated checkpoints below preserve historical evidence and open-state wording;
+the October 28 acceptance audit supersedes their earlier incomplete status.
 
 This is one story with two checkpoints, not separate source/effective actor stories. Close it only when the declared delivered sections pass and every remaining advanced limitation is explicitly recorded; never mark an unsupported effective capability verified.
 
@@ -106,3 +111,19 @@ validation covers actual paginated JS responses and self-contained discovery.
 This delivers the previously missing ability-navigation join. It does not close
 M-PC: combined-section integration acceptance remains required. Casting and
 condition/effect shared prerequisites are now Complete; affliction is Deferred.
+
+## Integrated acceptance — October 28, 2026
+
+ACT-character/M-PC is Complete for the original supported/partial reading scope;
+see [requirement-by-requirement evidence and preserved limits](../character-acceptance.md).
+Actual combined-section production JS pages pass Python validation. The final
+focused marked-character current check passed 78 MCP calls, eight statistics
+pages with 47 core/six supplement records, and nested character/NPC Skills proof
+of 408 current records, two owned Lore source references and two resolved joins
+across 42 pages. Source/current fingerprints and exact cleanup passed.
+
+This closes the identified current Skills/character-supplement evidence gaps.
+It does not claim complete target-context statistics, final Strike damage,
+exhaustive actions, casting availability, active condition application, live
+character pack/token configurations or CORE-token/CORE-acceptance completion.
+Dedicated affliction Items remain approved Deferred scope with no reader.

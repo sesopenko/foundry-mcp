@@ -264,16 +264,18 @@ material, identification and serialized attachment fields. Action Items map
 activation kind/count, frequency, traits and named self-effects; only an explicit
 relationship request resolves the immediate effect, without applying it.
 NPC attack Items preserve authored modes, bonus/damage and named effect labels,
-with explicit null-range/thrown limitations. Other concrete type readers and
-effective Actor statistics remain staged. See the
+with explicit null-range/thrown limitations. The delivered registry identifies
+verified per-type support and partial or unsupported Actor sections. See the
 [contracts](docs/actor-tools.md) and [development story map](docs/actor-item-story-map/index.md).
-Lore Items expose owner-aware stored modifiers and labelled ranks; Actor Skills
-currently returns partial Lore specialty references with canonical Item/token
-context. Effective check totals remain unsupported.
+Lore Items expose owner-aware stored modifiers and labelled ranks. Actor Skills
+combines independent Lore specialty references with selected transformed
+character/NPC modifiers, DCs and proficiency data. Owner-local Item IDs join
+current Lore to its actual contributor; rank remains distinct from a total.
 NPC source reading includes authored attributes, defenses, skills, movement and
 IWR with source provenance. Explicit Actor description reads separate bounded
-NPC blurb, public notes and GM-private notes. Integrated/effective statistics
-remain pending; elite/weak adjustments are not calculated.
+NPC blurb, public notes and GM-private notes. Selected current NPC statistics,
+Skills and Strikes are available separately; target-context application and
+local elite/weak recalculation remain unsupported.
 Explicit NPC strikes and abilities expose actual owned attack/action Item
 references for follow-up reading, with partial completeness and token context.
 Character/NPC Strikes also expose declared current attack data and bounded
@@ -339,8 +341,22 @@ Character readers preserve selected persisted identity, nullable manual attribut
 HP, labelled skill ranks, resources and recorded build choices. Biography and
 language notes require explicit description reads. Explicit statistics adds selected
 transformed attributes, AC/HP, saves, Perception/vision and movement for characters
-and NPCs, retaining a separate basis from source. The section remains partial;
-full current views, skill totals, generated Strikes and familiar derivation remain gated.
+and NPCs, retaining a separate basis from source. These sections remain partial.
+Live checks cover character core statistics, Common language and empty
+sense/IWR collections, plus broader existing NPC statistics. Populated character
+sense/IWR configurations and target-dependent application remain unverified.
+Character/NPC Skills and actual owner-local Lore joins passed live comparison
+with public serialization and unchanged source fingerprints; conditional skill
+variants and target-specific modifiers remain unevaluated. See the
+[Skills contract](docs/actor-item-story-map/skills-current-contract.md).
+Familiar current defenses, movement and ordinary skills use declared public
+model fields after checking the recorded master's identity and permission.
+Missing or denied masters retain source context without current statistics.
+Combined-section tests preserve these boundaries alongside source, actions,
+casting, inventory and state; normal familiar Strikes and independent attributes
+remain unsupported. Live familiar current evidence covers a marked world Actor
+and master unassignment; live compendium/token configurations remain unverified.
+See the [familiar contract](docs/actor-item-story-map/familiar-current-contract.md).
 
 
 

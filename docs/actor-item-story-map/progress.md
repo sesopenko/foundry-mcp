@@ -869,3 +869,33 @@ invocation supplied no runtime evidence and is not counted as a passing check.
 Full suites passed: 526 Python tests (one skipped), 592 JavaScript tests.
 Rule decisions were checked with `codex execpolicy check`; arbitrary Python
 does not match. Current delivery progress remains **34/38 (89.5%)**.
+
+## Character/NPC integrated acceptance — October 28, 2026
+
+The approved fixed character verifier passed **78 requested/completed calls**
+with exact marked-fixture cleanup. Its single character/Lore and an existing
+NPC supplied **408 current Skills records over 42 pages**, two independent source
+Lore identities and two actual owner-local current joins (64 nested calls,
+included in the total). Character statistics supplied **47 core and six
+supplement records over eight pages**. Independent public serialization matched
+every selected witness; source/current fingerprints stayed unchanged.
+Supplement coverage is language code/qualification and empty sense/IWR
+collections, not populated character custom configurations.
+
+The [character](character-acceptance.md) and [NPC](npc-acceptance.md) closure
+matrices audit every original requirement against the delivered readers,
+combined-section JavaScript/Python acceptance and scoped live evidence.
+ACT-character/M-PC and ACT-npc/M-NPC are Complete for their declared
+supported/partial views. Discovery now records current Skills/statistics proof
+and explicitly preserves advanced exclusions and unverified configurations.
+The discovery regression failed against stale `not_run` metadata before the
+update and passes with the scoped evidence and unchanged affliction boundary.
+
+Progress is **36/38 delivery stories (94.7%)**. CORE-token and CORE-acceptance
+remain open; the former lacks an existing same-base unlinked pair with distinct
+current HP. No existing tokens were changed and no original acceptance gate was
+weakened. Affliction remains Deferred outside delivery.
+Focused checks and full regression suites passed: 526 Python tests (one skipped)
+and 593 JavaScript tests. Dependency/Mermaid and whitespace checks passed.
+After refresh the native MCP registry returned the new scoped evidence; the
+only browser console category was the existing core window-size notification.

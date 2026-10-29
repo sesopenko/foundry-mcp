@@ -25,17 +25,19 @@ carrying/identification state and serialized attachment metadata. Action Items
 map activation kind/count, stored frequency, traits and named self-effects;
 explicit immediate relationship reads do not apply them. NPC attack Items retain
 authored modes, bonus/damage and additional-effect labels, including explicit
-null-range/thrown limitations. Other concrete type readers and effective Actor
-statistics remain staged or unsupported. These are
+null-range/thrown limitations. The delivered registry identifies verified
+per-type support and partial or unsupported Actor sections. These are
 unreleased source capabilities; inspect the delivered registry and the
 [Actor/Item contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-tools.md).
-Lore Items expose owner-aware stored modifiers and labelled ranks; Actor Skills
-currently returns partial Lore specialty references with canonical Item/token
-context. Effective check totals remain unsupported.
+Lore Items expose owner-aware stored modifiers and labelled ranks. Actor Skills
+combines independent Lore specialty references with selected transformed
+character/NPC modifiers, DCs and proficiency data. Owner-local Item IDs join
+current Lore to its actual contributor; rank remains distinct from a total.
 NPC source reading includes authored attributes, defenses, skills, movement and
 IWR with source provenance. Explicit Actor description reads separate bounded
-NPC blurb, public notes and GM-private notes. Integrated/effective statistics
-remain pending; elite/weak adjustments are not calculated.
+NPC blurb, public notes and GM-private notes. Selected current NPC statistics,
+Skills and Strikes are available separately; target-context application and
+local elite/weak recalculation remain unsupported.
 Explicit NPC strikes and abilities expose actual owned attack/action Item
 references for follow-up reading, with partial completeness and token context.
 Character/NPC Strikes additionally expose declared current attack data and
@@ -105,21 +107,23 @@ Character readers preserve selected persisted identity, nullable manual attribut
 HP, labelled skill ranks, resources and recorded build choices. Biography and
 language notes require explicit description reads. Explicit statistics adds selected
 transformed attributes, AC/HP, saves, Perception/vision and movement for characters
-and NPCs, retaining a separate basis from source. The section remains partial;
-full current views, skill totals, generated Strikes and familiar derivation remain gated.
+and NPCs, retaining a separate basis from source. These sections remain partial.
 Character/NPC statistics also retains senses, language qualifications and
 immunities/weaknesses/resistances with their exceptions. Positive Infinity
 sense range uses an explicit JSON tag; predicates and resistance doubleVs
 remain data, without target-detection or damage calculations. Supplemental
-serialization is live-verified on two existing world/synthetic NPCs; character
-configurations and target-dependent application remain unverified. See the
+serialization is live-verified on existing world/synthetic NPCs. A marked
+character verified core statistics, Common language and empty sense/IWR
+collections with confirmed cleanup. Populated character sense/IWR configurations
+and target-dependent application remain unverified. See the
 [creature current contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/creature-current-contract.md).
 Explicit skills now adds selected transformed character/NPC modifiers, DCs,
 labels and proficiency data alongside the independent owned-Lore source list.
 Lore joins use actual owner-local Item IDs; unreadable linked Lore withholds
 the prepared skill's key, label and totals. NPC notes retain qualifications;
-conditional variants and target-specific modifiers remain unevaluated. Current
-skill live verification is pending. See the
+conditional variants and target-specific modifiers remain unevaluated. Live
+character/NPC checks verified 408 current records and two actual owner-local Lore
+joins across 42 pages, with unchanged source fingerprints. See the
 [skills contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/skills-current-contract.md).
 Explicit spellcasting also includes separate transformed character/NPC focus
 pool values and owned-spell focus costs. Missing serialized fields remain
@@ -144,8 +148,11 @@ ordinary skills only after verifying the recorded master's identity and access.
 Unavailable master returns source context without transformed statistics.
 Independent attributes, normal Strikes, Item-linked skill totals and local
 recalculation remain unsupported. A marked world familiar passed 127 current
-fields, omission of current rows after master unassignment and confirmed cleanup; compendium/token
-current fixtures and full integrated views remain unverified;
+fields, omission of current rows after master unassignment and confirmed cleanup.
+Combined-section tests retain source, recorded master, actions, casting,
+inventory and state alongside these guarded model values, with explicit
+partial/unsupported sections. Live compendium/token current configurations
+remain unverified;
 see the [current contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/familiar-current-contract.md).
 Explicit Actor state joins actual owned conditions/effects, their selected
 source and immediate provenance. Application stays unknown: stored presence,

@@ -303,3 +303,19 @@ need their own live proof. Dedicated affliction functionality remains Deferred
 outside delivery; the live four-call interface check verified 22 tool schemas,
 false discovery support flags and two invalid filters rejected before any
 document read. Current progress is 34/38 delivery stories (89.5%).
+
+October 28 character/NPC closure: [character](character-acceptance.md) and
+[NPC](npc-acceptance.md) matrices audit the original declared views using
+combined production-reader acceptance and the new independent current-data
+proof. One marked character/Lore and an existing NPC passed 408 current Skills
+rows over 42 pages, two source Lore references and two actual owner-local joins
+(64 calls). Character statistics passed 47 core and six supplement records over
+eight pages. Those supplements cover language code/qualification and empty
+sense/IWR collections; populated character configurations remain unverified
+live. The complete same-client run passed 78 requested/completed calls,
+unchanged fingerprints and exact fixture cleanup. No existing game document
+was changed. The refreshed native MCP `get_actor_types` response confirms
+scoped live statuses and advanced limitations; the development browser has no
+new console error category. ACT-character/M-PC and ACT-npc/M-NPC are Complete.
+Current delivery progress is 36/38 (94.7%); CORE-token/CORE-acceptance retain
+their separate gates and Affliction remains Deferred.
