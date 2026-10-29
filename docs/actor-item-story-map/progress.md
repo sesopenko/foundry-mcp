@@ -17,6 +17,7 @@ The 39 stories retain the full agreed scope. Source checkpoints, integrated Acto
 ./scripts/actor-tools.sh affliction-interface
 ./scripts/actor-tools.sh journal-live
 ./scripts/actor-tools.sh token-live
+./scripts/actor-tools.sh token-fixture-live
 ```
 
 The fixed runner accepts only those commands and rejects extra arguments.
@@ -28,6 +29,8 @@ statistics, and removes only that run's fixture with exact-marker cleanup.
 `journal-live` checks the existing journal→Actor→owned action/spell path without
 writes; `token-live` checks existing same-base instances and reports absent
 coverage without manufacturing it.
+`token-fixture-live` is the separately authorized marked NPC/Item/inactive-Scene
+fixture with two unlinked instances, a linked control and exact cleanup.
 `refresh` reloads only the existing dedicated development tab; it does not change game documents. `live` exercises the existing development MCP server using its caller credential from `.env.mcp`, with read-only selectors and no secret/document-ID output. `browser` inspects readiness and console-error counts in the dedicated development profile; neither command creates worlds or changes game documents. It uses installed Python/Node dependencies, performs no network setup or release, and can be approved by its script prefix for unattended checks. The full runner uses the existing repository test script. PDF subprocess tests need host execution when sandboxed child-process waiting stalls; do not repeatedly run them in the known-failing sandbox environment.
 
 ## Verified increments
@@ -957,3 +960,27 @@ explicit decision; none was created or silently authorized.
 
 Full suites passed: 536 Python tests (one skipped), 594 JavaScript tests.
 Dependency/Mermaid, runner argument rejection and whitespace checks passed.
+
+## Approved token fixture acceptance — October 28, 2026
+
+The user explicitly authorized creating test state in the existing Foundry world.
+The marked NPC/action and inactive Scene passed the original token comparison:
+two unlinked copies with HP7/19, different Item source data and canonical owned
+identities, plus a linked base-Actor control. Selection was confined to that exact
+Scene; unrelated world data could not satisfy the fixture check.
+
+The run passed **62 requested/completed calls**, with 58 nested reader-check calls,
+48 pages, 48 independent source/prose witnesses and three Item follow-ups.
+Read-phase and enclosing fixture fingerprints stayed unchanged. Cross-token
+Item reads rejected; inactive Scene reading needed no canvas. Exact cleanup
+confirmed zero pending creation and no remaining marked Actor/Scene, with the
+active Scene unchanged. No pre-existing documents, time/combat or settings changed.
+
+Fail-first regressions corrected the verifier's Scene scope and optional-undefined
+source comparison; eight fixture lifecycle tests cover late creation, identity
+guards, cleanup ordering, failed requests and precise counters. Production readers
+were unchanged. Full suites passed **545 Python tests (one skipped) and 594
+JavaScript tests**; dependency/diagram and whitespace checks passed.
+
+CORE-token is Complete. Progress is **37/38 (97.4%)**; CORE-acceptance is ready for
+final sign-off. Affliction remains separately Deferred, with no reader or filter.

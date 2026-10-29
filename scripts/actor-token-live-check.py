@@ -9,6 +9,7 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
+import re
 
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
@@ -24,11 +25,12 @@ const encoded=JSON.stringify(result);if(encoded.length>12000)throw Error('Probe 
 return Array.from({length:Math.ceil(encoded.length/800)},(_,i)=>encoded.slice(i*800,(i+1)*800));
 """
 SELECT="""
+const scenesForProbe=[...game.scenes.values()].filter(scene=>typeof requestedSceneUuid==='undefined'||requestedSceneUuid===null||scene.uuid===requestedSceneUuid);
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value)))),b=>b.toString(16).padStart(2,'0')).join('');
 const supported=new Set(['action','melee','lore','effect','condition','weapon','armor','shield','equipment','treasure','backpack','ammo','consumable','spell','spellcastingEntry','book','kit','feat','ancestry','heritage','background','class','deity']);
 const candidates=[];let scenes=0,tokens=0;
 const census={readable_supported_linked:0,readable_supported_unlinked:0,with_readable_items:0,excluded_no_readable_items:0,excluded_nonfinite_hp:0,excluded_invalid_owned_membership:0,excluded_invalid_owned_uuid:0,candidate_unlinked_base_groups:0,groups_with_distinct_current_hp:0};
-for(const scene of game.scenes.values()){if(++scenes>200)throw Error('Scene bound');if(!scene.testUserPermission(game.user,'OBSERVER'))continue;
+for(const scene of scenesForProbe){if(++scenes>200)throw Error('Scene bound');if(!scene.testUserPermission(game.user,'OBSERVER'))continue;
 for(const token of scene.tokens.values()){if(++tokens>2000)throw Error('Token bound');const actor=token.actor,base=token.baseActor;
 if(!actor||!['npc','character'].includes(actor.type)||!base||!token.testUserPermission(game.user,'OBSERVER')||!actor.testUserPermission(game.user,'OBSERVER'))continue;
 census[token.isLinked?'readable_supported_linked':'readable_supported_unlinked']++;
@@ -43,7 +45,7 @@ const groups=new Map();for(const candidate of candidates){if(candidate.token.isL
 census.candidate_unlinked_base_groups=groups.size;
 census.groups_with_distinct_current_hp=[...groups.values()].filter(group=>new Set(group.map(c=>c.currentHP)).size>1).length;
 let pair=null;for(let i=0;i<candidates.length&&!pair;i++)for(let j=i+1;j<candidates.length;j++){const a=candidates[i],b=candidates[j];if(!a.token.isLinked&&!b.token.isLinked&&a.base.uuid===b.base.uuid&&a.actor.uuid!==b.actor.uuid&&a.actor.uuid!==a.base.uuid&&b.actor.uuid!==b.base.uuid&&a.currentHP!==b.currentHP&&a.itemUUIDs.every(uuid=>!b.itemUUIDs.includes(uuid))){pair=[a,b];break;}}
-const inactiveScene=[...game.scenes.values()].find(scene=>scene.active===false&&scene.testUserPermission(game.user,'OBSERVER'));
+const inactiveScene=scenesForProbe.find(scene=>scene.active===false&&scene.testUserPermission(game.user,'OBSERVER'));
 const linked=candidates.find(c=>c.token.isLinked);const gaps=[];if(!pair)gaps.push('same_base_unlinked_pair_with_distinct_hp_items');if(!linked)gaps.push('linked_control');if(!inactiveScene)gaps.push('inactive_scene');
 const samples=[];if(!gaps.length)for(const c of [...pair,linked]){const {token,actor,base,scene}=c;
 const readable=[...actor.items.values()].filter(i=>supported.has(i.type)&&i.testUserPermission(game.user,'OBSERVER'));
@@ -64,14 +66,18 @@ def payload(result):
     return json.loads(next(block.text for block in result.content if block.type == 'text'))
 
 
-async def verify(client, world_id):
+async def verify(client, world_id, scene_uuid=None):
     """PF2e-specific existing character/NPC token proof; absent scenarios are gaps.
 
     Familiar/master integration retains its separate deterministic/live gates;
     this probe does not serialize familiar current data without master checks.
+    Optional canonical scene_uuid confines selection to a caller's marked Scene;
+    it never substitutes a qualifying pair/control from unrelated game data.
     """
     if world_id != 'test':
         raise ValueError('Explicit test world required')
+    if scene_uuid is not None and (not isinstance(scene_uuid,str) or len(scene_uuid)>512 or re.fullmatch(r'Scene\.[A-Za-z0-9_-]+',scene_uuid) is None):
+        raise ValueError('Canonical Scene UUID required')
     stage = 'discovery'
     calls = 0
     summary = dict(passed=False)
@@ -83,7 +89,7 @@ async def verify(client, world_id):
         return payload(await client.call_tool(name, args))
 
     async def js(code):
-        result = await call('execute_javascript', dict(code=GUARD + code + CHUNKS))
+        result = await call('execute_javascript', dict(code=GUARD + 'const requestedSceneUuid='+json.dumps(scene_uuid)+';' + code + CHUNKS))
         value = result['value']
         if isinstance(value, dict) and value.get('$type') == 'Array':
             assert value.get('truncated') is False
@@ -164,7 +170,7 @@ async def verify(client, world_id):
                 # reproducing private prose or exceeding exploration string limits.
                 for offset in range(0,len(witnesses),30):
                     checks=await js('const claims='+json.dumps(witnesses[offset:offset+30])+';' + """
-const result=[];for(const claim of claims){const item=await foundry.utils.fromUuid(claim.document_uuid);if(!item||!item.testUserPermission(game.user,'OBSERVER'))throw Error('Missing selected Item');let value=item.toObject(true),present=true;for(const key of claim.path.slice(1).split('/').map(k=>k.replace(/~1/g,'/').replace(/~0/g,'~'))){if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)){present=false;break;}value=value[key];}if(claim.fragment){const f=claim.fragment;result.push(present===claim.present&&typeof value==='string'&&value.length===f.total&&value.slice(f.start,f.end)===claim.value);}else result.push(present===claim.present&&(!present||JSON.stringify(value)===JSON.stringify(claim.value)));}
+const result=[];for(const claim of claims){const item=await foundry.utils.fromUuid(claim.document_uuid);if(!item||!item.testUserPermission(game.user,'OBSERVER'))throw Error('Missing selected Item');let value=JSON.parse(JSON.stringify(item.toObject(true))),present=true;for(const key of claim.path.slice(1).split('/').map(k=>k.replace(/~1/g,'/').replace(/~0/g,'~'))){if(value===null||typeof value!=='object'||!Object.hasOwn(value,key)){present=false;break;}value=value[key];}if(claim.fragment){const f=claim.fragment;result.push(present===claim.present&&typeof value==='string'&&value.length===f.total&&value.slice(f.start,f.end)===claim.value);}else result.push(present===claim.present&&(!present||JSON.stringify(value)===JSON.stringify(claim.value)));}
 """)
                     assert len(checks) == len(witnesses[offset:offset+30])
                     for raw,check in zip(witnesses[offset:offset+30],checks):

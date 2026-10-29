@@ -49,8 +49,8 @@ console.log(JSON.stringify({result,error,reads,writes,canvasReads}));
 
 
 class TokenSelectionTests(unittest.TestCase):
-    def run_selection(self, scenario):
-        code = harness.GUARD + harness.SELECT + '\nreturn result;'
+    def run_selection(self, scenario, scene_uuid=None):
+        code = 'const requestedSceneUuid=' + json.dumps(scene_uuid) + ';' + harness.GUARD + harness.SELECT + '\nreturn result;'
         process = subprocess.run(['node', '--input-type=module', '-e', NODE_FIXTURE,
                                   json.dumps([code, scenario])], capture_output=True, text=True,
                                  cwd=SCRIPT.parents[1])
@@ -102,6 +102,15 @@ class TokenSelectionTests(unittest.TestCase):
         self.assertEqual(observation['result']['inactive_scene'], 'Scene.other')
         self.assertTrue(all(not row['inactive'] for row in observation['result']['samples']))
 
+    def test_explicit_scene_scope_never_substitutes_an_unrelated_pair(self):
+        selected=self.run_selection('separateInactive','Scene.other')['result']
+        self.assertEqual(selected['samples'],[])
+        self.assertIn('same_base_unlinked_pair_with_distinct_hp_items',selected['gaps'])
+        self.assertEqual(selected['inactive_scene'],'Scene.other')
+        valid=self.run_selection('valid','Scene.inactive')['result']
+        self.assertEqual(valid['gaps'],[])
+        self.assertTrue(all(row['scene']=='Scene.inactive' for row in valid['samples']))
+
     def test_aggregate_census_distinguishes_candidate_exclusions_without_selectors(self):
         valid=self.run_selection('valid')['result']['census']
         self.assertEqual(valid,dict(readable_supported_linked=1,readable_supported_unlinked=2,with_readable_items=3,excluded_no_readable_items=0,excluded_nonfinite_hp=0,excluded_invalid_owned_membership=0,excluded_invalid_owned_uuid=0,candidate_unlinked_base_groups=1,groups_with_distinct_current_hp=1))
@@ -144,7 +153,7 @@ class TokenSelectionTests(unittest.TestCase):
 class TokenVerifyTests(unittest.IsolatedAsyncioTestCase):
     async def test_full_orchestration_consumes_cursors_rejects_cross_token_and_detects_changes(self):
         selection = TokenSelectionTests().run_selection('valid')['result']
-        for failure in (None, 'fingerprint', 'cross_token', 'empty_checks'):
+        for failure in (None, 'fingerprint', 'cross_token', 'empty_checks', 'undefined_source', 'undefined_forgery'):
             calls = []
             selection_reads = 0
 
@@ -164,6 +173,19 @@ class TokenVerifyTests(unittest.IsolatedAsyncioTestCase):
                         if 'const claims=' in code:
                             claims = json.loads(code.split('const claims=', 1)[1].split(';', 1)[0])
                             value = [] if failure == 'empty_checks' else [True] * len(claims)
+                            if failure in ('undefined_source','undefined_forgery'):
+                                script = r"""
+import {actionFields} from './foundry-module/scripts/actorAction.js';
+const source={name:'Name',type:'action',system:{actionType:{value:'passive'},frequency:undefined,description:{value:'Exact prose'}}};
+if(actionFields(source).find(field=>field.path==='/system/frequency').present!==false)throw Error('Expected actual source omission');
+globalThis.location={origin:'http://localhost:30000'};
+globalThis.game={ready:true,user:{isGM:true},world:{id:'test'},version:'14.369',system:{id:'pf2e',version:'8.6.1'}};
+globalThis.foundry={utils:{fromUuid:async()=>({testUserPermission:()=>true,toObject:()=>source})}};
+const chunks=await new Function('return (async()=>{'+JSON.parse(process.argv[1])+'})()')();
+console.log(chunks.join(''));
+"""
+                                process=subprocess.run(['node','--input-type=module','-e',script,json.dumps(code)],cwd=SCRIPT.parents[1],text=True,capture_output=True,check=True,timeout=10)
+                                value=json.loads(process.stdout)
                         else:
                             selection_reads += 1
                             value = json.loads(json.dumps(selection))
@@ -199,6 +221,8 @@ class TokenVerifyTests(unittest.IsolatedAsyncioTestCase):
                             description = arguments['sections'] == ['description']
                             raw = dict(document_uuid=sample['item']['uuid'], path='/system/description/value' if description else '/name',
                                        basis='source', present=True, value='Exact prose' if description else 'Name')
+                            if not description and failure in ('undefined_source','undefined_forgery'):
+                                raw=dict(document_uuid=sample['item']['uuid'],path='/system/frequency' if failure=='undefined_source' else '/system/actionType/value',basis='source',present=False)
                             rows = [dict(kind='text' if description else 'field', raw=[raw])]
                             if description:
                                 rows[0]['text'] = dict(start=0, end=11, total=11)
@@ -213,7 +237,7 @@ class TokenVerifyTests(unittest.IsolatedAsyncioTestCase):
 
             with self.subTest(failure=failure):
                 report = await harness.verify(Client(), 'test')
-                if failure is None:
+                if failure in (None,'undefined_source'):
                     self.assertTrue(report['passed'], report)
                     self.assertEqual(report['item_followups'], 3)
                     self.assertTrue(any(args.get('cursor') for _, args in calls))
@@ -222,7 +246,8 @@ class TokenVerifyTests(unittest.IsolatedAsyncioTestCase):
                     self.assertFalse(report['passed'])
                     self.assertEqual(report['failure_stage'], {'fingerprint': 'unchanged_source_fingerprints',
                                                                'cross_token': 'cross_token_rejection',
-                                                               'empty_checks': 'item_reads'}[failure])
+                                                               'empty_checks': 'item_reads',
+                                                               'undefined_forgery': 'item_reads'}[failure])
 
     async def test_wrong_world_rejects_before_client_operations(self):
         class Client:

@@ -5,8 +5,8 @@
 | Tracking | Value |
 | --- | --- |
 | Stage | 1 |
-| Planning readiness | Planned |
-| Implementation status | Blocked |
+| Planning readiness | Verified with approved test fixture |
+| Implementation status | Complete |
 | Prerequisites | [CORE-extract](CORE-extract.md) |
 | Dependency reason | Adds instance-correct resolution to the shared extraction pipeline. |
 
@@ -19,6 +19,15 @@ As a GM reader, I can select a placed token and read its current linked/syntheti
 - Define revision inputs that detect relevant actor/token/master changes across continued or joined reads. Report deleted token, missing actor/base, unsupported type and permission errors explicitly.
 
 Acceptance: two unlinked tokens from one base retain different HP/Items/identities; linked tokens point to their world actor; reading an inactive scene does not require canvas objects. Readiness and missing-master behavior are explicit. No new instance, synthetic actor creation or document updates.
+
+Approved testing exception — October 28, 2026: the user explicitly authorized
+creating state in the existing Foundry test world. The marked temporary
+NPC/Item/inactive-Scene/token fixture may be created, configured and cleaned up
+to verify this acceptance. Reader calls remain read-only. No new instance/world,
+existing game-document changes, active-Scene changes, time/combat changes or
+production writes are authorized by this exception. Setup/cleanup safety tests
+and exact run-marker/UUID guards precede its live use; permission alone does not
+establish passing verification.
 
 ## Evidence and completion
 
@@ -67,3 +76,24 @@ HP**. Owned membership/UUID checks excluded no candidates. The original live
 pair is therefore unavailable; no token or Actor was created or changed.
 CORE-token is Blocked on that fixture, not on different Item contents. Existing
 unlinked-token state reads separately passed; see [token verification](../token-verification.md).
+
+### Approved fixture acceptance — October 28, 2026
+
+The earlier existing-data blocker is closed under the user's explicit testing
+exception above. The marked NPC/action and inactive Scene supplied two unlinked
+copies with source/current HP 7 and 19, distinct Item source content and actual
+owned identities, plus a linked control. The original reader verifier was scoped
+to that exact Scene so it could not substitute unrelated game data.
+
+The run passed **62 requested/completed calls**, including 58 reader-check calls,
+48 bounded pages, 48 independent Item witnesses and three canonical Item
+follow-ups. Source/current Actor values, actual ownership, linked/base identity,
+inactive Scene access and cross-token rejection passed. Full read-phase source
+fingerprints matched. Exact marker/UUID cleanup removed Scene before base Actor
+and confirmed zero pending creation, zero marked roots and unchanged active Scene.
+No existing game documents, time, combat or settings were changed.
+
+CORE-token is Complete. The [verification record](../token-verification.md)
+retains original criteria, approved setup scope, fail-first verifier regressions,
+public API/schema evidence and cleanup safety limits. Readers remain read-only;
+this does not certify full effective state or untested system/core versions.

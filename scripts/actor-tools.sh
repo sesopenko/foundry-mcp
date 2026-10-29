@@ -24,5 +24,6 @@ case "${1:-status}" in
   affliction-interface) exec .venv/bin/python scripts/affliction-interface-check.py ;;
   token-live) exec .venv/bin/python scripts/actor-token-live-check.py --world-id test ;;
   journal-live) exec .venv/bin/python scripts/actor-journal-live-check.py ;;
-  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface|token-live|journal-live]' >&2; exit 2 ;;
+  token-fixture-live) exec .venv/bin/python scripts/actor-token-fixture-live-check.py --world-id test ;;
+  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface|token-live|journal-live|token-fixture-live]' >&2; exit 2 ;;
 esac

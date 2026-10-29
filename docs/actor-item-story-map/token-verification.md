@@ -1,7 +1,9 @@
 # Token-instance acceptance evidence
 
-Baseline: Foundry 14.369 / PF2e 8.6.1. CORE-token is Blocked on an unavailable
-existing distinct-HP pair. Its original acceptance criteria remain unchanged.
+Baseline: Foundry 14.369 / PF2e 8.6.1. CORE-token is Complete after the approved
+marked-fixture verification below. The earlier existing-data census and blocker
+remain historical evidence; the user explicitly authorized the test-world setup
+exception. Reader acceptance and read-only behavior were preserved.
 
 The read-only `scripts/actor-token-live-check.py --world-id test` check scanned
 50 existing Scenes and 778 placed tokens on October 25. It found linked and
@@ -87,3 +89,54 @@ No reader pages or writes followed the unmet selection gate.
 The original story explicitly prohibits synthetic creation/document updates.
 Using a marked temporary fixture would require an explicit user exception;
 the other character/familiar fixture permissions do not silently override it.
+
+## Authorized fixture and completion — October 28, 2026
+
+The user subsequently authorized creating state in the existing test world.
+`actor-tools.sh token-fixture-live` created one marked NPC with one inert action,
+one inactive non-navigation Scene and three tokens. Two unlinked same-base
+instances retained source/current HP **7/19**, distinct action source names/prose
+and distinct actual owned Item UUIDs. The linked control retained the base Actor
+and Item. Only the new fixture's synthetic owned Items were configured; the base
+Item and pre-existing game documents stayed unchanged.
+
+The full run passed **62 requested/completed MCP calls**, including 58 nested
+reader-check calls, **48 bounded pages**, **48 independent Item source/prose
+witnesses**, and **three canonical Item follow-ups**. The shared verifier selected
+only the exact marked Scene, requiring two unlinked instances and the linked
+control from that scope. Public source/transformed HP, disjoint owned identities,
+actual Item membership, inactive Scene navigation and rejected cross-token Item
+selectors all passed. Exhausting pages did not imply complete effective state.
+
+Complete source fingerprints matched before/after all reader calls. The enclosing
+fixture fingerprint also matched. Exact UUID/type/run-marker cleanup deleted the
+Scene before its base Actor and confirmed **pending=0, actors=0, scenes=0** and
+unchanged active Scene. No new instance/world, Scene activation, combat, time,
+settings, import, roll or preparation calls were used.
+
+### Supported setup boundary and deterministic evidence
+
+Grounded Docs verified the public v14 Actor `getTokenDocument(data, options)`,
+Document create/update embedded operations and deletion, plus public
+[TokenData](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.TokenData.html)
+`actorId`/`actorLink`/`delta`,
+[ActorDeltaData](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.ActorDeltaData.html)
+`system`/`items`, and
+[SceneData](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.SceneData.html)
+`active`/`navigation`. The fixture uses normal document construction and actual
+synthetic Actor `updateEmbeddedDocuments`, never manual ActorDelta merging or
+private fields. NPC HP and inert action inputs use pinned PF2e8.6.1 schemas.
+
+Eleven shared verifier tests include a fail-first Scene-scope case that formerly
+borrowed an unrelated pair and now refuses it. Another actual-JavaScript test
+proved that schema-permitted own `undefined` source leaves must compare as absent
+after canonical source serialization; the old comparator rejected them, while a
+forged absence for a present actionType still rejects after correction. Production
+readers were correct and unchanged. Eight additional fixture tests execute actual
+setup/cleanup JavaScript against guarded mock Documents: late Actor/Scene creation,
+Scene-before-Actor cleanup, wrong UUID/type/marker, ambiguity, foreign tokens,
+failed/lost responses, incomplete proofs, deadlines and precise safe call counts.
+
+CORE-token is Complete for the original supported reading scope under the
+approved setup exception. Existing-data absence is still a true historical fact;
+the passing evidence is the genuine temporary fixture, not a fabricated census.
