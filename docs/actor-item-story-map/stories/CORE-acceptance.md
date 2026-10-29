@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 4 |
 | Planning readiness | Planned |
-| Implementation status | In progress |
+| Implementation status | Complete |
 | Prerequisites | [CORE-world](CORE-world.md), [CORE-packs](CORE-packs.md), [CORE-token](CORE-token.md), [CORE-journal](CORE-journal.md), [ITEM-book](ITEM-book.md), [ITEM-kit](ITEM-kit.md); M-NPC, M-PC, M-FAMILIAR |
 | Dependency reason | Checks every type baseline, actor integration checkpoint and source/navigation adapter. |
 
@@ -75,3 +75,21 @@ gap was found beyond CORE-token's live pair. The latest existing-data census
 again found zero distinct-current-HP groups among 117 eligible base groups.
 The original no-fixture restriction remains in force pending a user decision.
 No synthetic Actor or token was created or modified by these checks.
+
+## Final acceptance — October 28, 2026
+
+The user subsequently authorized marked test-world fixture creation. The
+[token verification](../token-verification.md) passed 62 calls, including
+same-base unlinked HP7/19, distinct owned Item identities/content, a linked
+control, inactive Scene reading, cross-token rejection and unchanged source
+fingerprints. Exact cleanup confirmed zero remaining fixture Actors/Scenes,
+zero pending operations and an unchanged active Scene. CORE-token is Complete.
+
+The [final requirement matrix](../delivery-acceptance.md) now closes every
+current delivery requirement using the individual story records, three Actor
+acceptance matrices, actual discovery checks, typed journal workflow and token
+proof. All 38 delivery stories are Complete; ITEM-affliction remains Deferred
+and unreadable. Full offline verification passed 545 Python tests (one skipped)
+and 594 JavaScript tests. Compatibility is verified only for Foundry14.369 /
+PF2e8.6.1; the documented partial, unsupported and unverified capabilities remain
+visible. Completion authorizes no release, version bump, tag or push.

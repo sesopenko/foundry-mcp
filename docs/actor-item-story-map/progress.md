@@ -2,7 +2,12 @@
 
 [Story map](index.md) · [Reviewed contracts](../actor-tools.md)
 
-The 39 stories retain the full agreed scope. Source checkpoints, integrated Actor views and advanced/live evidence gates are separate. Individual story headers are authoritative; regenerate a dependency-aware status report with:
+Current delivery is **38/38 stories Complete (100%)**, accepted October 28, 2026.
+The 39-story backlog also retains ITEM-affliction as Deferred outside delivery.
+See the [final acceptance matrix](delivery-acceptance.md) for evidence and
+remaining capability limitations. Source checkpoints, integrated Actor views
+and advanced/live evidence gates remain separate. Individual story headers are
+authoritative; regenerate a dependency-aware status report with:
 
 ```bash
 ./scripts/actor-tools.sh status

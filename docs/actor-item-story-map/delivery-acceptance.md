@@ -1,7 +1,7 @@
 # Current delivery acceptance audit
 
-October 28, 2026: Foundry14.369/PF2e8.6.1 only. The tracker reports 37/38
-delivery stories Complete, including CORE-token; CORE-acceptance awaits final sign-off.
+October 28, 2026: Foundry14.369/PF2e8.6.1 only. Final acceptance is complete:
+38/38 delivery stories Complete (100%), including CORE-token and CORE-acceptance.
 All three Actor integrated checkpoints are Complete. Dedicated affliction Items
 remain separately Deferred, outside delivery and unreadable through tool inputs.
 
@@ -17,7 +17,9 @@ remain separately Deferred, outside delivery and unreadable through tool inputs.
 
 The final review checked each delivery story's stated acceptance and the three
 Actor matrices. The typed journal proof and approved token pair now close the
-last identified evidence gaps. Final sign-off remains separately tracked.
+last identified evidence gaps. CORE-acceptance is Complete. Full offline
+verification passed 545 Python tests (one skipped) and 594 JavaScript tests;
+the dependency tracker validates all 42 nodes and 79 edges without cycles.
 Full current mechanics, target-context calculations,
 casting legality/availability and condition application/suppression retain their
 explicit unsupported/unevaluated boundaries. Populated character senses/IWR,

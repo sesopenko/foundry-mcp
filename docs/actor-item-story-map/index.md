@@ -1,6 +1,6 @@
 # PF2e Actor and Item development story map
 
-Research audit: **October 20, 2026**. **Status: development in progress; see the [progress record](progress.md).**
+Research audit: **October 20, 2026**. **Delivery acceptance: October 28, 2026; 38/38 current delivery stories Complete (100%).** See the [final acceptance matrix](delivery-acceptance.md) and [progress record](progress.md). Affliction remains Deferred; this completion does not represent a release.
 
 Enable a fresh GM-trusted LLM to discover and read characters, NPCs and familiars, and the Items that contribute to them, using rulebook concepts alongside selected source data and canonical identifiers. Current delivery contains **38 stories: 3 Actor types, 23 Item types, and 12 shared tasks**, plus three integration checkpoints inside the Actor stories. The backlog retains 39 stories: dedicated affliction Items are deferred until PF2e maintainers complete that upstream functionality, as explicitly approved October 25, 2026. Deferred work is excluded from delivery progress and is never counted Complete.
 
