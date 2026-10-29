@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fixed commands for dependency tracking and offline Actor/Item verification.
+# Fixed commands for dependency tracking and local Actor/Item verification.
 set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd -- "$repo_root"
@@ -19,5 +19,8 @@ case "${1:-status}" in
   browser) exec .venv/bin/python scripts/actor-live-check.py --browser ;;
   refresh) exec .venv/bin/python scripts/actor-live-check.py --refresh ;;
   live) exec .venv/bin/python scripts/actor-live-check.py ;;
-  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh]' >&2; exit 2 ;;
+  skills-live) exec .venv/bin/python scripts/actor-skills-live-check.py --world-id test ;;
+  character-current-live) exec .venv/bin/python scripts/actor-character-current-live-check.py --world-id test ;;
+  affliction-interface) exec .venv/bin/python scripts/affliction-interface-check.py ;;
+  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface]' >&2; exit 2 ;;
 esac

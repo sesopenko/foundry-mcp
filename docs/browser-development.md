@@ -126,6 +126,25 @@ host-network diagnostics.
 
 ## Validation
 
+### Unattended local Actor checks
+
+Use the fixed `./scripts/actor-tools.sh` commands described in AGENTS.md.
+`skills-live` reads existing NPC current skills and owner-local Lore;
+`affliction-interface` checks discovery and invalid filters without document
+reads. `character-current-live` creates one marked character and inert Lore in
+the existing localhost `test` world, verifies current Skills and statistics,
+then removes only that exact fixture. All reject extra command arguments;
+the verifiers enforce runtime/world guards and bounded requests.
+
+The trusted project's `.codex/rules/local-verification.rules` permits these
+reviewed commands outside the network-restricted sandbox without a new prompt
+for each script filename. Codex loads rule files at startup, so restart Codex
+after installing/changing them. Existing session approvals may already permit
+the runner. Invoke it plainly, without shell wrappers or output redirection.
+No global approval-policy or sandbox relaxation is required. Managed policy
+can still impose stricter restrictions. See
+[official Codex rules](https://learn.chatgpt.com/docs/agent-configuration/rules).
+
 `./scripts/test.sh` runs all offline tests, including development opt-in,
 profile endpoint validation, and credential-loading tests. Live verification
 uses Chrome MCP to list the Foundry tab, evaluate a diagnostic console message,

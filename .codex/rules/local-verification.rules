@@ -1,0 +1,9 @@
+# Trusted-project local verification; no arbitrary Python or shell execution.
+# The runner rejects extra arguments and dispatches only reviewed fixed cases.
+prefix_rule(
+    pattern = ["./scripts/actor-tools.sh", ["status", "check", "focused", "full", "live", "browser", "refresh", "skills-live", "character-current-live", "affliction-interface"]],
+    decision = "allow",
+    justification = "Run reviewed local Actor/Item checks, including exact-marker temporary fixtures confined to the existing localhost test world.",
+    match = ["./scripts/actor-tools.sh skills-live", "./scripts/actor-tools.sh character-current-live", "./scripts/actor-tools.sh affliction-interface"],
+    not_match = ["python -c print(1)", ".venv/bin/python arbitrary.py", "./scripts/actor-tools.sh arbitrary", "git push"],
+)

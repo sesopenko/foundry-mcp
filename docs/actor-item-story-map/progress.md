@@ -12,9 +12,18 @@ The 39 stories retain the full agreed scope. Source checkpoints, integrated Acto
 ./scripts/actor-tools.sh live
 ./scripts/actor-tools.sh browser
 ./scripts/actor-tools.sh refresh
+./scripts/actor-tools.sh skills-live
+./scripts/actor-tools.sh character-current-live
+./scripts/actor-tools.sh affliction-interface
 ```
 
-The fixed runner accepts only those commands. `refresh` reloads only the existing dedicated development tab; it does not change game documents. `live` exercises the existing development MCP server using its caller credential from `.env.mcp`, with read-only selectors and no secret/document-ID output. `browser` inspects readiness and console-error counts in the dedicated development profile; neither command creates worlds or changes game documents. It uses installed Python/Node dependencies, performs no network setup or release, and can be approved by its script prefix for unattended checks. The full runner uses the existing repository test script. PDF subprocess tests need host execution when sandboxed child-process waiting stalls; do not repeatedly run them in the known-failing sandbox environment.
+The fixed runner accepts only those commands and rejects extra arguments.
+`skills-live` checks existing NPC current Skills without writes;
+`affliction-interface` checks discovery and rejected filters without document
+reads. `character-current-live` creates one marked character and inert Lore in
+the existing localhost test world, checks character/NPC Skills and character
+statistics, and removes only that run's fixture with exact-marker cleanup.
+`refresh` reloads only the existing dedicated development tab; it does not change game documents. `live` exercises the existing development MCP server using its caller credential from `.env.mcp`, with read-only selectors and no secret/document-ID output. `browser` inspects readiness and console-error counts in the dedicated development profile; neither command creates worlds or changes game documents. It uses installed Python/Node dependencies, performs no network setup or release, and can be approved by its script prefix for unattended checks. The full runner uses the existing repository test script. PDF subprocess tests need host execution when sandboxed child-process waiting stalls; do not repeatedly run them in the known-failing sandbox environment.
 
 ## Verified increments
 
@@ -839,3 +848,24 @@ CORE-acceptance; the distinct-current-HP token pair remains CORE-token's blocker
 Character/NPC current Skills and character supplements still need live evidence.
 Progress is **34/38 delivery stories (89.5%)**; affliction remains separately
 Deferred and unavailable in readable interfaces.
+
+## Unattended verifier commands — October 28, 2026
+
+The fixed runner now includes `skills-live`, `character-current-live` and
+`affliction-interface`. Reviewed project rules allow those exact command names;
+the runner rejects unknown commands and extra arguments. AGENTS.md records
+authorization for the scoped localhost test-world checks, including bounded
+marked-fixture setup/cleanup. No global sandbox or approval policy was relaxed.
+
+The new Skills verifier passed on an existing NPC: 221 current records over
+23 pages, one actual source Lore identity and current owner-local join, unchanged
+source/current fingerprints, 36 requested/completed calls. Census found 172
+readable NPCs with current skills and 12 with resolved Lore. This verifies that
+sample's current-data boundary, not character Skills or target-context rolls.
+The same-client character/Lore verifier is prepared and has offline safety
+coverage; its character runtime checks remain pending. The interrupted direct
+invocation supplied no runtime evidence and is not counted as a passing check.
+
+Full suites passed: 526 Python tests (one skipped), 592 JavaScript tests.
+Rule decisions were checked with `codex execpolicy check`; arbitrary Python
+does not match. Current delivery progress remains **34/38 (89.5%)**.

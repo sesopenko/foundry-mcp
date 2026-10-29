@@ -12,6 +12,29 @@ a large search-and-replace or structured bulk transformation. Keep that operatio
 focused and reviewable. Run tests and other commands separately from file edits
 so approval requests do not bundle unrelated actions.
 
+## Unattended local verification
+
+Use plain `./scripts/actor-tools.sh <command>` invocations for the reviewed
+local Actor/Item checks. Its fixed commands reject extra arguments and are
+covered by the trusted project's `.codex/rules/local-verification.rules`.
+Prefer these commands over requesting a new approval for each Python filename:
+
+- `skills-live`: read-only current Skills/Lore check on existing NPCs.
+- `affliction-interface`: discovery and invalid-filter checks; no document reads.
+- `character-current-live`: one marked temporary character and inert Lore in
+  the existing localhost `test` world, with bounded exact-marker cleanup.
+- `status`, `check`, `focused`, `full`, `live`, `browser`, `refresh`: existing
+  tracking, offline, read-only runtime and dedicated-browser commands.
+
+These development checks and their scoped fixture setup/cleanup are authorized
+for this build. Run offline regression checks before any fixture verifier.
+Review and test new fixed runner cases before adding them; never accept an
+arbitrary command, Python code, URL, world or script path through the runner.
+Keep rules limited to this runner, rather than arbitrary Python/shell execution.
+Rules are loaded at Codex startup; keep the current user approval mode and
+sandbox protections. This authorization excludes publication, releases,
+production/game-session mutations and changes to existing game documents.
+
 The trusted project's `.codex/rules/local-commits.rules` allows staging and
 authorized local unit/story commits. Run `git add` and `git commit` as plain,
 separate commands without output redirection, pipes, environment assignments or
