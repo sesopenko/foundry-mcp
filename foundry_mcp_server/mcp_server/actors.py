@@ -4442,7 +4442,9 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     a generic denied scope without identities. Serialized attachments remain
     local source paths, never owned Item UUIDs. Actual owned kit definitions use
     inventory_kit_definition references and remain partial without content
-    expansion; books expose common physical fields with specialty pending.
+    expansion; books retain common physical fields here. Select read_item source/relationships
+    for book category/capacity/contents and immediate definition links; inventory
+    does not expand those definitions into owned possessions.
     Quantity, price.per, carrying and investment preserve source values; no total
     Bulk, sale price, effective benefits or activation eligibility is inferred.
     Inventory source-complexity guards reject over 12000 owned Items or 24000
@@ -4472,7 +4474,9 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     or full compendium/embedded UUID returned by discovery or list_actor_items;
     names/local IDs/paths are invalid. token_uuid Scene.<id>.Token.<id> is required
     for synthetic-owned Items and permitted for linked-token Items only when the
-    Item belongs to that token.actor. No template substitution. Default unique
+    Item belongs to that token.actor. A valid Item belonging to another token
+    instance returns DocumentNotFound; use list_actor_items on the selected token
+    and follow its returned selectors. No template substitution. Default unique
     sections identity/source expose common metadata and shared physical source
     fields for weapon/armor/shield/equipment/consumable/ammo/backpack/book/treasure:
     quantity, level, Bulk, denomination prices and price.per, carrying/investment,
@@ -4480,7 +4484,7 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     Missing paths have present=false without value; null/zero/false remain distinct.
     Serialized attachments expose local _id/name/type paths, never their own UUIDs.
     Armor/shield/treasure omit persisted usage; kit is not a physical source type.
-    Source remains partial until its concrete type story is delivered;
+    Source completion covers each delivered type's selected fields, not its full schema;
     weapon Items additionally expose authored damage dice/die/type/modifier and
     persistent damage, category/group, range/reload, ammunition capacity and local
     selectedAmmoId, runes, combination melee usage, trait toggles and specific-magic
@@ -4520,8 +4524,10 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     name, name_truncated and token_uuid for synthetic targets; follow read_item.
     Absent/empty arrays return missing/empty scope rows. At most 200 references
     are resolved per read; oversized selections fail ReadFailed. No recursive
-    expansion occurs and duplicate references remain distinct. Book support has
-    deterministic coverage only; representative live book fixtures are unavailable.
+    expansion occurs and duplicate references remain distinct. Genuine marked formula/spell books
+    passed world-source, exact-prose and immediate-link live checks with unchanged
+    fingerprints and exact cleanup. Owned/token book configurations retain deterministic
+    coverage; contents never establish preparation, ownership or current availability.
     ancestry Items expose authored HP contribution, size, base speed, hands,
     reach, vision, language offers/custom text, additional-language allowance,
     keyed boost/flaw offers and selections, nullable alternate boosts and legacy

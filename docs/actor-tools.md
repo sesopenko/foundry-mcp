@@ -1,8 +1,8 @@
 # Actor and Item reading contracts
 
-**Contract version 1, reviewed October 20, 2026.** This document settles
-CORE-contract for implementation. Tools described here are not thereby
-registered or implemented. The [story map](actor-item-story-map/index.md) owns
+**Contract version 1, reconciled October 28, 2026.** This document describes
+the delivered Actor/Item tools and their explicit capability limits. The
+[story map](actor-item-story-map/index.md) owns
 implementation tracking; the [evidence ledger](actor-item-story-map/evidence.md)
 owns evidence and open gates. All tools are read-only and require the existing
 authenticated, GM-trusted MCP endpoint and a ready authenticated GM browser.
@@ -26,8 +26,8 @@ evidence references. A source reader can be delivered and
 deterministically tested while `live=not_run` remains explicit; do not force all
 support flags false because a different advanced section still has an open gate.
 Enable runtime-dependent claims only after their required live verification.
-The registry is maintained per delivered milestone; the full section/type lists
-below describe the planned contract, not simultaneous delivery requirements.
+The registry is maintained per delivered milestone; known section names remain
+valid requests even when that section is explicitly unsupported for a type.
 `effective_supported` may be false while source and deterministic mappings work.
 The tool works on any ready core runtime to explain incompatibility, but performs
 no PF2e interpretation outside the pairing below. Next: `get_actor_tree`,
@@ -35,7 +35,7 @@ no PF2e interpretation outside the pairing below. Next: `get_actor_tree`,
 
 | Runtime/type | Version-1 policy |
 | --- | --- |
-| Foundry 14.369 + PF2e 8.6.1 | Documentary target; enable sections only after their story tests and required live verification pass |
+| Foundry 14.369 + PF2e 8.6.1 | Verified delivered pairing; each section retains its scoped support, verification and limitations |
 | Other core 14 builds / PF2e releases | Unsupported until explicitly verified and added to this matrix; no inferred future compatibility |
 | Core 13 | New Actor/Item tools unavailable; no verified compatible PF2e pairing. Existing tools and manifest policy are separate |
 | Non-PF2e systems | Discovery reports unsupported system; reader/discovery tools below return `UnsupportedSystem` |
@@ -44,11 +44,12 @@ no PF2e interpretation outside the pairing below. Next: `get_actor_tree`,
 | Deferred upstream | affliction: outside delivery and readable filters until PF2e maintainers complete the type; registry support flags and in_scope are false |
 | Excluded | hazard, vehicle, loot, party, army, base/unknown Actors; campaignFeature, base/unknown Items |
 
-Current development baseline was separately checked through Foundry MCP on
+The historical development baseline was separately checked through Foundry MCP on
 October 20: ready GM browser, Foundry 14.369/PF2e 8.6.1, bridge/server source
 1.5.0, 172 NPC Actors and no character/familiar Actors. This establishes runtime
-availability for subsequent focused checks; it does not verify the proposed
-readers, effective sections or missing populated Actor fixtures. Historical
+availability at that date; it did not verify the later readers or current
+sections. Subsequent marked character/familiar and existing NPC verification
+are recorded in the individual contracts and Actor acceptance matrices. Historical
 audit observations in the evidence ledger retain their original dates/status.
 
 Do not change the module's minimum core version as a side effect of this
@@ -111,7 +112,9 @@ exactly one actor selector. `read_item(item_uuid, token_uuid?,
 sections=["identity","source"], limit=50, max_bytes=48000, cursor?)` accepts a
 world, pack or owned Item UUID; `token_uuid` is required for synthetic-owned
 Items and permitted for linked-token context. If supplied, the Item must belong
-to the selected current `token.actor`, otherwise return `InvalidRequest`. `list_actor_items` takes the same actor selector pair,
+to the selected current `token.actor`, otherwise return `DocumentNotFound`.
+Rediscover that token's owned Items through `list_actor_items`; an Item from
+another instance is not a substitute. `list_actor_items` takes the same actor selector pair,
 optional `types`, `query`, `limit=50`, `max_bytes=48000`, `cursor`.
 
 `sections` is a nonempty unique list with at most 12 Actor sections or 6 Item
@@ -125,9 +128,10 @@ Identity always appears once per page. Actor sections are `identity`, `source`, 
 `description`, `rules`, `relationships`, `effective`. `source` contains approved
 fields with deterministic book-term mappings, not complete effective values.
 Other sections are purpose-specific selections of the same representation.
-`description` exposes exact stored description text; `rules` exposes allowlisted
-serialized rule-element source without evaluating it. Neither is implicit in
-`source`. No arbitrary field path, flags dump, object depth, source-mode switch,
+`description` exposes exact stored description text. `rules` is a known request
+section but remains unsupported; it does not expose an unrestricted rule-element
+dump. Neither section is implicit in `source`. Audited grant/selection fields
+remain their own selected source contract. No arbitrary field path, flags dump, object depth, source-mode switch,
 or unrestricted `toObject(false)`/roll-data export is exposed.
 
 Every reader response contains `contract_version`, `runtime`, `identity`,
@@ -145,7 +149,7 @@ stable response-local string within the revision, never a mutation selector.
 `{document_uuid,path,present,value,basis}`; `basis` is `source` or
 `transformed` for the implemented current-document allowlists. The earlier
 planned `supported_effective` label is not emitted in place of `transformed`.
-Paths are JSON Pointers into documented serialized data;
+Paths are JSON Pointers into documented source or declared public model data;
 `present=false` omits `value`, distinguishing missing from JSON null and zero.
 `mapped` contains `{concept,value,unit}` with null unit where inapplicable.
 `provenance` contains `contributors` (document UUID/source path/basis triples),
@@ -288,14 +292,16 @@ records; optional section/relationship limitations belong in successful data.
 | `ReadFailed` | Retry once or inspect runtime diagnostics; no silent empty result |
 
 PF2e-specific mappings must identify type/schema dependency and source-versus-
-derived assumptions in implementation docs/JSDoc. The ledger's G-PC,
-G-FAMILIAR, G-CAST, G-STATE, G-SPECIAL and G-LINKS remain gates: default source
-reading never closes them. In particular no complete PC Strike, familiar-derived
-statistic, prepared expenditure, focus maximum, condition activity/expiry or
-advanced book/affliction interpretation is advertised until its own supported
-contract, fixtures and required existing-runtime check pass. An explicitly
-requested gated `effective` section is `unsupported`, leaving verified requested
-sections usable. No reimplementation of PF2e calculations fills a gate.
+derived assumptions in implementation docs/JSDoc. Historical evidence gates in
+the ledger are resolved only for their recorded selected capabilities. Delivered
+current statistics, generated Strike fields, casting resources, book references
+and effect expiry flags do not establish complete mechanics. Default source
+reading never certifies those derived values. Full target-context damage,
+casting availability, condition activity/suppression and active application
+remain unsupported or unevaluated. Dedicated affliction functionality is Deferred.
+The generic `effective` section remains unsupported; explicitly requested
+verified current fields use their named sections and transformed provenance.
+No reimplementation of PF2e calculations fills a gate.
 
 ## Concrete reader examples
 
@@ -325,11 +331,11 @@ The token example's Actor UUID illustrates a runtime-returned identity; its
 spelling must never be constructed by the caller. For Items returned from that
 instance, pass both their returned `item_uuid` and `token_uuid` to `read_item`.
 
-## CORE-contract review acceptance
+## Historical CORE-contract design review
 
-This checklist validates the design artifact, not registered MCP tools or runtime
-support. Implementation acceptance separately compares real discovery schemas
-and descriptions to this contract and executes the relevant story tests.
+This October 20 checklist records the original design review. It is not the
+current delivery status: subsequent implementation and scoped runtime evidence
+are tracked in the story map and the field/acceptance contracts linked below.
 
 - [x] Canonical world/pack/owned selectors, explicit linked/synthetic token context,
   duplicate-name behavior and returned next-call selectors are defined.
@@ -344,20 +350,27 @@ and descriptions to this contract and executes the relevant story tests.
 - [x] World Actor, compendium Item and unlinked-token responses are concrete JSON;
   examples are illustrative and make no new live-verification claim.
 - [x] Main-agent review approves this contract before dependent implementation.
-- [ ] Delivered tools match their actual MCP descriptions/input schemas and pass
-  focused boundary tests plus required existing-runtime verification.
+- Implementation validation is maintained separately in the current story map,
+  actual MCP discovery tests and scoped runtime evidence; this design review
+  alone establishes none of those later results.
 
 ## Incremental delivery registry
 
-The extraction foundation initially reads canonical identity and selected core `/name` and `/type` source fields. Item `description` reads the bounded PF2e `/system/description/value` source explicitly. Type-specific system fields and book mappings are added only after their individual stories pass. Initial source sections are partial with `type_reader_pending` even when all available common records have been paginated; this does not represent a completed type story. `source_supported` can describe that explicitly limited foundation, while `mapped_supported` and `effective_supported` remain false. Later type registrations replace that limitation only for the fields/sections actually delivered.
+The delivered readers include canonical identity, approved type-specific source
+and explicitly selected descriptions/relationships. All 23 in-scope Item types
+have their own selected contracts; affliction is separately Deferred. Actor
+source and integrated views retain their documented partial boundaries. Registry
+support and verification flags describe the delivered subset, not full PF2e
+mechanics. The original metadata-only foundation and its `type_reader_pending`
+placeholder are historical, not the current status of completed type readers.
 
 ### Shared physical source milestone
 
-For nine physical types, `source` now includes the exact [physical field registry](actor-item-story-map/physical-fields.md), including price.per and concrete source omissions. Serialized attachments carry local source paths, not invented document UUIDs. Alternate unidentified description text appears only in an explicit `description` request. Source remains partial with `type_reader_pending` until the concrete type reader ships; no effective Bulk, investment bonus or market price is calculated. The schema-permitted undefined price.sizeSensitive source field is reported absent, never as prepared false.
+For nine physical types, `source` includes the exact [physical field registry](actor-item-story-map/physical-fields.md), including price.per and concrete source omissions, alongside their concrete type selectors. Serialized attachments carry local source paths, not invented document UUIDs. Alternate unidentified description text appears only in an explicit `description` request. Source completion covers the selected allowlist; no effective Bulk, investment bonus or market price is calculated. The schema-permitted undefined price.sizeSensitive source field is reported absent, never as prepared false.
 
 ### Action source milestone
 
-Action Items now deliver the [selected field registry](actor-item-story-map/action-fields.md), deterministic activation labels and explicitly requested immediate self-effect references. Source records are complete after pagination; this does not imply current action usability. Source-only calls never hydrate effects. Relationship target permissions/identity and synthetic token context are rechecked for revisions. All other concrete Item readers retain their own pending status; rules and effective sections remain unsupported.
+Action Items deliver the [selected field registry](actor-item-story-map/action-fields.md), deterministic activation labels and explicitly requested immediate self-effect references. Source records are complete after pagination; this does not imply current action usability. Source-only calls never hydrate effects. Relationship target permissions/identity and synthetic token context are rechecked for revisions. Other concrete Item readers have their own delivered contracts; rules and effective sections remain unsupported.
 
 ### NPC attack source milestone
 
@@ -368,15 +381,22 @@ The [NPC attack field registry](actor-item-story-map/melee-fields.md) is deliver
 PF2e Lore source uses actual owner type: NPC authored modifier, character
 proficiency rank, neutral stored semantics otherwise. Rank mappings retain the
 original integer and readable label; no effective check total is calculated.
-Actor `skills` currently exposes only owned Lore specialties and is always
-partial with `other_skills_pending`. Resolved references preserve Item identity
+Actor `skills` preserves every readable owned Lore specialty independently and
+additionally selects current character/NPC skill fields with owner-local Lore
+contributor joins. Source rank/modifier and current total are separate witnesses.
+The section remains partial with `other_skills_pending`; conditional variants
+and target-context checks are not evaluated. Resolved references preserve Item identity
 and selected token context for `read_item`; denied Items expose no selectors.
-See [the evidence and field boundary](actor-item-story-map/lore-fields.md).
+See [the source field boundary](actor-item-story-map/lore-fields.md) and
+[current Skills contract](actor-item-story-map/skills-current-contract.md).
 
 NPC source now includes authored stat-block fields with `pf2e.npc.source.v1`
 provenance. Source remains partial; explicit `description` returns bounded NPC blurb, public
-notes and GM-private notes separately. Character/familiar description and NPC
-integrated/effective sections remain pending. See [NPC field boundary](actor-item-story-map/npc-fields.md).
+notes and GM-private notes separately. Character biography and familiar creature
+prose are also explicit description selections. NPC integrated views are
+delivered with scoped source/current provenance; complete effective mechanics
+remain unsupported. See [NPC field boundary](actor-item-story-map/npc-fields.md)
+and [acceptance](actor-item-story-map/npc-acceptance.md).
 
 NPC authored `strikes` and `abilities` retain actual owned melee/action Item
 references, with mapping `pf2e.npc.item-reference.v1` and concepts `npc_attack_item`
@@ -408,6 +428,76 @@ continuations. See the [current Strike contract](actor-item-story-map/strike-cur
 for all keys, fields, bounds, raw bases, privacy, and runtime evidence. NPC source
 references remain independently identifiable by their original mapping.
 
+## Selected current Actor views
+
+Character/NPC `statistics` selects bounded transformed attributes, AC/HP, saves,
+Perception, movement, senses, languages and IWR declarations. `skills` separately
+selects current skill fields and actual owner-local Lore contributors. Source
+values remain available in `source` and Item readers with their original basis.
+These sections remain partial: declarations and totals are not target-context
+checks, visibility detection or damage application. Representative live proof
+is scoped to the recorded character/NPC samples and selected fields; empty
+collections do not prove every populated optional configuration. See the
+[core statistics](actor-item-story-map/current-statistics-contract.md),
+[creature supplements](actor-item-story-map/creature-current-contract.md) and
+[Skills](actor-item-story-map/skills-current-contract.md) contracts.
+
+Familiar `identity` resolves the recorded nullable world-character master ID,
+retaining source context and explicit unresolved statuses. Familiar `statistics`
+reads declared own public model fields only after that master is resolved and
+authorized; missing/deleted/denied/unassociated master returns no current rows.
+Selected defenses, HP, Perception, movement and ordinary skills retain transformed
+provenance without recalculation from the master. Item-linked skill traces,
+independent attributes and normal Strikes are not inferred. Owned action Items
+remain unclassified; exact descriptions establish familiar/master benefit
+scope. See [familiar source](actor-item-story-map/familiar-fields.md),
+[current fields](actor-item-story-map/familiar-current-contract.md) and
+[acceptance](actor-item-story-map/familiar-acceptance.md).
+
+Actor integration is verified for the declared supported/partial views; the
+generic `effective` section remains unsupported. The character, NPC and familiar
+acceptance matrices preserve their individual limits. Full contextual workflow
+acceptance and CORE-token's missing existing same-base pair remain separate
+gates; section completion does not close those requirements.
+
+## Character Build source joins
+
+Explicit character `build` lists actual owned ancestry, heritage, background,
+class, deity, feat/feature and Lore contributors once, with typed selected source
+and separate persisted grant/selection claims. Offered definitions, future
+class features and deity spell options are not acquisitions. Multiple donors
+can reference one actual owned benefit without duplicating its identity.
+Reciprocal source agreement is evidence of recorded claims, not causality,
+eligibility or an active benefit. NPC/familiar Build stays unsupported.
+No grants, boost choices, training replacements or advancement are applied.
+See the [Build contract](actor-item-story-map/build-contract.md) and
+[runtime verification](actor-item-story-map/build-verification.md).
+
+## Actor condition/effect state joins
+
+Explicit `state` returns actual owned condition/effect identities, typed source
+and immediate same-owner condition/external effect provenance. Duplicate names,
+overlapping effects and separate origins retain their real identities; a
+tracking effect does not become another acquired ability. Names in `state_item`
+come from exact source witnesses. Follow returned canonical Item/token selectors
+with `read_item` for source or prose.
+
+For each readable owned effect, `state:current:<Item UUID>:/system/expired`
+selects the declared own public `Item.system.expired` boolean using mapping
+`pf2e.effect.current.v1`, concept `current_effect_expired`, transformed basis and
+limitation `effect_expiry_not_application`. Serialization can omit this model
+field; missing stays unavailable without source/serialization fallback. Neither
+`false` nor `true` establishes complete active application or remaining time.
+
+State remains partial with `effective_application_not_evaluated` and
+`affliction_reading_unsupported`, even when the collection is empty. Stored
+override claims do not establish condition activity/suppression. Explicit denied
+and nonempty unresolved relationships remain distinguishable from optional
+absent context. Affliction capability is always unsupported under the approved
+deferral. No preparation, duration getter, formula evaluation or state mutation
+is performed. See [exact records and limits](actor-item-story-map/state-contract.md)
+and [acceptance](actor-item-story-map/state-acceptance.md).
+
 ## Effect source checkpoint
 
 PF2e effect source now retains selected duration/start fields, badge discriminator
@@ -415,7 +505,9 @@ and branch-specific primitives, nullable context and exact origin/target UUID
 strings, traits/publication, unidentified and fromSpell fields. Source records use
 `pf2e.effect.source.v1`; no formula is evaluated and no tracking effect becomes a
 learned spell or acquired ability. Source UUIDs remain unverified references;
-immediate context resolution requires explicit relationships; effective expiry/current application remain pending.
+immediate context resolution requires explicit relationships. Item source does
+not infer expiry or current application; the Actor state view separately selects
+the declared public effect expiry boolean as described below.
 See [field boundary](actor-item-story-map/effect-fields.md) and
 [actual rulebook/fixture evidence](actor-item-story-map/effect-verification.md).
 
@@ -599,7 +691,8 @@ reasons; limitations identify exact source paths. Selection rejects over 12,000
 descriptors, 6,000 preparations per array or 64 issues with ReadFailed. These are
 source-complexity bounds, separate from normal response count/byte/text limits.
 Explicit description preserves authored exceptions without enrichment. Preparation
-IDs remain local source claims; CORE-casting will join actual spells. Relationships,
+IDs remain local source claims; the delivered Actor spellcasting view joins
+actual owned spells. Relationships,
 effective and rules remain unsupported. See [field contract](actor-item-story-map/spellcasting-entry-fields.md)
 and [evidence](actor-item-story-map/spellcasting-entry-verification.md).
 
@@ -626,6 +719,22 @@ Selection rejects over 12,000 owned Items or 24,000
 selected records with ReadFailed, independently of response pagination bounds.
 See [fields](actor-item-story-map/casting-fields.md) and
 [evidence](actor-item-story-map/casting-verification.md).
+
+The same section separately emits `pf2e.actor.casting-options.v1` contextual
+configuration rows. Prepared positions preserve independent expenditure flags;
+spontaneous repertoire, innate individual uses and shared Actor focus have
+different resource scopes. Base rank, configured rank and slot rank remain
+separate; `cast_rank` stays null. Signature flags do not generate rank
+alternatives or establish feature entitlement. Flexible, ritual, item and unknown
+modes retain readable identities/source with unsupported contextual interpretation.
+Availability always remains `not_evaluated`.
+
+Separate `pf2e.actor.casting-current.v1` records select transformed character/NPC
+focus value/maximum/cap and owned spell focus cost. These never replace persisted
+character focus source with a derived maximum. Missing current data is unknown;
+no resource sufficiency or legal casting is inferred. Familiar current focus
+semantics remain unsupported. See [options](actor-item-story-map/casting-options-contract.md)
+and [current resources](actor-item-story-map/casting-current-contract.md).
 
 ## Container source and containment claims
 
@@ -674,7 +783,7 @@ investment source are independent facts. Serialized attachment paths remain
 metadata on the actual containing Item, without fabricated document UUIDs.
 Actual kit Items appear separately as `inventory_kit_definition`, never as
 possessions or recursively expanded component copies. Books retain common
-possession source with optional specialty interpretation pending.
+possession source; request `read_item` for their category/content interpretation.
 
 Edges resolve same-owner local IDs only. Missing/denied/unsupported targets have
 null target UUIDs. Absent/null/empty claims retain exact raw presence; they do
@@ -683,8 +792,8 @@ partial. Container `cycle=true` means following readable physical parent claims
 reaches a cycle, including a tail entering it; inaccessible ancestry remains
 unknown. Each actual possession appears once even in rootless components.
 `inventory_scope` distinguishes a verified empty inventory from unreadable
-Items. Denied Items expose no source/name/UUID. Pending book/kit interpretation
-is explicit and does not block ordinary inventory delivery.
+Items. Denied Items expose no source/name/UUID. Book and kit specialty readers
+remain separate explicit requests rather than automatic inventory expansion.
 
 Shared count/byte paging and source-bound revision checks apply. Selected
 inventory rejects over12,000 owned Items or24,000 records rather than silently
@@ -713,8 +822,10 @@ can still be read as source and individual UUIDs followed separately. Shared
 count/byte paging and stale-source/permission/target-name checks apply.
 
 Source and relationship contracts have deterministic and cross-language DTO
-coverage. The existing runtime contains no representative `book` Item;
-discovery therefore reports `live=not_run`, and the story remains In progress.
+coverage. Two genuine marked world books, formula and spell category, passed
+actual MCP source, exact long Unicode descriptions, duplicate/missing content
+references and canonical target follow-ups, with unchanged fingerprints and
+confirmed cleanup. Discovery reports scoped live verification passed.
 Standard blank spellbooks/formula books are `equipment` in the pinned data;
 they must not be silently retyped. See [fields](actor-item-story-map/book-fields.md)
 and [evidence](actor-item-story-map/book-verification.md).
@@ -792,9 +903,10 @@ Maps/lists admit12000 entries; explicit resolution admits200 references.
 Shared paging, byte bounds and stale-source/permission/identity checks apply.
 
 Three existing compendium backgrounds, exact prose and two feat links are
-verified with unchanged source fingerprints. Acquired multi-contributor
-feat/Lore joins and duplicate-training handling remain CORE-build work; the
-background story stays In progress for that acceptance. See
+verified with unchanged source fingerprints. The delivered character Build view
+also verifies acquired same-Lore/feat multi-contributor claims without duplicating
+actual owned Items. No missing grant or duplicate-training replacement is inferred
+or created; persisted claims are not proof of causality or active benefits. See
 [fields](actor-item-story-map/background-fields.md) and
 [evidence](actor-item-story-map/background-verification.md).
 
@@ -877,8 +989,9 @@ Optional undefined source values remain absent; explicit nullable values remain 
 Source-only reading does not resolve or execute GrantItem rules, acquire future
 features, apply subfeatures or infer current benefits. Effective sections remain unsupported. Explicit relationships now resolve
 selected persisted references as described below. The
-[grant audit](actor-item-story-map/feat-grant-contract.md) is a proposed contract,
-separate from implemented behavior. See the
+[grant audit](actor-item-story-map/feat-grant-contract.md) records the implemented
+selected-source boundary. Character Build separately verifies actual owned
+multi-contributor claims without executing grants. See the
 [field audit](actor-item-story-map/feat-fields.md) and
 [evidence](actor-item-story-map/feat-verification.md).
 

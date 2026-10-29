@@ -90,6 +90,7 @@ Formula/spell book source and explicit immediate content links have deterministi
 coverage and live verification on genuine temporary world books, including
 populated compendium references, exact prose and confirmed cleanup. Content
 references never establish formula ownership, prepared spells or castability.
+Owned and synthetic book contexts retain deterministic coverage.
 Kit readers preserve nested bundle definitions and explicit immediate component
 links without importing inventory or recursively expanding referenced kits.
 Ancestry readers separate offered/selected/alternate choices and source benefits
@@ -483,8 +484,14 @@ identity links. Listed spells do not establish learned or prepared spells or
 active character benefits. See the [deity field audit](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/deity-fields.md).
 
 PF2e feat source reading distinguishes feats from features and nominal levels from
-recorded taken levels, retaining prerequisites and description prose. Explicit grant claims resolve only within the actual Actor owner; reciprocal
-acquisition and selection joins remain pending. Source rules never execute.
+recorded taken levels, retaining prerequisites and description prose. Explicit
+grant claims resolve only within the actual Actor owner. Character Build lists
+each actual acquired Item once and reports agreeing, disagreeing, absent or
+unevaluated reciprocal grant evidence separately. Source rules never execute.
 
-Recorded feat selections expose stored string/finite-number values only; unsupported
-selection values make source partial, without acquisition or eligibility inference.
+Recorded feat selections expose stored string/finite-number values only;
+unsupported selection values make source partial. These delivered source
+selections remain separate from acquired-document joins and do not establish
+eligibility or active benefits. See the
+[selection contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/feat-selection-contract.md) and
+[Build verification](https://github.com/sesopenko/foundry-mcp/blob/main/docs/actor-item-story-map/build-verification.md).

@@ -899,3 +899,28 @@ Focused checks and full regression suites passed: 526 Python tests (one skipped)
 and 593 JavaScript tests. Dependency/Mermaid and whitespace checks passed.
 After refresh the native MCP registry returned the new scoped evidence; the
 only browser console category was the existing core window-size notification.
+
+## Final interface reconciliation — October 28, 2026
+
+CORE-acceptance is In progress. Actual MCP discovery and response regression
+checks first reproduced stale delivery claims, then passed after correction.
+Book source/links now advertise their verified marked-world fixtures; inventory
+points to the concrete book reader; Actor sections describe delivered scoped
+views and the actual direct-model expiry boundary. The token-owned Item mismatch
+documents its implemented DocumentNotFound recovery. Actor contracts, README
+and Docker overview were reconciled with completed story evidence.
+
+The discovery checker now selects read_actor or read_item explicitly, with
+bounded connection/request/session deadlines and sanitized requested/completed
+counts. Three fresh one-call checks passed against the restarted service, covering
+the corrected Item and Actor descriptions. Initial attempts during the still
+running restart failed before discovery; they provide no runtime evidence.
+After a post-recovery refresh the GM bridge is ready and only the existing core
+window-size console category remains.
+
+Progress remains **36/38 (94.7%)**. A typed journal→Actor→ability/spell proof still
+needs to be made explicit, alongside the unchanged existing token-pair gap.
+Neither an unspecified Item follow-up nor source-only coverage closes those
+requirements. Affliction remains Deferred, not readable or counted Complete.
+Focused discovery/response tests, dependency/Mermaid checks, whitespace checks
+and the full Python/JavaScript suites passed before commit.

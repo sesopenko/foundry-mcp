@@ -6,7 +6,7 @@
 | --- | --- |
 | Stage | 4 |
 | Planning readiness | Planned |
-| Implementation status | Not started |
+| Implementation status | In progress |
 | Prerequisites | [CORE-world](CORE-world.md), [CORE-packs](CORE-packs.md), [CORE-token](CORE-token.md), [CORE-journal](CORE-journal.md), [ITEM-book](ITEM-book.md), [ITEM-kit](ITEM-kit.md); M-NPC, M-PC, M-FAMILIAR |
 | Dependency reason | Checks every type baseline, actor integration checkpoint and source/navigation adapter. |
 
@@ -35,3 +35,27 @@ Acceptance: every baseline story and integrated actor milestone meets its declar
 ## Evidence and completion
 
 Use the [evidence ledger](../evidence.md), [original research](../../pf2e-actor-item-reference.md), and [shared story-map conventions](../index.md#working-conventions). Each implementation checklist item needs deterministic evidence; runtime-dependent claims also need the specified live check. No current Actor/Item implementation is implied.
+
+## Contract reconciliation checkpoint — October 28, 2026
+
+All three Actor stories and 23 in-scope Item stories now have their declared
+scoped acceptance records. Combined production JavaScript/Python tests preserve
+identity, contributor paths, pagination and source/current distinctions across
+Actor sections and context adapters. Existing per-type, pack, journal and runtime
+evidence remains reusable; no new broad fixture matrix or benchmark is required.
+
+Failing-then-passing actual discovery/response checks corrected stale claims:
+book live fixtures were unavailable, inventory book specialty was pending,
+generated Strikes/supplement verification were pending, and direct-model effect
+expiry was described as serialized. User-facing contracts, README and Docker
+overview now match the delivered scope. A selected-tool SDK checker verifies
+both Actor and Item discovery with bounded timeouts and precise call counts.
+Three fresh one-call discovery checks passed after service recovery, including
+the final Item token-instance recovery wording; no game documents were
+read or changed by those discovery checks.
+
+Remaining acceptance evidence is explicit: the journal workflow record needs a
+typed ability/spell follow-up rather than an unspecified owned Item, and
+CORE-token still lacks its required existing same-base unlinked pair with
+distinct current HP. This story remains In progress and cannot be closed by
+the contract corrections alone. Affliction stays Deferred outside delivery.

@@ -2,17 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getActorTypes, readActor, readItem, listActorItems } from '../../foundry-module/scripts/actors.js';
 import { handleRpcMessage } from '../../foundry-module/scripts/foundryBridge.js';
+const PRIVATE_SENTINEL='TEST_UNSELECTED_PRIVATE_7c38db';
 
 function fixture() {
   const docs=new Map();
   const make=(uuid,documentName,type,system={})=>{
-    const source={name:'Duplicate',type,system,flags:{private_secret:'never'},_migration:{secret:'never'}};
+    const source={name:'Duplicate',type,system,flags:{private_secret:PRIVATE_SENTINEL},_migration:{secret:PRIVATE_SENTINEL}};
     const d={uuid,id:uuid.split('.').at(-1),name:source.name,type,documentName,parent:null,folder:null,compendium:null,items:new Map(),
       testUserPermission:()=>true,toObject(sourceFlag){assert.equal(sourceFlag,true);return structuredClone(source);}};
     docs.set(uuid,d);return {d,source};
   };
-  const {d:actor,source:actorSource}=make('Actor.a','Actor','npc',{attributes:{hp:{value:17}},_migration:{secret:'never'}});
-  const {d:item,source:itemSource}=make('Actor.a.Item.i','Item','action',{description:{value:'<p>Source 😀 &amp; @UUID[Actor.a]</p>',gm:'never'},rules:[{secret:'never'}]});
+  const {d:actor,source:actorSource}=make('Actor.a','Actor','npc',{attributes:{hp:{value:17}},_migration:{secret:PRIVATE_SENTINEL}});
+  const {d:item,source:itemSource}=make('Actor.a.Item.i','Item','action',{description:{value:'<p>Source 😀 &amp; @UUID[Actor.a]</p>',gm:PRIVATE_SENTINEL},rules:[{secret:PRIVATE_SENTINEL}]});
   item.parent=actor;actor.items.set(item.id,item);
   globalThis.game={version:'14.369',system:{id:'pf2e',version:'8.6.1'},ready:true,user:{isGM:true},actors:new Map([['a',actor]]),items:new Map()};
   globalThis.foundry={utils:{fromUuid:async uuid=>docs.get(uuid)},documents:{Actor:{TYPES:['character','npc','familiar','loot']},Item:{TYPES:['action','campaignFeature']}}};
@@ -28,7 +29,7 @@ test('source reads preserve identities and exclude migration, flags and unselect
   assert.ok(!JSON.stringify(a).includes('private_secret'));assert.equal(a.pagination.complete,true);
   const i=await readItem({item_uuid:item.uuid,sections:['identity','source','effective']});
   assert.equal(i.identity.actor.uuid,actor.uuid);assert.equal(i.sections.at(-1).status,'unsupported');
-  assert.ok(!JSON.stringify(i).includes('never'));assert.ok(!JSON.stringify(a).includes('never'));
+  assert.ok(!JSON.stringify(i).includes(PRIVATE_SENTINEL));assert.ok(!JSON.stringify(a).includes(PRIVATE_SENTINEL));
   await assert.rejects(readActor({actor_uuid:actor.uuid,extra:true}),/Unknown input/);
   await assert.rejects(readActor({actor_uuid:actor.uuid,limit:true}),/integer/);
   await assert.rejects(readItem({item_uuid:item.uuid,sections:['source','source']}),/unique/);
