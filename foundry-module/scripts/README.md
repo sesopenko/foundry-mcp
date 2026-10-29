@@ -1,5 +1,12 @@
 # foundry-module/scripts
 
+`actorParty.js` discovers PF2e8.6.1 world-party Actors and selects persisted
+`system.details.members[].uuid` through public source serialization. It resolves
+world Actor identities with permission checks, preserves unavailable member
+diagnostics and revision-bound pagination, and never reads prepared membership,
+stash, member sources or computed inventory totals. See
+[party contracts](../../docs/party-tools.md).
+
 `readJournalPage` supplies lazy `resolve_next_call` metadata.
 `resolveJournalReference` resolves selected notation through public async
 `fromUuid` relative to the source page. PF2e Actor/Item admission reuses

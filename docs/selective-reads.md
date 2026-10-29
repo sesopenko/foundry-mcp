@@ -6,6 +6,11 @@ existing FastMCP boundary; no PydanticAI dependency or extra model call is used.
 Other tools retain their existing contracts. Restart the Python service, refresh
 the GM module and reconnect clients to refresh cached discovery when upgrading.
 
+Version 2.1.0 also registers the new typed `get_party_members` tool
+through this boundary. It has compact bounded membership entries, without a
+`select` expansion, and does not change the nine migrated interfaces. See
+[party contracts](party-tools.md).
+
 ## Request only the needed details
 
 Object reads default to identity, runtime and limitations. Collection reads

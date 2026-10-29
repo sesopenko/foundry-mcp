@@ -6,6 +6,11 @@ list_actor_items, list_actor_compendiums and get_actor_types. The v1 record
 definitions below remain the internal validated evidence contract; other tools
 retain v1. Request evidence explicitly when raw witnesses are needed.
 
+**Version 2.1.0 addition:** [get_party_members](party-tools.md) has its own typed
+version-two membership contract. It admits world party identities only through
+that narrow interface; the registry's party exclusion still applies to generic
+Actor reading. Stash, computed wealth and current Bulk remain unsupported.
+
 **Contract version 1, reconciled October 28, 2026.** This document describes
 the delivered Actor/Item tools and their explicit capability limits. The
 [story map](actor-item-story-map/index.md) owns

@@ -5,9 +5,14 @@ or scheduled. Append subsequent requests with stable `WISH-###` identifiers.
 
 ## WISH-001 — Official party members and party stash
 
-- **Status:** Wishlist
+- **Status:** Partially implemented in v2.1.0: party membership; stash remains wishlist
 - **Requested:** 2026-10-28
 - **Scope:** Read-only party discovery and stash access, initially for PF2e.
+
+`get_party_members` supplies bounded official world-party discovery and
+membership, with canonical character follow-ups. See [party contracts and
+verification](party-tools.md). Generic party Actor reads and stash access remain
+unsupported.
 
 ### User need
 
@@ -50,6 +55,11 @@ before implementation, following the repository's public API requirements.
 - **Status:** Wishlist
 - **Requested:** 2026-10-28
 - **Scope:** Read-only character Bulk and encumbrance, initially for PF2e.
+
+Implementation gate (October 28): supported external access to current PF2e
+Bulk calculations has not been established. [Evidence and required next
+step](party-tools.md#api-evidence-and-remaining-calculation-gate). This wish
+remains unimplemented; party discovery alone does not deliver encumbrance answers.
 
 ### User need
 
@@ -182,3 +192,61 @@ The live comparison covered all nine selected interfaces, including journal and
 PDF payloads beyond the original AC example. The marked temporary character
 check verified two repeated prepared positions, current AC, unchanged read-time
 state and exact-marker cleanup. No production characters were modified.
+
+## WISH-004 — Compute character wealth
+
+- **Status:** Wishlist
+- **Requested:** 2026-10-28
+- **Scope:** Read-only character wealth calculation, initially for PF2e.
+
+Agreed totals: **Total Currency** is currency only; **Total Wealth** is currency
+plus full current item value, matching PF2e's GM-visible calculations. Optional
+item details should explain the totals. No resale estimates or shared stash.
+
+Implementation gate (October 28): supported external access to current PF2e
+valuation totals has not been established. [Evidence and required next
+step](party-tools.md#api-evidence-and-remaining-calculation-gate). This wish
+remains unimplemented.
+
+### User need
+
+Answer “How much wealth does this character have?” through MCP tools.
+
+### Desired behavior
+
+- Report total wealth with explicit currency units and a breakdown of coins,
+  other treasure and equipment value. State the valuation basis; inventory
+  value and expected sale proceeds are distinct concepts.
+- Account for quantities, price-per units and currency conversion without
+  double-counting coins, contained items or attachments.
+- Preserve character identity and offer optional contributing-item details
+  with canonical identifiers for follow-up reads.
+- Keep personal wealth separate from the shared party stash. Distinguish
+  missing prices, inaccessible items and partial totals from zero wealth.
+
+### Design decision for implementation
+
+Choose an existing Actor/inventory tool extension, a new tool, or a combination
+based on clear LLM discovery and compact answers. Tool names and schemas remain
+undecided.
+
+Existing inventory and treasure source readers do not establish computed wealth
+support. Verify supported PF2e valuation interfaces and schema semantics before
+implementation, documenting source versus derived values, inclusion rules and
+relevant version constraints.
+
+### Group-question acceptance (WISH-002 and WISH-004)
+
+Use character members of the selected official party, not all character Actors
+or player ownership. Required examples:
+
+- “What's each PC worth?” — Total Currency and Total Wealth for each PC.
+- “Who has the most wealth?” — highest Total Wealth, preserving ties.
+- “Who's close to being encumbered?” — already-encumbered PCs first, then rank
+  by additional Bulk needed to become encumbered, with exact boundary semantics.
+- “What's the spread of wealth among the PCs?” — sorted totals, minimum,
+  maximum, range, mean and median.
+
+Use compact per-character summaries, preserve duplicate-name identities, and
+state incomplete roster/value coverage. Group reads are sequential observations;
+recheck party membership revision before claiming complete-party comparisons.

@@ -1,9 +1,10 @@
 # sesopenko/foundry-mcp
 
-Version 2.0.0 includes [à la carte read contracts](docs/selective-reads.md):
-nine heavy tools now default to compact results with typed `select` requests and
-responses. This breaking change requires client schema refresh and migration
-from Actor/Item `records` to `entries[].values[]`.
+Version 2.1.0 adds [official party membership discovery](docs/party-tools.md).
+It retains the [à la carte read contracts](docs/selective-reads.md) introduced
+in 2.0.0: nine heavy tools default to compact results with typed `select`
+requests and responses. Clients upgrading from 1.x must refresh schemas and
+migrate Actor/Item `records` to `entries[].values[]`.
 
 This project provides a Model Context Protocol (MCP) bridge between a Large Language Model (LLM) and a running Foundry VTT game.  
 It consists of a Python MCP proxy server and a Foundry VTT client module that communicate over a WebSocket-based RPC channel.
@@ -44,7 +45,7 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-2.0.0 migration instructions in the operations guide.
+2.1.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -73,7 +74,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.0.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.1.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -256,9 +257,15 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v2.0.0)
+## Actor and Item source reading (v2.1.0)
 
-Version 2.0.0 adds GM-only Actor/Item capability discovery, selected-source
+Version 2.1.0 adds `get_party_members` for official PF2e world-party
+membership, with named party selection and canonical `read_actor` follow-ups.
+Use character members for PC-group questions. Party stash, computed character
+wealth and current Bulk/encumbrance remain unsupported; see
+[party contracts and calculation blockers](docs/party-tools.md).
+
+Version 2.1.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and

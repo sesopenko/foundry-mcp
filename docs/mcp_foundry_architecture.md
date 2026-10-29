@@ -7,6 +7,12 @@ and response validation at FastMCP. Actor/Item projections retain private valida
 source witnesses between browser and Python, then publish only the checked compact
 result. No extra agent/model call or new game-state cache is involved.
 
+The separate typed `get_party_members` tool reads PF2e's persisted world-party
+membership in the browser, returning compact named member identities and reader
+follow-ups. Python validates its scope and response at the same FastMCP boundary.
+It does not use prepared party getters or expand inventory. See
+[party contracts and calculation gates](party-tools.md).
+
 This document describes the architecture and design of a system that allows a Large Language Model (LLM) to interact synchronously with a Foundry VTT game via the Model Context Protocol (MCP).
 
 The system consists of:

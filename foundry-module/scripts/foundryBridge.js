@@ -5,6 +5,7 @@ import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage, resolveJournalReference } from "./journals.js";
 import { getActorTypes, readActor, readItem, listActorItems, readActorSelected, readItemSelected } from "./actors.js";
 import { getActorTree, searchActors } from "./actorWorld.js";
+import { getPartyMembers } from "./actorParty.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
 /**
@@ -62,6 +63,7 @@ const rpcHandlers = {
   resolveJournalReference,
   getActorTypes,
   getActorTree,
+  getPartyMembers,
   searchActors,
   listSceneActors,
   listActorCompendiums,
