@@ -23,6 +23,11 @@ records the former task sequencing and tracking. Neither artifact defines active
 
 ## Goal and agreed scope
 
+Later delivery note (October 28): [character wealth/Bulk](../character-inventory-metrics.md)
+uses a user-authorized exception to the API-evidence requirement with guarded
+runtime reads and explicit potentially missing fields. Earlier gates below
+remain historical research, not a prohibition on that scoped implementation.
+
 Enable a fresh GM-trusted MCP client to follow actor references in journals,
 find characters/creatures in world folders or compendiums, and read their
 statistics, abilities, equipment, spells and supported current encounter state.

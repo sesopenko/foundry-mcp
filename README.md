@@ -1,6 +1,6 @@
 # sesopenko/foundry-mcp
 
-Version 2.1.0 adds [official party membership discovery](docs/party-tools.md).
+Version 2.2.0 adds [character wealth and Bulk](docs/character-inventory-metrics.md).
 It retains the [à la carte read contracts](docs/selective-reads.md) introduced
 in 2.0.0: nine heavy tools default to compact results with typed `select`
 requests and responses. Clients upgrading from 1.x must refresh schemas and
@@ -45,7 +45,7 @@ For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
 credentials; development execution stays disabled. See the authentication and
-2.1.0 migration instructions in the operations guide.
+2.2.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -74,7 +74,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.1.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.2.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -257,15 +257,17 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v2.1.0)
+## Actor and Item source reading (v2.2.0)
 
-Version 2.1.0 adds `get_party_members` for official PF2e world-party
+Version 2.1.0 added `get_party_members` for official PF2e world-party
 membership, with named party selection and canonical `read_actor` follow-ups.
-Use character members for PC-group questions. Party stash, computed character
-wealth and current Bulk/encumbrance remain unsupported; see
-[party contracts and calculation blockers](docs/party-tools.md).
+Use character members for PC-group questions. Version 2.2.0 adds
+`read_actor` selections `wealth`, `bulk`, `wealth.items` and `bulk.items`, with
+guarded runtime fields reporting `available` or `potentially_missing`. Party
+stash remains unsupported. See [metric contracts](docs/character-inventory-metrics.md)
+and [party contracts](docs/party-tools.md).
 
-Version 2.1.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 2.2.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and

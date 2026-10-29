@@ -52,14 +52,13 @@ before implementation, following the repository's public API requirements.
 
 ## WISH-002 — Character carried Bulk and encumbrance
 
-- **Status:** Wishlist
+- **Status:** Implemented in v2.2.0
 - **Requested:** 2026-10-28
 - **Scope:** Read-only character Bulk and encumbrance, initially for PF2e.
 
-Implementation gate (October 28): supported external access to current PF2e
-Bulk calculations has not been established. [Evidence and required next
-step](party-tools.md#api-evidence-and-remaining-calculation-gate). This wish
-remains unimplemented; party discovery alone does not deliver encumbrance answers.
+The user authorized a scoped API-evidence exception on October 28, requiring
+defensive getter access and explicit potentially missing fields. See the
+[implemented contract and verification](character-inventory-metrics.md).
 
 ### User need
 
@@ -195,7 +194,7 @@ state and exact-marker cleanup. No production characters were modified.
 
 ## WISH-004 — Compute character wealth
 
-- **Status:** Wishlist
+- **Status:** Implemented in v2.2.0
 - **Requested:** 2026-10-28
 - **Scope:** Read-only character wealth calculation, initially for PF2e.
 
@@ -203,10 +202,8 @@ Agreed totals: **Total Currency** is currency only; **Total Wealth** is currency
 plus full current item value, matching PF2e's GM-visible calculations. Optional
 item details should explain the totals. No resale estimates or shared stash.
 
-Implementation gate (October 28): supported external access to current PF2e
-valuation totals has not been established. [Evidence and required next
-step](party-tools.md#api-evidence-and-remaining-calculation-gate). This wish
-remains unimplemented.
+The same scoped exception as WISH-002 permits guarded PF2e current valuations.
+See the [implemented contract and verification](character-inventory-metrics.md).
 
 ### User need
 
@@ -250,3 +247,68 @@ or player ownership. Required examples:
 Use compact per-character summaries, preserve duplicate-name identities, and
 state incomplete roster/value coverage. Group reads are sequential observations;
 recheck party membership revision before claiming complete-party comparisons.
+
+## WISH-005 — On-demand explanation lookup
+
+- **Status:** Wishlist
+- **Requested:** 2026-10-28
+- **Scope:** A new read-only MCP tool for retrieving explanations currently
+  repeated in tool responses.
+
+### User need
+
+Repeated requests repeatedly consume context and tokens with the same explanatory
+paragraphs. Let the LLM look up an explanation when needed instead of receiving
+it on every data read.
+
+### Desired behavior
+
+- Move reusable disclaimers, interpretation guidance, calculation semantics,
+  source-versus-current explanations, capability limitations and verification
+  background into a shared explanation catalog exposed through a new MCP tool.
+  Audit all tool families, including Actor/Item reads, inventory, wealth/Bulk,
+  navigation and capability discovery.
+- Replace repeated prose in ordinary responses with compact, stable explanation
+  identifiers relevant to the requested data. Avoid returning references for
+  unrequested details.
+- Provide bulk lookup as the normal interface: accept an array of explanation
+  IDs and return their explanations together in one tool call. Looking up
+  8–15 explanations must not require 8–15 calls. Publish an example such as
+  `{"ids":["<explanation-id-1>","<explanation-id-2>"]}` and document batch
+  bounds large enough for at least 15 IDs. Associate every result with its ID;
+  an unknown ID must not discard successful lookups for the rest of the batch.
+- Make lookup discoverable from MCP tool descriptions and response schemas.
+  A fresh LLM must know which tool accepts the returned identifiers, when a
+  lookup is useful and how to request it without prior repository context.
+- Return each explanation's identifier, text, revision and applicable runtime,
+  system or feature scope. Define revision/cache semantics so an LLM can reuse
+  an explanation within a conversation and recognize when it has changed.
+- Keep lookup selective and bounded; do not return the entire catalog by
+  default or embed its full prose in MCP discovery schemas. Handle unknown or
+  obsolete identifiers with actionable errors and documented recovery.
+- Retain compact result-specific facts inline: units, availability, missing or
+  denied fields, partial/unsupported status, scope and continuation information.
+  Their longer explanations belong in lookup. Omitting explanatory prose must
+  not make incomplete data appear complete or turn unknown values into zero.
+
+### Acceptance direction
+
+- Publish typed requests and responses through the existing FastMCP boundary;
+  validate actual discovery, invocation and identifier/revision behavior.
+- Test that ordinary data responses omit catalog prose and reference only
+  explanations relevant to selected data, while preserving result semantics.
+- Verify a fresh client can follow returned references and retrieve the needed
+  explanations, including unknown/changed identifiers. Verify actual MCP calls
+  resolve batches of 8 and 15 valid IDs in one call each, with no per-ID calls;
+  test mixed valid/unknown IDs and documented batch bounds.
+- Measure catalog/discovery size, response bytes and call counts before and
+  after for repeated reads, both with and without an initial explanation lookup.
+  Include the lookup cost rather than claiming savings from smaller data reads
+  alone; report provider token usage only when actually measured.
+
+### Design decision for implementation
+
+Choose the tool name, identifier format, catalog organization and versioning
+contract during implementation. Keep explanations centralized so tool behavior,
+lookup text and any concise discovery guidance remain consistent. This wishlist
+entry does not implement the endpoint or change existing response contracts.

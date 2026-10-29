@@ -98,11 +98,12 @@ API requirement. Upstream user-facing inventory documentation describes UI
 behavior, not an external calculation contract. This is an unresolved support
 boundary, not a claim that these getters are marked private.
 
-**WISH-002 and WISH-004 remain unimplemented.** No `bulk`/`wealth` selection or
-approximate total has been added. Resuming requires establishing an upstream-
-supported external interface for these dependencies or a documented alternative
-providing the same current results. This delivery cannot yet answer the four
-wealth/encumbrance example questions end to end.
+This gate describes the released v2.1.0 decision. Later on October 28 the user
+explicitly authorized bypassing this evidence requirement for wealth/Bulk with
+defensive access and potentially missing fields. Version 2.2.0
+implements `wealth`/`bulk` and optional `.items` selections under that exception;
+it does not claim these getters have become supported public APIs. See the
+[metric contract and verification](character-inventory-metrics.md).
 
 ## Verification
 

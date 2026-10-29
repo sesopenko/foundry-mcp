@@ -18,6 +18,11 @@ framework is not a prerequisite.
 
 ## Evidence and its limits
 
+October 28 follow-up: the user authorized guarded inventory wealth/Bulk getter
+access despite unresolved external API support. The [implementation contract](character-inventory-metrics.md)
+records the narrow exception, version constraint and availability semantics.
+This authorization does not promote implementation observations to public APIs.
+
 Use these labels when extending this document:
 
 - **API:** documented, externally callable Foundry public API or core schema.

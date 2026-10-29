@@ -24,9 +24,9 @@ Identifier = Annotated[str, Field(min_length=1, max_length=512, strict=True)]
 Cursor = Annotated[str, Field(min_length=1, max_length=4096, pattern=r"^[\x00-\x7f]+$", strict=True)]
 Limit = Annotated[int, Field(ge=1, le=100, strict=True)]
 ByteLimit = Annotated[int, Field(ge=8000, le=48000, strict=True)]
-ActorSection = Literal['identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective']
+ActorSection = Literal['identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective', 'wealth', 'bulk']
 ItemSection = Literal['identity', 'source', 'description', 'rules', 'relationships', 'effective']
-ActorSections = Annotated[list[ActorSection], Field(min_length=1, max_length=12)]
+ActorSections = Annotated[list[ActorSection], Field(min_length=1, max_length=14)]
 ItemSections = Annotated[list[ItemSection], Field(min_length=1, max_length=6)]
 ItemType = Literal['melee', 'action', 'feat', 'spell', 'spellcastingEntry', 'lore', 'condition', 'effect', 'affliction', 'ancestry', 'heritage', 'background', 'class', 'deity', 'weapon', 'armor', 'shield', 'equipment', 'consumable', 'ammo', 'backpack', 'book', 'kit', 'treasure']
 # PF2e-specific known types include deferred affliction identifiers for explicit
@@ -34,7 +34,7 @@ ItemType = Literal['melee', 'action', 'feat', 'spell', 'spellcastingEntry', 'lor
 ReadableItemType = Literal[tuple(value for value in get_args(ItemType) if value!='affliction')]
 ItemTypes = Annotated[list[ReadableItemType], Field(min_length=1, max_length=23)]
 Query = Annotated[str, Field(min_length=1, max_length=200, strict=True)]
-ACTOR_SECTIONS = {'identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective'}
+ACTOR_SECTIONS = {'identity', 'source', 'description', 'build', 'statistics', 'skills', 'strikes', 'abilities', 'spellcasting', 'inventory', 'state', 'effective', 'wealth', 'bulk'}
 ITEM_SECTIONS = {'identity', 'source', 'description', 'rules', 'relationships', 'effective'}
 ITEM_TYPES = set(ItemType.__args__)
 READABLE_ITEM_TYPES = set(get_args(ReadableItemType))
@@ -3667,6 +3667,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
         return False
     if type(row['key']) is not str or row['section'] not in sections or row['kind'] not in ('field', 'relationship', 'text') or type(row['raw']) is not list:
         return False
+    if row['section'] in ('wealth','bulk'):
+        from .actor_metrics import metric_record
+        return metric_record(row,identity)
     if identity['document_name']=='Actor' and identity['type']=='familiar' and row['section'] in ('identity','abilities') and row['key']!='identity':
         return _familiar_relationship(row,identity)
     # PF2e-specific transformed statistics are admitted only at this narrow gate.
@@ -3855,6 +3858,8 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     if valid and result['identity']['document_name']=='Item' and result['identity']['type']=='effect':
                         valid = _effect_source_page(result['records'])
                     if valid and result['identity']['document_name']=='Actor':
+                        from .actor_metrics import metric_section
+                        valid = valid and all(metric_section(result['records'], row, result['identity']) for row in rows if row['name'] in ('wealth','bulk'))
                         valid = valid and all(_skills_section(result['records'], row, result['identity']) for row in rows if row['name']=='skills')
                         valid = valid and all(_state_section(result['records'], row, result['identity']) for row in rows if row['name']=='state')
                         valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting')

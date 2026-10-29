@@ -16,7 +16,7 @@ ActorDetail = Literal['identity', 'source', 'description', 'build', 'statistics'
     'statistics.saves', 'statistics.perception', 'statistics.movement',
     'statistics.senses', 'statistics.languages', 'statistics.iwr', 'skills',
     'strikes', 'abilities', 'spellcasting', 'spellcasting.prepared',
-    'spellcasting.options', 'inventory', 'inventory.summary', 'state', 'effective']
+    'spellcasting.options', 'inventory', 'inventory.summary', 'state', 'effective', 'wealth', 'wealth.items', 'bulk', 'bulk.items']
 ItemDetail = Literal['identity', 'source', 'source.definition', 'source.activation',
     'source.attack', 'source.damage', 'source.defenses', 'source.casting',
     'source.preparations', 'source.physical', 'source.traits', 'source.publication',
@@ -40,8 +40,8 @@ class UniqueSelections(Model):
 
 
 class ActorSelect(UniqueSelections):
-    details: list[ActorDetail] = Field(default_factory=list, max_length=29, description='Empty means identity only. Dot selections narrow a section before paging. prepared preserves recorded slot uses, not castability; inventory.summary selects identities, quantities and containers.')
-    item_uuids: list[Identifier] = Field(default_factory=list, max_length=100, description='Optional actual owned Item UUIDs narrowing inventory, abilities and build; diagnostics remain visible.')
+    details: list[ActorDetail] = Field(default_factory=list, max_length=33, description='Empty means identity only. wealth/bulk select guarded character summaries. wealth.items/bulk.items select separately paginated physical Item details. Missing runtime values report potentially_missing. Other dots narrow sections; inventory.summary selects identities, quantities and containers.')
+    item_uuids: list[Identifier] = Field(default_factory=list, max_length=100, description='Optional actual owned Item UUIDs from list_actor_items narrowing inventory, abilities, build and wealth.items/bulk.items, never wealth/Bulk summary totals; diagnostics remain visible.')
     entry_uuids: list[Identifier] = Field(default_factory=list, max_length=100, description='Optional owned spellcasting-entry UUIDs narrowing spellcasting, including preparation witnesses.')
     skill_names: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(default_factory=list, max_length=100, description='Exact serialized skill keys, such as stealth; narrows current Skills. Lore identity diagnostics remain visible.')
     evidence: bool = Field(default=False, description='Include validated raw fields, contributor paths and mapping evidence. Off by default; basis and essential limitations remain.')
@@ -62,7 +62,7 @@ class ActorRequest(PageRequest):
     actor_uuid: Identifier | None = Field(default=None, description='World/compendium Actor UUID from discovery; mutually exclusive with token_uuid.')
     token_uuid: Identifier | None = Field(default=None, description='Placed Scene.<id>.Token.<id>; reads current token Actor, never substitutes base.')
     select: ActorSelect | None = Field(default=None, description='À la carte selection; omitted means identity only.')
-    sections: list[Literal['identity','source','description','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective']] | None = Field(default=None, min_length=1, max_length=12, description='Explicit coarse shorthand for select.details; cannot combine with select.')
+    sections: list[Literal['identity','source','description','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective','wealth','bulk']] | None = Field(default=None, min_length=1, max_length=14, description='Explicit coarse shorthand for select.details; cannot combine with select. wealth/bulk select character summaries only.')
 
     @model_validator(mode='after')
     def selector_and_selection(self):
@@ -117,7 +117,7 @@ class PacksRequest(PageRequest):
 class CapabilitySelect(UniqueSelections):
     actor_types: list[str] = Field(default_factory=list, max_length=30, description='Exact type codes; empty omits Actor registry entries.')
     item_types: list[str] = Field(default_factory=list, max_length=40, description='Exact type codes; empty omits Item registry entries.')
-    actor_sections: list[str] = Field(default_factory=list, max_length=12, description='Exact section names; empty omits section registry entries.')
+    actor_sections: list[str] = Field(default_factory=list, max_length=14, description='Exact section names; empty omits section registry entries.')
     item_sections: list[str] = Field(default_factory=list, max_length=6)
     all: bool = Field(default=False, description='Explicitly select all registry entries; may require a larger byte budget.')
     evidence: bool = Field(default=False, description='Include verification evidence and detailed limitations.')
@@ -265,11 +265,25 @@ class Evidence(Model):
 class Value(Model):
     concept: str = Field(description='Book-oriented concept from the selected supported reader.')
     value: JsonValue = Field(description='Selected value; null is distinct from absent source (present=false). Text is exact source.')
-    basis: Literal['source','transformed','mixed','none']
+    basis: Literal['source','transformed','mixed','none','runtime']
+    availability: Literal['available','potentially_missing'] | None = Field(default=None, description='Runtime wealth/Bulk fields: available preserves zero/false; potentially_missing has null value and a reason. Never count missing as zero.')
+    reason: Literal['missing_api','invalid_value','getter_failed','items_denied','item_limit','dependency_unavailable','inconsistent_value'] | None = None
     present: bool | None = Field(default=None, description='Present on single-field values. Omitted for multi-contributor relationships.')
     unit: str | None = None
     text: TextFragment | None = None
     evidence: Evidence | None = None
+
+    @model_validator(mode='after')
+    def runtime_availability(self):
+        if self.basis == 'runtime':
+            if self.availability == 'available' and self.value is not None and self.reason is None:
+                return self
+            if self.availability == 'potentially_missing' and self.value is None and self.reason is not None:
+                return self
+            raise ValueError('Runtime fields require explicit availability and consistent value/reason')
+        if self.availability is not None or self.reason is not None:
+            raise ValueError('Availability is reserved for runtime metrics')
+        return self
 
 
 class Entry(Model):

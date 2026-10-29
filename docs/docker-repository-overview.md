@@ -12,9 +12,9 @@ This image runs the Python MCP server. A companion Foundry module connects the G
 
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
-## Selective reads in v2.1.0
+## Selective reads in v2.2.0
 
-Version 2.1.0 includes compact defaults and typed `select` request and
+Version 2.2.0 includes compact defaults and typed `select` request and
 response contracts for nine heavy Actor/Item, journal and PDF-search tools.
 Object reads default to identity; lists default to ten entries; journal text
 defaults to 2,000 UTF-16 units; JSON defaults to 8,000 bytes. Actor/Item responses
@@ -22,13 +22,17 @@ use `entries[].values[]`; request raw evidence explicitly. Upgrade both componen
 and refresh client discovery when upgrading. See the
 [selective-read migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/selective-reads.md).
 
-## Actor and Item reading in v2.1.0
+## Actor and Item reading in v2.2.0
 
-Version 2.1.0 adds `get_party_members` for official PF2e world-party membership
-and named character follow-ups. Party stash and computed wealth/Bulk remain unsupported.
-See [party contracts and calculation blockers](https://github.com/sesopenko/foundry-mcp/blob/main/docs/party-tools.md).
+Version 2.1.0 added `get_party_members` for official PF2e world-party membership
+and named character follow-ups. Version 2.2.0 adds computed wealth/Bulk through
+`read_actor` selections `wealth`, `bulk`, `wealth.items`
+and `bulk.items`, with guarded `available`/`potentially_missing` fields. Party
+stash remains unsupported. Deploy matching server/module builds and refresh
+LibreChat discovery when upgrading. See
+[metric contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/character-inventory-metrics.md).
 
-Version 2.1.0 provides GM-only Actor/Item capability discovery, selected-source
+Version 2.2.0 provides GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item pack index search on the verified
 Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and

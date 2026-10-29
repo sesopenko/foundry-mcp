@@ -11,6 +11,10 @@ through this boundary. It has compact bounded membership entries, without a
 `select` expansion, and does not change the nine migrated interfaces. See
 [party contracts](party-tools.md).
 
+Version 2.2.0: `read_actor` also accepts `wealth`, `bulk`, `wealth.items` and
+`bulk.items`. Summaries are separate from inventory detail. Runtime values
+report `available` or `potentially_missing`; see [metric contracts](character-inventory-metrics.md).
+
 ## Request only the needed details
 
 Object reads default to identity, runtime and limitations. Collection reads

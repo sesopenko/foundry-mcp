@@ -16,6 +16,7 @@ import { spellFields,spellDescriptionFields } from './actorSpell.js';
 import { spellcastingEntryFields,spellcastingEntryIssues } from './actorSpellcastingEntry.js';
 import { actorCastingRecords } from './actorCasting.js';
 import { actorInventoryRecords } from './actorInventory.js';
+import {inventoryMetrics} from './actorInventoryMetrics.js';
 import { actorBuildRecords } from './actorBuild.js';
 import { actorStrikeSnapshot } from './actorStrikes.js';
 import { bookFields } from './actorBook.js';
@@ -56,7 +57,7 @@ import { conditionFields } from './actorCondition.js';
 import { conditionReferenceFields,conditionRelationships } from './actorConditionRelationships.js';
 import { effectReferenceFields,effectRelationships } from './actorEffectRelationships.js';
 
-const ACTOR_SECTIONS = ['identity','source','description','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective'];
+const ACTOR_SECTIONS = ['identity','source','description','build','statistics','skills','strikes','abilities','spellcasting','inventory','state','effective','wealth','bulk'];
 const ITEM_SECTIONS = ['identity','source','description','rules','relationships','effective'];
 const LIMITS = {default_limit:50,max_records:100,min_bytes:8000,max_bytes:48000,max_text_units:6000,max_cursor_characters:4096,max_selector_characters:512};
 const PENDING = 'type_reader_pending';
@@ -495,8 +496,9 @@ async function actionRelationship(target,selected) {
  * selecting declared own Actor.system data; unresolved masters admit no model
  * read. Field/version boundaries are defined in actorFamiliarCurrent.js.
  */
-async function snapshot(target,sections) {
+async function snapshot(target,sections,detailSelection=null) {
   const selected=selection(target,sections);
+  selected.inventoryMetrics=inventoryMetrics(target,sections,detailSelection);
   // PF2e-specific character8.6.1 owned action/feat identities are source
   // navigation only; basic/prose abilities and active benefits are not inferred.
   if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('abilities')){
@@ -626,6 +628,11 @@ export async function getActorTypes(params = {}) {
   // PF2e-specific action8.6.1 source milestone; section flags are conditional on
   // this per-type registry, never a promise for every other Item type.
   if (supported) {
+    for(const name of ['wealth','bulk']){
+      const entry=result.actor_sections.find(row=>row.name===name);
+      entry.mapped_supported=true;entry.effective_supported=true;
+      entry.limitations=['Character-only guarded PF2e8.6.1 runtime getters, authorized API-evidence exception. Each value reports available or potentially_missing. Summary only by default; explicit .items details are separately paginated.'];
+    }
     // PF2e-specific Creature/CharacterSystemData8.6.1 transformed primitives,
     // distinct from source and from complete target-context/effective views.
     const statistics=result.actor_sections.find(entry=>entry.name==='statistics');
@@ -810,8 +817,9 @@ export async function getActorTypes(params = {}) {
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
 async function read(target,params,sections,tool,selection=null) {
-  const selected = await snapshot(target,sections); const revision = await digest(selected);
+  const selected = await snapshot(target,sections,selection); const revision = await digest(selected);
   const records = [];
+  records.push(...selected.inventoryMetrics.records);
   if(selected.familiarMaster?.record&&sections.includes('identity'))records.push(selected.familiarMaster.record);
   if(target.document.documentName==='Actor'&&target.document.type==='familiar'&&sections.includes('statistics')){
     const master=selected.familiarMaster.record;
@@ -1031,7 +1039,7 @@ async function read(target,params,sections,tool,selection=null) {
   if(target.document.documentName==='Actor'&&target.document.type==='character'){
     for(const section of base.sections)if(['source','description'].includes(section.name)){section.status='complete';section.reasons=[];}
     base.limitations=base.limitations.filter(message=>message!=='Type-specific system fields and effective mappings are pending their stories.');
-    base.limitations.push('Character selected persisted source only: nullable manual attributes, identity/level/languages, HP, skill ranks, selected resources and recorded build choices. Rank is not a check modifier; no source HP/focus maximum or effective statistic is inferred. Biography requires explicit description. Other source fields, effective defenses/movement/Strikes and full integrated current views remain unsupported or partial. Use list_actor_items and read_item for owned contents, and build for persisted contributor claims.');
+    if(sections.includes('source'))base.limitations.push('Character selected persisted source only: nullable manual attributes, identity/level/languages, HP, skill ranks, selected resources and recorded build choices. Rank is not a check modifier; no source HP/focus maximum or effective statistic is inferred. Biography requires explicit description. Other source fields, effective defenses/movement/Strikes and full integrated current views remain unsupported or partial. Use list_actor_items and read_item for owned contents, and build for persisted contributor claims.');
   }
   if(target.document.documentName==='Actor'&&target.document.type==='character'&&sections.includes('build')){
     const section=base.sections.find(row=>row.name==='build');
@@ -1048,11 +1056,13 @@ async function read(target,params,sections,tool,selection=null) {
   if(inventorySection)base.limitations.push('Stored possessions and same-owner containment/ammunition claims only. Each owned physical Item appears once; serialized attachments and kit definitions are separate. No total Bulk, sale proceeds, effective benefits or activation eligibility is calculated. Follow read_item for concrete source and exact activation prose.');
   if(castingSection)base.limitations.push('Actor casting is a source join only. Availability remains not_evaluated; ritual, flexible and item-casting semantics remain partial. Follow canonical group/spell selectors with read_item for exact definition/prose.');
   if(isCastingEntry)base.limitations.push(...selected.castingIssues.map(issue=>`Uninterpreted casting source at ${issue.path}: ${issue.reason}.`));
+  for(const status of selected.inventoryMetrics.sections)Object.assign(base.sections.find(row=>row.name===status.name),status);
+  if(selected.inventoryMetrics.sections.length)base.limitations.push('Wealth/Bulk are guarded PF2e character runtime calculations. potentially_missing means unknown, never zero. Currency and full owned wealth use cp (100 cp = 1 gp), not resale. light_bulk means tenths of Bulk. until_encumbered is additional light units to cross the system threshold. Item Bulk is not additive: containers, stacking and size affect totals.');
   const scope={tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections};
   const result=selection?await selectivePage(records,base,{...params,select:selection},scope):await paginate(records,base,params,scope);
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);
-  if (await digest(await snapshot(fresh,sections))!==revision) fail('ContentChanged','Selected data changed during the read.','Discard accumulated pages and restart without cursor.');
+  if (await digest(await snapshot(fresh,sections,selection))!==revision) fail('ContentChanged','Selected data changed during the read.','Discard accumulated pages and restart without cursor.');
   return result;
 }
 
@@ -1070,7 +1080,8 @@ export async function readItem(params={}) {
 }
 
 /** PF2e-specific selected v2 reads reuse the audited v1 source/current witnesses.
- * No new schema/API dependency; core14.369/PF2e8.6.1 boundary remains unchanged.
+ * Wealth/Bulk additionally use the scoped guarded getter exception documented
+ * in actorInventoryMetrics.js; core14.369/PF2e8.6.1 admission remains unchanged.
  */
 async function selectedRead(params,item) {
   validateParams(params,['actor_uuid','item_uuid','token_uuid','select','limit','max_bytes','cursor']);

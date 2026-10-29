@@ -76,6 +76,7 @@ def compact_read(proof, lengths, evidence):
             value = dict(concept=row['mapped']['concept'], value=row['raw'][0].get('value') if row['kind']=='text' else row['mapped']['value'],
                          basis=next(iter(bases)) if len(bases)==1 else 'mixed' if bases else 'none')
             if len(row['raw'])==1: value['present']=row['raw'][0]['present']
+            if row['section'] in ('wealth','bulk'): value.update(**row['mapped']['value'],basis='runtime')
             if 'text' in row: value['text']=row['text']
             if row['mapped']['unit'] is not None: value['unit']=row['mapped']['unit']
             if evidence: value['evidence']=row
@@ -107,6 +108,7 @@ def item_group(row):
 def group_key(row):
     """PF2e-specific mirror of semantic page-unit IDs; never a document selector."""
     section=row['section'];path=row['raw'][0]['path'] if row['raw'] else ''
+    if section in ('wealth','bulk'): return row['key'].rsplit(':',1)[0]
     if row['kind']=='text': return row['key']
     if section=='statistics': return section+':'+statistic(path)
     if section in ('skills','strikes'):
@@ -129,6 +131,9 @@ def selected(row, selection):
     path=row['raw'][0]['path'] if row['raw'] else ''
     concept=row['mapped']['concept']
     include=section in details
+    if section in ('wealth','bulk'):
+        include=section+('' if row['key'].startswith(section+':summary:') else '.items') in details
+        if selection.item_uuids and row['key'].startswith(section+':item:') and row['key'][len(section+':item:'):].rsplit(':',1)[0] not in selection.item_uuids: return False
     if section=='statistics': include |= 'statistics.'+statistic(path) in details
     if section=='source': include |= 'source.'+item_group(row) in details
     if section=='inventory' and 'inventory.summary' in details:
@@ -168,6 +173,11 @@ async def read(request):
             rows=proof['records'][offset:offset+length];offset+=length
             key=group_key(rows[0])
             if key in keys or any(group_key(row)!=key for row in rows): raise ValueError()
+            if rows[0]['section'] in ('wealth','bulk'):
+                from .actor_metrics import FIELDS
+                section=rows[0]['section']
+                expected=set(FIELDS[section]) if key==section+':summary' else {'item_count'} if key==section+':items' else {'item_uuid','item_name','quantity','asset_value' if section=='wealth' else 'item_bulk'}
+                if {row['mapped']['concept'] for row in rows}!=expected: raise ValueError()
             keys.add(key)
         identity=proof['identity']
         if proof['runtime']!={'core_version':'14.369','system_id':'pf2e','system_version':'8.6.1'}: raise ValueError()
@@ -256,6 +266,24 @@ async def pdf_search(request):
 
 READ_DOC = """PF2e-specific GM read of selected source/current details (core14.369/PF2e8.6.1).
 Default is identity only. Use the documented select.details enum to request values;
+For character worth, richest PC, wealth spread or encumbrance, first use
+get_party_members and select character members (exclude party stash). Call
+read_actor once per character with select.details=["wealth","bulk"]. wealth:
+total_currency, total_wealth and non_currency_value in cp (100 cp=1 gp), full
+owned system value, not sale proceeds. bulk: carried_bulk and until_encumbered
+in light_bulk (10 light=1 Bulk), encumbered_after/maximum_bulk in Bulk,
+is_encumbered/is_over_max booleans. until_encumbered measures additional light
+units to cross the threshold; rank already encumbered first, then smallest gap.
+Runtime values have basis=runtime and availability=available or
+potentially_missing. Missing values are null with reason; never treat as zero
+or repeatedly inventory-page to guess them. Report incomplete comparisons.
+Wealth ranking includes ties; spread can report sorted values, min/max/range,
+mean/median, naming excluded unknowns. PF2e character only; NPC/familiar metric
+sections return unsupported. Version-specific getter exceptions are contained.
+Explicit wealth.items/bulk.items return item_count plus paginated named actual
+owned physical Items: item_uuid, item_name, quantity, asset_value(cp) or
+item_bulk(light_bulk). item_uuids narrows these details, never summary totals.
+Item Bulk is non-additive. Use read_item for container/source context.
 sections is an explicit coarse shorthand, not combinable with select. Returns
 contract_version=2, identity/runtime/revision, sections, entries, limitations and
 pagination. Entry keys are local grouping keys, not document selectors. Values

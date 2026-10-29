@@ -59,6 +59,7 @@ export function selectRecords(records, selection) {
   return records.filter(row=>{
     const section=row.section, path=row.raw[0]?.path??'', concept=row.mapped.concept;
     let included=details.includes(section);
+    if(['wealth','bulk'].includes(section))included=details.includes(section+(row.key.startsWith(section+':summary:')?'':'.items'));
     if(section==='statistics') included ||= details.includes('statistics.'+statistic(path));
     if(section==='source') included ||= details.includes('source.'+itemGroup(row));
     if(section==='inventory' && details.includes('inventory.summary')) included ||= ['inventory_item','quantity','inventory_container','inventory_kit_definition','inventory_scope'].includes(concept);
@@ -78,6 +79,7 @@ export function selectRecords(records, selection) {
 /** PF2e-specific semantic page unit: statistic, skill, Strike, Item or preparation. */
 export function groupKey(row) {
   const path=row.raw[0]?.path??'', section=row.section;
+  if(['wealth','bulk'].includes(section))return row.key.slice(0,row.key.lastIndexOf(':'));
   if(row.kind==='text')return row.key;
   if(section==='statistics')return section+':'+statistic(path);
   if(section==='skills')return section+':'+(path.match(/^\/system\/skills\/([^/]+)/)?.[1]??row.key);
@@ -94,6 +96,7 @@ export function compactRead(proof, groups, evidence=false) {
   const entries=groups.map(rows=>({section:rows[0].section,key:groupKey(rows[0]),values:rows.map(row=>{
     const bases=[...new Set(row.raw.map(r=>r.basis))];
     const value={concept:row.mapped.concept,value:row.kind==='text'?(row.raw[0].value??null):row.mapped.value,basis:bases.length===1?bases[0]:bases.length?'mixed':'none'};
+    if(['wealth','bulk'].includes(row.section))Object.assign(value,row.mapped.value,{basis:'runtime'});
     if(row.raw.length===1)value.present=row.raw[0].present;
     if(row.text)value.text=row.text;
     if(row.mapped.unit!==null)value.unit=row.mapped.unit;
