@@ -266,7 +266,7 @@ relationship request resolves the immediate effect, without applying it.
 NPC attack Items preserve authored modes, bonus/damage and named effect labels,
 with explicit null-range/thrown limitations. The delivered registry identifies
 verified per-type support and partial or unsupported Actor sections. See the
-[contracts](docs/actor-tools.md) and [development story map](docs/actor-item-story-map/index.md).
+[contracts](docs/actor-tools.md) and [archived development story map](docs/actor-item-story-map/index.md).
 Lore Items expose owner-aware stored modifiers and labelled ranks. Actor Skills
 combines independent Lore specialty references with selected transformed
 character/NPC modifiers, DCs and proficiency data. Owner-local Item IDs join

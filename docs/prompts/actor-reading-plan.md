@@ -1,5 +1,10 @@
 # PF2e character and creature reading: implementation handoff
 
+**Archived October 28, 2026.** Historical planning context for the
+[archived Actor/Item tracker](../actor-item-story-map/index.md), not active work
+in progress. The proposal and sequencing statements below reflect their original
+date; consult [Actor/Item contracts](../actor-tools.md) for delivered behavior.
+
 Updated October 19, 2026. **Status: proposed functionality; not implemented.**
 This handoff preserves the direction for a future build task. The current work
 only records research; it does not authorize implementing or releasing tools.
@@ -9,12 +14,12 @@ It is the source of truth for the type-by-type audit, technical/rulebook
 references, dated observations, transformation requirements and verification gaps.
 Follow AGENTS.md and its required readings before implementation.
 
-The [development story map](../actor-item-story-map/index.md) now supplies the
+The [archived development story map](../actor-item-story-map/index.md) supplies the historical
 staged backlog, individual Actor/Item stories and authoritative dependency graph.
 Use its [October 20 evidence ledger](../actor-item-story-map/evidence.md) for
 release-pinned schema checks, actual additional rulebook reads, corrections and
 remaining evidence gates. This handoff preserves overall intent; the story map
-owns task sequencing and tracking. Neither artifact implements tools.
+records the former task sequencing and tracking. Neither artifact defines active work.
 
 ## Goal and agreed scope
 

@@ -1,4 +1,9 @@
-# Actor/Item development progress
+# Archived Actor/Item development progress
+
+**Archived October 28, 2026.** This is a historical work record, not active work
+in progress. Its pending notes and deferred items do not authorize continuation.
+The commands below remain available for inspecting historical status and for
+verification when relevant to separately requested work.
 
 [Story map](index.md) · [Reviewed contracts](../actor-tools.md)
 

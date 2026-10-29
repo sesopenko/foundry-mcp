@@ -1,10 +1,17 @@
-# PF2e Actor and Item development story map
+# Archived PF2e Actor and Item development story map
+
+**Archived October 28, 2026.** This tracker and its story statuses are historical
+records, not the active work in progress. Preserve the delivery evidence and
+deferred items for reference; do not resume its backlog without a new request.
+The archive remains in place to preserve links from implementation contracts
+and verification records. Planning and sequencing instructions below describe
+the archived project.
 
 Research audit: **October 20, 2026**. **Delivery acceptance: October 28, 2026; 38/38 current delivery stories Complete (100%).** See the [final acceptance matrix](delivery-acceptance.md) and [progress record](progress.md). Affliction remains Deferred; this completion does not represent a release.
 
 Enable a fresh GM-trusted LLM to discover and read characters, NPCs and familiars, and the Items that contribute to them, using rulebook concepts alongside selected source data and canonical identifiers. Current delivery contains **38 stories: 3 Actor types, 23 Item types, and 12 shared tasks**, plus three integration checkpoints inside the Actor stories. The backlog retains 39 stories: dedicated affliction Items are deferred until PF2e maintainers complete that upstream functionality, as explicitly approved October 25, 2026. Deferred work is excluded from delivery progress and is never counted Complete.
 
-Start with [CORE-contract](stories/CORE-contract.md), then CORE-extract. The first useful vertical slice is world NPC discovery/source reading plus action, NPC attack and Lore readers; broader inventory/casting/state integrations can follow. Do not postpone this slice until every Item type or effective-state gate is complete.
+The original sequence started with [CORE-contract](stories/CORE-contract.md), then CORE-extract. The first vertical slice was world NPC discovery/source reading plus action, NPC attack and Lore readers, followed by broader inventory/casting/state integrations.
 
 Read the [evidence ledger](evidence.md), [research reference](../pf2e-actor-item-reference.md), and [implementation handoff](../prompts/actor-reading-plan.md) before implementation. The ledger records actual rulebook/API/schema reads, corrections and named evidence gates. No new tool behavior, runtime tests, release or deployment is represented by these documents.
 
