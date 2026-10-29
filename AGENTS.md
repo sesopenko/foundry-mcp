@@ -204,6 +204,25 @@ Before doing work in this repository, read these files in full:
 
 This list carries forward the required reading from `.aider.conf.yml`. Keep the guidance in the referenced files as the source of truth rather than duplicating it here.
 
+## Unexpected behavior and root-cause fixes
+
+When unexpected behavior occurs, ascertain its root cause before changing the
+system. Do not treat symptoms, add speculative workarounds, or hide the failure.
+Prove the root cause with a focused unit test that fails against the current
+system under test for the expected reason. Then fix the system under test and
+verify that the same test passes, followed by the relevant regression checks.
+Do not weaken the test or change its expected behavior merely to obtain a pass.
+If the cause cannot yet be reproduced in a unit test, the investigation remains
+incomplete; do not claim that a speculative correction fixes it.
+
+After three unsuccessful diagnosis or fix attempts for the same issue, stop
+development and inform the user. Explain the unexpected behavior, the evidence,
+the attempts made, what remains unresolved, and the input needed to proceed.
+Wait for the user's input before making another attempt or resuming any
+development. Keep the attempt count across turns and collaborating agents;
+switching agents, rewording the issue or treating another symptom does not reset
+it. This stop-and-wait requirement takes precedence over autonomous continuation.
+
 ## Continuous testing
 
 For behavioral MCP evaluation, follow
