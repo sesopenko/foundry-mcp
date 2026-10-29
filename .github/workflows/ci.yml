@@ -188,6 +188,9 @@ jobs:
       - name: Install Debian bootstrap prerequisites
         run: apt-get update && apt-get install -y ca-certificates curl git nodejs npm python3 ripgrep util-linux
       - uses: actions/checkout@v4
+      - name: Trust the mounted checkout for container shell steps
+        shell: bash
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Bootstrap without Codex, Docker, Foundry or models
         shell: bash
         run: |

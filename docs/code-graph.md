@@ -178,7 +178,12 @@ CODE_GRAPH_INTEGRATION=1 .venv/bin/python -m unittest discover -s tests -p test_
 ```
 
 The Debian CI job bootstraps twice in debian:13 without Codex/Foundry and runs
-native fixtures. The smoke client bounds initialization, initialized notification,
+native fixtures. Before setup it trusts only the mounted checkout path in the
+container shell user's Git configuration: checkout's action-local trust does
+not cover that user's different HOME/ownership context. A real-Git regression
+test simulates different ownership and verifies this step precedes local hooks
+configuration, without a wildcard trust exception.
+The smoke client bounds initialization, initialized notification,
 list/query and shutdown to 90 seconds, asserting exact names, paths and line
 locations for FoundryConnectionManager and handleRpcMessage. `--dump-schemas`
 prints the observed catalog for upgrade review. Fixture tests cover local engine
