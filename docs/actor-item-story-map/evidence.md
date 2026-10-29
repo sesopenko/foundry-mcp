@@ -293,3 +293,13 @@ The October 20 checks passed for all 39 story files and both navigation/evidence
 - Targeted Markdown whitespace checks and `git diff --check` passed. No application behavior changed, so application regression suites and live game setup were not required for this documentation change.
 
 When editing dependencies later, compare the story prerequisite rows and integrated checkpoint lists against the index table, parse the fenced Mermaid block, check identical edge/node sets and run a cycle check before rendering. Optional relationships are not solid-arrow dependencies. Revalidate the exact three-Actor/24-Item inventory if scope changes; do not count actor integration checkpoints as new stories.
+
+October 28 familiar closure: [the requirement matrix](familiar-acceptance.md)
+combines existing master-linked runtime proof with `a87a830`'s all-section
+JavaScript/Python acceptance. ACT-familiar/M-FAMILIAR are Complete for the
+declared supported/partial views. No extra live fixture or full-mechanics claim
+was added. Character/NPC current Skills and character creature supplements still
+need their own live proof. Dedicated affliction functionality remains Deferred
+outside delivery; the live four-call interface check verified 22 tool schemas,
+false discovery support flags and two invalid filters rejected before any
+document read. Current progress is 34/38 delivery stories (89.5%).

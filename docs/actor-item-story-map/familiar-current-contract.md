@@ -2,9 +2,10 @@
 
 Implemented explicit `read_actor(sections=['statistics'])` contract on a
 familiar, Foundry 14.369 / PF2e 8.6.1, upstream revision
-`28d9d156f252d084371d994dc359509b49eadf18`. This checkpoint does not complete
+`28d9d156f252d084371d994dc359509b49eadf18`. This checkpoint alone did not complete
 [ACT-familiar](stories/ACT-familiar.md). Representative world-familiar values
-are now live-verified below; complete integrated acceptance remains open.
+are live-verified below; subsequent [combined acceptance](familiar-acceptance.md)
+closes the declared supported/partial Actor views without claiming full mechanics.
 
 ## Master guard before current model reads
 
@@ -167,12 +168,17 @@ prevent false cleanup success or unrelated deletions. Request/initialization/
 session limits are 30/10/180 seconds, with separately bounded cleanup.
 
 This verifies selected world-familiar current values and the unassociated-master
-boundary. Compendium/token current fixtures, Item-linked skills and integrated
-casting/state remain separate gates. It does not certify all familiar mechanics.
+boundary. Compendium/token current fixtures and Item-linked skills remain outside
+this live proof. Combined casting/state composition is now covered by the
+[Actor closure matrix](familiar-acceptance.md); it does not certify all familiar
+mechanics, current availability or effective application.
 
-Original ACT-familiar gates remain: representative master-linked live values,
-familiar/master ability identity and description, world/compendium/token context,
-integrated casting/state, and complete supported effective interfaces. Familiar
+The original ACT-familiar requirements are audited in the closure matrix:
+representative selected master-linked values and action identity/prose are
+verified, with deterministic combined casting/state and context boundaries.
+Full contextual live workflows remain CORE-acceptance's separate gate. Familiar
 action Items remain unclassified until their exact descriptions establish scope;
 this statistics checkpoint does not infer master-benefit classification, pet or
-companion roles, acquisition, activation or normal Strikes.
+companion roles, acquisition, activation or normal Strikes. Dedicated affliction
+functionality is Deferred; condition activity/suppression/application and full
+current statistics remain outside the declared supported subset.

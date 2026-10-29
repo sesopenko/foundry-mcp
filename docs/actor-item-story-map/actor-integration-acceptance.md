@@ -43,7 +43,10 @@ focused checks. Familiar selected current values already have independent
 [master-linked runtime evidence](familiar-current-contract.md); repeating that
 fixture solely to obtain more passing examples is unnecessary.
 
-Actor stories remain open in this increment. Full world/pack/token and journal
+The combined-test increment left Actor stories open. A subsequent
+[familiar audit](familiar-acceptance.md) closes that Actor's declared views using
+its existing runtime proof; character/NPC remain open for the gaps above.
+Full world/pack/token and journal
 workflow acceptance belongs to CORE-acceptance. CORE-token separately retains
 the missing existing same-base unlinked pair with distinct current HP; neither
 combined mocks nor the affliction deferral changes that requirement.

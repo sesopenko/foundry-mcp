@@ -821,3 +821,21 @@ Focused checks passed (four Python and three JavaScript); full suites passed
 515 Python tests (one skipped) and 592 JavaScript tests. Dependency/Mermaid and
 whitespace checks passed. These tests prove composition, not the pending live
 interfaces.
+
+## Familiar integrated acceptance — October 28, 2026
+
+The [familiar closure matrix](familiar-acceptance.md) audits every original
+ACT-familiar requirement against the delivered readers, combined-section
+JavaScript/Python acceptance and existing master-linked runtime evidence.
+The latter verifies 127 present current fields, exact action prose and master
+follow-ups, omission of current rows after master unassignment, unchanged read
+fingerprints and confirmed fixture cleanup. No additional fixture was created.
+
+ACT-familiar and M-FAMILIAR are Complete for their declared supported/partial
+views. Full mechanics, Item-linked familiar skills, ordinary Strikes, automatic
+ability classification, casting availability and state application remain
+unsupported or unverified. Broader contextual end-to-end acceptance stays in
+CORE-acceptance; the distinct-current-HP token pair remains CORE-token's blocker.
+Character/NPC current Skills and character supplements still need live evidence.
+Progress is **34/38 delivery stories (89.5%)**; affliction remains separately
+Deferred and unavailable in readable interfaces.
