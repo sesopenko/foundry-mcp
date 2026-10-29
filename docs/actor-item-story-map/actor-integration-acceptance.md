@@ -1,0 +1,49 @@
+# Combined Actor integration acceptance
+
+Target: Foundry 14.369 / PF2e 8.6.1. This checkpoint checks composition of the
+delivered readers; it does not turn deterministic mocks into runtime evidence.
+
+`tests/js/actor-integrated-readers.test.js` uses production `readActor` with all
+sections advertised by `getActorTypes`, consuming every bounded page for
+character, NPC and familiar Actors. It checks stable revision and identity,
+unique record keys, exact contributor paths, distinct source/current HP,
+owned ability and Lore references, casting preparations, inventory and state.
+Familiar master identity and action references coexist with current statistics;
+ordinary familiar Strikes remain unsupported. Token cases preserve actual
+instance ownership without substituting base-Actor witnesses. Changes to current
+values, owned source or permissions invalidate combined continuations.
+
+`tests/test_actor_integrated.py` passes actual production JavaScript pages
+through Python `read_actor`, including returned cursors, selected sections and
+count/byte limits. It rejects a forged foreign current-value contributor.
+The shared fixture fingerprints source, current and owned Item data before and
+after reads and makes mutation, preparation and roll entry points throw.
+
+These checks complement the section-specific tests and existing runtime
+verification. They do not establish every possible combination of game rules,
+complete action legality, target-dependent statistics or active application.
+Effective sections remain unsupported and state application remains unknown.
+Dedicated affliction Items remain Deferred, with no reader or selectable type.
+
+## Remaining evidence before Actor closure
+
+The audit found two concrete gaps that combined mocks cannot close:
+
+- Character/NPC current Skills has discovery and deterministic coverage but
+  lacks representative live comparisons of current values and owner-local Lore
+  `itemId` joins. Source Lore reads and recorded proficiency ranks do not prove
+  this separate current-data boundary. See the [Skills contract](skills-current-contract.md).
+- Character senses, languages and IWR supplements lack representative live
+  serialization verification. The extended current-statistics probe verified
+  NPC samples; earlier character checks covered the core numeric subset.
+  See the [creature supplement contract](creature-current-contract.md).
+
+Reuse the existing development world and verification harnesses for these
+focused checks. Familiar selected current values already have independent
+[master-linked runtime evidence](familiar-current-contract.md); repeating that
+fixture solely to obtain more passing examples is unnecessary.
+
+Actor stories remain open in this increment. Full world/pack/token and journal
+workflow acceptance belongs to CORE-acceptance. CORE-token separately retains
+the missing existing same-base unlinked pair with distinct current HP; neither
+combined mocks nor the affliction deferral changes that requirement.

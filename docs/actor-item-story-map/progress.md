@@ -799,3 +799,25 @@ Progress remains **33/38 (86.8%)**; dedicated affliction functionality stays Def
 Full suites passed: 511 Python tests (one skipped) and 589 JavaScript tests.
 Fresh-client discovery and the refreshed GM browser checks passed. M-PC is now
 tracked In progress; no full Actor story completion is claimed by this unit.
+
+## Combined Actor integration checks — October 28, 2026
+
+Production JavaScript readers now have combined, fully paginated acceptance
+fixtures for character, NPC and familiar Actors, including all advertised
+sections. Actual pages also pass through Python's strict tool boundary.
+The checks retain exact contributor identity, distinct source/current values,
+owned Lore joins and Item follow-ups, individual spell preparations, inventory,
+state and explicit unsupported sections. Token cases retain instance ownership;
+changed current values, source or permissions invalidate continuations.
+
+The [integration audit](actor-integration-acceptance.md) records two remaining
+runtime evidence gaps: character/NPC current Skills and character creature
+supplements. These are distinct from already verified source ranks, Lore source
+and NPC supplements. Actor stories remain open; progress stays **33/38 (86.8%)**.
+Dedicated affliction functionality remains Deferred and unavailable in readable
+type filters. The existing local Docker stack and test-world GM bridge were
+restored without creating another instance or changing game documents.
+Focused checks passed (four Python and three JavaScript); full suites passed
+515 Python tests (one skipped) and 592 JavaScript tests. Dependency/Mermaid and
+whitespace checks passed. These tests prove composition, not the pending live
+interfaces.
