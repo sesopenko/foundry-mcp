@@ -9,6 +9,26 @@ file's maintenance instructions. Completed requests live in
 [docs/feature-wishlist-finished.md](docs/feature-wishlist-finished.md). Check both
 files for existing requests and stable IDs before adding or moving an entry.
 
+## Public-facing README
+
+Treat the root `README.md` as the project's public introduction and marketing
+page. Lead with what users can do, how to get started, and links to further
+reading. Keep feature summaries to one or two short sentences per topic.
+
+When a task says to update the README, revise the existing summary rather than
+append a completion note for each feature, Item type, or development story.
+Keep field inventories, API/schema contracts, edge cases, verification evidence,
+and development history in the relevant `docs/` pages. Link to those details;
+retain only limitations that materially affect a user's decision to use the
+project, and do not overstate support.
+
+Before finishing a README edit, review the whole affected section as rendered
+Markdown: ordinary line breaks do not separate paragraphs. Remove repetition
+and accumulated implementation detail instead of merely splitting a wall of
+text into more paragraphs or bullets. Requirements to maintain detailed tool
+contracts and implementation documentation do not require duplicating them in
+the README.
+
 ## Editing files
 
 Use the standard code-editing functionality, such as `apply_patch`, for ordinary
