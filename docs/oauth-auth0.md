@@ -1,4 +1,4 @@
-# Auth0 OAuth deployment (unreleased)
+# Auth0 OAuth deployment (v2.3.0)
 
 This server is an OAuth protected resource. Auth0 owns login, consent, access
 tokens and refresh; ChatGPT holds the OAuth client secret. No client secret,
@@ -47,8 +47,8 @@ and [refresh-token guidance](https://auth0.com/docs/secure/tokens/refresh-tokens
 
 Use the separate [OAuth Compose file](../deploy/compose.oauth.yaml) and
 [environment template](../deploy/.env.oauth.example), never an override layered
-on the Basic example. Set a pinned OAuth-capable image; v2.2.0 does not contain
-this unreleased feature. Keep `.env.oauth` private and outside version control.
+on the Basic example. Set a pinned OAuth-capable image, starting with
+`sesopenko/foundry-mcp:v2.3.0`. Keep `.env.oauth` private and outside version control.
 
 | Variable | Contract |
 | --- | --- |

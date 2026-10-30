@@ -1,6 +1,6 @@
 # Connect ChatGPT using Auth0
 
-First complete [Auth0 setup](oauth-auth0.md). This feature is unreleased and
+First complete [Auth0 setup](oauth-auth0.md). This feature ships in v2.3.0 and
 [live acceptance](oauth-verification.md) is still required.
 
 In the current [custom MCP flow](https://developers.openai.com/api/docs/guides/custom-mcp-server),

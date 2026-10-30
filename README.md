@@ -1,6 +1,7 @@
 # sesopenko/foundry-mcp
 
-Version 2.2.0 adds [character wealth and Bulk](docs/character-inventory-metrics.md).
+Version 2.3.0 adds [Auth0 OAuth](docs/oauth-auth0.md) and
+[PF2e inline builders](docs/pf2e-inline-builders.md).
 It retains the [à la carte read contracts](docs/selective-reads.md) introduced
 in 2.0.0: nine heavy tools default to compact results with typed `select`
 requests and responses. Clients upgrading from 1.x must refresh schemas and
@@ -25,7 +26,7 @@ Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architectur
 The source tree also provides three [typed PF2e inline builders](docs/pf2e-inline-builders.md)
 for roll, check and compendium Item embed notation. They require a ready GM on
 Foundry14.369/PF2e8.6.1 and never send chat, write documents or evaluate rolls.
-This addition follows v2.2.0 and is not yet released.
+These builders are included in v2.3.0.
 
 Journal preparation tools provide hierarchical navigation, page outlines,
 literal text search, and exact HTML/Markdown reading through the GM browser.
@@ -46,16 +47,16 @@ This is currently in an experimental state, not a foundry module that is ready t
 
 ## Standalone LAN deployment and module releases
 
-The source tree adds optional [Auth0 OAuth](docs/oauth-auth0.md) for
-[ChatGPT](docs/oauth-chatgpt.md), with a separate deployment template. This is
-unreleased; v2.2.0 remains Basic-only. Basic and OAuth are mutually exclusive per
+Version 2.3.0 adds optional [Auth0 OAuth](docs/oauth-auth0.md) for
+[ChatGPT](docs/oauth-chatgpt.md), with a separate deployment template.
+Basic and OAuth are mutually exclusive per
 instance. See [automated evidence and live acceptance gates](docs/oauth-verification.md).
 
 For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
-The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
+The gaming Foundry installation is independently managed. Production deployments require MCP Basic Auth or OAuth and separate browser bridge
 credentials; development execution stays disabled. See the authentication and
-2.2.0 migration instructions in the operations guide.
+2.3.0 migration instructions in the operations guide.
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
@@ -84,7 +85,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.2.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.3.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -279,17 +280,17 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v2.2.0)
+## Actor and Item source reading (v2.3.0)
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party
 membership, with named party selection and canonical `read_actor` follow-ups.
-Use character members for PC-group questions. Version 2.2.0 adds
+Use character members for PC-group questions. Version 2.2.0 added
 `read_actor` selections `wealth`, `bulk`, `wealth.items` and `bulk.items`, with
 guarded runtime fields reporting `available` or `potentially_missing`. Party
 stash remains unsupported. See [metric contracts](docs/character-inventory-metrics.md)
 and [party contracts](docs/party-tools.md).
 
-Version 2.2.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 2.3.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and

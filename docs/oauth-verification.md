@@ -1,7 +1,8 @@
 # Auth0 OAuth verification
 
-Implementation evidence recorded 29 October 2026. This is an unreleased source
-change, not approval to deploy or a claim of successful ChatGPT login.
+Implementation evidence recorded 29 October 2026 for the change released in
+v2.3.0. Publication does not establish successful ChatGPT login or refresh;
+the live acceptance checks below remain outstanding.
 
 ## Framework migration
 

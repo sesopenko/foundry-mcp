@@ -12,12 +12,12 @@ This image runs the Python MCP server. A companion Foundry module connects the G
 
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
-## Selective reads in v2.2.0
+## Selective reads in v2.3.0
 
-### Unreleased Auth0 support
+### Auth0 support
 
-The source after v2.2.0 adds mutually exclusive Auth0 OAuth and Basic modes.
-Published v2.2.0 images do not include OAuth. With an OAuth-capable pinned build,
+Version 2.3.0 adds mutually exclusive Auth0 OAuth and Basic modes.
+With a pinned v2.3.0 image or later,
 use the standalone
 [OAuth Compose file](https://github.com/sesopenko/foundry-mcp/blob/main/deploy/compose.oauth.yaml)
 and [environment template](https://github.com/sesopenko/foundry-mcp/blob/main/deploy/.env.oauth.example).
@@ -45,7 +45,7 @@ services:
 Its private `.env` contains:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=REPLACE_WITH_OAUTH_CAPABLE_PINNED_IMAGE
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.3.0
 FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
 FOUNDRY_MCP_OAUTH_ISSUER=https://YOUR_TENANT.REGION.auth0.com/
 FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS=auth0|REPLACE_WITH_USER_ID
@@ -68,16 +68,15 @@ and [live acceptance gates](https://github.com/sesopenko/foundry-mcp/blob/main/d
 
 ### Released selective reads
 
-The source tree after v2.2.0 adds `create_pf2e_inline_roll`,
+Version 2.3.0 adds `create_pf2e_inline_roll`,
 `create_pf2e_inline_check` and `create_pf2e_inline_embed`. These typed builders
 return insertable notation and verified runtime identity through a ready GM
 browser on Foundry14.369/PF2e8.6.1. They never send messages, write documents or
 evaluate rolls. Embed generation checks compendium Item access. Update both
-components and refresh discovery when a release includes this addition; it is
-not present in the published v2.2.0 image. See the
+components and refresh discovery when upgrading. See the
 [inline builder contract and limitations](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pf2e-inline-builders.md).
 
-Version 2.2.0 includes compact defaults and typed `select` request and
+Version 2.3.0 includes compact defaults and typed `select` request and
 response contracts for nine heavy Actor/Item, journal and PDF-search tools.
 Object reads default to identity; lists default to ten entries; journal text
 defaults to 2,000 UTF-16 units; JSON defaults to 8,000 bytes. Actor/Item responses
@@ -85,17 +84,17 @@ use `entries[].values[]`; request raw evidence explicitly. Upgrade both componen
 and refresh client discovery when upgrading. See the
 [selective-read migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/selective-reads.md).
 
-## Actor and Item reading in v2.2.0
+## Actor and Item reading in v2.3.0
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party membership
-and named character follow-ups. Version 2.2.0 adds computed wealth/Bulk through
+and named character follow-ups. Version 2.2.0 added computed wealth/Bulk through
 `read_actor` selections `wealth`, `bulk`, `wealth.items`
 and `bulk.items`, with guarded `available`/`potentially_missing` fields. Party
 stash remains unsupported. Deploy matching server/module builds and refresh
 LibreChat discovery when upgrading. See
 [metric contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/character-inventory-metrics.md).
 
-Version 2.2.0 provides GM-only Actor/Item capability discovery, selected-source
+Version 2.3.0 provides GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item pack index search on the verified
 Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and

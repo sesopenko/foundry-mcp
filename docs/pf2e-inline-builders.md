@@ -1,6 +1,6 @@
 # Typed PF2e inline builders
 
-Implemented in the source tree after v2.2.0 (WISH-008); not yet released.
+Released in v2.3.0 (WISH-008).
 `create_pf2e_inline_roll`, `create_pf2e_inline_check` and
 `create_pf2e_inline_embed` construct insertable notation from structured
 mechanics. Every invocation requires the existing authenticated, ready GM
