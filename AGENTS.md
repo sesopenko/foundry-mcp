@@ -297,7 +297,15 @@ behavior, rather than leaving testing until the end. Resolve relevant failures
 before building further work on top of a change.
 
 Run tests autonomously without asking the user to prompt or approve routine
-local test execution. Before committing, run `./scripts/test.sh` for both suites.
+local test execution. Before committing, run `./scripts/test.sh` for both suites,
+except when there is at least one staged change and every affected path ends in
+case-sensitive `.md`. Such Markdown-only commits need no local tests or
+confirmation; retain applicable documentation link, example, consistency and
+whitespace checks. Inspect staged changes only; unstaged files do not affect
+this exception. Both old and new rename paths must end in `.md`. Empty staging,
+non-Markdown and mixed commits still require tests; Git inspection failures
+block commits. The pre-commit hook enforces this rule and prints a short skip
+message. GitHub Actions continues running tests for Markdown changes.
 This offline runner uses the existing `.venv` and Node directly, avoiding uv
 cache writes outside the sandbox. For focused Python checks use
 `.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`;

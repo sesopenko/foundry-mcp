@@ -23,7 +23,12 @@ alongside new behavior and run focused checks after meaningful edits:
 
 - Python: `.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`
 - JavaScript: `node --test tests/js/<area>.test.js`
-- Full offline suite before committing: `./scripts/test.sh`
+- Full offline suite before committing: `./scripts/test.sh`, except for commits
+  with at least one staged change and only case-sensitive `.md` paths (both
+  sides of renames). These need no local tests or confirmation; retain applicable
+  documentation link, example, consistency and whitespace checks. Unstaged files
+  do not affect this exception; GitHub Actions still runs tests. See the
+  [commit hook policy](../../../README.md#unit-tests-and-commit-hook).
 
 These commands use installed dependencies without uv cache/network access.
 Resolve failures before continuing dependent work. Provision dependencies
@@ -51,4 +56,4 @@ separately only when needed.
 Report the observed before/after behavior, focused/full test results, and any
 remaining live verification gap. Do not claim success from server health or a
 page reload alone. Commit only when requested or otherwise authorized by the
-current task; run the required suites first.
+current task; follow the commit hook policy above for required checks.

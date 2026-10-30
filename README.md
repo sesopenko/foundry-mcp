@@ -186,9 +186,17 @@ hooks, reconnect backoff, and manual disconnect. These mocks verify bridge
 behavior; Foundry API compatibility requires a separate live check.
 
 The setup command above installs the tracked `.githooks/pre-commit` hook for this
-clone. Each new clone must run that command once. The hook runs both suites
-and blocks commits if tests fail or the local Python environment or Node.js cannot run them. It tests the
-current working tree, so stage the intended changes before committing.
+clone. Each new clone must run that command once. The hook skips local tests
+without confirmation when there is at least one staged change and every affected
+path ends in case-sensitive `.md`, including deletions and both sides of renames.
+Unstaged files do not affect that decision. Keep applicable documentation link,
+example, consistency and whitespace checks for these commits. GitHub Actions
+still runs tests for Markdown changes.
+
+For non-Markdown, mixed or empty staging, the hook runs both suites and blocks
+commits if tests fail or the local Python environment or Node.js cannot run them.
+Git inspection failures also block commits. When tests run, they test the current
+working tree, so stage the intended changes before committing.
 
 ## LLM
 

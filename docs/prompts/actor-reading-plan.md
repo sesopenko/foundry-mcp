@@ -181,8 +181,10 @@ Live v13 compatibility, complete resource expenditure and some effective-state
 APIs remain unverified, as detailed in the reference.
 
 For a later code change, run focused tests during development and the full
-`./scripts/test.sh` before committing. Documentation-only consolidation needs
-link/example/consistency and whitespace checks, not runtime regression tests.
+`./scripts/test.sh` before committing. Commits containing only staged `.md`
+paths need link/example/consistency and whitespace checks, without local tests
+or confirmation; both rename paths must qualify. Unstaged files do not affect
+the exception. See [the commit hook policy](../../README.md#unit-tests-and-commit-hook).
 
 Success is a fresh LLM discovering the correct entity, reading supported source
 and mapped concepts, following dependencies and retaining canonical identities,

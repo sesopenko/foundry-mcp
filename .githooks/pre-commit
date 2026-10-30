@@ -1,5 +1,31 @@
-#!/bin/sh
+#!/usr/bin/env bash
 set -eu
 
-cd "$(git rev-parse --show-toplevel)"
+repo_root=$(git rev-parse --show-toplevel)
+cd -- "$repo_root"
+
+# Preserve NUL-delimited paths and Git's exit status before deciding to skip.
+staged_paths=$(mktemp)
+trap 'rm -f -- "$staged_paths"' EXIT
+git diff --cached --name-only --no-renames --no-ext-diff --no-textconv \
+    --ignore-submodules=none -z -- > "$staged_paths"
+
+# Disabling rename detection includes both old and new paths in this check.
+has_changes=false
+markdown_only=true
+while IFS= read -r -d '' path; do
+    has_changes=true
+    case "$path" in
+        *.md) ;;
+        *) markdown_only=false ;;
+    esac
+done < "$staged_paths"
+rm -f -- "$staged_paths"
+trap - EXIT
+
+if "$has_changes" && "$markdown_only"; then
+    echo 'Skipping local tests for staged Markdown-only changes.'
+    exit 0
+fi
+
 exec ./scripts/test.sh
