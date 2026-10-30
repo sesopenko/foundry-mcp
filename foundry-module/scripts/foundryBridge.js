@@ -6,6 +6,7 @@ import { getJournalTree, getJournalContents, searchJournals, readJournalPage, re
 import { getActorTypes, readActor, readItem, listActorItems, readActorSelected, readItemSelected } from "./actors.js";
 import { getActorTree, searchActors } from "./actorWorld.js";
 import { getPartyMembers } from "./actorParty.js";
+import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
 /**
@@ -52,6 +53,9 @@ function reportStatus(state, message) {
  * or a Promise resolving to a value.
  */
 const rpcHandlers = {
+  verifyPF2eInlineRoll,
+  verifyPF2eInlineCheck,
+  verifyPF2eInlineEmbed,
   readActorSelected,
   readItemSelected,
   getModuleBuildInfo,

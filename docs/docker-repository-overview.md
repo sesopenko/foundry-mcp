@@ -14,6 +14,15 @@ The image does not include Foundry VTT or a chat interface. Use your existing li
 
 ## Selective reads in v2.2.0
 
+The source tree after v2.2.0 adds `create_pf2e_inline_roll`,
+`create_pf2e_inline_check` and `create_pf2e_inline_embed`. These typed builders
+return insertable notation and verified runtime identity through a ready GM
+browser on Foundry14.369/PF2e8.6.1. They never send messages, write documents or
+evaluate rolls. Embed generation checks compendium Item access. Update both
+components and refresh discovery when a release includes this addition; it is
+not present in the published v2.2.0 image. See the
+[inline builder contract and limitations](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pf2e-inline-builders.md).
+
 Version 2.2.0 includes compact defaults and typed `select` request and
 response contracts for nine heavy Actor/Item, journal and PDF-search tools.
 Object reads default to identity; lists default to ten entries; journal text

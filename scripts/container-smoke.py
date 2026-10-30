@@ -16,6 +16,7 @@ from fastmcp.client.transports import StreamableHttpTransport
 import websockets
 
 TOOLS = {
+    'create_pf2e_inline_roll', 'create_pf2e_inline_check', 'create_pf2e_inline_embed',
     'get_bridge_versions', 'get_player_names',
     'get_journal_tree', 'get_journal_contents', 'search_journals',
     'read_journal_page', 'resolve_journal_reference',

@@ -203,3 +203,75 @@ Use compact per-character summaries, preserve duplicate-name identities, and
 state incomplete roster/value coverage. Group reads are sequential observations;
 recheck party membership revision before claiming complete-party comparisons.
 
+## WISH-008 — PF2e inline-formatting assistance
+
+- **Status:** Implemented in source after v2.2.0; not yet released
+- **Requested:** 2026-10-29
+- **Scope:** Three separate MCP tools generating inline roll links, inline check
+  links and inline embeds for PF2e content authoring.
+
+### User need
+
+Help the LLM draft PF2e-formatted text for chat messages, journal entries and
+other future write/create tools without requiring it to construct inline syntax
+from memory.
+
+### Desired behavior
+
+- Provide **one tool per inline type**, each accepting a structured parameter
+  object tailored to that type. This supersedes the initial idea of a single
+  tool with a block-type selector. Publish distinct typed input/output contracts
+  with concise field guidance, defaults, bounds, conflicts and examples.
+- Each tool returns a text block containing the insertable inline source text.
+  Drafting must not send chat, write journals, execute rolls or apply effects.
+  Return source notation rather than rendered HTML or fetched document bodies.
+- Keep generated text compact and reusable in WISH-007 and future journal
+  writing. Make PF2e requirements and destination/context limitations explicit;
+  do not claim that every destination enriches the syntax identically.
+- Limit this entry to these three inline families. Inline action macros,
+  templates, localization and images are outside scope.
+
+### Evidence and proposed tool boundaries
+
+The upstream [PF2e wiki Style Guide](https://github.com/foundryvtt/pf2e/wiki/Style-Guide)
+was searched in Grounded Docs library `pf2e-wiki` and fetched on 2026-10-29.
+It is rolling documentation, not a versioned runtime contract. The following
+boundaries follow its **Inline Roll Links**, **Inline Check Links** and
+**Inline Embeds** sections; exact supported parameters and versions still need
+implementation-time verification.
+
+| Separate tool | Proposed parameter coverage | Example returned text |
+| --- | --- | --- |
+| Inline roll links | Non-damage formula, roll visibility, flavor and optional label; PF2e damage formula/types/categories, roll options and optional label in the same roll-link tool | `[[/r 1d20+17 #Counteract]]` or `@Damage[1d6[fire]]{ouch!}` |
+| Inline check links | Check/statistic type, one DC method (`dc`, `against` or `defense`), optional label, basic save, DC visibility/adjustment, roller role, traits and roll options; other documented check flags where verified | `@Check[fortitude|dc:20|basic]` |
+| Inline embeds | Compendium Item UUID and optional horizontal-rule suppression; always emit the inline flag | `@Embed[Compendium.pf2e.feats-srd.Item.39CqlOzlHjEhh0E4 inline hr=false]` |
+
+Use the guide's parameter ordering and preferred syntax. Distinguish a roll
+link's eventual roll visibility from the audience of the message containing it.
+Document where check/damage behavior depends on an owning Actor/Item or target;
+do not invent that context when drafting standalone chat text. Embeds require
+canonical UUIDs obtained through discovery, not guessed names or IDs; generating
+notation does not establish target access or successful rendering.
+
+### Acceptance direction
+
+Verify a fresh client can discover and invoke each tool independently using
+only its published schema and examples. Cover valid parameter combinations,
+conflicting DC methods, invalid input and delimiter/escaping behavior. Verify
+exact insertable output and absence of write/roll side effects. After offline
+checks, verify relevant enrichment in the existing development runtime and
+record the tested Foundry/PF2e versions and destination-specific limitations.
+Measure discovery size and generated-text response bytes. Tool names and exact
+schemas remain to be finalized; this entry records proposed work only.
+
+### Implementation and acceptance
+
+The three typed `create_pf2e_inline_roll`, `create_pf2e_inline_check` and
+`create_pf2e_inline_embed` tools are implemented and verified on
+Foundry14.369/PF2e8.6.1. Advanced expressions and dynamic references are excluded;
+roll arithmetic uses structured dice/modifiers. The source tree retains version
+2.2.0 pending a separately authorized release. See the
+[contract, API evidence, live acceptance and measured payloads](pf2e-inline-builders.md).
+The historical proposed boundaries above are preserved; the linked contract
+supersedes their undecided schema and verification statements.
+

@@ -2,6 +2,12 @@
 
 ## Overview
 
+Three [typed PF2e inline builders](pf2e-inline-builders.md) validate structured
+mechanics in Python, format bounded source and use the existing GM bridge for
+version/permission checks, public non-evaluating formula validation and canonical
+compendium Item access. Their dedicated models are separate from selective
+reads; responses contain insertable text plus verified runtime identity.
+
 The nine [selective read tools](selective-reads.md) use explicit Pydantic request
 and response validation at FastMCP. Actor/Item projections retain private validated
 source witnesses between browser and Python, then publish only the checked compact

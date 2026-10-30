@@ -1,5 +1,11 @@
 # foundry-module/scripts
 
+`inline.js` verifies typed PF2e inline builder source on core14.369/PF2e8.6.1
+using public `Roll.validate`, canonical document identity and permissions. It
+never evaluates rolls, enriches content, sends messages or changes documents.
+Python constructs delimiters from bounded typed mechanics. See the
+[builder contract and verification](../../docs/pf2e-inline-builders.md).
+
 `actorParty.js` discovers PF2e8.6.1 world-party Actors and selects persisted
 `system.details.members[].uuid` through public source serialization. It resolves
 world Actor identities with permission checks, preserves unavailable member

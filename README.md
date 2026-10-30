@@ -22,6 +22,11 @@ In practice, you run the Python MCP server, load the companion module in Foundry
 
 Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architecture.md)
 
+The source tree also provides three [typed PF2e inline builders](docs/pf2e-inline-builders.md)
+for roll, check and compendium Item embed notation. They require a ready GM on
+Foundry14.369/PF2e8.6.1 and never send chat, write documents or evaluate rolls.
+This addition follows v2.2.0 and is not yet released.
+
 Journal preparation tools provide hierarchical navigation, page outlines,
 literal text search, and exact HTML/Markdown reading through the GM browser.
 See [journal tool contracts and compatibility](docs/journal-tools.md).
