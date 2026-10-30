@@ -1,5 +1,6 @@
 """Offline wrapper contracts; native integration is opt-in and runs in Debian CI."""
 import asyncio
+from contextlib import asynccontextmanager
 import json
 import os
 from pathlib import Path
@@ -8,8 +9,52 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import AsyncMock, patch
+
+from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool
+from scripts import code_graph_smoke
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+class SmokeTests(unittest.IsolatedAsyncioTestCase):
+    async def run_smoke(self, *, is_error=False):
+        async def call_tool(tool, arguments):
+            self.assertEqual(tool, 'get_ast_node')
+            return CallToolResult(is_error=is_error, content=[TextContent(
+                type='text', text=json.dumps({
+                    'name': arguments['symbol_name'],
+                    'file_path': arguments['file_path'],
+                    'start_line': 1, 'end_line': 2,
+                }),
+            )])
+
+        session = AsyncMock()
+        session.call_tool.side_effect = call_tool
+        session.list_tools.return_value = ListToolsResult(tools=[
+            Tool(name=name, input_schema={'type': 'object'})
+            for name in code_graph_smoke.TOOLS
+        ])
+
+        @asynccontextmanager
+        async def transport(*args, **kwargs):
+            yield (None, None)
+
+        @asynccontextmanager
+        async def client(*args, **kwargs):
+            yield session
+
+        with patch.object(code_graph_smoke, 'stdio_client', transport), \
+                patch.object(code_graph_smoke, 'ClientSession', client):
+            await code_graph_smoke.smoke()
+        self.assertEqual(session.call_tool.await_count, 2)
+
+    async def test_smoke_accepts_sdk_success_results(self):
+        await self.run_smoke()
+
+    async def test_smoke_rejects_sdk_error_even_with_valid_node_content(self):
+        with self.assertRaises(AssertionError):
+            await self.run_smoke(is_error=True)
 
 
 class WrapperTests(unittest.TestCase):
@@ -100,7 +145,7 @@ class NativeTests(unittest.IsolatedAsyncioTestCase):
                     await session.initialize()
                     async def query(tool, **args):
                         r = await session.call_tool(tool, args)
-                        self.assertFalse(r.isError, r)
+                        self.assertFalse(r.is_error, r)
                         return '\n'.join(c.text for c in r.content if c.type == 'text')
                     for symbol, file in (('graph_leaf', 'leaf.py'), ('jsLeaf', 'leaf.js'), ('test_graph_fixture', 'tests/test_fixture.py')):
                         text = await query('get_ast_node', symbol_name=symbol, file_path=file, compact=True)
@@ -122,7 +167,7 @@ class NativeTests(unittest.IsolatedAsyncioTestCase):
                         while True:
                             r = await session.call_tool('get_ast_node', {'symbol_name': symbol, 'file_path': file, 'compact': False})
                             text = '\n'.join(c.text for c in r.content if c.type == 'text')
-                            found = not r.isError and 'code_content' in text and symbol in text and file in text
+                            found = not r.is_error and 'code_content' in text and symbol in text and file in text
                             if found == present:
                                 return text
                             if time.monotonic() > deadline:

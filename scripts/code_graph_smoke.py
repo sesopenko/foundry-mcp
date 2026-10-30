@@ -28,7 +28,7 @@ async def smoke():
                 result = await session.call_tool("get_ast_node", {
                     "symbol_name": name, "file_path": file, "compact": True,
                 })
-                assert not result.isError, result
+                assert not result.is_error, result
                 payload = "\n".join(c.text for c in result.content if c.type == "text")
                 node = json.loads(payload)
                 assert node['name'] == name and node['file_path'] == file, node
