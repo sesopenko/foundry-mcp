@@ -10,7 +10,7 @@ implemented or scheduled. Completed requests are in
   Recording a request does not authorize implementation.
 - Read both wishlist files before adding an entry. Extend an existing request
   when the idea overlaps; otherwise append a new `## WISH-### — Title` entry.
-  Use one more than the highest ID across both files (currently `WISH-005`);
+  Use one more than the highest ID across both files (currently `WISH-008`);
   never renumber or reuse IDs, including after moving entries.
 - Include **Status**, **Requested** (the request date as `YYYY-MM-DD`) and
   **Scope**, followed by the user need and desired behavior. Add acceptance
@@ -138,3 +138,171 @@ Choose the tool name, identifier format, catalog organization and versioning
 contract during implementation. Keep explanations centralized so tool behavior,
 lookup text and any concise discovery guidance remain consistent. This wishlist
 entry does not implement the endpoint or change existing response contracts.
+
+## WISH-006 — Paginated chat message reading
+
+- **Status:** Wishlist
+- **Requested:** 2026-10-29
+- **Scope:** Read-only access to Foundry chat messages through MCP.
+
+### User need
+
+Let the LLM read chat messages and subsequently ask “give me the messages after
+this one” without retrieving the full history again, keeping context consumption
+down.
+
+### Desired behavior
+
+- Read chat messages in bounded pages with deterministic ordering and stable
+  message identifiers, useful author/speaker context and message content.
+- Return continuation data for paging through existing history and a reusable
+  message identifier or cursor for requesting only messages after a previously
+  read point. The boundary is exclusive: do not repeat the anchor message.
+- Allow incremental reads after reaching the end of the current history, so
+  later calls retrieve newly added messages without replaying earlier pages.
+- Keep default responses compact with explicit count and byte limits; provide
+  bounded follow-up access when a single message exceeds the response budget.
+- Respect message visibility, including whispers and blind messages. Distinguish
+  no newer visible messages from incomplete results or unavailable history.
+- Document ordering, continuation and recovery behavior for missing/deleted
+  anchors, edited messages and messages arriving between calls. A fresh LLM
+  should be able to use returned selectors without constructing cursors.
+
+### Acceptance direction
+
+Verify complete pagination and repeated incremental reads without duplicate or
+skipped messages under the documented ordering contract. Cover equal timestamps,
+new arrivals, empty results, deleted anchors, visibility and oversized content.
+Measure response bytes and call counts for initial history retrieval and later
+“after this message” reads, demonstrating that incremental reads omit previously
+read history. Tool names and exact cursor/schema design remain undecided.
+
+## WISH-007 — Send HTML chat messages and retrieve the writing style guide
+
+- **Status:** Wishlist
+- **Requested:** 2026-10-29
+- **Scope:** A chat-sending MCP tool and a separate read-only writing-style-guide
+  tool. Images, message deletion and clearing the chat log are excluded.
+
+### User need
+
+Let the LLM compose and send chat messages using the same terminology as the
+Foundry UI, including HTML formatting, and retrieve Paizo's writing conventions
+when drafting Pathfinder text.
+
+### Desired behavior
+
+- Expose these UI choices in the sending tool's published contract:
+  **Public as User**, **private to game masters**, **blind to game masters**,
+  **self only**, and **public as character**. Keep the user-facing terminology
+  even when the underlying API uses different names or represents audience and
+  speaker separately; translate internally.
+- Document each choice's audience, author and speaker semantics. Make character
+  selection discoverable through named canonical identifiers, with explicit
+  permission and missing-character errors. Do not silently substitute a different
+  audience or speaker.
+- Accept HTML message content matching the editor's supported basic formatting:
+  headings, block and inline elements, alignment, tables, font, size, format and
+  lists, plus supported PF2e inline formatting from WISH-008. Images are out of
+  scope. Establish the actual supported HTML subset and sanitization behavior
+  during implementation; these categories are user-observed editor features,
+  not a verified tag/style allowlist or a promise of arbitrary HTML support.
+- Return a compact send result with the created message's stable identifier,
+  audience and named author/speaker context, usable with WISH-006 reading.
+- Provide a separate tool to retrieve the exact Paizo passage below on demand.
+  Keep the passage out of routine send responses and discovery descriptions.
+  Distinguish this writing guide from the PF2e wiki's inline-syntax guidance.
+- **Do not expose any message-deletion functionality or “Clear chat log” to
+  the LLM**, including through alternate operations on the sending tool.
+
+### Writing-style-guide payload
+
+The user supplied the following as official Paizo text. Preserve it verbatim
+as the requested guide payload; publication/page attribution remains to be
+verified during implementation. The page 628 reference belongs to this passage
+and must not be presented as a universal page reference for other books.
+
+```text
+Throughout this rulebook, you will see formatting standards that might look a bit unusual at first. Specifically, the game’s rules are set apart in this text using specialized capitalization and italicization. These standards are in place to make the rules elements in this book easier to recognize.
+
+The names of specific statistics, skills, feats, actions, and some other mechanical elements in Pathfinder are capitalized. This way, when you see the statement “a Strike targets Armor Class,” you know that both Strike and Armor Class are referring to rules.
+
+If a word or a phrase is italicized, it is describing a spell or a magic item. This way, when you see the statement “the door is sealed by lock,” you know that in this case the word denotes the lock spell, rather than a physical item.
+
+Pathfinder also uses many terms that are typically expressed as abbreviations, like AC for Armor Class, DC for Difficulty Class, and HP for Hit Points. If you’re ever confused about a game term or an abbreviation, you can always turn to the Glossary and Index, beginning on page 628, and look it up!
+```
+
+### Acceptance direction
+
+Verify actual MCP discovery and invocation for all five UI choices, checking
+audience visibility and author/speaker identity separately. Test HTML handling,
+invalid choices, denied or missing characters and exact style-guide retrieval.
+Confirm discovery exposes neither deletion nor clearing operations. Measure
+discovery and representative response sizes, including an explicit guide lookup.
+Before implementation, verify documented public Foundry APIs and supported
+runtime behavior; finalize names, schemas, content bounds and send-failure/retry
+semantics so an uncertain send outcome does not invite duplicate messages.
+
+This request is separate from WISH-006's read-only chat scope. Recording it does
+not authorize sending messages to an existing game session.
+
+## WISH-008 — PF2e inline-formatting assistance
+
+- **Status:** Wishlist
+- **Requested:** 2026-10-29
+- **Scope:** Three separate MCP tools generating inline roll links, inline check
+  links and inline embeds for PF2e content authoring.
+
+### User need
+
+Help the LLM draft PF2e-formatted text for chat messages, journal entries and
+other future write/create tools without requiring it to construct inline syntax
+from memory.
+
+### Desired behavior
+
+- Provide **one tool per inline type**, each accepting a structured parameter
+  object tailored to that type. This supersedes the initial idea of a single
+  tool with a block-type selector. Publish distinct typed input/output contracts
+  with concise field guidance, defaults, bounds, conflicts and examples.
+- Each tool returns a text block containing the insertable inline source text.
+  Drafting must not send chat, write journals, execute rolls or apply effects.
+  Return source notation rather than rendered HTML or fetched document bodies.
+- Keep generated text compact and reusable in WISH-007 and future journal
+  writing. Make PF2e requirements and destination/context limitations explicit;
+  do not claim that every destination enriches the syntax identically.
+- Limit this entry to these three inline families. Inline action macros,
+  templates, localization and images are outside scope.
+
+### Evidence and proposed tool boundaries
+
+The upstream [PF2e wiki Style Guide](https://github.com/foundryvtt/pf2e/wiki/Style-Guide)
+was searched in Grounded Docs library `pf2e-wiki` and fetched on 2026-10-29.
+It is rolling documentation, not a versioned runtime contract. The following
+boundaries follow its **Inline Roll Links**, **Inline Check Links** and
+**Inline Embeds** sections; exact supported parameters and versions still need
+implementation-time verification.
+
+| Separate tool | Proposed parameter coverage | Example returned text |
+| --- | --- | --- |
+| Inline roll links | Non-damage formula, roll visibility, flavor and optional label; PF2e damage formula/types/categories, roll options and optional label in the same roll-link tool | `[[/r 1d20+17 #Counteract]]` or `@Damage[1d6[fire]]{ouch!}` |
+| Inline check links | Check/statistic type, one DC method (`dc`, `against` or `defense`), optional label, basic save, DC visibility/adjustment, roller role, traits and roll options; other documented check flags where verified | `@Check[fortitude|dc:20|basic]` |
+| Inline embeds | Compendium Item UUID and optional horizontal-rule suppression; always emit the inline flag | `@Embed[Compendium.pf2e.feats-srd.Item.39CqlOzlHjEhh0E4 inline hr=false]` |
+
+Use the guide's parameter ordering and preferred syntax. Distinguish a roll
+link's eventual roll visibility from the audience of the message containing it.
+Document where check/damage behavior depends on an owning Actor/Item or target;
+do not invent that context when drafting standalone chat text. Embeds require
+canonical UUIDs obtained through discovery, not guessed names or IDs; generating
+notation does not establish target access or successful rendering.
+
+### Acceptance direction
+
+Verify a fresh client can discover and invoke each tool independently using
+only its published schema and examples. Cover valid parameter combinations,
+conflicting DC methods, invalid input and delimiter/escaping behavior. Verify
+exact insertable output and absence of write/roll side effects. After offline
+checks, verify relevant enrichment in the existing development runtime and
+record the tested Foundry/PF2e versions and destination-specific limitations.
+Measure discovery size and generated-text response bytes. Tool names and exact
+schemas remain to be finalized; this entry records proposed work only.
