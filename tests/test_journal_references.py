@@ -42,7 +42,7 @@ class JournalReferenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def invoke(self, result):
         self.manager.call.return_value = result
-        return await resolve_journal_reference.fn(page_uuid=self.page, target=self.target)
+        return await resolve_journal_reference(page_uuid=self.page, target=self.target)
 
     async def test_world_pack_item_and_token_selectors(self):
         for document in ("Actor", "Item"):
@@ -98,7 +98,7 @@ class JournalReferenceTests(unittest.IsolatedAsyncioTestCase):
             result = self.response()
             result.update(target=target, anchor=anchor, source="markdown")
             self.manager.call.return_value = result
-            self.assertEqual(await resolve_journal_reference.fn(
+            self.assertEqual(await resolve_journal_reference(
                 page_uuid=self.page, target=target, source="markdown"), result)
 
     async def test_transport_and_origin_errors(self):
@@ -107,7 +107,7 @@ class JournalReferenceTests(unittest.IsolatedAsyncioTestCase):
                 (RpcError({"type": "ReferenceChanged", "message": "Reread origin"}), "ReferenceChanged: Reread origin")]:
             self.manager.call.side_effect = error
             with self.assertRaisesRegex(ToolError, expected):
-                await resolve_journal_reference.fn(page_uuid=self.page, target=self.target)
+                await resolve_journal_reference(page_uuid=self.page, target=self.target)
 
     async def test_discovery_and_schema(self):
         async with Client(mcp) as client:

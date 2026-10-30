@@ -87,7 +87,7 @@ class VersionToolTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_browser_preserves_server_identity(self):
         self.manager.websockets = {}
-        result = await tools.get_bridge_versions.fn()
+        result = await tools.get_bridge_versions()
         self.assertEqual(result['server'], SERVER)
         self.assertEqual(result['comparison'], 'unavailable')
         self.assertEqual(result['module_status'], 'not_connected')
@@ -98,7 +98,7 @@ class VersionToolTests(unittest.IsolatedAsyncioTestCase):
         for module, expected in [(SERVER,'match'), (make_build_info('1.3.1','v1.3.1',SHA),'mismatch'),
                                  (make_build_info('1.3.0',revision=SHA),'unverified'), (dict(UNKNOWN),'unverified')]:
             self.manager.call.return_value = module
-            result = await tools.get_bridge_versions.fn()
+            result = await tools.get_bridge_versions()
             self.assertEqual(result['comparison'], expected)
             self.assertEqual(result['module'], module)
             self.assertEqual(result['module_status'], 'connected')
@@ -110,14 +110,14 @@ class VersionToolTests(unittest.IsolatedAsyncioTestCase):
                               (asyncio.TimeoutError(),'timed_out'), (ConnectionError(),'disconnected'),
                               (RuntimeError(),'disconnected')]:
             self.manager.call.side_effect = error
-            result = await tools.get_bridge_versions.fn()
+            result = await tools.get_bridge_versions()
             self.assertEqual(result['module_status'],status)
             self.assertEqual(result['server'],SERVER)
             self.assertIsNone(result['module'])
         self.manager.call.side_effect = None
         for raw in [None, [], {'version':'fake'}, dict(SERVER,release_tag='vwrong'), dict(SERVER,build_kind=[])]:
             self.manager.call.return_value = raw
-            self.assertEqual((await tools.get_bridge_versions.fn())['module_status'],'invalid_metadata')
+            self.assertEqual((await tools.get_bridge_versions())['module_status'],'invalid_metadata')
 
     async def test_fresh_mcp_discovery_schema_and_real_no_browser_call(self):
         self.manager.websockets = {}

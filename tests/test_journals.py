@@ -40,7 +40,7 @@ class JournalToolTests(unittest.IsolatedAsyncioTestCase):
                 self.manager.reset_mock()
                 result = self.response(field)
                 self.manager.call.return_value = result
-                self.assertEqual(await tool.fn(**arguments), result)
+                self.assertEqual(await tool(**arguments), result)
                 self.manager.call.assert_awaited_once_with("gm", method, params, timeout=15.0)
 
     async def test_transport_and_browser_errors_are_actionable(self):
@@ -53,7 +53,7 @@ class JournalToolTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(message=message):
                 self.manager.call.side_effect = error
                 with self.assertRaisesRegex(ToolError, message):
-                    await get_journal_tree.fn()
+                    await get_journal_tree()
 
     async def test_invalid_responses_and_conflicting_search_scope(self):
         for response in [None, [], {}, {**self.response("children"), "complete": "true"},
@@ -63,11 +63,11 @@ class JournalToolTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(response_type=type(response)):
                 self.manager.call.return_value = response
                 with self.assertRaises(ToolError):
-                    await get_journal_tree.fn()
+                    await get_journal_tree()
         with self.assertRaisesRegex(ToolError, "at most one"):
-            await search_journals.fn(query="x", folder_id="f", journal_id="j")
+            await search_journals(query="x", folder_id="f", journal_id="j")
         with self.assertRaisesRegex(ToolError, "nonblank"):
-            await search_journals.fn(query=" ")
+            await search_journals(query=" ")
 
     async def test_fresh_client_discovery_and_schema_validation(self):
         async with Client(mcp) as client:

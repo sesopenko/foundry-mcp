@@ -14,6 +14,60 @@ The image does not include Foundry VTT or a chat interface. Use your existing li
 
 ## Selective reads in v2.2.0
 
+### Unreleased Auth0 support
+
+The source after v2.2.0 adds mutually exclusive Auth0 OAuth and Basic modes.
+Published v2.2.0 images do not include OAuth. With an OAuth-capable pinned build,
+use the standalone
+[OAuth Compose file](https://github.com/sesopenko/foundry-mcp/blob/main/deploy/compose.oauth.yaml)
+and [environment template](https://github.com/sesopenko/foundry-mcp/blob/main/deploy/.env.oauth.example).
+Do not layer it over the Basic example below. A minimal configuration for a
+host-local TLS proxy is:
+
+```yaml
+services:
+  foundry-mcp:
+    image: ${FOUNDRY_MCP_IMAGE:?set an OAuth-capable pinned image}
+    environment:
+      FOUNDRY_MCP_HOST: 0.0.0.0
+      FOUNDRY_MCP_AUTH_MODE: oauth
+      FOUNDRY_MCP_OAUTH_PROVIDER: auth0
+      FOUNDRY_MCP_PUBLIC_URL: ${FOUNDRY_MCP_PUBLIC_URL:?set HTTPS origin}
+      FOUNDRY_MCP_OAUTH_ISSUER: ${FOUNDRY_MCP_OAUTH_ISSUER:?set exact issuer}
+      FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS: ${FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS:?set approved user}
+      FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS: ${FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS:?set approved client}
+      FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
+      FOUNDRY_MCP_DEV_EXECUTION: "false"
+    ports:
+      - "127.0.0.1:8000:8000"
+```
+
+Its private `.env` contains:
+
+```dotenv
+FOUNDRY_MCP_IMAGE=REPLACE_WITH_OAUTH_CAPABLE_PINNED_IMAGE
+FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
+FOUNDRY_MCP_OAUTH_ISSUER=https://YOUR_TENANT.REGION.auth0.com/
+FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS=auth0|REPLACE_WITH_USER_ID
+FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS=REPLACE_WITH_CLIENT_ID
+FOUNDRY_MCP_BRIDGE_TOKEN=
+```
+
+Set the browser credential before startup. Auth0's API identifier and expected
+audience are the full `https://mcp.example.com/mcp/mcp` URL. Register ChatGPT
+manually with authorization-code + S256 PKCE, `client_secret_post` and refresh;
+keep its client secret in ChatGPT, never on this server. The granted `foundry:gm`
+scope and local user/client allowlists are mandatory. OAuth rejects all Basic
+credentials, including ones accepted before cutover. Recreate containers to
+switch modes; rollback is another explicit configuration change. Keep the backend
+private; route MCP and well-known resource metadata without Basic middleware.
+The separate WSS browser handshake and optional PDF upload/TLS guards remain.
+See the [Auth0 runbook](https://github.com/sesopenko/foundry-mcp/blob/main/docs/oauth-auth0.md),
+[ChatGPT fields](https://github.com/sesopenko/foundry-mcp/blob/main/docs/oauth-chatgpt.md)
+and [live acceptance gates](https://github.com/sesopenko/foundry-mcp/blob/main/docs/oauth-verification.md).
+
+### Released selective reads
+
 The source tree after v2.2.0 adds `create_pf2e_inline_roll`,
 `create_pf2e_inline_check` and `create_pf2e_inline_embed`. These typed builders
 return insertable notation and verified runtime identity through a ready GM

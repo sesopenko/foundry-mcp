@@ -229,7 +229,14 @@ It is suitable for solo development and can be extended incrementally as needed.
 
 ## Production authentication
 
-Production mode protects every MCP HTTP method with Basic Auth. Browser-native
+Production mode protects MCP with either Basic Auth or direct Auth0 OAuth,
+selected exclusively at startup. OAuth uses verified access-token claims,
+exact local GM/client allowlists and the granted `foundry:gm` scope. Discovery
+is public only in OAuth mode; all tool/session operations remain protected.
+The MCP app uses `/mcp/mcp` and mounts at `/` after explicit FastAPI routes so
+resource metadata is reachable at its root well-known path. See
+[OAuth architecture and operations](oauth-auth0.md).
+Browser-native
 WebSockets send a separate credential in a bounded first message, with a
 five-second deadline. The manager serializes admission and sends the successful
 authentication acknowledgment before making a GM socket available for RPC.

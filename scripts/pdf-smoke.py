@@ -4,7 +4,7 @@ import asyncio
 import base64
 from io import BytesIO
 import json
-import httpx
+import httpx2 as httpx
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from pypdf import PdfWriter

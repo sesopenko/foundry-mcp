@@ -46,6 +46,11 @@ This is currently in an experimental state, not a foundry module that is ready t
 
 ## Standalone LAN deployment and module releases
 
+The source tree adds optional [Auth0 OAuth](docs/oauth-auth0.md) for
+[ChatGPT](docs/oauth-chatgpt.md), with a separate deployment template. This is
+unreleased; v2.2.0 remains Basic-only. Basic and OAuth are mutually exclusive per
+instance. See [automated evidence and live acceptance gates](docs/oauth-verification.md).
+
 For container setup, GitHub Actions secrets, module install/update, LibreChat
 cutover, troubleshooting, and rollback, see [operations](docs/operations.md).
 The gaming Foundry installation is independently managed. Production deployments require separate MCP Basic Auth and browser bridge
@@ -124,11 +129,11 @@ git config --local core.hooksPath .githooks
 ```
 
 `.python-version` selects Python 3.12. `pyproject.toml` restricts the project to
-Python 3.12 and declares the direct dependencies, retaining the previous exact
-pins. Python 3.12 satisfies FastAPI 0.128.0's Python >=3.9 requirement and
-FastMCP 2.14.1 and Uvicorn 0.40.0's Python >=3.10 requirements.
-`uv.lock` records the resolved dependency versions. The uv constraint on
-Fakeredis preserves compatibility with the locked Pydocket release. Commit all three files.
+Python 3.12 and declares exact dependency pins. The framework baseline is
+FastAPI 0.162.0 and FastMCP 4.1.4 with MCP SDK 2 and Starlette 1.x.
+`uv.lock` records the resolved versions. FastMCP no longer pulls Pydocket/Fakeredis;
+the old Fakeredis constraint is removed. HTTP client helpers use httpx2.
+Commit all three files.
 `uv sync` creates and manages `.venv`; manual activation is unnecessary.
 
 ### Run the server

@@ -10,7 +10,8 @@ from unittest.mock import patch
 
 from fastmcp import Client, FastMCP
 from fastmcp.server.middleware import Middleware
-from mcp.shared.exceptions import McpError
+from fastmcp.exceptions import McpError
+from mcp.types import REQUEST_TIMEOUT
 from mcp.types import ErrorData
 
 
@@ -72,7 +73,7 @@ class ProbeTimeoutTests(unittest.IsolatedAsyncioTestCase):
         initialization.__cause__ = RuntimeError('SECRET transport details')
         cases = (
             (TimeoutError('SECRET transport details'), 'probe_session_timeout'),
-            (McpError(ErrorData(code=408, message='SECRET transport details')), 'probe_request_timeout'),
+            (McpError(code=REQUEST_TIMEOUT, message='SECRET transport details'), 'probe_request_timeout'),
             (initialization, 'probe_initialization_timeout'),
         )
         for name in SCRIPTS:
@@ -127,7 +128,7 @@ class ProbeTimeoutTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(McpError) as caught:
                     await client.call_tool('never_responds', {})
                 self.assertTrue(entered.is_set())
-                self.assertEqual(caught.exception.error.code, 408)
+                self.assertEqual(caught.exception.error.code, REQUEST_TIMEOUT)
                 self.assertEqual(
                     [tool.name for tool in await client.list_tools()], ['never_responds'],
                 )
@@ -144,7 +145,7 @@ class ProbeTimeoutTests(unittest.IsolatedAsyncioTestCase):
         server.add_middleware(StalledInitialization())
         async with asyncio.timeout(2):
             with self.assertRaises(RuntimeError) as caught:
-                async with Client(server, timeout=0.5, init_timeout=0.1):
+                async with Client(server, timeout=0.5, init_timeout=0.1, mode='legacy'):
                     self.fail('Initialization unexpectedly completed')
         self.assertTrue(entered.is_set())
         self.assertEqual(

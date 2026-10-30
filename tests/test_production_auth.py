@@ -5,7 +5,7 @@ import os
 import unittest
 from unittest.mock import AsyncMock, patch
 
-import httpx
+import httpx2 as httpx
 from fastapi import FastAPI, WebSocketDisconnect
 from foundry_mcp_server import main
 from foundry_mcp_server.config import Settings

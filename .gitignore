@@ -170,6 +170,7 @@ coverage_html_report/
 .env
 .env.*
 !.env.example
+!deploy/.env.oauth.example
 *.env
 
 # foundry

@@ -12,7 +12,7 @@ from pathlib import Path
 import subprocess
 from urllib.parse import urlsplit
 
-import httpx
+import httpx2 as httpx
 import websockets
 
 

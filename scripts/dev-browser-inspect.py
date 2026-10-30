@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from urllib.parse import urlsplit
 
-import httpx
+import httpx2 as httpx
 import websockets
 
 

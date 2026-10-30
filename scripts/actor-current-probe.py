@@ -11,7 +11,8 @@ from pathlib import Path
 
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
-from mcp.shared.exceptions import McpError
+from fastmcp.exceptions import McpError
+from mcp.types import REQUEST_TIMEOUT
 
 REQUEST_TIMEOUT_SECONDS = 30
 INIT_TIMEOUT_SECONDS = 10
@@ -22,7 +23,7 @@ def timeout_failure(error):
     """Classify pinned client deadlines without exposing transport/error text."""
     if isinstance(error, TimeoutError):
         return 'probe_session_timeout'
-    if isinstance(error, McpError) and error.error.code == 408:
+    if isinstance(error, McpError) and error.error.code == REQUEST_TIMEOUT:
         return 'probe_request_timeout'
     # Pinned FastMCP 2.14.1 emits these exact messages only for its handshake
     # TimeoutError (the outer Client connection wrapper preserves the message).

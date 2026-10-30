@@ -7,7 +7,7 @@ import argparse
 import asyncio
 import json
 import os
-import httpx
+import httpx2 as httpx
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, build_opener
 

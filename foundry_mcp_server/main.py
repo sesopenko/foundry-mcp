@@ -4,6 +4,7 @@ import binascii
 import json
 import secrets
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from foundry_mcp_server.config import settings
@@ -78,6 +79,16 @@ class MCPAccessControl:
                 await JSONResponse({"error": "Unauthorized"}, status_code=401,
                     headers={"WWW-Authenticate": 'Basic realm="Foundry MCP", charset="UTF-8"'})(scope, receive, send)
                 return
+        if settings.auth_mode == 'oauth' and mcp_request:
+            headers = [value for key, value in scope.get('headers', []) if key.lower() == b'authorization']
+            # Reject ambiguity before the framework chooses a header. Signature,
+            # claims and scope enforcement remain in the selected provider.
+            if (len(headers) != 1 or len(headers[0]) > 16384 or
+                not re.fullmatch(rb'Bearer [A-Za-z0-9._~+/-]+=*', headers[0], re.IGNORECASE)):
+                metadata = settings.public_url + '/.well-known/oauth-protected-resource/mcp/mcp'
+                await JSONResponse({'error': 'invalid_token'}, status_code=401,
+                    headers={'WWW-Authenticate': f'Bearer resource_metadata="{metadata}"'})(scope, receive, send)
+                return
         if settings.development and mcp_request:
             headers = dict(scope.get("headers", []))
             expected = ("Bearer " + settings.mcp_token).encode()
@@ -89,9 +100,6 @@ class MCPAccessControl:
 
 
 app.add_middleware(MCPAccessControl)
-
-app.mount("/mcp", mcp_app)
-
 
 # --- WebSocket Endpoint for Foundry Clients ---------------------------------
 
@@ -123,7 +131,7 @@ async def foundry_ws(websocket: WebSocket) -> None:
         except (ValueError, asyncio.TimeoutError, WebSocketDisconnect):
             await websocket.close(code=1008)
             return
-    production_auth = settings.auth_mode == "basic"
+    production_auth = settings.production_auth
     if production_auth:
         try:
             raw = await asyncio.wait_for(websocket.receive_text(), timeout=5)
@@ -201,6 +209,9 @@ async def health() -> JSONResponse:
 
 
 # --- Entry Point -------------------------------------------------------------
+
+# Mount last: explicit health/bridge routes remain outside OAuth transport auth.
+app.mount('/', mcp_app)
 
 
 def main() -> None:

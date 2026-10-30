@@ -7,7 +7,7 @@ import json
 from typing import Any
 
 from fastmcp.exceptions import ToolError
-from fastmcp.tools.tool import Tool, ToolResult
+from fastmcp.tools import Tool, ToolResult
 from mcp.types import TextContent, ToolAnnotations
 from pydantic import ValidationError
 

@@ -1,5 +1,11 @@
 # Foundry MCP operations
 
+For the unreleased Auth0 alternative, use the separate
+[OAuth runbook and cutover/rollback procedure](oauth-auth0.md),
+[ChatGPT setup](oauth-chatgpt.md) and [verification gates](oauth-verification.md).
+Select exactly one MCP authentication mode per instance. The Basic deployment
+below stays independently usable; do not merge its environment into OAuth.
+
 This guide deploys the bridge independently of your Foundry installation.
 The production deployment example requires MCP HTTP Basic Auth and separate
 browser WebSocket authentication. It does not configure Foundry hosting, TLS, a

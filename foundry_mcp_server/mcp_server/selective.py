@@ -12,7 +12,7 @@ import re
 from collections.abc import Awaitable, Callable
 
 from fastmcp.exceptions import ToolError
-from fastmcp.tools.tool import Tool, ToolResult
+from fastmcp.tools import Tool, ToolResult
 from mcp.types import ToolAnnotations
 from pydantic import ValidationError
 

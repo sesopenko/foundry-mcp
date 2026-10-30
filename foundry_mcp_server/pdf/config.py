@@ -26,7 +26,7 @@ class PDFConfig:
         enabled, uploads = flag('ENABLED'), flag('UPLOAD_ENABLED')
         if uploads and not enabled: raise ValueError('PDF uploads require the PDF library')
         if not enabled: return cls()
-        if not (settings.auth_mode == 'basic' or settings.development) or not flag('TRUSTED_GM_MCP'):
+        if not (settings.production_auth or settings.development) or not flag('TRUSTED_GM_MCP'):
             raise ValueError('PDF library requires authenticated, exclusively GM-trusted MCP clients')
         roots = [Path(os.environ['FOUNDRY_MCP_PDF_' + key]) for key in ('LIBRARY_DIR', 'INDEX_DIR')]
         if any(not p.is_absolute() or p.is_symlink() or p.resolve()!=p for p in roots): raise ValueError('PDF roots must be absolute non-symlink directories')

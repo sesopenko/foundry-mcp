@@ -85,12 +85,12 @@ class ConfigurationTests(unittest.TestCase):
     def test_discovery_and_http_authorization(self):
         script = '''
 import asyncio
-import httpx
+import httpx2 as httpx
 from foundry_mcp_server.main import app
 from foundry_mcp_server.mcp_server.server import mcp
 from foundry_mcp_server.config import settings
 async def run():
-    tools = await mcp.get_tools()
+    tools = {t.name: t for t in await mcp.list_tools()}
     assert ("execute_javascript" in tools) == settings.development
     if settings.development:
         async with app.router.lifespan_context(app), httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:

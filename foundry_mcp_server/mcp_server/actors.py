@@ -13,7 +13,7 @@ import re
 from typing import Annotated, Any, Literal, get_args
 
 from fastmcp.exceptions import ToolError
-from fastmcp.tools.tool import FunctionTool
+from fastmcp.tools.function_tool import FunctionTool
 from mcp.types import ToolAnnotations
 from pydantic import Field, ValidationError
 

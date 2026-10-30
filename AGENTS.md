@@ -52,6 +52,14 @@ directly. This does not authorize pushing, tagging, releasing or skipping checks
 
 ## MCP server lifecycle
 
+Authentication modes are exclusive: `none`, `basic`, or `oauth` (Auth0).
+Follow [OAuth operations](docs/oauth-auth0.md) and
+[verification gates](docs/oauth-verification.md) for changes to this boundary.
+Keep real OAuth login/refresh acceptance distinct from offline JWT/HTTP tests.
+Use `.venv/bin/python -m unittest discover -s tests -p 'test_oauth*.py' -v`
+for focused checks. Never configure Basic fallback, bypass browser/PDF credentials,
+or mutate an Auth0 tenant/production deployment during ordinary verification.
+
 At the start of work in this repository, check the server with
 `curl -fsS --max-time 3 http://127.0.0.1:8000/health`. The project MCP
 registration may be present even when the server is stopped.

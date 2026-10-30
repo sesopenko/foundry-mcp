@@ -1,0 +1,36 @@
+# Standalone OAuth deployment. Do not merge with compose.yaml (Basic mode).
+services:
+  foundry-mcp:
+    image: ${FOUNDRY_MCP_IMAGE:?set an OAuth-capable pinned image}
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      FOUNDRY_MCP_HOST: 0.0.0.0
+      FOUNDRY_MCP_PORT: "8000"
+      FOUNDRY_MCP_DEV_EXECUTION: "false"
+      FOUNDRY_MCP_AUTH_MODE: oauth
+      FOUNDRY_MCP_OAUTH_PROVIDER: auth0
+      FOUNDRY_MCP_PUBLIC_URL: ${FOUNDRY_MCP_PUBLIC_URL:?set public HTTPS origin}
+      FOUNDRY_MCP_OAUTH_ISSUER: ${FOUNDRY_MCP_OAUTH_ISSUER:?set exact Auth0 issuer}
+      FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS: ${FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS:?set approved subject IDs}
+      FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS: ${FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS:?set approved client IDs}
+      FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set separate browser credential}
+      FOUNDRY_MCP_PDF_ENABLED: ${FOUNDRY_MCP_PDF_ENABLED:-false}
+      FOUNDRY_MCP_PDF_TRUSTED_GM_MCP: ${FOUNDRY_MCP_PDF_TRUSTED_GM_MCP:-false}
+      FOUNDRY_MCP_PDF_LIBRARY_DIR: /data/pdf-library
+      FOUNDRY_MCP_PDF_INDEX_DIR: /data/pdf-state
+      FOUNDRY_MCP_PDF_UPLOAD_ENABLED: ${FOUNDRY_MCP_PDF_UPLOAD_ENABLED:-false}
+      FOUNDRY_MCP_PDF_UPLOAD_TOKEN: ${FOUNDRY_MCP_PDF_UPLOAD_TOKEN:-}
+      FOUNDRY_MCP_PDF_TRUST_TLS_PROXY: ${FOUNDRY_MCP_PDF_TRUST_TLS_PROXY:-false}
+      FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES: ${FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES:-134217728}
+      FOUNDRY_MCP_PDF_QUOTA_BYTES: ${FOUNDRY_MCP_PDF_QUOTA_BYTES:-2147483648}
+    volumes:
+      - pdf-library:/data/pdf-library
+      - pdf-state:/data/pdf-state
+    ports:
+      - "${FOUNDRY_MCP_LAN_ADDRESS:?set private proxy-reachable bind address}:8000:8000"
+    stop_grace_period: 15s
+
+volumes:
+  pdf-library:
+  pdf-state:

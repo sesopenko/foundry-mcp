@@ -55,7 +55,7 @@ def correlation(context):
         try:
             request = ctx.request_context
             if request is not None:
-                meta = request.meta.model_dump() if request.meta is not None else {}
+                meta = request.meta or {}
                 request_id = str(ctx.request_id)[:128]
                 session = fingerprint(ctx.session_id)
         except RuntimeError:
