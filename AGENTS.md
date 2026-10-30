@@ -1,5 +1,14 @@
 # Repository guidance for Codex
 
+## Feature wishlist
+
+Keep feature ideas and unfinished requests in
+[docs/feature-wishlist.md](docs/feature-wishlist.md). When the user says “add to
+the wishlist” followed by a description, record the idea there, following that
+file's maintenance instructions. Completed requests live in
+[docs/feature-wishlist-finished.md](docs/feature-wishlist-finished.md). Check both
+files for existing requests and stable IDs before adding or moving an entry.
+
 ## Editing files
 
 Use the standard code-editing functionality, such as `apply_patch`, for ordinary
