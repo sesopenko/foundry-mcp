@@ -235,6 +235,10 @@ populate the official Foundry API index on a fresh machine. Docker with
 Compose must be running; no documentation API key is required. See
 [setup, indexing, and recovery](docs/foundry-api-docs.md).
 
+The upstream PF2e wiki is available through the separate `pf2e-wiki` library
+for system workflows and feature research. See the
+[LLM search, indexing, and refresh workflow](docs/foundry-api-docs.md#pf2e-wiki-discovery-indexing-and-refresh).
+
 ### Other MCP clients
 
 An LLM Web Interface is not included.  You can use [LibreChat](https://www.librechat.ai/) and then connect it to the mcp server.  Example configuration:

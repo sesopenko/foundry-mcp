@@ -166,6 +166,12 @@ alone does not add tools to the current session. Do not run a second detached
 documentation server or delete persistent volumes. Prefer `./scripts/codex.sh`
 on fresh clones to provision the image before MCP discovery.
 
+For PF2e feature research, search Grounded Docs library `pf2e-wiki` for the
+upstream system wiki. It is rolling documentation, separate from versioned
+`pf2e-schema` and core `foundry-vtt` APIs. Follow the
+[wiki search, indexing, and refresh workflow](docs/foundry-api-docs.md#pf2e-wiki-discovery-indexing-and-refresh)
+to check existing content before crawling and verify coverage afterward.
+
 ## Self-documenting MCP tools
 
 Design tools for a fresh LLM session with no prior repository or game-world

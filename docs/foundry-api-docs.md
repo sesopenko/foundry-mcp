@@ -44,6 +44,85 @@ again. Refresh explicitly when documentation changes; do not refresh every
 session. A failed or partial version needs repair, not another blind scrape:
 inspect its job status and use `refresh_version` to retry or refresh it.
 
+## PF2e wiki: discovery, indexing, and refresh
+
+The upstream [PF2e wiki](https://github.com/foundryvtt/pf2e/wiki) is indexed
+separately as `pf2e-wiki`. Use it for system workflows, rule elements, content
+authoring, and research for PF2e feature requests. `pf2e-schema` is a separate,
+versioned source; its presence does not establish that the wiki was indexed.
+The wiki is rolling documentation, so omit `version` in the calls below. Do
+not label it with the installed PF2e version or treat it as a release snapshot.
+
+For a future LLM session:
+
+1. Call `list_libraries` and `find_version({"library":"pf2e-wiki"})`.
+   Reuse an existing index rather than scraping every session.
+   `No matching version ... but unversioned docs exist` is the expected
+   `find_version` response for this library, not a missing-index error.
+2. Search with a bounded request, for example
+   `search_docs({"library":"pf2e-wiki","query":"rule elements predicates","limit":3})`.
+   Check that results cite pages under the upstream wiki URL. Follow a relevant
+   URL with `fetch_url` when the snippet is insufficient. Empty search results
+   do not prove that a capability is unsupported or that the whole wiki is absent.
+3. If the library is missing, call `scrape_docs` with the following arguments.
+   Inspect the current tool schema if its interface has changed.
+
+   ```json
+   {
+     "library": "pf2e-wiki",
+     "url": "https://github.com/foundryvtt/pf2e/wiki",
+     "scope": "subpages",
+     "maxDepth": 4,
+     "maxPages": 100,
+     "includePatterns": ["/^https:\\/\\/github\\.com\\/foundryvtt\\/pf2e\\/wiki(?:\\/[^/?#]+)?\\/?$/"],
+     "excludePatterns": ["/\\/wiki\\/(?:_.*|.*\\/(?:_history|_edit|_compare))(?:[/?#]|$)/"],
+     "followRedirects": true
+   }
+   ```
+
+   This limits crawling to wiki root/page URLs, excluding query strings,
+   history/edit/compare routes, repository code, issues and external sites.
+4. Poll `get_job_info` using the returned `jobId` until completion. Keep the
+   owning MCP session alive; do not start a concurrent CLI indexing process.
+   Inspect failures and page counts, and compare coverage with the wiki's
+   current page list. Hitting the page/depth limit is not proof of completeness.
+   Search for both rule elements and a player/GM workflow to verify retrieval
+   from distinct pages, rather than merely checking the library name.
+   If MCP job details omit counts, run `./scripts/docs-cli.sh list` after the
+   job has finished; inspect `status`, `uniqueUrlCount`, `documentCount` (text
+   chunks, not pages), `indexedAt`, and `sourceUrl` for this library.
+5. When an update is requested or the index is stale, call
+   `refresh_version({"library":"pf2e-wiki"})`, then poll and verify again.
+   Inspect a failed/partial job before retrying; do not delete the index or
+   repeatedly launch blind scrapes. If GitHub prevents page discovery, compare
+   the wiki's page list with crawl results and report the precise coverage gap.
+
+Wiki guidance is evidence of documented PF2e usage, not permission to depend on
+private system internals. Before implementing a feature, establish its schema
+or supported API contract for the installed system version and verify relevant
+runtime behavior. Continue to use `foundry-vtt` for core Foundry public APIs and
+the [Actor/Item reference](pf2e-actor-item-reference.md) for existing research.
+
+The index lives in the same persistent local Docker volumes described below.
+These instructions travel with Git; scraped content does not. Other machines
+or clients need access to that Grounded Docs index or must populate their own.
+
+### Verification record
+
+On 2026-10-30 UTC (2026-10-29 America/Denver), no `pf2e-wiki` library was
+present. The bounded crawl above completed as job
+`9c18ba4d-ff2a-476d-abfd-90cd5d831d98`. The catalog reported status `completed`,
+13 unique URLs and 290 text chunks, indexed at `2026-10-30T03:01:02Z` from the
+wiki root. The upstream homepage advertised 13 wiki pages; matching counts
+support coverage but are not a page-by-page content audit. Actual MCP searches
+for `rule elements predicates` and `Making a PC character creation` returned
+content from `Quickstart-guide-for-rule-elements` and `Making-a-PC`, respectively.
+The MCP job summary did not expose per-page failure details. Search text can
+retain GitHub navigation and expiring screenshot URLs; indexing text does not
+establish that screenshot content was captured. Existing `pf2e-schema@8.6.1`
+had only one unique URL, so it must not be treated as a complete system schema
+index.
+
 ## CLI recovery
 
 These commands use the same persistent storage as MCP:
