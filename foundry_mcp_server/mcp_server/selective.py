@@ -266,6 +266,15 @@ async def pdf_search(request):
 
 READ_DOC = """PF2e-specific GM read of selected source/current details (core14.369/PF2e8.6.1).
 Default is identity only. Use the documented select.details enum to request values;
+For compendium action/spell rules, call read_item with select.details=["source",
+"description"] and follow pagination.next_cursor until complete. This includes
+requirements, activation, spell rank/time/range/targets/area/defense/damage/
+heightening, traits/traditions and publication when stored, plus exact prose.
+Range is in source.attack if requesting narrower groups; source.casting alone
+is insufficient. Source activation labels do not replace prose treatment times.
+For one concise definition use limit=100,max_bytes=48000 to collect all selected
+groups; defaults remain compact. Preserve absent/null versus not-applicable;
+compendium definitions never establish caster DC, slots or castability.
 For character worth, richest PC, wealth spread or encumbrance, first use
 get_party_members and select character members (exclude party stash). Call
 read_actor once per character with select.details=["wealth","bulk"]. wealth:

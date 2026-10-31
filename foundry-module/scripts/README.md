@@ -1,5 +1,11 @@
 # foundry-module/scripts
 
+`compendiumJournals.js` adds core14 read-only pack discovery, bounded entry/page
+search and exact compendium journal reading. It reuses authorized-entry journal
+processors, public getIndex/getDocument and lazy fromUuid reference resolution;
+no imports, writes, pack configuration or server cache. See
+[compendium contracts](../../docs/compendium-tools.md).
+
 `chat.js` implements core14 GM chat reading, exact oversized fragments and
 explicit audience/speaker sending through public ChatMessage APIs. Browser-local
 ID sequences support incremental reads; request flags reconcile loaded sends.

@@ -11,6 +11,11 @@ through this boundary. It has compact bounded membership entries, without a
 `select` expansion, and does not change the nine migrated interfaces. See
 [party contracts](party-tools.md).
 
+Version 2.5.0 adds five separately typed
+[compendium tools](compendium-tools.md), including compact default pages and
+opt-in outlines, excerpts, references and source metadata. They reuse this
+validation boundary without changing the nine migrated interfaces.
+
 Version 2.2.0: `read_actor` also accepts `wealth`, `bulk`, `wealth.items` and
 `bulk.items`. Summaries are separate from inventory detail. Runtime values
 report `available` or `potentially_missing`; see [metric contracts](character-inventory-metrics.md).

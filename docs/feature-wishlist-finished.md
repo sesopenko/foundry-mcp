@@ -391,3 +391,181 @@ roll arithmetic uses structured dice/modifiers. The source tree retains version
 The historical proposed boundaries above are preserved; the linked contract
 supersedes their undecided schema and verification statements.
 
+## WISH-009 — Read-only compendium search and reading
+
+- **Status:** Implemented in v2.5.0 (2026-10-30)
+- **Requested:** 2026-10-30
+- **Scope:** Discover, search and read compendium Items, supported Actor types
+  and JournalEntries/pages, initially for PF2e. Compendium mutation is prohibited.
+
+Implementation contracts, bounds, compatibility and verification are in
+[the compendium guide](compendium-tools.md). Five typed read-only tools add pack
+capability discovery, page-title/body search, ordered contents, exact source
+reading and lazy canonical reference follow-ups. Existing PF2e Actor/Item
+readers supply complete selected definitions with published rules-reference
+guidance. Offline, live deterministic and two bounded fresh-context lookup
+checks passed. The requirements
+and pre-implementation evidence below are retained as historical context.
+
+### User need
+
+Use the established Item, Actor and journal reading capabilities to look up
+compendium content: search for spells, actions and monsters, and read core PF2e
+game rules stored in compendium journal entries.
+
+### Desired behavior
+
+- Discover relevant packs and search document names in explicitly selected pack
+  indexes, with supported type filters. Return compact named results with pack
+  context, document type and canonical identifiers for follow-up reads. State
+  which packs and fields were searched; name matches do not establish matches
+  in descriptions, embedded abilities or journal page bodies.
+- Read selected spell and action Items, monster Actors and other supported
+  Actor/Item types using the established readers where suitable. Extend journal
+  navigation and reading to compendium JournalEntries and their pages, including
+  core PF2e rules text. Reuse internal journal processing while preserving a
+  separate compendium interface, as in the existing
+  [compendium journal plan](prompts/read-compendium-packs.md).
+- Support page-title search across entries in an explicitly selected journal
+  pack, without requiring the caller to know the parent entry. Load entries
+  within declared work bounds and return continuations when needed. Also offer
+  page-name navigation within a selected entry. Any
+  broader description or journal-body search must have verified field coverage
+  and explicit loading/work bounds. A literal text scan of selected loaded
+  journals is feasible; an automatic full-content scan of every pack is not
+  required. Report unsearched content and partial scans explicitly.
+- Preserve pack/document/page identity and distinguish duplicate names, empty
+  results, inaccessible packs, unsupported content and incomplete searches.
+  Provide bounded selective responses and continuations for complete retrieval.
+- Enforce a strictly read-only compendium boundary: the agent must never be
+  allowed to create, write, update or delete compendium content, or change pack
+  configuration or permissions to enable such changes. Expose no mutation
+  operation through these tools, even for unlocked packs or GM callers.
+- Make the discover-search-read workflow usable by a fresh LLM through published
+  tool contracts and returned selectors without guessed IDs or prior pack knowledge.
+
+### Acceptance criteria — gameplay and session preparation
+
+Acceptance concerns the GM's completed task, not merely a successful search.
+A fresh agent must use published MCP contracts and returned selectors, without
+repository access, arbitrary JavaScript, UI inspection, memorized pack IDs or
+user knowledge of Foundry's storage layout. The agent supplies explanations;
+the tools supply discoverable, bounded source evidence, not model-generated
+rules summaries. Do not send chat or execute the retrieved inline notation.
+
+| GM task | Required outcome |
+| --- | --- |
+| “Explain Treat Wounds to my players.” | Find the action and read its complete rules. Explain equipment/proficiency requirements where supported, treatment time, eligible targets, check/DC choices, degree-of-success outcomes, immunity/repeat timing, extended treatment and wounded removal. Distinguish unsupported or unstated facts from explicit source. A GM-screen summary table alone is insufficient for the full explanation. |
+| “Look up Fireball during play.” | Return a concise sourced reference covering rank, traditions/traits, casting time, range, area/targets, defense, damage and heightening. Obtain structured fields as well as description; identify genuinely absent/not-applicable fields. Do not infer a caster's DC, available slots or castability from a compendium definition. |
+| “Find DCs by level; what's the DC for level 5?” | Discover the embedded page without being told “GM Screen”; answer 20 from its level/DC table and retain the named pack/entry/page reference. Keep the spell-rank table distinct from the level table; retain footnotes when relevant. A follow-up about hard difficulty must retrieve the separate DC Adjustments evidence rather than invent an adjustment. |
+| “Prepare references for next session: Treat Wounds, level-based DCs and difficulty adjustments.” | Produce a concise reading list with canonical references and supported key points. Read the relevant action/page content, preserve caveats and table relationships, and reuse discovered identities without repeatedly enumerating unrelated packs or returning entire journals. This authorizes drafting an answer, not writing Foundry documents. |
+
+- **Discovery:** expose Item, Actor and JournalEntry pack capabilities and
+  searchable fields. Page-title search must find “DCs by Level” within a selected
+  journal pack even though no top-level entry has that name. Case-insensitive
+  partial-title matching and returned parent context should support refinement;
+  document literal semantics and recovery for no matches. Semantic/fuzzy search
+  is not required. Unknown terminology can be investigated through compact page
+  lists/outlines and an explicitly scoped literal body search with continuations.
+- **Reading:** provide an obvious rules-reference selection for Items, or
+  published guidance identifying all needed field groups. Identity-only reads
+  must not be presented as enough to explain an action/spell. Preserve exact
+  description/HTML and table headers, rows, units, footnotes and source notation;
+  support complete reconstruction across fragments. Return named canonical
+  citations and supported follow-ups to related Items/journal pages without
+  automatic recursive expansion. Surface ambiguity and source differences.
+- **Gameplay efficiency:** target at most eight MCP calls and two minutes for
+  each standalone named lookup from fresh discovery in this existing fixture.
+  Measure cold and reused-discovery paths separately; do not hide setup calls.
+  These are acceptance targets, not measured current performance or universal
+  latency guarantees. A small lookup must not require all-pack body loading or
+  copying every page into the model context.
+- **Preparation completeness:** test bounded multi-page reading and a related
+  source follow-up, with a declared cap (initial target 20 calls/five minutes).
+  Support continuation after count/byte/work limits; distinguish exhausted
+  matches from unsearched scopes. Verify stale selection/revision handling,
+  duplicate names, denied/missing packs and unsupported page/document types.
+- **Measurement and safety:** validate actual discovery and invocation, source
+  coverage and exact reconstruction with deterministic tests before budgeted
+  fresh-agent evaluation under [the evaluation process](mcp-tool-evaluation.md).
+  Record actual calls, compact JSON bytes, completion and elapsed time; bytes
+  are not tokens. Retain monster search/read coverage from the original scope.
+  Confirm no imports, document writes/deletes, rolls, chat sends or permission/
+  pack configuration changes. Pack locks must not be the only protection.
+
+Existing Actor/Item compendium index search is a starting point, not evidence
+that this complete workflow is implemented. Audit current reader coverage and
+public Foundry/PF2e contracts before deciding which tools need extensions;
+tool names and schemas remain undecided. Recording this request authorizes
+neither implementation nor compendium changes.
+
+### API feasibility review — 2026-10-30
+
+Checked the official v14 documentation through Grounded Docs and fresh official
+page fetches. The local v14 index was completed on 2026-10-12; matching the
+documented development major version does not establish build-specific behavior.
+This review adds documentation evidence, not a new live runtime verification.
+
+- **Direct public API support:**
+  [CompendiumCollection](https://foundryvtt.com/api/v14/classes/foundry.documents.collections.CompendiumCollection.html)
+  provides pack identity/type, `testUserPermission`, `getIndex({fields})` and
+  `getDocument(id)`. Name/type filtering can operate on the returned index;
+  selected document loading requires no import. Existing `actorPacks.js`
+  already implements scoped Actor/Item name search with these index APIs.
+- **Search coverage needs verification:** the same public API documents
+  `search({query, filters, exclude})` over names and indexed HTML fields, plus
+  `getSearchableFields(documentName, type)`. This is evidence of a search API,
+  not a guarantee that every PF2e description or embedded journal page body is
+  indexed. Verify relevant fields and loading behavior before adopting it.
+- **Journal reading is supported:**
+  [JournalEntry](https://foundryvtt.com/api/v14/classes/foundry.documents.JournalEntry.html)
+  defines embedded pages, and the
+  [page schema](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.JournalEntryPageData.html)
+  provides names, ordering and text sources. Loading an entry can load many
+  pages; bounded MCP output alone does not bound that underlying load.
+- **Application work remains:** MCP pagination, byte budgets, scan continuations
+  and stale-result handling are application contracts; `getIndex` does not
+  document server-side offset/limit pagination. Avoid promising cheap full-pack
+  text searches or snapshot guarantees the API has not established. Preserve
+  the existing journal plan's unresolved internal-folder and cache boundaries.
+- **Read-only is enforced by this project:** Foundry also exposes mutation
+  APIs and a GM can have write permission. Pack locks are not an agent security
+  boundary. Keep mutation operations out of this interface and require any
+  future document-writing interface to reject compendium targets.
+
+### Exploratory live lookups — 2026-10-30
+
+Read-only checks used the existing `test` world, ready GM, Foundry 14.369 and
+PF2e 8.6.1. These are assisted exploratory observations, not a fresh-agent pass
+or a measured performance baseline. Existing Item discovery/search/read tools
+were used; journal discovery and selected reads required development JavaScript
+because compendium journal tools are absent. No mutation operations were invoked.
+
+- Actions pack name search found **Treat Wounds**; `read_item` returned the
+  complete 1,798-unit description in two contiguous fragments, plus publication
+  identity. Its stored activation mapping says `passive_ability`, while the
+  prose specifies ten minutes: that label alone cannot explain gameplay timing.
+  The GM Screen also contains a Treat Wounds table with trained/expert/master/
+  legendary DCs, but lacks the full action procedure.
+- Spells pack name search found **Fireball**. Selected casting/damage/description
+  reads supplied rank 3, two-action source time, 20-foot burst, basic Reflex,
+  6d6 fire and +2d6 per heightened rank; a traits/publication read supplied
+  traditions and Player Core provenance. Those selections did not expose range;
+  a selected source-document check confirmed `system.range.value` is “500 feet”.
+  Range retrieval through the production selective interface remains a coverage
+  question for implementation, not an established fix or absence of source data.
+- PF2e Journals' index contains seven entry names, including **GM Screen** but
+  no **DCs by Level**. Loading that one entry exposed 61 embedded pages and
+  located **DCs by Level**, **DC Adjustments** and **Treat Wounds** by page title.
+  This proves entry-name-only search cannot satisfy the requested rules lookup.
+- The complete **DCs by Level** HTML was read in three bounded contiguous
+  fragments totaling 1,645 UTF-16 units. It contains both level/DC and spell-rank/
+  DC tables, a rarity footnote and GM Core p. 53 attribution. Level 5 maps to
+  DC 20. The separate **DC Adjustments** page specifies hard as +2. Preserve
+  table structure and the distinction between these sources in future reads.
+
+The lookups establish that the requested content can be obtained through
+selected public index/document/page reads. They do not establish native
+full-text index coverage, complete journal-search tooling, uniform source
+quality or current satisfaction of the acceptance criteria above.
+

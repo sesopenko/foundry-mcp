@@ -265,16 +265,21 @@ function pageNode(page, groups, select=null) {
 export async function getJournalContents(params = {}) {
   ready();
   const entry = journal(params.journal_id);
+  return journalContents(entry, params);
+}
+
+/** Shared read-only processing for an already authorized world/pack entry. */
+export async function journalContents(entry, params = {}, context = {}) {
   const limit = integer(params.limit, 20, 1, 50, "limit");
   const groups = categories(entry);
   const categoriesOnly = params.categories_only ?? false;
   if (typeof categoriesOnly !== "boolean" || (categoriesOnly && params.page_id != null)) {
     fail("InvalidParameters", "categories_only must be boolean and cannot be combined with page_id.");
   }
-  const rev = await revision([entry.name, entry.folder?.id, groups.map(c => [c.id, c.name, c.sort]),
-    entry.pages.contents.map(p => [p.id, p.name, p.type, p.sort, p.title, p.category, p.text?.content])]);
+  const rev = await revision([entry.uuid, entry.name, context, entry.folder?.id, groups.map(c => [c.id, c.name, c.sort]),
+    entry.pages.contents.map(p => [p.id, p.name, p.type, p.sort, p.title, p.category, p.text])]);
   const scope = { journal_id: entry.id, page_id: params.page_id ?? null, categories_only: categoriesOnly,...(params.select?{select:params.select,max_bytes:integer(params.max_bytes,8000,8000,48000,'max_bytes'),limit}:{}) };
-  const base = { foundry_version: game.version, journal_id: entry.id, journal_uuid: entry.uuid,
+  const base = { ...context, foundry_version: game.version, journal_id: entry.id, journal_uuid: entry.uuid,
     ...name(entry), folder_path: path(entry.folder) };
   if(params.select){base.contract_version=2;if(!params.select.folder_path)delete base.folder_path;}
   if (categoriesOnly) {
@@ -310,7 +315,7 @@ export async function getJournalContents(params = {}) {
 }
 
 /** Derived search text only. Never used for source reads or source positions. */
-function normalizeSearchText(text) {
+export function normalizeSearchText(text) {
   return text.replace(/@UUID\[[^\]]+\]\{([^}]+)\}/g, "$1")
     .replace(/@UUID\[[^\]]+\]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -409,9 +414,9 @@ function references(content, sourcePage, source) {
  * fragment. Public JournalEntryPage.text/parent and Document.testUserPermission:
  * https://foundryvtt.com/api/v14/classes/foundry.documents.JournalEntryPage.html
  */
-function referenceOrigin(pageUuid, source, target) {
+export function referenceOrigin(pageUuid, source, target, supplied = null) {
   ready();
-  const { entry, page } = pageFromUuid(pageUuid);
+  const { entry, page } = supplied ?? pageFromUuid(pageUuid);
   if (!permitted(entry) || !permitted(page)) fail("PermissionDenied", "The originating journal or page is not readable; refresh journal navigation with an authorized GM.");
   if (page.type !== "text") fail("UnsupportedPageType", "Only world text pages can supply references.");
   const content = source === "html" ? page.text.content : page.text.markdown;
@@ -436,17 +441,25 @@ function referenceOrigin(pageUuid, source, target) {
  * No preparation state, private APIs, name matching or recursive hydration.
  */
 export async function resolveJournalReference(params = {}) {
+  return resolvePageReference(params);
+}
+
+/** Shared lazy reference admission with a synchronous authorized-origin provider.
+ * PF2e-specific Actor/Item admission remains in actorDocuments; source is never
+ * expanded and the origin is rechecked after every asynchronous resolution.
+ */
+export async function resolvePageReference(params = {}, origin = referenceOrigin) {
   validateParams(params, ["page_uuid", "target", "source"]);
   selector(params.page_uuid, "page_uuid");
   selector(params.target, "target");
   const source = params.source ?? "html";
   if (!["html", "markdown"].includes(source)) fail("InvalidParameters", "source must be html or markdown.");
-  const page = referenceOrigin(params.page_uuid, source, params.target);
+  const page = origin(params.page_uuid, source, params.target);
   const [uuid, ...anchors] = params.target.split("#");
   const result = status => bounded({ foundry_version: game.version, page_uuid: page.uuid,
     source, target: params.target, anchor: anchors.join("#") || null, status, identity: null, next_call: null });
   const recheck = () => {
-    if (referenceOrigin(params.page_uuid, source, params.target) !== page) {
+    if (origin(params.page_uuid, source, params.target) !== page) {
       fail("ReferenceChanged", "The originating page changed; reread its source before resolving references.");
     }
   };
@@ -500,6 +513,11 @@ export async function resolveJournalReference(params = {}) {
 export async function readJournalPage(params = {}) {
   ready();
   const { entry, page } = pageFromUuid(params.page_uuid);
+  return journalPage(entry, page, params);
+}
+
+/** Shared exact source fragmentation for an already authorized text page. */
+export async function journalPage(entry, page, params = {}, context = {}, mapReferences = null) {
   if (page.type !== "text") fail("UnsupportedPageType", `Page type '${page.type}' is not readable. Only text pages are supported; use get_journal_contents to select one.`);
   const source = params.source ?? "html";
   if (!["html", "markdown"].includes(source)) fail("InvalidParameters", "source must be html or markdown.");
@@ -508,7 +526,7 @@ export async function readJournalPage(params = {}) {
     ...(typeof page.text.markdown === "string" ? ["markdown"] : [])];
   if (source === "markdown" && !available.includes(source)) fail("SourceUnavailable", "Original Markdown is not stored for this page. Read source=html instead.");
   const content = (source === "html" ? page.text.content : page.text.markdown) ?? "";
-  const rev = await revision([page.uuid, page.text]);
+  const rev = await revision([page.uuid, entry.name, page.name, context, page.text]);
   const scope = { page_uuid: page.uuid, source,...(params.select?{select:params.select,max_bytes:integer(params.max_bytes,8000,8000,48000,'max_bytes'),max_chars:limit}:{}) };
   const start = position(params.cursor, "read", scope, rev, content.length);
   if (start > 0 && /[\uDC00-\uDFFF]/.test(content[start]) && /[\uD800-\uDBFF]/.test(content[start - 1])) {
@@ -518,7 +536,7 @@ export async function readJournalPage(params = {}) {
   // Avoid splitting UTF-16 surrogate pairs, even if max_chars is one.
   if (end < content.length && /[\uD800-\uDBFF]/.test(content[end - 1]) && /[\uDC00-\uDFFF]/.test(content[end])) end--;
   if (end === start && end < content.length) end = Math.min(content.length, start + 2);
-  const make = () => {const result={ ...(params.select?{contract_version:2}:{}),foundry_version: game.version, revision: rev, journal_id: entry.id,
+  const make = () => {const result={ ...context, ...(params.select?{contract_version:2}:{}),foundry_version: game.version, revision: rev, journal_id: entry.id,
     journal_name: name(entry).name, journal_name_truncated: name(entry).name_truncated,
     page_id: page.id, page_uuid: page.uuid, page_name: name(page).name, page_name_truncated: name(page).name_truncated,
     folder_path: path(entry.folder), source, stored_format: page.text.format, available_sources: available,
@@ -527,7 +545,9 @@ export async function readJournalPage(params = {}) {
     fragment: start > 0 || end < content.length, complete: end === content.length,
     ...(!params.select||params.select.references?references(content.slice(start, end), page, source):{}),
     next_cursor: end === content.length ? null : cursor("read", scope, rev, end) };
-    if(params.select){if(!params.select.folder_path)delete result.folder_path;if(!params.select.source_metadata){delete result.stored_format;delete result.available_sources;}}return result;};
+    if(params.select){if(!params.select.folder_path)delete result.folder_path;if(!params.select.source_metadata){delete result.stored_format;delete result.available_sources;}}
+    if(mapReferences&&result.references)result.references=result.references.map(mapReferences);
+    return result;};
   let result = make();
   while (bytes(result) > (scope.max_bytes??MAX_BYTES) && end > start) {
     end = start + Math.floor((end - start) / 2);

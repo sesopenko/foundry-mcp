@@ -181,6 +181,8 @@ async def get_bridge_versions() -> BridgeVersionResult:
 from . import pdfs  # noqa: E402,F401
 from .selective import install as install_selective_tools  # noqa: E402
 install_selective_tools(mcp)
+from .compendium_journals import install as install_compendium_tools  # noqa: E402
+install_compendium_tools(mcp)
 from .inline import install as install_inline_tools  # noqa: E402
 install_inline_tools(mcp)
 from . import chat  # noqa: E402,F401

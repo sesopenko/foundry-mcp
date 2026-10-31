@@ -2,6 +2,12 @@
 
 ## Overview
 
+The separate typed [compendium interface](compendium-tools.md) discovers packs,
+scans explicitly selected journal indexes/pages with work bounds and reads exact
+source through shared journal processors. Canonical pack selectors remain
+separate from world journal selectors. Python validates responses and retains no
+content cache; browser permission checks and read-only RPCs govern each call.
+
 The four [chat tools](chat-tools.md) use dedicated typed requests/responses.
 Browser RPCs read visible stored messages, fragment oversized content and create
 explicit-audience messages through the configured public ChatMessage class.

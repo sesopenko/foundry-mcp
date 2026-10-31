@@ -1,6 +1,6 @@
 # sesopenko/foundry-mcp
 
-Version 2.4.0 adds [chat reading and HTML sending](docs/chat-tools.md).
+Version 2.5.0 adds [read-only compendium rules lookup](docs/compendium-tools.md).
 It includes [Auth0 OAuth](docs/oauth-auth0.md) and
 [PF2e inline builders](docs/pf2e-inline-builders.md).
 It retains the [à la carte read contracts](docs/selective-reads.md) introduced
@@ -29,9 +29,10 @@ for roll, check and compendium Item embed notation. They require a ready GM on
 Foundry14.369/PF2e8.6.1 and never send chat, write documents or evaluate rolls.
 These builders are included in v2.3.0.
 
-Journal preparation tools provide hierarchical navigation, page outlines,
-literal text search, and exact HTML/Markdown reading through the GM browser.
-See [journal tool contracts and compatibility](docs/journal-tools.md).
+Journal tools provide navigation, outlines, search and exact HTML/Markdown
+reading through the GM browser. Version 2.5.0 adds
+[compendium rules references](docs/compendium-tools.md) alongside
+[world journals](docs/journal-tools.md).
 
 Chat tools provide bounded reading and HTML sending with explicit
 audiences and character speakers. See [chat tools and compatibility](docs/chat-tools.md).
@@ -89,7 +90,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.4.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.5.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -284,7 +285,7 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v2.4.0)
+## Actor and Item source reading (v2.5.0)
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party
 membership, with named party selection and canonical `read_actor` follow-ups.
@@ -294,7 +295,7 @@ guarded runtime fields reporting `available` or `potentially_missing`. Party
 stash remains unsupported. See [metric contracts](docs/character-inventory-metrics.md)
 and [party contracts](docs/party-tools.md).
 
-Version 2.4.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 2.5.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and

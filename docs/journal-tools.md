@@ -7,7 +7,8 @@ source, search and resolution semantics below still apply.
 
 Five read-only MCP tools let a fresh LLM navigate and investigate world journals
 through the connected GM browser. They include GM-only text. Compendium journals
-and reading images, maps, PDFs, or video are outside this version's scope.
+use a [separate compendium interface](compendium-tools.md); these world tools
+retain world-only selectors. Images, maps, PDFs and video are outside their scope.
 
 | Tool | Start here when | Next step |
 | --- | --- | --- |

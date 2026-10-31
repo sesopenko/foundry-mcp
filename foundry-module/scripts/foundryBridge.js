@@ -4,6 +4,7 @@ import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
 import { getJournalTree, getJournalContents, searchJournals, readJournalPage, resolveJournalReference } from "./journals.js";
+import {listCompendiums, searchCompendiumJournals, getCompendiumJournalContents, readCompendiumJournalPage, resolveCompendiumJournalReference} from './compendiumJournals.js';
 import { getActorTypes, readActor, readItem, listActorItems, readActorSelected, readItemSelected } from "./actors.js";
 import { getActorTree, searchActors } from "./actorWorld.js";
 import { getPartyMembers } from "./actorParty.js";
@@ -65,6 +66,11 @@ const rpcHandlers = {
   getModuleBuildInfo,
   executeJavaScript,
   getJournalTree,
+  listCompendiums,
+  searchCompendiumJournals,
+  getCompendiumJournalContents,
+  readCompendiumJournalPage,
+  resolveCompendiumJournalReference,
   getJournalContents,
   searchJournals,
   readJournalPage,

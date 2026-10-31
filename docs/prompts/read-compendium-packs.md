@@ -1,5 +1,10 @@
 # Build compendium journal reading tools
 
+**Implementation handoff archived October 30, 2026.** WISH-009 is implemented
+in v2.5.0; see [current contracts and verification](../compendium-tools.md).
+The planning and exploration below preserve their original context. No Python
+content cache was added; separate compendium selectors reuse journal processing.
+
 Implement MCP functionality for discovering, browsing, searching, and reading
 JournalEntry documents in compendium packs. Start by reading AGENTS.md and its
 required project documentation. This prompt captures requirements and exploration
