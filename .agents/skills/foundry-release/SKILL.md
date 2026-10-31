@@ -127,6 +127,17 @@ GitHub release assets; the stable manifest must advertise `X.Y.Z` and its ZIP.
 Use bounded status checks with progress updates. Do not confuse queued/skipped
 jobs or a successful Git push with completed publication.
 
+For unattended public liveness checks, use plain
+`./scripts/release-liveness.sh <check>` invocations. Reviewed choices are `runs`
+(five recent workflow runs), `release` (latest release metadata), `manifest`
+(stable Foundry manifest), `module` (stable ZIP headers), and `images` (ten
+Docker Hub tags). Inspect returned tag/commit/digest, not merely HTTP success.
+The runner permits only fixed anonymous HTTPS GET/HEAD requests, ignores curl
+configuration, and rejects extra arguments, URLs and options. Project rules in
+`.codex/rules/release-liveness.rules` allow this runner rather than unrestricted
+curl. Other endpoints retain normal approval requirements. Restart Codex after
+rule changes; liveness permission alone never authorizes release or deployment.
+
 If credentials or permissions block publication, report the precise job/reason
 and stop publishing attempts until corrected. Required Actions secrets are
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (Read/Write access); the Actions

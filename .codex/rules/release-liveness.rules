@@ -1,0 +1,10 @@
+# Trusted-project release liveness: fixed runner rejects URLs/extra arguments.
+# Raw curl prefixes cannot constrain trailing upload/method flags, so grant
+# only the reviewed anonymous GET/HEAD operations. Loaded at Codex startup.
+prefix_rule(
+    pattern = ["./scripts/release-liveness.sh", ["runs", "release", "manifest", "module", "images"]],
+    decision = "allow",
+    justification = "Check this project's public CI, release assets and image tags using fixed bounded anonymous HTTPS GET/HEAD requests.",
+    match = ["./scripts/release-liveness.sh runs", "./scripts/release-liveness.sh manifest", "./scripts/release-liveness.sh images"],
+    not_match = ["curl https://example.com", "./scripts/release-liveness.sh https://example.com", "./scripts/release-liveness.sh arbitrary", "git push"],
+)
