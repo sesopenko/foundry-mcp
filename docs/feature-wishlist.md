@@ -10,7 +10,7 @@ implemented or scheduled. Completed requests are in
   Recording a request does not authorize implementation.
 - Read both wishlist files before adding an entry. Extend an existing request
   when the idea overlaps; otherwise append a new `## WISH-### — Title` entry.
-  Use one more than the highest ID across both files (currently `WISH-008`);
+  Use one more than the highest ID across both files (currently `WISH-009`);
   never renumber or reuse IDs, including after moving entries.
 - Include **Status**, **Requested** (the request date as `YYYY-MM-DD`) and
   **Scope**, followed by the user need and desired behavior. Add acceptance
@@ -73,3 +73,51 @@ The previous Actor/Item delivery excluded party Actors. This request adds a new
 wishlist scope; it does not imply that existing readers already support parties
 or their stash. Verify supported PF2e party relationships and inventory schemas
 before implementation, following the repository's public API requirements.
+
+## WISH-009 — Read-only compendium search and reading
+
+- **Status:** Requested; existing Actor/Item compendium index search provides a starting point
+- **Requested:** 2026-10-30
+- **Scope:** Discover, search and read compendium Items, supported Actor types
+  and JournalEntries/pages, initially for PF2e. Compendium mutation is prohibited.
+
+### User need
+
+Use the established Item, Actor and journal reading capabilities to look up
+compendium content: search for spells, actions and monsters, and read core PF2e
+game rules stored in compendium journal entries.
+
+### Desired behavior
+
+- Discover relevant packs and search their supported content, returning compact
+  named results with pack context, document type and canonical identifiers for
+  follow-up reads. Make search scope and matching semantics explicit.
+- Read selected spell and action Items, monster Actors and other supported
+  Actor/Item types using the established readers where suitable. Extend journal
+  navigation, search and reading to compendium JournalEntries and their pages,
+  including core PF2e rules text.
+- Preserve pack/document/page identity and distinguish duplicate names, empty
+  results, inaccessible packs, unsupported content and incomplete searches.
+  Provide bounded selective responses and continuations for complete retrieval.
+- Enforce a strictly read-only compendium boundary: the agent must never be
+  allowed to create, write, update or delete compendium content, or change pack
+  configuration or permissions to enable such changes. Expose no mutation
+  operation through these tools, even for unlocked packs or GM callers.
+- Make the discover-search-read workflow usable by a fresh LLM through published
+  tool contracts and returned selectors without guessed IDs or prior pack knowledge.
+
+### Acceptance direction
+
+Verify actual MCP discovery and end-to-end searches and reads for spells,
+actions, monsters and PF2e rules journals in the existing development runtime.
+Check permission boundaries, duplicate names, unsupported types, bounded
+pagination and exact journal text reconstruction. Measure discovery/response
+sizes and call counts under the selective-read guidance. Confirm that the
+workflow leaves compendium content unchanged and exposes no compendium write
+or delete capability.
+
+Existing Actor/Item compendium index search is a starting point, not evidence
+that this complete workflow is implemented. Audit current reader coverage and
+public Foundry/PF2e contracts before deciding which tools need extensions;
+tool names and schemas remain undecided. Recording this request authorizes
+neither implementation nor compendium changes.
