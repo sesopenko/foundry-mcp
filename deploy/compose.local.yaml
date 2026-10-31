@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       args:
-        VERSION: 2.3.0
+        VERSION: 2.4.0
     # Public synthetic credentials for isolated tests ONLY; never deploy these.
     environment:
       FOUNDRY_MCP_AUTH_MODE: basic

@@ -1,5 +1,11 @@
 # foundry-module/scripts
 
+`chat.js` implements core14 GM chat reading, exact oversized fragments and
+explicit audience/speaker sending through public ChatMessage APIs. Browser-local
+ID sequences support incremental reads; request flags reconcile loaded sends.
+Stored HTML may already contain PF2e's converted roll links. No deletion or
+clearing handler is registered; see [chat contracts](../../docs/chat-tools.md).
+
 `inline.js` verifies typed PF2e inline builder source on core14.369/PF2e8.6.1
 using public `Roll.validate`, canonical document identity and permissions. It
 never evaluates rolls, enriches content, sends messages or changes documents.

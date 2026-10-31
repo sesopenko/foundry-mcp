@@ -1,4 +1,5 @@
 import { setPdfSocket, handlePdfMessage } from "./pdfChannel.js";
+import { readChatMessages, readChatMessageContent, sendChatMessage } from './chat.js';
 import { getModuleBuildInfo, reportServerBuild } from "./versionStatus.js";
 import { executeJavaScript } from "./exploration.js";
 import { bridgeUrl } from "./connectionConfig.js";
@@ -53,6 +54,9 @@ function reportStatus(state, message) {
  * or a Promise resolving to a value.
  */
 const rpcHandlers = {
+  readChatMessages,
+  readChatMessageContent,
+  sendChatMessage,
   verifyPF2eInlineRoll,
   verifyPF2eInlineCheck,
   verifyPF2eInlineEmbed,

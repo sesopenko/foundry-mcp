@@ -2,6 +2,13 @@
 
 ## Overview
 
+The four [chat tools](chat-tools.md) use dedicated typed requests/responses.
+Browser RPCs read visible stored messages, fragment oversized content and create
+explicit-audience messages through the configured public ChatMessage class.
+ID-only observation sequences support exclusive incremental cursors; send keys
+and persisted flags reconcile retries. The static writing guide needs no RPC.
+No message deletion/clearing RPC is exposed.
+
 Three [typed PF2e inline builders](pf2e-inline-builders.md) validate structured
 mechanics in Python, format bounded source and use the existing GM bridge for
 version/permission checks, public non-evaluating formula validation and canonical

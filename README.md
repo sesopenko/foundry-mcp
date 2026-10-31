@@ -1,6 +1,7 @@
 # sesopenko/foundry-mcp
 
-Version 2.3.0 adds [Auth0 OAuth](docs/oauth-auth0.md) and
+Version 2.4.0 adds [chat reading and HTML sending](docs/chat-tools.md).
+It includes [Auth0 OAuth](docs/oauth-auth0.md) and
 [PF2e inline builders](docs/pf2e-inline-builders.md).
 It retains the [à la carte read contracts](docs/selective-reads.md) introduced
 in 2.0.0: nine heavy tools default to compact results with typed `select`
@@ -32,6 +33,9 @@ Journal preparation tools provide hierarchical navigation, page outlines,
 literal text search, and exact HTML/Markdown reading through the GM browser.
 See [journal tool contracts and compatibility](docs/journal-tools.md).
 
+Chat tools provide bounded reading and HTML sending with explicit
+audiences and character speakers. See [chat tools and compatibility](docs/chat-tools.md).
+
 Selected journal UUID references can be followed lazily to supported PF2e Actors
 and Items with `resolve_journal_reference`, preserving anchors and token context.
 
@@ -47,7 +51,7 @@ This is currently in an experimental state, not a foundry module that is ready t
 
 ## Standalone LAN deployment and module releases
 
-Version 2.3.0 adds optional [Auth0 OAuth](docs/oauth-auth0.md) for
+Version 2.3.0 added optional [Auth0 OAuth](docs/oauth-auth0.md) for
 [ChatGPT](docs/oauth-chatgpt.md), with a separate deployment template.
 Basic and OAuth are mutually exclusive per
 instance. See [automated evidence and live acceptance gates](docs/oauth-verification.md).
@@ -85,7 +89,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.3.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.4.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -280,7 +284,7 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v2.3.0)
+## Actor and Item source reading (v2.4.0)
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party
 membership, with named party selection and canonical `read_actor` follow-ups.
@@ -290,7 +294,7 @@ guarded runtime fields reporting `available` or `potentially_missing`. Party
 stash remains unsupported. See [metric contracts](docs/character-inventory-metrics.md)
 and [party contracts](docs/party-tools.md).
 
-Version 2.3.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 2.4.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and

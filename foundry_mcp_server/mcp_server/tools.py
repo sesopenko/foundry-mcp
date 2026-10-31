@@ -183,3 +183,4 @@ from .selective import install as install_selective_tools  # noqa: E402
 install_selective_tools(mcp)
 from .inline import install as install_inline_tools  # noqa: E402
 install_inline_tools(mcp)
+from . import chat  # noqa: E402,F401

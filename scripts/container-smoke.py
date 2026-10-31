@@ -17,6 +17,8 @@ import websockets
 
 TOOLS = {
     'create_pf2e_inline_roll', 'create_pf2e_inline_check', 'create_pf2e_inline_embed',
+    'read_chat_messages', 'read_chat_message_content', 'send_chat_message',
+    'get_pathfinder_writing_style_guide',
     'get_bridge_versions', 'get_player_names',
     'get_journal_tree', 'get_journal_contents', 'search_journals',
     'read_journal_page', 'resolve_journal_reference',
