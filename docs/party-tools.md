@@ -2,7 +2,7 @@
 
 `get_party_members` is a GM-only, read-only tool on Foundry 14.369/PF2e 8.6.1.
 It discovers world parties and reads their persisted membership. The separate
-unreleased `get_party_stash` interface below reads shared possessions. Neither
+`get_party_stash` interface, added in v3.0.0, reads shared possessions. Neither
 party tool computes Bulk, currency value or wealth.
 
 ## Workflow and response
@@ -69,7 +69,7 @@ follow-up identity, mode, scope, runtime and pagination consistency. This is a
 narrow separate interface: `get_actor_types` still describes the character/NPC/
 familiar `read_actor` scope. Generic party Actor reading remains unsupported.
 
-## Party stash (unreleased)
+## Party stash (v3.0.0)
 
 `get_party_stash` reads actual physical Items embedded in a world party Actor,
 separately from members' inventories and Kingmaker campaign data. Use the party
@@ -211,7 +211,7 @@ party checks do not establish that those answers can currently be produced.
 
 ## Stash verification — 2026-10-31
 
-Implemented in source after v2.5.0; not released. Full offline checks passed
+Included in v3.0.0. Before release, full offline checks passed
 627 Python tests (one existing skip) and 652 JavaScript tests before live fixture
 verification. A subsequent focused check adds heavy Unicode identity pagination
 coverage and confirms exact UTF-8 byte bounds without dropped/duplicate Items.

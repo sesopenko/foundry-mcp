@@ -1,6 +1,6 @@
 # Browsing Foundry images
 
-WISH-011 adds read-only `browse_journal_images` after v2.5.0, unreleased. It helps
+Version 3.0.0 adds read-only `browse_journal_images` (WISH-011). It helps
 the GM select existing illustrations by navigating Foundry file directories.
 These directories are separate from journal folders. It does not upload,
 delete, generate, download or visually inspect images, and never scans recursively.

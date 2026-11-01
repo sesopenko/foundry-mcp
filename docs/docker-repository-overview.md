@@ -14,21 +14,25 @@ Version 2.4.0 added bounded chat reading, explicit-audience HTML
 sending and an on-demand Pathfinder writing guide. See the
 [chat contracts and compatibility](https://github.com/sesopenko/foundry-mcp/blob/main/docs/chat-tools.md).
 
-Version 2.5.0 adds read-only compendium pack discovery, journal page-title search
+Version 2.5.0 added read-only compendium pack discovery, journal page-title search
 and exact rules reading. Update both the server and companion module; see
 [compendium contracts and verification](https://github.com/sesopenko/foundry-mcp/blob/main/docs/compendium-tools.md).
 
-Source builds after 2.5.0 add GM-guided world-journal text authoring, organization,
-player sharing and read-only
+Version 3.0.0 adds GM-guided world-journal text authoring, organization,
+player sharing and
 [image selection and embedding](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
-This is not yet a published image release; see
-[journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
+See [journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
 for guidance configuration, limits and retry/ownership behavior. Compendiums
 remain read-only.
 
+Upgrade the server and module together and refresh discovery: v3.0.0 replaces
+`get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires
+the connected GM browser and includes that world's instructions. See the
+[migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md#migration).
+
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
-## Selective reads in v2.5.0
+## Selective reads in v3.0.0
 
 ### Auth0 support
 
@@ -61,7 +65,7 @@ services:
 Its private `.env` contains:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v2.5.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.0.0
 FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
 FOUNDRY_MCP_OAUTH_ISSUER=https://YOUR_TENANT.REGION.auth0.com/
 FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS=auth0|REPLACE_WITH_USER_ID
@@ -92,7 +96,7 @@ evaluate rolls. Embed generation checks compendium Item access. Update both
 components and refresh discovery when upgrading. See the
 [inline builder contract and limitations](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pf2e-inline-builders.md).
 
-Version 2.5.0 includes compact defaults and typed `select` request and
+Version 3.0.0 includes compact defaults and typed `select` request and
 response contracts for nine heavy Actor/Item, journal and PDF-search tools.
 Object reads default to identity; lists default to ten entries; journal text
 defaults to 2,000 UTF-16 units; JSON defaults to 8,000 bytes. Actor/Item responses
@@ -100,18 +104,18 @@ use `entries[].values[]`; request raw evidence explicitly. Upgrade both componen
 and refresh client discovery when upgrading. See the
 [selective-read migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/selective-reads.md).
 
-## Actor and Item reading in v2.5.0
+## Actor and Item reading in v3.0.0
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party membership
 and named character follow-ups. Version 2.2.0 added computed wealth/Bulk through
 `read_actor` selections `wealth`, `bulk`, `wealth.items`
 and `bulk.items`, with guarded `available`/`potentially_missing` fields. Party
-stash discovery and Item reading are available in source builds, pending release.
+stash discovery and Item reading are included in v3.0.0.
 Deploy matching server/module builds and refresh
 LibreChat discovery when upgrading. See
 [metric contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/character-inventory-metrics.md).
 
-Version 2.5.0 provides GM-only Actor/Item capability discovery, selected-source
+Version 3.0.0 provides GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item pack index search on the verified
 Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and

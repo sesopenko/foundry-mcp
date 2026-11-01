@@ -7,8 +7,8 @@ Follow the active wishlist's maintenance instructions when moving entries here.
 
 ## WISH-001 — Official party members and party stash
 
-- **Status:** Membership released in v2.1.0; stash implemented after v2.5.0,
-  unreleased, verified 2026-10-31
+- **Status:** Membership released in v2.1.0; stash included in v3.0.0,
+  verified 2026-10-31
 - **Requested:** 2026-10-28
 - **Scope:** Read-only party discovery and stash access, initially for PF2e.
 
@@ -385,7 +385,7 @@ not authorize sending messages to an existing game session.
 
 ## WISH-008 — PF2e inline-formatting assistance
 
-- **Status:** Implemented in source after v2.2.0; not yet released
+- **Status:** Implemented in v2.3.0
 - **Requested:** 2026-10-29
 - **Scope:** Three separate MCP tools generating inline roll links, inline check
   links and inline embeds for PF2e content authoring.
@@ -635,7 +635,7 @@ quality or current satisfaction of the acceptance criteria above.
 
 ## WISH-010 — Journal writing with GM-controlled guidance
 
-- **Status:** Implemented after v2.5.0, unreleased; verified 2026-10-31
+- **Status:** Included in v3.0.0; verified 2026-10-31
 - **Requested:** 2026-10-31
 - **Scope:** GM-only world-journal creation/editing, journal folder management,
   ownership changes and a unified writing-guidance tool. Initially text pages
@@ -797,7 +797,7 @@ HTML persistence/rendering and permission behavior during implementation.
 
 ## WISH-011 — Browse Foundry images for content selection
 
-- **Status:** Implemented after v2.5.0, unreleased; verified 2026-10-31
+- **Status:** Included in v3.0.0; verified 2026-10-31
 - **Requested:** 2026-10-31
 - **Scope:** GM-only, read-only discovery of existing image files accessible
   through Foundry's file browsing API, for journal display and later embedding.
@@ -836,7 +836,7 @@ listing with all images on the server.
 
 ## WISH-012 — Embed images in journal text
 
-- **Status:** Implemented after v2.5.0, unreleased; verified 2026-10-31
+- **Status:** Included in v3.0.0; verified 2026-10-31
 - **Requested:** 2026-10-31
 - **Scope:** Add image embedding to journal text authoring.
 - **Depends on:** WISH-010 (journal writing) and WISH-011 (image browsing).

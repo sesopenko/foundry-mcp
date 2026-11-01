@@ -1,10 +1,10 @@
 # Journal authoring and GM writing guidance
 
-WISH-010 adds GM-guided world journal authoring after v2.5.0, unreleased.
+Version 3.0.0 adds GM-guided world journal authoring (WISH-010).
 The tools use the existing readers' canonical folder/entry IDs and page UUIDs,
 with bounded text writes and explicit ownership previews. Compendiums remain
 read-only. [Image browsing and embedding](journal-images.md) extend this workflow
-in the same unreleased source tree.
+in the same release.
 
 ## Authoring workflow
 

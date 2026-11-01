@@ -134,7 +134,7 @@ requires reconciliation before reloading. The server never automatically resends
 
 ## Writing guide
 
-The unreleased WISH-010 work replaces `get_pathfinder_writing_style_guide` with
+Version 3.0.0 replaces `get_pathfinder_writing_style_guide` with
 `get_writing_guidance`, combining exact GM-authored HTML instructions with the
 original style passage as HTML paragraphs. It requires the GM browser, supports
 change checks and preserves the attribution caveat below. Refresh discovery and
