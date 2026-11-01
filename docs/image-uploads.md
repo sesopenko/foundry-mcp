@@ -1,6 +1,6 @@
 # Uploading images into Foundry User Data
 
-Version 3.3.0 adds `create_image_directory` and `upload_image`. They use the
+Version 3.3.1 adds `create_image_directory` and `upload_image`. They use the
 existing MCP authentication and ready GM browser on Foundry14, with no new
 environment variables or endpoints. Deploy matching server/module builds,
 refresh the GM browser and refresh client discovery. These tools work across

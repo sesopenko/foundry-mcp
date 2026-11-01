@@ -1,6 +1,6 @@
 # Browsing Foundry images
 
-Version 3.3.0 also supports [User Data folder creation and image uploads](image-uploads.md).
+Version 3.3.1 also supports [User Data folder creation and image uploads](image-uploads.md).
 Browser results include current-location and directory-node `capabilities`:
 `can_upload`, `can_create_directory`, and `reasons`. These are advisory public
 FilePicker checks with User Data-only mutation scope. Core Data/S3 remain

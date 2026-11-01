@@ -21,17 +21,20 @@ EVALUATION_INIT_TIMEOUT = 5
 EVALUATION_SESSION_TIMEOUT = 15
 
 
-async def evaluation_requests(server, meta):
+async def evaluation_requests(server, meta, *, tool_timeout=None):
     """Bound discovery, invocation and cleanup; expose timeouts as test failures.
 
     FastMCP dispatches synchronous tools to worker threads. Run outside the
     agent sandbox so asyncio's local socket-pair wakeups are permitted.
+    Inject a tool-only timeout through call_tool, so deadline tests cannot
+    accidentally time out initialization or discovery before reaching the tool.
+    None retains the client's normal request deadline.
     """
     async with asyncio.timeout(EVALUATION_SESSION_TIMEOUT):
         async with Client(server, timeout=EVALUATION_REQUEST_TIMEOUT,
                           init_timeout=EVALUATION_INIT_TIMEOUT) as client:
             await client.list_tools()
-            result = await client.call_tool("search_journals", {"query": "Ripnugget"}, meta=meta)
+            result = await client.call_tool("search_journals", {"query": "Ripnugget"}, meta=meta, timeout=tool_timeout)
             bad = await client.call_tool("search_journals", {"query": "x", "limit": "invalid"}, meta=meta, raise_on_error=False)
             missing = await client.call_tool("missing", {}, meta=meta, raise_on_error=False)
     return result, bad, missing
@@ -41,6 +44,17 @@ class EvaluationDeadlineTests(unittest.IsolatedAsyncioTestCase):
     async def test_unresponsive_tool_has_a_request_deadline(self):
         server = FastMCP('evaluation-stalled-request')
         entered = asyncio.Event()
+        discovery_completed = asyncio.Event()
+
+        class SlowDiscovery(Middleware):
+            async def on_list_tools(self, context, call_next):
+                # Reproduce discovery exceeding the injected 50 ms tool budget.
+                await asyncio.sleep(0.1)
+                result = await call_next(context)
+                discovery_completed.set()
+                return result
+
+        server.add_middleware(SlowDiscovery())
 
         @server.tool
         async def search_journals(query: str, limit: int = 20):
@@ -50,9 +64,9 @@ class EvaluationDeadlineTests(unittest.IsolatedAsyncioTestCase):
         # The outer guard bounds a broken harness; only its own request timeout
         # produces the required McpError rather than this guard's TimeoutError.
         async with asyncio.timeout(1):
-            with patch(__name__ + '.EVALUATION_REQUEST_TIMEOUT', 0.05):
-                with self.assertRaises(McpError) as caught:
-                    await evaluation_requests(server, {})
+            with self.assertRaises(McpError) as caught:
+                await evaluation_requests(server, {}, tool_timeout=0.05)
+        self.assertTrue(discovery_completed.is_set(), 'tool timeout interrupted discovery')
         self.assertTrue(entered.is_set())
         self.assertEqual(caught.exception.error.code, REQUEST_TIMEOUT)
 
