@@ -98,7 +98,8 @@ Version 2.1.0 added `get_party_members` for official PF2e world-party membership
 and named character follow-ups. Version 2.2.0 added computed wealth/Bulk through
 `read_actor` selections `wealth`, `bulk`, `wealth.items`
 and `bulk.items`, with guarded `available`/`potentially_missing` fields. Party
-stash remains unsupported. Deploy matching server/module builds and refresh
+stash discovery and Item reading are available in source builds, pending release.
+Deploy matching server/module builds and refresh
 LibreChat discovery when upgrading. See
 [metric contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/character-inventory-metrics.md).
 

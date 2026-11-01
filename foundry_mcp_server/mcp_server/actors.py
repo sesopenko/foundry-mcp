@@ -2637,8 +2637,20 @@ def _identity(value: Any) -> bool:
         row = value[key]
         if row is not None and (type(row) is not dict or not keys <= set(row) or not set(row) <= keys | {'name_truncated'} | ({'type'} if key == 'actor' else set()) or not all(type(row[k]) is str for k in keys) or ('name_truncated' in row and type(row['name_truncated']) is not bool)):
             return False
-    if value['actor'] is not None and 'type' in value['actor'] and value['actor']['type'] not in ('character','npc','familiar'):
-        return False
+    if value['actor'] is not None and 'type' in value['actor']:
+        owner = value['actor']
+        # PF2e-specific8.6.1 world-party stash: physical embedded Item source
+        # only. Core Actor.items + physical/data.ts (pinned in actorParty.js),
+        # not generic party Actor reading, token/pack parties or campaign Items.
+        if owner['type'] == 'party':
+            if (value['document_name'] != 'Item' or value['type'] not in PHYSICAL_TYPES
+                    or value['source_kind'] != 'world' or value['pack'] is not None or value['instance'] is not None
+                    or not re.fullmatch(r'Actor\.[^.\s#]+', owner['uuid'])
+                    or not re.fullmatch(r'[^.\s#]+', value['id'])
+                    or value['uuid'] != owner['uuid'] + '.Item.' + value['id']):
+                return False
+        elif owner['type'] not in ('character','npc','familiar'):
+            return False
     instance = value['instance']
     if value['source_kind'] == 'token':
         if type(instance) is not dict or set(instance) != {'scene_uuid', 'scene_name', 'token_uuid', 'token_name', 'actor_link', 'base_actor'}:

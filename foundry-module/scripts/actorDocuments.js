@@ -7,6 +7,7 @@
  * No sheet/preparation data, roll context or PF2e relationship getters are used.
  */
 import { fail, selector } from "./actorReadUtils.js";
+import { PHYSICAL_TYPES } from './actorPhysical.js';
 
 export const ACTOR_TYPES = ["character", "npc", "familiar"];
 // PF2e-specific known types include affliction for explicit unsupported
@@ -113,7 +114,11 @@ export async function actorTarget(params) {
   return { document: actor, actor: null, token, identity: documentIdentity(actor, null, token) };
 }
 
-/** Resolve an Item with its owner/instance; PF2e-specific 8.6.1 type filter. */
+/** Resolve an Item with its owner/instance; PF2e-specific 8.6.1 type filter.
+ * World party-owned physical Items from get_party_stash are supported source
+ * definitions; party Actors/token parties and campaign Items stay unsupported.
+ * Physical schema: https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/physical/data.ts
+ */
 export async function itemTarget(params) {
   selector(params.item_uuid, "item_uuid");
   if (params.token_uuid != null) {
@@ -126,7 +131,14 @@ export async function itemTarget(params) {
   if (params.item_uuid.startsWith("Scene.")) fail("InvalidRequest", "Synthetic-owned Item reads also require token_uuid.", "Reuse the Item UUID and token_uuid from list_actor_items.");
   const item = await resolve(params.item_uuid, "Item");
   const actor = item.parent?.documentName === "Actor" ? item.parent : null;
-  if (actor) { requirePermission(actor); supported(actor); }
+  if (actor) {
+    requirePermission(actor);
+    // PF2e-specific party stash admission, not generic party interpretation.
+    const stash = actor.type === 'party' && PHYSICAL_TYPES.includes(item.type) && !actor.parent && !actor.compendium
+        && /^Actor\.[^.\s#]+$/.test(actor.uuid) && game.actors.get(actor.id) === actor
+        && actor.items.get(item.id) === item && item.uuid === actor.uuid + '.Item.' + item.id;
+    if (!stash) supported(actor);
+  }
   supported(item);
   return { document: item, actor, token: null, identity: documentIdentity(item, actor, null) };
 }

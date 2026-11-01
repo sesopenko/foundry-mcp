@@ -27,53 +27,6 @@ implemented or scheduled. Completed requests are in
   work and prior implementation history explained. Keep one entry per ID across
   the two files.
 
-## WISH-001 — Official party members and party stash
-
-- **Status:** Partially implemented in v2.1.0: party membership; stash remains wishlist
-- **Requested:** 2026-10-28
-- **Scope:** Read-only party discovery and stash access, initially for PF2e.
-
-`get_party_members` supplies bounded official world-party discovery and
-membership, with canonical character follow-ups. See [party contracts and
-verification](party-tools.md). Generic party Actor reads and stash access remain
-unsupported.
-
-### User need
-
-Answer “Who's in the party?” using official party membership and read the
-shared party stash through MCP tools.
-
-The user identifies the UI entry point as the special **“The Party”** group.
-Its button opens the party sheet, which lists party members and provides access
-to the party stash. This is the requested UI correspondence; the underlying
-supported API/schema still needs verification.
-
-### Desired behavior
-
-- Discover the official party and list its members with names and canonical
-  Actor identifiers for follow-up reads. Membership must come from the party
-  relationship, not guesses based on player ownership, logged-in users, folders,
-  or scene tokens.
-- Discover and read the party stash, including item names, quantities and
-  identifiers for follow-up item details. Preserve stash ownership/context so
-  shared possessions are distinguishable from members' personal inventories.
-- Make missing parties, empty membership/stashes, inaccessible data and partial
-  results distinguishable. Handle multiple parties explicitly if supported by
-  the system.
-- Let a fresh LLM discover the workflow from tool descriptions and returned
-  follow-up selectors without opening the UI or knowing document IDs beforehand.
-
-### Design decision for implementation
-
-Choose existing tool extensions, new tools, or a combination based on clear LLM
-discovery and efficient follow-up reading. Reuse existing Actor/Item readers
-where suitable; tool names and schemas are intentionally undecided.
-
-The previous Actor/Item delivery excluded party Actors. This request adds a new
-wishlist scope; it does not imply that existing readers already support parties
-or their stash. Verify supported PF2e party relationships and inventory schemas
-before implementation, following the repository's public API requirements.
-
 ## WISH-010 — Journal writing with GM-controlled guidance
 
 - **Status:** Requested; not implemented

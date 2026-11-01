@@ -5,6 +5,70 @@ Original request details below preserve implementation history; current behavior
 and verification are documented in each entry's linked implementation guide.
 Follow the active wishlist's maintenance instructions when moving entries here.
 
+## WISH-001 — Official party members and party stash
+
+- **Status:** Membership released in v2.1.0; stash implemented after v2.5.0,
+  unreleased, verified 2026-10-31
+- **Requested:** 2026-10-28
+- **Scope:** Read-only party discovery and stash access, initially for PF2e.
+
+`get_party_members` supplies bounded official world-party discovery and
+membership, with canonical character follow-ups. `get_party_stash` adds actual
+party-owned physical Item identities, stored quantities and optional container
+claims; its `read_item` follow-ups preserve the party owner. Generic party Actor
+reads remain unsupported. See [party contracts and verification](party-tools.md).
+
+### User need
+
+Answer “Who's in the party?” using official party membership and read the
+shared party stash through MCP tools.
+
+The user identifies the UI entry point as the special **“The Party”** group.
+Its button opens the party sheet, which lists party members and provides access
+to the party stash. This is the requested UI correspondence; the original
+request required verification of the underlying supported API/schema.
+
+### Desired behavior
+
+- Discover the official party and list its members with names and canonical
+  Actor identifiers for follow-up reads. Membership must come from the party
+  relationship, not guesses based on player ownership, logged-in users, folders,
+  or scene tokens.
+- Discover and read the party stash, including item names, quantities and
+  identifiers for follow-up item details. Preserve stash ownership/context so
+  shared possessions are distinguishable from members' personal inventories.
+- Make missing parties, empty membership/stashes, inaccessible data and partial
+  results distinguishable. Handle multiple parties explicitly if supported by
+  the system.
+- Let a fresh LLM discover the workflow from tool descriptions and returned
+  follow-up selectors without opening the UI or knowing document IDs beforehand.
+
+### Original implementation direction and delivered decision
+
+The original request left tool names/schemas undecided and called for reusing
+existing Actor/Item readers where suitable, verifying supported PF2e party and
+inventory contracts before implementation. Prior generic Actor/Item delivery
+excluded party Actors; it did not establish stash support.
+
+The delivered separate typed stash interface selects compact source values
+before count/byte pagination and reuses `read_item` for optional source/prose/
+evidence. World-party physical Item admission is deliberately narrower than
+generic party Actor or campaign reading. Shared party selection and page
+validation preserve membership behavior while removing duplicate policy logic.
+
+### Verification
+
+Focused JavaScript and actual typed MCP tests cover source values, missing/zero
+quantities, denied/empty/multiple parties, canonical ownership, unsupported
+systems, selection, UTF-8 budgets, complete pagination and stale continuations.
+The existing Foundry14.369/PF2e8.6.1 test world passed the bounded fixture workflow
+in 21 tool calls plus discovery: roster/stash reading, Item detail/prose/evidence
+follow-ups, unchanged read-time source, and stale cursor rejection. Exact-marker
+cleanup left zero fixtures and no pending creations; the browser reported zero
+console errors. Measurements and the public API/schema evidence are recorded in
+[the stash verification](party-tools.md#stash-verification--2026-10-31).
+This completes the request in source without a release or version bump.
+
 ## WISH-002 — Character carried Bulk and encumbrance
 
 - **Status:** Implemented in v2.2.0

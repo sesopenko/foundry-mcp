@@ -9,7 +9,11 @@ retain v1. Request evidence explicitly when raw witnesses are needed.
 **Version 2.1.0 addition:** [get_party_members](party-tools.md) has its own typed
 version-two membership contract. It admits world party identities only through
 that narrow interface; the registry's party exclusion still applies to generic
-Actor reading. Stash, computed wealth and current Bulk remain unsupported.
+Actor reading. The unreleased `get_party_stash` tool enumerates party-owned
+physical Items; `read_item` accepts their world UUIDs for source/description
+reading. Generic party Actor reads remain unsupported. See
+[party contracts](party-tools.md#party-stash-unreleased) and the separately
+released [character wealth/Bulk contract](character-inventory-metrics.md).
 
 **Contract version 1, reconciled October 28, 2026.** This document describes
 the delivered Actor/Item tools and their explicit capability limits. The

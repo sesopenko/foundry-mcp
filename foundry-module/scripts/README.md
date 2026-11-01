@@ -79,6 +79,12 @@ Only common source metadata and explicit Item descriptions are delivered by the
 foundation; type-specific mappings/effective values remain staged. See
 [the contract and version boundary](../../docs/actor-tools.md).
 
+`actorParty.js` shares permission-aware world-party selection between roster and
+stash reads. Stash summaries select actual physical embedded Item source before
+pagination; `actorDocuments.js` narrowly admits these world-party physical Items
+to `read_item`. Generic party Actor, token/pack party and campaign Item reading
+remain unsupported. No prepared party inventory getter is used.
+
 Actor discovery modules `actorWorld.js`, `actorScenes.js` and `actorPacks.js` use public document relationships and selected pack indexes. Python discovery adapters validate their bounded DTOs and expose self-contained tool contracts. Scene navigation retains current token Actor identity; effective token state remains a separate acceptance gate.
 
 `actorAction.js` selects persisted PF2e action fields. `actors.js` maps their activation discriminator and resolves immediate self-effect references only for explicit relationship requests, preserving synthetic target context and rechecking authorization. It never applies an effect or evaluates an action.

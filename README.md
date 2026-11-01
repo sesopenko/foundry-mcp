@@ -292,7 +292,8 @@ membership, with named party selection and canonical `read_actor` follow-ups.
 Use character members for PC-group questions. Version 2.2.0 added
 `read_actor` selections `wealth`, `bulk`, `wealth.items` and `bulk.items`, with
 guarded runtime fields reporting `available` or `potentially_missing`. Party
-stash remains unsupported. See [metric contracts](docs/character-inventory-metrics.md)
+stash discovery and Item reading are available in source builds (unreleased).
+See [metric contracts](docs/character-inventory-metrics.md)
 and [party contracts](docs/party-tools.md).
 
 Version 2.5.0 includes GM-only Actor/Item capability discovery, selected-source

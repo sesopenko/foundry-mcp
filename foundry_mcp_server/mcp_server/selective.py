@@ -305,6 +305,9 @@ restart. UnsupportedSystem/Version/Type: inspect get_actor_types. DocumentNotFou
 rediscover; PermissionDenied/BridgeUnavailable: reconnect an authorized ready GM.
 Use list_actor_items for owned identities and read_item for selected definitions
 or exact description. No writes, rolls, imports or target-context calculations.
+For PF2e shared possessions use get_party_stash. Its world-party-owned physical
+Item UUIDs work with read_item, preserving party ownership. Generic party Actor
+reads, token/pack parties and nonphysical campaign Items remain unsupported.
 Affliction Items are deferred (in_scope false); use journal/PDF rules instead.
 Familiar current values use public Actor.system own data without invoking getters;
 familiar_value_not_recalculated and familiar_master_<status> delimit support.
@@ -364,12 +367,14 @@ mechanical claims; headings/tables may be ambiguous. No OCR or source execution.
 def install(server):
     """Install typed readers; legacy functions remain validators for nine tools."""
     from .parties import PartyRequest, PartyResult, read_party, PARTY_DOC
+    from .parties import StashRequest, StashResult, read_stash, STASH_DOC
     specs=[('read_actor',M.ActorRequest,M.ReadResult,read,READ_DOC),('read_item',M.ItemRequest,M.ReadResult,read,READ_DOC),
            ('get_actor_types',M.CapabilityRequest,M.CapabilityResult,capabilities,REGISTRY_DOC),
            ('list_actor_items',M.ItemsRequest,M.ListResult,metadata,LIST_DOC),('list_actor_compendiums',M.PacksRequest,M.ListResult,metadata,LIST_DOC),
            ('get_journal_contents',M.ContentsRequest,M.JournalContentsResult,metadata,JOURNAL_DOC),('search_journals',M.JournalSearchRequest,M.JournalSearchResult,metadata,JOURNAL_DOC),
            ('read_journal_page',M.JournalPageRequest,M.JournalPageResult,metadata,JOURNAL_DOC),('search_pdf_documents',M.PdfSearchRequest,M.PdfResult,pdf_search,PDF_DOC),
-           ('get_party_members',PartyRequest,PartyResult,read_party,PARTY_DOC)]
+           ('get_party_members',PartyRequest,PartyResult,read_party,PARTY_DOC),
+           ('get_party_stash',StashRequest,StashResult,read_stash,STASH_DOC)]
     for name,request,response,handler,description in specs:
         server.add_tool(SelectiveTool(name=name,description=description,parameters=request.model_json_schema(),output_schema=response.model_json_schema(),
             request_model=request,response_model=response,handler=handler,

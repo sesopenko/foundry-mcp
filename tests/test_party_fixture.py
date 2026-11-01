@@ -13,7 +13,7 @@ spec.loader.exec_module(harness)
 
 class PartyFixtureTests(unittest.TestCase):
     def test_wrong_world_cannot_create_or_clean_up(self):
-        scripts = [harness.code(body, 'a' * 32) for body in (harness.CREATE, harness.CLEANUP, harness.CHANGE)]
+        scripts = [harness.code(body, 'a' * 32) for body in (harness.CREATE, harness.CLEANUP, harness.CHANGE, harness.STASH_CHANGE)]
         js = r"""
 const scripts=JSON.parse(process.argv[1]);
 const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;

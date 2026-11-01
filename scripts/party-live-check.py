@@ -5,7 +5,7 @@ update/delete/getFlag/toObject, then cleans only this run's exact marker.
 https://foundryvtt.com/api/v14/classes/foundry.documents.Actor.html
 PF2e8.6.1 persisted party system.details.members[].uuid:
 https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/party/data.ts
-No prepared party getters or existing-document writes. At most 20 calls/180s
+No prepared party getters or existing-document writes. At most 32 calls/180s
 plus a reserved bounded cleanup. Reports only counts/bytes, not game content.
 """
 import argparse
@@ -35,12 +35,21 @@ try {
   GUARD;if(state.closed)throw Error('Fixture closed');
   const type=role==='party'?'party':'character';
   const actor=await Actor.implementation.create({name:'MCP temporary party verification '+role,type,
-   ...(type==='party'?{system:{details:{members:created.map(a=>({uuid:a.uuid}))}}}:{}),
+   ...(type==='party'?{system:{details:{members:created.map(a=>({uuid:a.uuid}))}},items:[
+    {name:'MCP temporary stash bag',type:'backpack',system:{quantity:1}},
+    {name:'MCP temporary stash coins',type:'treasure',system:{quantity:0,price:{value:{gp:1},per:1},description:{value:'<p>MCP stash source.</p>'}}}
+   ]}:{}),
    flags:{'foundry-mcp':{partyProbe:RUN,partyProbeRole:role}}});
   GUARD;
   if(!actor||actor.type!==type||actor.getFlag('foundry-mcp','partyProbe')!==RUN)throw Error('Wrong fixture identity');
   if(state.closed){await actor.delete();throw Error('Fixture closed during creation');}
   created.push(actor);
+  if(type==='party') {
+   const bag=actor.items.find(i=>i.type==='backpack'),coin=actor.items.find(i=>i.type==='treasure');
+   if(actor.items.size!==2||!bag||!coin)throw Error('Fixture stash identity mismatch');
+   GUARD;if(state.closed)throw Error('Fixture closed');
+   await coin.update({'system.containerId':bag.id});
+  }
  }
  result={party:created[2].uuid,members:created.slice(0,2).map(a=>a.uuid)};
 } finally {state.pending--;}
@@ -61,6 +70,13 @@ GUARD;
 const refs=party.toObject(true).system.details.members;
 if(refs.length!==2||refs.some(r=>!actors.some(a=>a.type==='character'&&a.uuid===r.uuid)))throw Error('Unexpected fixture references');
 await party.update({'system.details.members':refs.slice(0,1)});
+const result={changed:true};
+"""
+STASH_CHANGE = SELECTED + """
+GUARD;
+const item=party.items.find(i=>i.name==='MCP temporary stash coins');
+if(!item||item.type!=='treasure'||item.parent!==party)throw Error('Fixture stash missing');
+await item.update({'system.quantity':3});
 const result={changed:true};
 """
 CLEANUP = STATE + """
@@ -99,7 +115,7 @@ async def verify(client):
     async def call(name, args, *, cleanup=False, error=False):
         nonlocal calls
         calls += 1
-        if calls > (21 if cleanup else 20):
+        if calls > (33 if cleanup else 32):
             raise AssertionError('Call bound exceeded')
         response = await client.call_tool(name, args, raise_on_error=not error)
         if error:
@@ -139,10 +155,45 @@ async def verify(client):
                 actor = await call(entry['next_call']['tool'], entry['next_call']['arguments'])
                 assert actor['identity']['uuid'] == entry['identity']['uuid']
             assert await execute(FINGERPRINT) == before
+            stash = await call('get_party_stash', {'party_uuid': party})
+            assert stash['mode'] == 'stash' and stash['scope_status'] == 'complete'
+            assert len(stash['entries']) == 2 and stash['pagination']['complete']
+            assert sorted(e['quantity']['value'] for e in stash['entries']) == [0, 1]
+            assert all(e['identity']['uuid'].startswith(party + '.Item.') for e in stash['entries'])
+            report['rows'].append({'scenario': 'stash_default', 'bytes': size(stash), 'calls': 1, 'complete': True})
+            selected = await call('get_party_stash', {'party_uuid': party, 'select': {'quantity': False, 'container': True, 'follow_up': False}})
+            assert all('quantity' not in e and 'next_call' not in e and 'container' in e for e in selected['entries'])
+            report['rows'].append({'scenario': 'stash_selective', 'bytes': size(selected), 'calls': 1, 'complete': True})
+            stash_pages, stash_cursor = [], None
+            for _ in range(3):
+                args = {'party_uuid': party, 'limit': 1}
+                if stash_cursor:
+                    args['cursor'] = stash_cursor
+                page = await call('get_party_stash', args)
+                stash_pages.append(page); stash_cursor = page['pagination']['next_cursor']
+                if stash_cursor is None:
+                    break
+            assert len(stash_pages) == 2 and stash_cursor is None
+            assert [e for p in stash_pages for e in p['entries']] == stash['entries']
+            report['rows'].append({'scenario': 'stash_complete_pagination', 'bytes': sum(size(p) for p in stash_pages), 'calls': len(stash_pages), 'complete': True})
+            coin = next(e for e in stash['entries'] if e['identity']['type'] == 'treasure')
+            for details, evidence in [(['source.physical'], True), (['description'], False)]:
+                detail = await call('read_item', {**coin['next_call']['arguments'], 'select': {'details': details, 'evidence': evidence}, 'max_bytes': 48000})
+                assert detail['identity']['actor']['uuid'] == party and detail['identity']['actor']['type'] == 'party'
+                assert detail['pagination']['complete']
+                if details == ['description']:
+                    assert any(v['value'] == '<p>MCP stash source.</p>' for e in detail['entries'] for v in e['values'])
+                else:
+                    assert any(v['concept'] == 'quantity' and v['value'] == 0 for e in detail['entries'] for v in e['values'])
+                report['rows'].append({'scenario': 'stash_' + ('evidence' if evidence else 'description'), 'bytes': size(detail), 'calls': 1, 'complete': True})
+            assert await execute(FINGERPRINT) == before
+            await execute(STASH_CHANGE)
+            stale_stash = await call('get_party_stash', {'party_uuid': party, 'limit': 1, 'cursor': stash_pages[0]['pagination']['next_cursor']}, error=True)
+            assert stale_stash.is_error and 'ContentChanged' in str(stale_stash.content)
             await execute(CHANGE)
             stale = await call('get_party_members', {'party_uuid': party, 'limit': 1, 'cursor': pages[0]['pagination']['next_cursor']}, error=True)
             assert stale.is_error and 'ContentChanged' in str(stale.content)
-            report.update(passed=True, source_unchanged=True, stale_cursor_rejected=True)
+            report.update(passed=True, source_unchanged=True, stale_cursor_rejected=True, stash_stale_cursor_rejected=True)
     except Exception as error:
         report.update(passed=False, exception_type=type(error).__name__)
     finally:
@@ -165,11 +216,13 @@ async def main(catalog_only):
     async with Client(transport, timeout=30, init_timeout=10) as client:
         catalog = await client.list_tools()
         party_tool = next((t for t in catalog if t.name == 'get_party_members'), None)
+        stash_tool = next((t for t in catalog if t.name == 'get_party_stash'), None)
         report = {'catalog_bytes': size([t.model_dump(mode='json') for t in catalog]),
                   'tools': len(catalog), 'discovery_calls': 1,
-                  'party_schema_bytes': size(party_tool.model_dump(mode='json')) if party_tool else None}
+                  'party_schema_bytes': size(party_tool.model_dump(mode='json')) if party_tool else None,
+                  'stash_schema_bytes': size(stash_tool.model_dump(mode='json')) if stash_tool else None}
         if not catalog_only:
-            assert party_tool is not None and party_tool.outputSchema is not None
+            assert party_tool is not None and party_tool.output_schema is not None
             report.update(await verify(client))
     print(json.dumps(report))
     return 0 if catalog_only or report['passed'] else 1
