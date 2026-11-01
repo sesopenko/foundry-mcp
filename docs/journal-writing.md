@@ -70,16 +70,47 @@ The HTML subset includes paragraphs/divs/spans, headings 1–6, line breaks,
 emphasis/underline/strike/sub/sup, blockquotes/pre/code, unordered/ordered lists,
 horizontal dividers, simple tables and safe links. Table colspan/rowspan is 1–100.
 Links allow HTTP, HTTPS, mailto, relative paths and anchors, with no controls or
-whitespace in URLs; href is bounded to 2,048 characters, title to 512. No event,
-class/data attributes, scripts, iframes, images or arbitrary CSS declarations.
-Raw image markup is rejected; use `embed_image` with a browsed source instead.
+whitespace in URLs; href is bounded to 2,048 characters, title to 512.
+Journal HTML additionally supports `section`, `aside`, `article`, `header`,
+`footer`, `figure`, `figcaption`, `dl`/`dt`/`dd`, `mark`, `small`, `abbr` and `img`.
+Class lists are presentation tokens, not an allowlist of publisher class names:
+`split no-toc`, `sidebar float-right`, `handout handout1`, trait lists and
+`read-aloud` on either paragraphs or divs are supported. Class values are bounded
+to1,024 characters and ASCII letter/underscore-start tokens with letters,
+digits, underscores and hyphens. Duplicate tokens are retained. IDs accept an
+ASCII letter/underscore followed by letters, digits, underscores, colons, dots
+or hyphens, up to256 characters. Titles are bounded to512 characters.
+`data-split-here` is bounded to256 characters without control characters;
+other data attributes and event handlers are rejected.
+
+Raw images accept relative or HTTP(S) `src` (up to2,048 characters, spaces
+allowed, no controls/backslashes), `alt` up to1,000 characters and optional
+integer width/height1–8,192. Data/blob/file/executable URLs, `srcset`, inline
+SVG/MathML, scripts, iframes, active embeds, forms and arbitrary attributes are
+rejected. SVG files may be used as passive image sources. Raw HTML does not
+verify asset existence or directory membership; use `browse_journal_images`
+and `embed_image` when selecting/verifying an asset. Publisher appearance
+depends on installed styles. Unsupported markup produces an error rather
+than silent stripping.
 Immediate inline rolls are rejected. Deferred PF2e notation should come from the
 verified PF2e builders when that system is active; these APIs do not roll dice.
 
-Limited CSS properties are text-align, font-size, font-family, font-weight,
+Font CSS properties are text-align, font-size, font-family, font-weight,
 font-style, text-decoration, color and background-color. Raw journal font sizes
-must be 1–200pt; other CSS dimensions/units are rejected. Optional `format` wraps
-only the supplied fragment in a styled div. `font_size` small/normal/large/huge
+must be 1–200pt. Other journal layout dimensions can use ordinary CSS units.
+The layout property allowlist is position, top/right/bottom/left,
+width/height/min-width/max-width/min-height/max-height,
+margin/padding (including their four sides), float, clear, display,
+vertical-align, border/border-width/border-style/border-color/border-radius,
+opacity, object-fit, text-indent and line-height. These layout values permit
+ASCII words, numbers, spaces and `#.,%+-`; CSS functions, comments, escapes and
+`!important` are excluded. Transform accepts numeric scale/scaleX/scaleY only;
+shape-outside accepts one `url(...)` with the safe image URL policy, quoted for
+paths containing spaces. Other URL-bearing CSS properties, custom properties,
+expression/var/calc and arbitrary declarations remain rejected.
+
+Optional `format` wraps only the supplied fragment in a styled div.
+`font_size` small/normal/large/huge
 maps to 10/12/18/24pt; custom requires `custom_size_pt` in 1–200. `font_color` uses
 `#RRGGBB`. `font_family` must be a loaded family from
 `get_journal_authoring_options({kind:"fonts"})` and fit the supported letters,
@@ -322,3 +353,60 @@ profile remains unchanged. Ownership tests also cover no-change preservation,
 GM rejection, partial failures, parent ownership changes, retries after reload,
 byte bounds and folder cycles. Category authoring, images and distributed
 transactions are not claimed by this implementation.
+
+## Publisher HTML verification — 2026-10-31 source build
+
+The root failure was applying the basic text authoring subset to complete
+publisher journal replacements. A two-class exception still rejected 13 of 18
+sampled pages. Thirteen structural unit regressions then failed against that
+policy before the distinct journal presentation policy above was implemented;
+the same regressions pass afterward. Negative coverage retains chat restrictions,
+rejects unsafe HTML/URLs/CSS and protects rejection without mutation.
+
+Run the read-only publisher audit after refreshing the dedicated development
+tab with `./scripts/actor-tools.sh refresh`:
+
+```bash
+.venv/bin/python scripts/journal-html-live-check.py
+```
+
+The script discovers the Seven Dooms folder and 18 named pages across eight
+journals, follows returned source continuations with revision/UTF-16 checks,
+and runs the actual module validator with the browser's real `DOMParser`.
+It does not enrich, render, write documents or insert source into the live DOM.
+Source stays in memory; only aggregate results/page names are printed. Run
+the script outside the sandbox, as with other local verification commands.
+Its bounds are 48 MCP reads/120 seconds, six fragments/50,000 UTF-16 units per
+page and 48,000 response bytes, plus one discovery call and a 30-second browser
+evaluation. Offline harness tests cover call/size/continuation/identity/revision
+failures, Unicode reconstruction, endpoint guards and data serialization.
+
+On Foundry 14.369 in the existing localhost `test` world, all 18 complete local
+pages passed with unchanged normalized source (95,931 UTF-16 units), using 32
+MCP reads/156,607 response bytes plus discovery. Six real-DOM unsafe-content
+probes were rejected. The local sample differs slightly from the earlier
+connector sample at Ground Level and Hall of Threats; this is a separate local
+runtime verification, not a claim that the two world snapshots are identical.
+Publisher stylesheet appearance is not asserted by this source audit.
+
+`scripts/journal-authoring-live-check.py` separately passed 48 calls plus
+discovery within its 60-call/180-second bound. A marked fixture persisted exact
+replacement source with `split no-toc`, sidebar/action sections, split metadata,
+images/layout CSS and read-aloud paragraphs/divs. It verified narration placement,
+UUID/check retention, identical retry behavior, rejection without revision change,
+unchanged pre-existing journal/folder/user fingerprints and exact fixture cleanup.
+Both full offline suites passed, including 705 JavaScript tests. The browser
+reported zero console errors after the module refresh. Restarting the local MCP
+service for updated discovery caused one recorded WebSocket transport error at
+the bridge error handler; the bridge reconnected and the audit passed afterward.
+No adventure page was
+edited. Table fixtures use explicit `tbody` so exact-source assertions do not
+mistake normal browser table normalization for lost markup.
+
+Compact JSON response measurements: create receipt 460 bytes, replacement
+receipt 618, complete readback 1,374, ownership preview 965, and all eight fonts
+over eight pages 2,185. Before the description update the running catalog was 41
+tools/247,069 bytes with a 27,019-byte writer entry. After the local service
+restart it was 41 tools/250,241 bytes with a 27,742-byte writer entry (+723).
+No input/output schema or response limits changed in this work; larger prose
+descriptions are not token savings. No provider token counts were measured.

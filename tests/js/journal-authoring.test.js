@@ -114,6 +114,34 @@ test('page create, append, replace and rename preserve siblings and use actual r
   assert.equal(JSON.stringify(f.page.data), original);
 });
 
+test('publisher replacement preserves narration position and notation; invalid HTML cannot mutate', async () => {
+  const f = fixture();
+  const original = '<h2 class="split no-toc">Room</h2><aside class="sidebar float-right"><p>Notes</p></aside><section class="action" data-split-here="Room"><p>@UUID[JournalEntry.other]{Link} @Check[type:perception|dc:20]</p></section>';
+  f.page.data.text.content = original;
+  const content = original.replace('</h2>', '</h2><p class="read-aloud">Approved narration.</p>');
+  // Model the browser parser output explicitly; attribute policy runs in the
+  // real validator, not in this DOM test double.
+  globalThis.DOMParser = class {parseFromString(html) {return {
+    querySelectorAll: () => [
+      {tagName: 'H2', attributes: [{name: 'class', value: 'split no-toc'}]},
+      {tagName: 'ASIDE', attributes: [{name: 'class', value: 'sidebar float-right'}]},
+      {tagName: 'SECTION', attributes: [{name: 'class', value: 'action'}, {name: 'data-split-here', value: 'Room'}]},
+      {tagName: 'P', attributes: [{name: 'class', value: 'read-aloud'},
+        ...(html.includes('onclick=') ? [{name: 'onclick', value: 'run()'}] : [])]}
+    ], body: {innerHTML: html, textContent: 'Room Approved narration. Link Check'}
+  };}};
+  const context = await getJournalWriteContext({target: {kind: 'page', page_uuid: f.page.uuid}});
+  const action = {operation: 'update_page', page_uuid: f.page.uuid, expected_revision: context.revision, content};
+  await assert.rejects(writeJournal(await request({...action, content: content.replace('class="read-aloud"', 'class="read-aloud" onclick="run()"')})), code('InvalidHTML'));
+  assert.equal(f.page.data.text.content, original);
+  assert.equal(f.updates.length, 0);
+  const valid = await request(action);
+  await writeJournal(valid);
+  await writeJournal(valid);
+  assert.equal(f.page.data.text.content, content);
+  assert.equal(f.updates.length, 1);
+});
+
 test('stale document or guidance revisions and missing GM authorization reject before mutation', async () => {
   const f = fixture(), target = {kind: 'page', page_uuid: f.page.uuid};
   const context = await getJournalWriteContext({target});

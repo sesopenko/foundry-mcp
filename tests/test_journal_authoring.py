@@ -51,6 +51,14 @@ class JournalAuthoringTests(unittest.IsolatedAsyncioTestCase):
 
 
 class JournalWriteTests(unittest.IsolatedAsyncioTestCase):
+    async def test_discovery_describes_publisher_html_and_safety_boundary(self):
+        async with Client(mcp, timeout=5, init_timeout=5) as client:
+            tool = next(t for t in await client.list_tools() if t.name == 'write_journal')
+            self.assertIn('CSS class lists (<=1024 chars)', tool.description)
+            self.assertIn('data-split-here (<=256)', tool.description)
+            self.assertIn('raw HTML does not verify asset', tool.description)
+            self.assertIn('Scripts/events/iframes/forms/active embeds', tool.description)
+
     async def asyncSetUp(self):
         self.manager = AsyncMock()
         register_foundry_manager(self.manager)

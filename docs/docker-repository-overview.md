@@ -21,6 +21,9 @@ and exact rules reading. Update both the server and companion module; see
 Version 3.0.0 added GM-guided world-journal text authoring, organization,
 player sharing and
 [image selection and embedding](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
+Version 3.2.0 also permits publisher-style journal sections, sidebars, CSS class
+lists, safe images and layout styles while rejecting executable HTML. Appearance
+depends on installed publisher styles.
 See [journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
 for guidance configuration, limits and retry/ownership behavior. Compendiums
 remain read-only.
@@ -32,7 +35,7 @@ the connected GM browser and includes that world's instructions. See the
 
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
-## Selective reads in v3.1.0
+## Selective reads in v3.2.0
 
 ### Auth0 support
 
@@ -65,7 +68,7 @@ services:
 Its private `.env` contains:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.1.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.2.0
 FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
 FOUNDRY_MCP_OAUTH_ISSUER=https://YOUR_TENANT.REGION.auth0.com/
 FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS=auth0|REPLACE_WITH_USER_ID
@@ -96,7 +99,7 @@ evaluate rolls. Embed generation checks compendium Item access. Update both
 components and refresh discovery when upgrading. See the
 [inline builder contract and limitations](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pf2e-inline-builders.md).
 
-Version 3.1.0 includes compact defaults and typed `select` request and
+Version 3.2.0 includes compact defaults and typed `select` request and
 response contracts for nine heavy Actor/Item, journal and PDF-search tools.
 Object reads default to identity; lists default to ten entries; journal text
 defaults to 2,000 UTF-16 units; JSON defaults to 8,000 bytes. Actor/Item responses
@@ -104,7 +107,7 @@ use `entries[].values[]`; request raw evidence explicitly. Upgrade both componen
 and refresh client discovery when upgrading. See the
 [selective-read migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/selective-reads.md).
 
-## Actor and Item reading in v3.1.0
+## Actor and Item reading in v3.2.0
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party membership
 and named character follow-ups. Version 2.2.0 added computed wealth/Bulk through
@@ -115,7 +118,7 @@ Deploy matching server/module builds and refresh
 LibreChat discovery when upgrading. See
 [metric contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/character-inventory-metrics.md).
 
-Version 3.1.0 provides GM-only Actor/Item capability discovery, selected-source
+Version 3.2.0 provides GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item pack index search on the verified
 Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and
@@ -539,7 +542,7 @@ derived index without PDF re-upload; allow additional private storage and take
 a stopped-service backup of both volumes before upgrading. It requires no paid
 API or extra service.
 
-Version 3.1.0 introduces contextual PDF search and clearer upload-limit errors.
+Version 3.1.0 introduced contextual PDF search and clearer upload-limit errors.
 
 The default PDF upload maximum is 128 MiB. For a 150 MB file, add
 `FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES=268435456` (256 MiB) to the deployment `.env`

@@ -41,6 +41,8 @@ let rendered;
 try{rendered=own.querySelector('table')!==null&&own.querySelector('ul')!==null&&own.querySelector('ol')!==null&&own.querySelector('hr')!==null&&own.querySelector('a')?.getAttribute('href')==='https://example.com/';}
 finally{own.remove();}
 if(!rendered||!html.includes('Appended once'))throw Error('HTML retention/render mismatch');
+const parsed=new DOMParser().parseFromString(html,'text/html');
+if(parsed.querySelector('h2.no-toc')?.nextElementSibling?.outerHTML!=='<p class="read-aloud">Approved narration.</p>'||parsed.querySelectorAll('p.read-aloud').length!==1)throw Error('Publisher markup/position mismatch');
 const result={gm_access:true,text_pages:pages.length,html_rendered:true,append_occurrences:html.split('Appended once').length-1};
 """
 CLEANUP = STATE + """
@@ -120,7 +122,7 @@ async def verify(client):
             retry = await call('write_journal', create_args)
             assert retry['identity'] == journal['identity']
             report['rows'].append(dict(scenario='create_receipt', bytes=size(journal), complete=True))
-            html = '<h2>Notes</h2><p><strong>Bold</strong> <a href="https://example.com/">link</a></p><ul><li>Bullet</li></ul><ol><li>Number</li></ol><hr><table><tr><td>Cell</td></tr></table>'
+            html = '<h2>Notes</h2><p><strong>Bold</strong> <a href="https://example.com/">link</a></p><ul><li>Bullet</li></ul><ol><li>Number</li></ol><hr><table><tbody><tr><td>Cell</td></tr></tbody></table>'
             for name in ('First', 'Second'):
                 parent = await context('journal', journal['identity'])
                 page, _ = await write(dict(operation='create_page', journal_id=journal['identity']['journal_id'], parent_revision=parent['revision'], name=name+' '+marker,
@@ -134,6 +136,29 @@ async def verify(client):
             await call('write_journal', append_args)
             stale = await call('write_journal', {**append_args, 'request_id': f'journal-{marker}-stale'}, error=True)
             assert stale.is_error and 'ContentChanged' in str(stale.content)
+            # Exercise the real browser DOMParser and Foundry persistence, using
+            # only this run's marked page. Replacement retains source notation.
+            replacement = html.replace('<h2>Notes</h2>', '<h2 class="split no-toc">Notes</h2><p class="read-aloud">Approved narration.</p>') + (
+                '<aside class="sidebar float-right"><p>Sidebar</p></aside>'
+                '<section class="action" data-split-here="Fixture"><h3 class="split">Fixture</h3>'
+                '<img class="float-right" src="modules/pf2e-ap200-seven-dooms-for-sandpoint/assets/tokens/hazard.webp" alt="Fixture" '
+                'style="transform:scale(1.5);width:70%;position:relative;left:0px"></section>'
+                '<div class="read-aloud">Secondary narration.</div>'
+                '<p>Appended once</p><p>@UUID[JournalEntry.missing]{Reference} @Check[type:perception|dc:20]</p>')
+            current = await context('page', first['identity'])
+            replaced, replacement_args = await write(dict(operation='update_page', page_uuid=first['identity']['page_uuid'], expected_revision=current['revision'], content=replacement))
+            await call('write_journal', replacement_args)
+            current = await context('page', first['identity'])
+            invalid = await call('write_journal', {**replacement_args, 'request_id': f'journal-{marker}-invalid-html', 'action': {
+                **replacement_args['action'], 'expected_revision': current['revision'],
+                'content': replacement.replace('class="read-aloud"', 'class="read-aloud" onclick="alert(1)"')}}, error=True)
+            assert invalid.is_error and 'InvalidHTML' in str(invalid.content)
+            assert await context('page', first['identity']) == current, 'Rejected write changed page context'
+            retained = await execute(STATE + "const actual=journals()[0].pages.get(" + json.dumps(first['identity']['page_id']) + ").toObject(true).text.content;const expected=" + json.dumps(replacement) + ";const index=[...expected].findIndex((c,i)=>c!==actual[i]);const result={retained:actual===expected,index,actual_fragment:actual.slice(Math.max(0,index-20),index+80),expected_fragment:expected.slice(Math.max(0,index-20),index+80)};")
+            report['replacement_source_comparison'] = retained
+            assert retained['retained'], 'Replacement source changed'
+            report['rows'].append(dict(scenario='publisher_replacement_receipt', bytes=size(replaced), complete=True))
+            report['publisher_replacement_verified'] = True
             read = await call('read_journal_page', dict(page_uuid=first['identity']['page_uuid']))
             report['rows'].append(dict(scenario='page_readback', bytes=size(read), complete=read['complete']))
             parent = await context('folder', child['identity'])

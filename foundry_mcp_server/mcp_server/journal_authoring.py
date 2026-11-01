@@ -424,7 +424,17 @@ async def write_journal(request: WriteRequest):
     remain unchanged. Each content fragment is <=16000 UTF-8 bytes; resulting
     text <=1000000 UTF-16 units. Long prose can use sequential appends with fresh
     context. Supported HTML includes blocks/headings/emphasis/lists/tables/hr,
-    safe links and limited font CSS; scripts/events/iframes/raw images are rejected.
+    safe links, semantic sections/asides/figures, CSS class lists (<=1024 chars),
+    id (<=256), title (<=512), data-split-here (<=256), and passive IMG markup.
+    Images accept relative or HTTP(S) src <=2048 chars (spaces allowed),
+    alt <=1000 chars and width/height1–8192; raw HTML does not verify asset
+    existence/membership. Use browse_journal_images/embed_image for verified
+    image selection. Publisher appearance requires installed styles.
+    Font CSS and bounded layout syntax support position/dimensions/margins/
+    padding/float/display/borders/opacity/object-fit/text-indent/line-height,
+    numeric scale transforms and shape-outside:url(safe image URL).
+    Scripts/events/iframes/forms/active embeds, unsafe URL schemes, srcset,
+    other data attributes and arbitrary CSS functions/declarations are rejected.
     Optional format wraps only the supplied fragment in a styled div: font_family
     comes from get_journal_authoring_options(kind=fonts), font_color is #RRGGBB,
     font_size small/normal/large/huge maps to10/12/18/24pt; custom requires
