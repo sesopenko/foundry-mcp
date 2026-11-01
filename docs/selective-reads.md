@@ -38,7 +38,7 @@ unrequested; their absence does not mean an empty source value.
 | `get_journal_contents` | headings, categories, presentation, folder_path |
 | `search_journals` | excerpts, counts, folder_path |
 | `read_journal_page` | references, source_metadata, folder_path |
-| `search_pdf_documents` | snippet, entries, context (requires entries) |
+| `search_pdf_documents` | snippet, entries, context (requires entries), match_details |
 
 Actor statistics refinements are `statistics.attributes`, `armor_class`,
 `hit_points`, `saves`, `perception`, `movement`, `senses`, `languages`, and `iwr`
@@ -94,6 +94,13 @@ discarding accumulated pages. Completion applies only to the requested scope.
 One indivisible unit exceeding a budget returns ResponseTooLarge; increase the
 budget or narrow details. PDF search retains offset continuation and its existing
 2,000-candidate cap; indexing can shift offsets, so restart after library changes.
+PDF `search_mode` defaults to `contextual`: all query words must match across
+page text, page-associated bookmark titles/ancestors or heuristic titles. `text`
+retains the original body-only index and ranking. Selections never change search
+scope or ordering; byte budgets can reduce returned counts. `match_details`
+explains contributing fields using FTS tokenization, with a separate derived
+metadata excerpt. Snippets remain body-derived; verify with `read_pdf_pages`.
+Keep mode unchanged during offset continuation. See [PDF contracts](pdf-library.md).
 
 The browser privately supplies selected source witnesses and group sizes to
 Python. Python reuses the existing record validators, independently checks the

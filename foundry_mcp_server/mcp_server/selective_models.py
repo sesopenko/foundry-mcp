@@ -185,7 +185,8 @@ class JournalPageRequest(Model):
 
 
 class PdfSearchSelect(Model):
-    snippet: bool = Field(default=False, description='Include the derived lexical-match snippet.')
+    match_details: bool = Field(default=False, description='Explain FTS field contributions; metadata excerpts are derived navigation context, not source evidence.')
+    snippet: bool = Field(default=False, description='Include a derived body-text snippet; metadata is never substituted for source text.')
     entries: bool = Field(default=False, description='Include candidate heading titles and provenance; not proof of a rule definition.')
     context: bool = Field(default=False, description='Include entry ancestor context and optional-variant evidence; requires entries.')
 
@@ -196,6 +197,7 @@ class PdfSearchSelect(Model):
 
 
 class PdfSearchRequest(Model):
+    search_mode: Literal['contextual','text'] = Field(default='contextual', description='contextual matches page text plus page-associated bookmark titles/ancestors and heuristic titles; text uses the original body-only index and ranking.')
     query: Annotated[str,Field(min_length=1,max_length=300)]
     document_id: Annotated[str,Field(pattern=r'^[a-f0-9]{32}$')] | None = None
     offset: Annotated[int,Field(ge=0,le=100000)] = 0
@@ -400,7 +402,15 @@ class JournalResult(Model):
     references_scope: str | None = None
 
 
+class PdfMatchDetails(Model):
+    matched_fields: list[Literal['body','bookmark_titles','bookmark_ancestors','heading_candidates']]
+    body_matches_all_terms: bool
+    metadata_excerpt: Annotated[str,Field(max_length=300)] | None = None
+    metadata_excerpt_derived: Literal[True] | None = None
+
+
 class PdfCandidate(Model):
+    match_details: PdfMatchDetails | None = None
     document_id: str
     name: str
     revision: str

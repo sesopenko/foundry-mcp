@@ -75,6 +75,20 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
         with patch('foundry_mcp_server.pdf.uploads.os.open',side_effect=OSError('secret host path')):
             result=await self.request('begin',name='ok.pdf',size_bytes=4)
         self.assertNotIn('secret',str(result))
+
+    async def test_oversize_error_reports_configured_limit_and_recovery(self):
+        await self.auth()
+        response=await self.request('begin',name='Large.pdf',size_bytes=150_000_000)
+        self.assertEqual(response['type'],'pdf.upload.error')
+        self.assertIn('200000 bytes',response['message'])
+        self.assertIn('FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES',response['message'])
+        self.assertFalse(self.uploads.sessions)
+        self.assertFalse(self.library.reservations)
+        self.assertEqual(list((self.library.config.state/'staging').iterdir()),[])
+        self.uploads.config=replace(self.uploads.config,max_bytes=268435456)
+        accepted=await self.request('begin',name='Large.pdf',size_bytes=150_000_000)
+        self.assertEqual(accepted['type'],'pdf.upload.begin_ack')
+        await self.request('cancel',upload_id=accepted['upload_id'])
     async def test_cancel_disconnect_orphan_cleanup_and_recover_completed(self):
         await self.auth();begin=await self.request('begin',name='ok.pdf',size_bytes=4)
         await self.request('cancel',upload_id=begin['upload_id'])
@@ -113,6 +127,11 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.library.documents()['documents'],[])
         self.assertEqual(self.library.search('Sure Strike')['candidates'],[])
         self.assertFalse((self.library.config.library/(revision+'.pdf')).exists())
+        for mode in ('text','contextual'):
+            self.assertEqual(self.library.search('Sure Strike',search_mode=mode)['candidates'], [])
+        with self.library.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM page_context_fts WHERE document_id=?',(identifier,)).fetchone()[0],0)
+            self.assertEqual(db.execute('SELECT count(*) FROM pdf_context_index_state WHERE document_id=?',(identifier,)).fetchone()[0],0)
         # Operator-supplied import files are preserved but must not resurrect deleted content.
         self.assertTrue(path.exists());self.assertEqual((await self.library.scan())['queued_document_ids'],[])
         self.assertTrue((await self.request('delete',document_id=identifier,revision=revision))['deleted'])
@@ -151,6 +170,11 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('ORIGINAL RULE',self.library.read(old_id,1)['text'])
         self.library.enqueue(new_id);await asyncio.gather(*self.library.tasks)
         self.assertIn('UPDATED RULE',self.library.read(new_id,1)['text'])
+        for mode in ('text','contextual'):
+            self.assertEqual(self.library.search('ORIGINAL',search_mode=mode)['candidates'], [])
+            self.assertEqual(self.library.search('UPDATED',search_mode=mode)['candidates'][0]['document_id'],new_id)
+        with self.library.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM pdf_context_index_state WHERE document_id=?',(old_id,)).fetchone()[0],0)
         with self.assertRaises(LibraryError):self.library.status(old_id)
         self.assertFalse((self.library.config.library/(old_revision+'.pdf')).exists())
         bad=self.library.config.state/'staging'/('f'*32);bad.write_bytes(b'%PDF-broken')
@@ -158,6 +182,8 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(replacing)
         self.library.enqueue(bad_id);await asyncio.gather(*self.library.tasks)
         self.assertEqual(self.library.status(bad_id)['status'],'failed')
+        for mode in ('text','contextual'):
+            self.assertEqual(self.library.search('UPDATED',search_mode=mode)['candidates'][0]['document_id'],new_id)
         self.assertIn('UPDATED RULE',self.library.read(new_id,1)['text'])
         self.assertEqual((await self.library.scan())['queued_document_ids'],[])
         await asyncio.gather(*self.library.tasks)
@@ -181,3 +207,28 @@ class UploadTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(recovered.documents()['documents']),1)
         self.assertIn('LEGACY RULE',recovered.read(new_id,1)['text'])
         await migrated.close();await recovered.close()
+
+    async def test_context_write_failure_rolls_back_replacement(self):
+        from foundry_mcp_server.pdf import search_context
+        from foundry_mcp_server.pdf.library import hash_file
+        original=self.library.config.library/'Atomic.pdf';pdf(original,'ORIGINAL checkpoint')
+        result=await self.library.scan();await asyncio.gather(*self.library.tasks)
+        old_id=result['queued_document_ids'][0]
+        before=self.library.read(old_id,1)
+        staged=self.library.config.state/'staging'/('2'*32);pdf(staged,'UPDATED checkpoint')
+        new_id,_=await self.library.accept_upload(staged,'Atomic.pdf',hash_file(staged),staged.stat().st_size)
+        write=search_context.write_context
+        def interrupted(*args):
+            write(*args)
+            raise OSError('private source detail')
+        with patch.object(search_context,'write_context',side_effect=interrupted):
+            self.library.enqueue(new_id);await asyncio.gather(*self.library.tasks)
+        self.assertEqual(self.library.status(new_id)['status'],'failed')
+        self.assertNotIn('private source',self.library.status(new_id)['error'])
+        self.assertEqual(self.library.read(old_id,1),before)
+        for mode in ('text','contextual'):
+            self.assertEqual(self.library.search('ORIGINAL',search_mode=mode)['candidates'][0]['document_id'],old_id)
+            self.assertEqual(self.library.search('UPDATED',search_mode=mode)['candidates'],[])
+        with self.library.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM page_context_fts WHERE document_id=?',(new_id,)).fetchone()[0],0)
+            self.assertEqual(db.execute('SELECT count(*) FROM pdf_context_index_state WHERE document_id=?',(new_id,)).fetchone()[0],0)

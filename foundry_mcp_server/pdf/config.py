@@ -4,6 +4,8 @@ from pathlib import Path
 import os
 from foundry_mcp_server.config import settings
 
+DEFAULT_MAX_UPLOAD_BYTES = 128 * 1024 * 1024
+
 @dataclass(frozen=True)
 class PDFConfig:
     enabled: bool = False
@@ -11,7 +13,7 @@ class PDFConfig:
     state: Path | None = None
     uploads: bool = False
     token: str = ''
-    max_bytes: int = 134217728
+    max_bytes: int = DEFAULT_MAX_UPLOAD_BYTES
     quota: int = 2147483648
     concurrent: int = 2
     idle: int = 120
@@ -36,7 +38,7 @@ class PDFConfig:
         if uploads and (not token or token in {settings.bridge_token, settings.browser_token, settings.basic_password, settings.mcp_token}):
             raise ValueError('PDF uploads require a separate private capability')
         values = [int(os.getenv('FOUNDRY_MCP_PDF_' + key, str(default))) for key,default in
-                  [('MAX_UPLOAD_BYTES',134217728),('QUOTA_BYTES',2147483648),('MAX_CONCURRENT_UPLOADS',2),('IDLE_SECONDS',120)]]
+                  [('MAX_UPLOAD_BYTES',DEFAULT_MAX_UPLOAD_BYTES),('QUOTA_BYTES',2147483648),('MAX_CONCURRENT_UPLOADS',2),('IDLE_SECONDS',120)]]
         if any(v <= 0 for v in values) or values[0] > values[1] or values[2] > 8:
             raise ValueError('Invalid PDF size, quota, concurrency or timeout limits')
         return cls(True, *roots, uploads, token, *values, flag('TRUST_TLS_PROXY'))

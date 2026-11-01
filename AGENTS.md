@@ -284,6 +284,15 @@ and [budgeted evaluation](docs/mcp-tool-evaluation.md).
   and verification gaps explicitly; update contracts and migration guidance when
   defaults, fields or continuation semantics change.
 
+## PDF search verification
+
+For PDF search changes, keep canonical pages and the original text-only FTS index
+separate from the derived contextual index; see [PDF contracts and migration](docs/pdf-library.md#contextual-lexical-contract).
+Use `scripts/pdf-context-audit.py` on synthetic data or a read-only SQLite backup
+for bounded retrieval/payload measurements. Test migrations on isolated copies
+before restarting a service with a private library; never reparse ready books
+as a search-schema migration or copy an open SQLite file as a consistent backup.
+
 ## Required reading
 
 Before doing work in this repository, read these files in full:

@@ -1,10 +1,10 @@
 # sesopenko/foundry-mcp
 
-Version 3.0.0 adds [GM-guided journal writing](docs/journal-writing.md),
-[image selection and embedding](docs/journal-images.md), and
-[shared party-stash reading](docs/party-tools.md).
+Version 3.1.0 adds [contextual PDF search](docs/pdf-library.md#contextual-lexical-contract)
+across page text and bookmark headings, with automatic index augmentation for
+existing books and clearer upload-limit errors.
 
-Upgrade the server and module together and refresh client discovery: the old
+Upgrade the server and module together and refresh client discovery. When upgrading from 2.x, the old
 style-guide tool is replaced by the GM-connected `get_writing_guidance` tool;
 see [migration guidance](docs/journal-writing.md#migration).
 
@@ -91,7 +91,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.0.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.1.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -286,14 +286,14 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v3.0.0)
+## Actor and Item source reading (v3.1.0)
 
 Read official PF2e party membership and shared possessions separately, with
 named characters and Items for follow-up reads. Compare characters' wealth and
 encumbrance using the [metric tools](docs/character-inventory-metrics.md);
 see [party contracts](docs/party-tools.md) for stash access and limits.
 
-Version 3.0.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 3.1.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and
@@ -304,7 +304,8 @@ Explore supported PF2e characters, NPCs, familiars and their Items through read-
 
 ## Private PDF references
 
-An opt-in GM-private PDF library provides lexical lookup and source-page reading,
+An opt-in GM-private PDF library searches page text and associated bookmark
+context, with exact source-page reading,
 plus acknowledged uploads through the existing Foundry bridge. See
 [PDF library setup, access policy and recovery](docs/pdf-library.md).
 Do not share a PDF-enabled endpoint's MCP credentials with players.

@@ -92,7 +92,12 @@ class Uploads:
                     if ws in self.sessions: raise LibraryError('Cancel the existing upload first')
                     name=safe_name(message.get('name'))
                     size=message.get('size_bytes')
-                    if type(size) is not int or not 0<size<=self.config.max_bytes: raise LibraryError('PDF size exceeds upload limit or is empty')
+                    if type(size) is not int or size<=0:
+                        raise LibraryError('Choose a nonempty PDF file with a positive integer size in bytes')
+                    if size>self.config.max_bytes:
+                        raise LibraryError(f'PDF size {size} bytes exceeds the configured upload limit of '
+                            f'{self.config.max_bytes} bytes ({self.config.max_bytes/1048576:g} MiB). '
+                            'Ask the operator to increase FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES and recreate/restart the MCP service, then retry.')
                     if len(self.sessions)>=self.config.concurrent: raise LibraryError('Too many active uploads; retry later')
                     reserved=sum(s['size']-s['accepted'] for s in self.sessions.values())
                     used=await asyncio.to_thread(self.library.usage)

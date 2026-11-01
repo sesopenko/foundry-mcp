@@ -10,6 +10,7 @@ import sqlite3
 import sys
 import uuid
 from contextlib import contextmanager
+from . import search_context as context_index
 
 class LibraryError(ValueError): pass
 
@@ -61,6 +62,8 @@ class Library:
             CREATE VIRTUAL TABLE IF NOT EXISTS page_fts USING fts5(document_id UNINDEXED,page UNINDEXED,text);
             CREATE INDEX IF NOT EXISTS entries_document ON entries(document_id);
             ''')
+        (self.config.state/'library.sqlite3').chmod(0o600)
+        self._setup_context()
         # Older libraries required globally unique hashes. Replacement jobs must
         # coexist with the old ready document until their atomic index commit.
         with self.db() as db:
@@ -85,6 +88,54 @@ class Library:
             unfinished=[r['document_id'] for r in db.execute('SELECT document_id FROM deleted_documents WHERE cleaned=0')]
         for identifier in unfinished: self._cleanup_deleted(identifier)
         self.started = True
+
+    def _check_context_headroom(self, rows):
+        required = context_index.estimated_growth(rows)
+        if (self.usage() + sum(self.reservations.values()) + required > self.config.quota
+                or shutil.disk_usage(self.config.state).free < required):
+            raise LibraryError('Search index needs more private storage/quota; increase headroom and restart')
+
+    def _setup_context(self):
+        """Backfill persisted ready sources without parsing or changing source status."""
+        try:
+            with self.db() as db:
+                # Explicit transaction: executescript would commit implicitly.
+                db.execute('BEGIN IMMEDIATE')
+                db.execute('''CREATE VIRTUAL TABLE IF NOT EXISTS page_context_fts USING fts5(
+                    document_id UNINDEXED,page UNINDEXED,body,bookmark_titles,
+                    bookmark_ancestors,heading_candidates,context_warnings UNINDEXED,
+                    tokenize='unicode61')''')
+                db.execute('''CREATE TABLE IF NOT EXISTS pdf_context_index_state(
+                    document_id TEXT PRIMARY KEY,source_revision TEXT NOT NULL,
+                    build_version INTEGER NOT NULL,inputs_sha256 TEXT NOT NULL,page_count INTEGER NOT NULL)''')
+                for table in ('page_context_fts', 'pdf_context_index_state'):
+                    db.execute('DELETE FROM '+table+' WHERE document_id NOT IN (SELECT id FROM documents)')
+            with self.db() as db:
+                documents = db.execute("SELECT id,revision FROM documents WHERE status='ready' ORDER BY id").fetchall()
+            for document in documents:
+                with self.db() as db:
+                    db.execute('BEGIN IMMEDIATE')
+                    pages = db.execute('SELECT page,text FROM pages WHERE document_id=? ORDER BY page', (document['id'],)).fetchall()
+                    entries = db.execute('SELECT page,title,context,provenance FROM entries WHERE document_id=?', (document['id'],)).fetchall()
+                    rows, fingerprint = context_index.project(pages, entries)
+                    state = db.execute('SELECT * FROM pdf_context_index_state WHERE document_id=?', (document['id'],)).fetchone()
+                    keys = [r[0] for r in db.execute('SELECT page FROM page_context_fts WHERE document_id=? ORDER BY page', (document['id'],))]
+                    if (state and state['source_revision'] == document['revision'] and
+                            state['build_version'] == context_index.BUILD_VERSION and
+                            state['inputs_sha256'] == fingerprint and state['page_count'] == len(rows)
+                            and keys == [r[0] for r in rows]):
+                        continue
+                    self._check_context_headroom(rows)
+                    context_index.write_context(db, document['id'], document['revision'], rows, fingerprint)
+        except Exception:
+            raise LibraryError('Contextual PDF index upgrade failed; check private storage/quota and persisted metadata, restore a stopped-service backup if needed, then restart') from None
+
+    @staticmethod
+    def _remove_search_source(db, identifier):
+        """Remove canonical and both derived indexes in one caller transaction."""
+        for table in ('pages', 'entries', 'page_fts'):
+            db.execute('DELETE FROM '+table+' WHERE document_id=?', (identifier,))
+        context_index.remove_context(db, identifier)
 
     async def start(self):
         await asyncio.to_thread(self.setup)
@@ -210,8 +261,7 @@ class Library:
                             raise LibraryError('PDF is still processing; wait for it to finish, refresh and delete again')
                     if revision!=row['sha256']: raise LibraryError('PDF revision changed; refresh the list before deleting')
                     db.execute('INSERT OR IGNORE INTO deleted_documents(document_id,sha256) VALUES(?,?)',(identifier,row['sha256']))
-                    for table in ('pages','entries','page_fts'):
-                        db.execute('DELETE FROM '+table+' WHERE document_id=?',(identifier,))
+                    self._remove_search_source(db, identifier)
                     db.execute('DELETE FROM documents WHERE id=?',(identifier,))
                     db.execute('DELETE FROM replacement_targets WHERE document_id=?',(identifier,))
                 # Record intent before unlinking so restart can recover interrupted cleanup.
@@ -237,8 +287,8 @@ class Library:
                 await asyncio.wait_for(process.wait(),120)
                 if process.returncode or not output.is_file() or output.stat().st_size>33554432: raise LibraryError('parse')
                 data = await asyncio.to_thread(lambda: json.loads(output.read_text()))
-                text_bytes=sum(len(p['text'].encode()) for p in data['pages'])
-                if self.usage()+sum(self.reservations.values())+text_bytes*5>self.config.quota: raise LibraryError('index_quota')
+                context_rows, fingerprint = context_index.project(data['pages'], data['entries'])
+                self._check_context_headroom(context_rows)
                 if source != final:
                     # State and source storage can be different Docker filesystems.
                     # Promote only inside the destination filesystem after a durable copy.
@@ -259,21 +309,19 @@ class Library:
                     removed=[]
                     with self.db() as db:
                         db.execute("UPDATE documents SET status='indexing' WHERE id=?",(identifier,))
-                        db.execute('DELETE FROM pages WHERE document_id=?',(identifier,))
-                        db.execute('DELETE FROM entries WHERE document_id=?',(identifier,))
-                        db.execute('DELETE FROM page_fts WHERE document_id=?',(identifier,))
+                        self._remove_search_source(db, identifier)
                         for p in data['pages']:
                             db.execute('INSERT INTO pages VALUES(?,?,?,?,?)',(identifier,p['page'],p['label'],p['text'],json.dumps(p['warnings'])))
                             db.execute('INSERT INTO page_fts VALUES(?,?,?)',(identifier,p['page'],' '.join(p['text'].split())))
                         for e in data['entries']:
                             db.execute('INSERT INTO entries VALUES(?,?,?,?,?)',(identifier,e['page'],e['title'],json.dumps(e['context']),e['provenance']))
+                        context_index.write_context(db, identifier, row['revision'], context_rows, fingerprint)
                         db.execute("UPDATE documents SET status='ready',page_count=?,error=NULL WHERE id=?",(len(data['pages']),identifier))
                         for target in db.execute('SELECT old_id,old_revision FROM replacement_targets WHERE document_id=?',(identifier,)).fetchall():
                             old=db.execute('SELECT sha256,revision FROM documents WHERE id=?',(target['old_id'],)).fetchone()
                             if old is None or old['revision']!=target['old_revision']: continue
                             db.execute('INSERT OR IGNORE INTO deleted_documents(document_id,sha256) VALUES(?,?)',(target['old_id'],old['sha256']))
-                            for table in ('pages','entries','page_fts'):
-                                db.execute('DELETE FROM '+table+' WHERE document_id=?',(target['old_id'],))
+                            self._remove_search_source(db, target['old_id'])
                             db.execute('DELETE FROM documents WHERE id=?',(target['old_id'],))
                             db.execute('DELETE FROM replacement_targets WHERE document_id=?',(target['old_id'],))
                             removed.append(target['old_id'])
@@ -344,54 +392,113 @@ class Library:
                     next_offset=offset+len(text) if offset+len(text)<len(row['text']) else None,
                     total_characters=len(row['text']))
 
-    def search(self, query, identifier=None, offset=0, limit=10, locate=False, *, select=None, max_bytes=48000):
+    def search(self, query, identifier=None, offset=0, limit=10, locate=False, *, select=None, max_bytes=48000, search_mode='contextual'):
+        if search_mode not in {'contextual', 'text'}: raise LibraryError('Use search_mode contextual or text')
         words = re.findall(r'\w+',query, re.UNICODE)
         if not words or len(query)>300 or len(words)>30: raise LibraryError('Use a nonempty query of at most 300 characters and 30 words')
         if identifier: self.status(identifier)
         match = ' AND '.join('"'+w+'"' for w in words)
+        table = 'page_context_fts' if search_mode == 'contextual' else 'page_fts'
+        ranking = context_index.BM25_WEIGHTS if search_mode == 'contextual' else ''
+        rank_args = ','+ranking if ranking else ''
+        extra = 'f.context_warnings' if search_mode == 'contextual' else "'[]'"
         with self.db() as db:
-            rows = db.execute('''SELECT f.document_id,f.page,d.name,d.revision,p.label,p.warnings,
-                 snippet(page_fts,2,'','', ' … ',30) AS snippet,bm25(page_fts) AS rank
-                 FROM page_fts f JOIN documents d ON d.id=f.document_id
+            db.execute('BEGIN')  # One consistent read snapshot across candidate/detail queries.
+            rows = db.execute(f'''SELECT f.document_id,f.page,d.name,d.revision,p.label,p.warnings,{extra} AS context_warnings,
+                 snippet({table},2,'','', ' … ',30) AS snippet,bm25({table}{rank_args}) AS rank
+                 FROM {table} f JOIN documents d ON d.id=f.document_id
                  JOIN pages p ON p.document_id=f.document_id AND p.page=f.page
-                 WHERE page_fts MATCH ? AND d.status='ready' AND (? IS NULL OR d.id=?)
+                 WHERE {table} MATCH ? AND d.status='ready' AND (? IS NULL OR d.id=?)
                  ORDER BY rank,d.id,f.page LIMIT 2000''',(match,identifier,identifier)).fetchall()
             results = []
             for r in rows:
-                entries = [dict(e) for e in db.execute('SELECT title,context,provenance FROM entries WHERE document_id=? AND page=?',(r['document_id'],r['page']))] if select is None or select.get('entries') else []
+                entries = [dict(e) for e in db.execute('SELECT title,context,provenance FROM entries WHERE document_id=? AND page=?',(r['document_id'],r['page']))] if locate or select is None or select.get('entries') else []
                 exact = [e for e in entries if normalized(e['title'])==normalized(query)]
                 chosen = exact or entries[:5]
                 for e in chosen:
                     e['context']=json.loads(e['context'])
                     e['optional_variant_evidence']=any('variant' in s.casefold() for s in e['context'])
                 results.append(dict(document_id=r['document_id'],name=r['name'],revision=r['revision'],physical_page=r['page'],page_label=r['label'],
-                    snippet=r['snippet'],entries=chosen,warnings=json.loads(r['warnings']),exact_heading_candidate=bool(exact)))
-                if select is not None:
-                    row=results[-1]
-                    if not select.get('snippet'): row.pop('snippet')
-                    if not select.get('entries'): row.pop('entries');row.pop('exact_heading_candidate')
-                    elif not select.get('context'):
-                        for entry in row['entries']: entry.pop('context');entry.pop('optional_variant_evidence')
+                    snippet=r['snippet'],entries=chosen,warnings=json.loads(r['warnings'])+json.loads(r['context_warnings']),exact_heading_candidate=bool(exact)))
+            heading_cap_reached = False
             if locate:
                 # Exact headings/bookmarks can exist even when extracted page text is empty.
-                for e in db.execute('''SELECT e.*,d.name,d.revision,p.label,p.warnings FROM entries e JOIN documents d ON d.id=e.document_id
+                headings = db.execute('''SELECT e.*,d.name,d.revision,p.label,p.warnings FROM entries e JOIN documents d ON d.id=e.document_id
                     JOIN pages p ON p.document_id=e.document_id AND p.page=e.page
-                    WHERE d.status='ready' AND (? IS NULL OR d.id=?) LIMIT 20000''',(identifier,identifier)):
+                    WHERE d.status='ready' AND (? IS NULL OR d.id=?)
+                    ORDER BY d.id,e.page,e.title,e.provenance,e.context LIMIT 20001''',(identifier,identifier)).fetchall()
+                heading_cap_reached = len(headings)>20000
+                for e in headings[:20000]:
                     if normalized(e['title'])!=normalized(query): continue
                     if any(r['document_id']==e['document_id'] and r['physical_page']==e['page'] for r in results): continue
                     context=json.loads(e['context'])
                     results.append(dict(document_id=e['document_id'],name=e['name'],revision=e['revision'],physical_page=e['page'],page_label=e['label'],snippet='',
                         entries=[dict(title=e['title'],context=context,provenance=e['provenance'],optional_variant_evidence=any('variant' in s.casefold() for s in context))],
                         warnings=json.loads(e['warnings']),exact_heading_candidate=True))
+                    if search_mode == 'contextual':
+                        warning = db.execute('SELECT context_warnings FROM page_context_fts WHERE document_id=? AND page=?',
+                                             (e['document_id'], e['page'])).fetchone()
+                        if warning: results[-1]['warnings'].extend(json.loads(warning[0]))
                 results.sort(key=lambda r:not r['exact_heading_candidate'])
+            # Ranking is finalized before selecting response details.
+            self._select_search_results(results[offset:offset+limit], select)
+            if select and select.get('match_details'):
+                self._match_details(db, results[offset:offset+limit], words, match, search_mode)
         message='Candidates are not proof. Read physical pages with read_pdf_pages before mechanical claims. Tables and heading roles require verification; no similarity confidence is reported.'
         def page(end):
-            return dict(candidates=results[offset:end],next_offset=end if end<len(results) else None,candidate_cap_reached=len(rows)==2000,message=message)
+            return dict(candidates=results[offset:end],next_offset=end if end<len(results) else None,candidate_cap_reached=len(rows)==2000 or heading_cap_reached,message=message)
         end=min(offset+limit,len(results))
         if select is not None:
             while end>offset and len(json.dumps(dict(page(end),contract_version=2),ensure_ascii=False,separators=(',',':')).encode())>max_bytes: end-=1
             if end==offset and offset<len(results): raise LibraryError('ResponseTooLarge: narrow select or increase max_bytes')
         return page(end)
+
+    @staticmethod
+    def _select_search_results(results, select):
+        """Project response details after ranking; selection cannot affect promotion."""
+        if select is None: return
+        for row in results:
+            if not select.get('snippet'): row.pop('snippet')
+            if not select.get('entries'):
+                row.pop('entries')
+                row.pop('exact_heading_candidate')
+            elif not select.get('context'):
+                for entry in row['entries']:
+                    entry.pop('context')
+                    entry.pop('optional_variant_evidence')
+
+    @staticmethod
+    def _match_details(db, results, words, match, mode):
+        """Batch FTS-tokenized explanations only for the requested result window."""
+        if not results: return
+        predicates = ' OR '.join('(document_id=? AND page=?)' for _ in results)
+        parameters = [value for r in results for value in (r['document_id'], r['physical_page'])]
+        table = 'page_context_fts' if mode == 'contextual' else 'page_fts'
+        fields = context_index.FIELDS if mode == 'contextual' else ('text',)
+        any_terms = ' OR '.join('"'+w+'"' for w in words)
+        hits = {}
+        for field in fields:
+            hits[field] = {(r[0], r[1]) for r in db.execute(
+                f'SELECT document_id,page FROM {table} WHERE {table} MATCH ? AND ({predicates})',
+                (field+': ('+any_terms+')', *parameters))}
+        body = fields[0]
+        full_body = {(r[0], r[1]) for r in db.execute(
+            f'SELECT document_id,page FROM {table} WHERE {table} MATCH ? AND ({predicates})',
+            (body+': ('+match+')', *parameters))}
+        metadata = {}
+        if mode == 'contextual':
+            metadata = {(r['document_id'], r['page']): r for r in db.execute(
+                f'SELECT * FROM {table} WHERE {predicates}', parameters)}
+        for result in results:
+            key = result['document_id'], result['physical_page']
+            matched = [field for field in fields if key in hits[field]]
+            details = dict(matched_fields=['body' if f == 'text' else f for f in matched],
+                           body_matches_all_terms=key in full_body)
+            contributing = [f for f in matched if f != body]
+            if contributing:
+                details.update(metadata_excerpt=' '.join(metadata[key][f] for f in contributing)[:300],
+                               metadata_excerpt_derived=True)
+            result['match_details'] = details
 
 def normalized(value): return ' '.join(value.casefold().split())
 

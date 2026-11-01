@@ -18,6 +18,7 @@ async def check(base, verify_only=False):
     stream=DecodedStreamObject();stream.set_data(b'BT /F1 12 Tf 50 750 Td (SYNTHETIC RULE) Tj 0 -16 Td (Use the documented synthetic result.) Tj ET')
     page[NameObject('/Contents')]=writer._add_object(stream)
     writer.add_outline_item('Synthetic Rule',0)
+    writer.add_outline_item('Infiltration',0)
     output=BytesIO();writer.write(output);data=output.getvalue()+b'\n'*70000
     async with httpx.AsyncClient(trust_env=False) as http:
         assert (await http.get(base+'/health')).json()['foundry_clients']==[], 'Never run against a connected gaming bridge'
@@ -27,6 +28,8 @@ async def check(base, verify_only=False):
             docs=(await client.call_tool('list_pdf_documents',{})).data['documents']
             ready=[d for d in docs if d['name']=='Synthetic.pdf' and d['status']=='ready']
             assert ready, 'Synthetic book did not survive container replacement'
+            hit=(await client.call_tool('search_pdf_documents',{'query':'Infiltration documented','document_id':ready[0]['document_id']})).structured_content
+            assert hit['candidates'][0]['physical_page']==1
             page=(await client.call_tool('read_pdf_pages',{'document_id':ready[0]['document_id'],'physical_page':1})).data
             assert 'documented synthetic result' in page['text']
             print('PASS: indexed source survives container replacement without a browser')
@@ -41,6 +44,9 @@ async def check(base, verify_only=False):
             assert all(d['document_id']!=ready[0]['document_id'] for d in docs)
             missing=await client.call_tool('read_pdf_pages',{'document_id':ready[0]['document_id'],'physical_page':1},raise_on_error=False)
             assert missing.is_error
+            for mode in ('text','contextual'):
+                removed=(await client.call_tool('search_pdf_documents',{'query':'documented','search_mode':mode})).structured_content
+                assert not removed['candidates']
             print('PASS: authenticated browser deletion removes source retrieval and library metadata')
             return
         await client.call_tool('refresh_pdf_index',{})
@@ -73,6 +79,9 @@ async def check(base, verify_only=False):
         # Retrieval does not need a connected browser.
         result=(await client.call_tool('locate_pdf_entry',{'name':'Synthetic Rule','document_id':identifier})).data
         assert result['candidates'][0]['physical_page']==1
+        for mode in ('text','contextual'):
+            hit=(await client.call_tool('search_pdf_documents',{'query':'Infiltration documented','document_id':identifier,'search_mode':mode})).structured_content
+            assert bool(hit['candidates'])==(mode=='contextual')
         page=(await client.call_tool('read_pdf_pages',{'document_id':identifier,'physical_page':1})).data
         assert 'documented synthetic result' in page['text']
         print('PASS: capability denials, multi-chunk ACK integrity, concurrent gameplay RPC, indexing, no-browser source lookup',identifier)

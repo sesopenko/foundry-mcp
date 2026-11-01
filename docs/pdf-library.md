@@ -4,6 +4,11 @@ In version 2.0.0, search_pdf_documents uses the [version-two selective
 contract](selective-reads.md). Snippets and entry context are opt-in; exact-page
 reading and the other PDF tools retain their existing contracts.
 
+PDF search now matches extracted page text together with page-associated bookmark
+headings and section ancestry. Results retain exact page selectors; contextual
+matches remain candidates to verify against source pages. This intentionally
+changes default matching and ranking while preserving `contract_version:2`.
+
 This opt-in library runs inside the existing Python process. SQLite FTS5 and
 pypdf supply lexical candidates and canonical extracted text; there is no
 cloud model, semantic embedding, OCR, or additional database/server. Retrieval
@@ -87,6 +92,16 @@ is bounded to 768 MiB address space, 90 CPU seconds, 120 wall seconds, 2000 page
 1 MiB. Limits can reject a legitimate complex PDF; this is a failure, not a
 claim that the book has no relevant rules. Unix resource limits are required.
 
+The default per-file upload limit is **128 MiB (134,217,728 bytes)**, configurable
+through `FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES`; it is not a fixed maximum. For a 150 MB
+PDF, set `FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES=268435456` (256 MiB) in the server
+deployment environment. The shipped Basic/OAuth Compose files forward this
+variable. Recreate the MCP container with `docker compose up -d --force-recreate`
+from its deployment directory, or restart a source service after changing its
+environment. A container restart alone does not apply changed environment values.
+The configured per-file limit cannot exceed the total quota. A larger upload
+limit does not raise the separate parser page/text/memory/time limits above.
+
 ## Foundry upload workflow
 
 On a GM browser, open **Game Settings → Configure Settings → Foundry MCP Proxy →
@@ -168,6 +183,76 @@ ruleset/edition. Optional-variant evidence derives from bookmark ancestry; its
 absence does not establish default status. Book-scoped regression checks located all eleven specified Player Core/GM Core
 entries at rank one. This finite corpus check does not establish general heading
 or definition-detection accuracy on arbitrary PDFs.
+
+### Contextual lexical contract
+
+`search_pdf_documents` and `locate_pdf_entry` accept `search_mode:"contextual"`
+(default) or `"text"`. Both safely quote extracted query words and require all
+words. Contextual mode searches one row per physical page across normalized body,
+bookmark titles, bookmark ancestors and heuristic titles; text mode uses the
+unchanged original body-only FTS index/ranking. It is not semantic or fuzzy search.
+Only entries attached to that page contribute. No last-heading propagation,
+inferred section spans, filenames, page labels or invented aliases are indexed.
+Heuristic heading ancestry is ignored because the extractor's last-bookmark
+context does not establish a parent relationship.
+
+Contextual [FTS5 BM25](https://www.sqlite.org/fts5.html#the_bm25_function) weights
+are body 1, bookmark titles 3, bookmark ancestors 0.5 and heuristic titles 0.75.
+These fixed engineering choices are not tuned or calibrated confidence scores.
+Ties use document ID then physical page. Locate promotes exact casefolded,
+whitespace-normalized titles, including bookmark-only pages beyond the lexical
+cap; at most 20,000 ordered headings are inspected. The cap flag covers either
+heading or lexical limits. Narrow scope/query when capped.
+
+Selections affect returned details only. `select.context` still requires
+`select.entries`. `select.match_details:true` adds `matched_fields` (at least one
+query term matched in that field), `body_matches_all_terms` (the full AND query
+matches body), and, only when metadata contributed, `metadata_excerpt` (at most
+300 Unicode characters) and `metadata_excerpt_derived:true`. Explanations use
+FTS column queries, including its Unicode tokenization, rather than substring
+tests. They are computed only for the requested result window. The excerpt is
+navigation metadata, never source evidence. Snippets always select body text;
+empty-body candidates retain an empty snippet and sparse-text warnings.
+
+```json
+{"query":"Infiltration checkpoint","search_mode":"contextual","limit":5,"select":{"snippet":true,"entries":true,"context":true,"match_details":true}}
+```
+
+Use real `document_id` values from `list_pdf_documents` to restrict a book.
+Reuse query, mode, scope, selection and bounds with returned `next_offset`.
+Restart after library/index changes; offset continuations have no revision lock.
+Unselected optional fields stay omitted; defaults remain ten candidates and
+8,000 JSON bytes (maximum 48,000). A byte-limited page may contain fewer results.
+
+Metadata whitespace is normalized and casefold-deduplicated. Whole strings are
+admitted in stable lexicographic order within each category: bookmark titles,
+bookmark ancestors, then heuristic titles. Combined metadata is limited to
+8,192 UTF-8 bytes per page including separating spaces; discarded material emits
+`search_context_truncated` on contextual candidates. Existing extractor title/path
+limits still apply. Publisher navigation metadata does not prove sentence scope
+or a complete rule definition. Tables remain unverified.
+
+### Search-index upgrades and rollback
+
+Startup creates a separate contextual FTS index and builds missing/stale ready
+documents from persisted pages and entries before tools/jobs become available.
+No PDF parse, upload, network or model call is involved. Build version, source
+revision, deterministic input fingerprint and exact physical-page key coverage
+govern rebuilding; unchanged builds are skipped. Each document's rows and build
+marker commit atomically. Source text, warnings, labels, IDs, revisions and source
+statuses are untouched. Uploads/retries maintain both indexes; successful
+replacement and deletion remove both indexes and markers in the same transaction.
+Failed replacements keep the old indexes usable.
+
+Quota/headroom checks reserve for both FTS indexes, metadata and transaction
+overhead (a conservative estimate, not a guaranteed growth factor). Migration
+storage or malformed-metadata failures stop startup with a sanitized actionable
+error; they do not mark source books failed or silently serve partial coverage.
+Repair private storage/quota/metadata or restore a consistent pre-upgrade backup.
+Before upgrading, stop the service and back up both private volumes using the
+procedures below. Test the upgrade and restart on an isolated copy first. For
+rollback, stop the service and restore that backup together with the previous
+image; never delete the volumes or copy an open SQLite file as a consistent backup.
 
 Two-column reading order and table structure remain unverified on every page.
 Never assign numeric values to a table solely because they occur near a heading.
@@ -264,3 +349,102 @@ A live synthetic test through the existing Foundry 14.369 GM browser replaced
 one PDF with a changed version, verified that the old synthetic ID retired,
 then deleted the test version. The existing user-owned PDF remained listed.
 The local index was backed up privately before enabling the additive migration.
+
+### Contextual search verification (2026-10-31)
+
+Implemented against checkout `a952845d066b133c4ccd9e7d7a28f10c8e4ae215`
+with Python 3.12 and the locked dependencies. The bounded
+`scripts/pdf-context-audit.py` uses temporary private storage, at most 400 calls
+and 120 seconds per run. Its `--source-state` option opens the original SQLite
+database read-only and uses SQLite's backup API; it does not copy an open database
+file, read/reparse source PDFs, change the running service or migrate live volumes.
+
+The fixed ten synthetic challenges require one word from bookmark metadata and
+one from body text. Recall@1, Recall@5 and MRR improve from 0 to 1 by construction;
+all extra-term negative controls remain empty. This is a deterministic functional
+gate, not an independent relevance benchmark or weight-tuning study. Initial
+weights were retained without tuning. Body-derived default payload comparisons
+use the same neutral `checkpoint` query in both modes.
+
+The private snapshot contains Player Core, Player Core 2 and GM Core (1,126 pages).
+The eleven historical named queries are explicitly scoped to Player Core and
+GM Core, with the same expected physical pages listed above. All eleven remain
+rank one in text and contextual locate modes: Recall@1, Recall@5 and MRR are 1
+in both; 162 candidates were returned across the top-20 result windows per mode.
+Negative extra-term controls remain empty. This re-establishes the baseline;
+it does not extend the reviewed relevance set to Player Core 2 or establish
+general relevance for broad headings. No private text or index is tracked.
+
+| Measurement | Synthetic | Private SQLite snapshot |
+| --- | ---: | ---: |
+| Body-only database bytes | 81,920 | 19,197,952 |
+| Database after contextual build | 122,880 | 28,348,416 |
+| Initial contextual build | 3.72 ms | 315 ms |
+| Median text lookup | 0.67 ms | 49.25 ms |
+| Median contextual lookup | 0.81 ms | 48.83 ms |
+
+These are single local runs, not stable performance estimates. The private
+database grew by 9,150,464 bytes (about 47.7%); the synthetic database grew by
+40,960 bytes (50%). Source PDFs are excluded from those SQLite-only figures.
+All canonical document/page/entry records, including labels, warnings, text and
+revisions, hashed identically before/after migration and restart. The private
+snapshot's maximum indexed page metadata was 496 bytes, with zero truncated
+pages; this does not guarantee that other books fit the 8,192-byte bound.
+
+Actual in-memory `fastmcp.Client` discovery/invocation validates the new interface.
+For comparison, the harness reconstructs the prior published PDF schemas and
+descriptions from Git HEAD on a separate in-memory server, using the retained
+text index for baseline responses. It does not claim a historical live-service
+trace. Compact UTF-8 structured JSON sizes for the private snapshot's representative
+`Sure Strike` search across books:
+
+| Scenario | Baseline bytes / returned | Contextual bytes / returned | Complete? |
+| --- | ---: | ---: | --- |
+| Default, one call | 3,367 / 10 | 3,367 / 10 | No |
+| Snippet, one call | 5,427 / 10 | 5,433 / 10 | No |
+| Snippet + entries + context, one call | 7,535 / 7 | 7,535 / 7 | No |
+| Same expansion plus new match details, one call | unavailable | 7,990 / 6 | No |
+| Complete identity traversal, limit 3 | 8,120 / 20 | 8,120 / 20 | Yes, 7 calls each |
+
+New details consume budget and can reduce first-page counts; this is not a
+payload-savings claim. Search discovery grows from 3,458 to 5,575 bytes including
+the description, input schema and output schema. The current full catalog is
+246,906 bytes; substituting the prior discovered PDF contracts into the otherwise
+unchanged catalog reconstructs a 244,296-byte baseline. These measurements are
+JSON bytes, not billed tokens. The final private audit used 68 bounded calls in
+2.39 seconds; the synthetic audit used 58. Calls include direct searches and
+MCP discovery/invocation; build/restart checks are also bounded by elapsed time.
+
+Focused tests cover provenance/deduplication/truncation, field-tokenized
+explanations, sparse pages, cross-page/book isolation, deterministic pagination,
+byte limits, legacy schema backfill, unchanged restart, duplicate/wrong page keys,
+changed fingerprints, sanitized storage/metadata failures and transaction rollback.
+They also cover upload/retry/replacement/deletion synchronization and actual
+request/response validation through MCP. Two diagnosed defects have regression
+tests: audit selection previously confused Player Core 2 with Player Core;
+compact locate selection previously removed the exact-title flag before ranking.
+Both were demonstrated failing before their fixes.
+
+Final validation: all 31 focused PDF tests passed, followed by
+`./scripts/test.sh`: 675 Python tests (one optional native code-graph integration
+test skipped because `CODE_GRAPH_INTEGRATION` was not enabled) and 688 JavaScript
+tests, with no failures. `git diff --check` passed. Reproduce the offline checks
+outside the agent sandbox:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -p 'test_pdf*.py' -v
+PYTHONPATH=. .venv/bin/python scripts/pdf-context-audit.py
+./scripts/test.sh
+```
+
+For the private-copy audit, add `--source-state` with the existing private
+`library.sqlite3` path; it is opened read-only. The harness requires Git history
+to reconstruct its HEAD baseline. No model/provider token usage was measured.
+
+The isolated MCP-only container build and smoke passed synthetic upload,
+context-dependent lookup with a text-mode negative control, no-browser reads,
+container recreation/persistence and deletion from both modes. Its containers
+and network were removed, retaining its synthetic test volumes. No Foundry
+module changes, new Foundry instance, production deployment or live private-library
+migration were performed. Numeric table/layout verification remains outside this
+feature; rendered-source checking is still required for such rules claims.

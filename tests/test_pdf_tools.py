@@ -16,6 +16,16 @@ from fastapi import WebSocketDisconnect
 from test_pdf_library import pdf
 
 class ToolTests(unittest.IsolatedAsyncioTestCase):
+    async def test_match_explanations_are_validated_at_mcp_output_boundary(self):
+        candidate = dict(document_id='a'*32,name='Synthetic.pdf',revision='r',physical_page=1,
+                         page_label='1',warnings=[],match_details={'matched_fields':['invented_field'], 'body_matches_all_terms':False})
+        packet = dict(candidates=[candidate],next_offset=None,candidate_cap_reached=False,message='Candidates require verification')
+        with patch('foundry_mcp_server.mcp_server.selective.pdfs.run',new=AsyncMock(return_value=packet)):
+            async with Client(mcp) as client:
+                result = await client.call_tool('search_pdf_documents',{'query':'checkpoint','select':{'match_details':True}},raise_on_error=False)
+                self.assertTrue(result.is_error)
+                self.assertIn('InvalidFoundryResponse',str(result.content))
+
     async def test_fresh_discovery_grounded_read_and_disabled_denial(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);library=Library(PDFConfig(True,root/'books',root/'state'))
@@ -25,11 +35,27 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
                     catalog={t.name:t for t in await client.list_tools()}
                     for name in ('list_pdf_documents','locate_pdf_entry','search_pdf_documents','read_pdf_pages','refresh_pdf_index'):
                         self.assertGreater(len(catalog[name].description),500)
-                        self.assertEqual(catalog[name].inputSchema['type'],'object')
+                        self.assertEqual(catalog[name].input_schema['type'],'object')
                     result=await client.call_tool('refresh_pdf_index',{})
                     await asyncio.gather(*library.tasks)
                     docs=(await client.call_tool('list_pdf_documents',{})).data
                     identifier=docs['documents'][0]['document_id']
+                    schema = catalog['search_pdf_documents'].input_schema
+                    self.assertEqual(schema['properties']['search_mode']['enum'], ['contextual','text'])
+                    self.assertIn('match_details', schema['$defs']['PdfSearchSelect']['properties'])
+                    query = {'query':'Variant Roll', 'document_id': identifier}
+                    contextual = (await client.call_tool('search_pdf_documents', query)).structured_content
+                    self.assertEqual(contextual['contract_version'], 2)
+                    self.assertEqual(len(contextual['candidates']), 1)
+                    self.assertNotIn('match_details', contextual['candidates'][0])
+                    self.assertEqual((await client.call_tool('search_pdf_documents', dict(query, search_mode='text'))).structured_content['candidates'], [])
+                    details = (await client.call_tool('search_pdf_documents', dict(query, select={'match_details':True,'snippet':True}))).structured_content
+                    self.assertEqual(details['candidates'][0]['match_details']['matched_fields'], ['body','bookmark_titles'])
+                    self.assertNotIn('metadata_excerpt_derived', contextual['candidates'][0])
+                    for invalid_args in (dict(query, search_mode='semantic'), dict(query, select={'unknown':True}),
+                                         dict(query, select={'context':True}), dict(query, extra=True)):
+                        invalid = await client.call_tool('search_pdf_documents', invalid_args, raise_on_error=False)
+                        self.assertTrue(invalid.is_error)
                     candidates=(await client.call_tool('locate_pdf_entry',{'name':'Sure Strike'})).data
                     self.assertEqual(candidates['candidates'][0]['document_id'],identifier)
                     page=(await client.call_tool('read_pdf_pages',{'document_id':identifier,'physical_page':1})).data
