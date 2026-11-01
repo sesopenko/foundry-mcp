@@ -81,7 +81,7 @@ async def verify(client):
         calls += 1
         catalog = await client.list_tools()
         tools = {t.name: t for t in catalog}
-        names = ['read_chat_messages', 'read_chat_message_content', 'send_chat_message', 'get_pathfinder_writing_style_guide']
+        names = ['read_chat_messages', 'read_chat_message_content', 'send_chat_message', 'get_writing_guidance']
         assert all(n in tools and tools[n].output_schema for n in names)
         assert not any('delete' in n or 'clear_chat' in n for n in tools)
         report.update(catalog_count=len(catalog), catalog_bytes=size([t.model_dump(mode='json') for t in catalog]),
@@ -198,9 +198,9 @@ return JSON.stringify({rows,rejected});
         assert ''.join(fragments) == big_text
         report.update(large_fragment_calls=len(fragments), large_fragment_bytes=fragment_bytes, large_default_bytes=size(compact))
         stage = 'guide_and_errors'
-        guide = await call('get_pathfinder_writing_style_guide', {})
+        guide = await call('get_writing_guidance', {})
         report['guide_bytes'] = size(guide)
-        assert guide['text'].endswith('and look it up!')
+        assert guide['pathfinder_guidance']['html'].endswith('and look it up!</p>')
         missing = await call('send_chat_message', {'request': dict(request_id=marker+'-missing', mode=modes[4], actor_id='MCPNoSuchActor00', content=marker)}, error=True)
         assert missing.is_error
         invalid = await call('send_chat_message', {'request': dict(request_id=marker+'-invalid', mode='Clear chat log', content=marker)}, error=True)

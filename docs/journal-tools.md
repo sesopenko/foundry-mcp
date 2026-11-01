@@ -10,6 +10,9 @@ through the connected GM browser. They include GM-only text. Compendium journals
 use a [separate compendium interface](compendium-tools.md); these world tools
 retain world-only selectors. Images, maps, PDFs and video are outside their scope.
 
+Source builds after v2.5.0 also provide [GM-guided journal authoring](journal-writing.md)
+using these same world selectors; this page describes the reading interface.
+
 | Tool | Start here when | Next step |
 | --- | --- | --- |
 | `get_journal_tree` | You need orientation in folders and entries | Expand folder nodes or inspect a returned journal ID |

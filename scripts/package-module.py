@@ -19,6 +19,10 @@ RUNTIME_SCRIPTS = ('main.js', 'foundryBridge.js', 'connectionConfig.js', 'explor
 RUNTIME_SCRIPTS += ('actorBuild.js','actorCharacter.js','actorCharacterAbilities.js','actorCurrent.js','actorFamiliar.js','actorFamiliarRelationships.js','actorCastingCurrent.js','actorCastingOptions.js','actorState.js','actorSkills.js','actorFamiliarCurrent.js','actorCreatureCurrent.js','actorStrikes.js','selectiveReads.js','actorParty.js','actorInventoryMetrics.js')
 RUNTIME_SCRIPTS += ('inline.js', 'chat.js')
 RUNTIME_SCRIPTS += ('compendiumJournals.js',)
+RUNTIME_SCRIPTS += ('writingGuidance.js',)
+RUNTIME_SCRIPTS += ('textHtml.js',)
+RUNTIME_SCRIPTS += ('journalAuthoring.js',)
+RUNTIME_SCRIPTS += ('journalAuthoringOptions.js',)
 
 
 def manifest(root=ROOT, tag=None):

@@ -18,6 +18,12 @@ Version 2.5.0 adds read-only compendium pack discovery, journal page-title searc
 and exact rules reading. Update both the server and companion module; see
 [compendium contracts and verification](https://github.com/sesopenko/foundry-mcp/blob/main/docs/compendium-tools.md).
 
+Source builds after 2.5.0 add GM-guided world-journal text authoring, organization
+and player sharing. This is not yet a published image release; see
+[journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
+for guidance configuration, limits and retry/ownership behavior. Compendiums
+remain read-only.
+
 The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
 ## Selective reads in v2.5.0

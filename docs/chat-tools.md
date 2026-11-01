@@ -134,9 +134,12 @@ requires reconciliation before reloading. The server never automatically resends
 
 ## Writing guide
 
-`get_pathfinder_writing_style_guide` takes `{}` and returns `text` plus
-`attribution_status`, preserving the supplied four paragraphs verbatim. It is
-separate from PF2e wiki inline syntax and absent from send responses/discovery.
+The unreleased WISH-010 work replaces `get_pathfinder_writing_style_guide` with
+`get_writing_guidance`, combining exact GM-authored HTML instructions with the
+original style passage as HTML paragraphs. It requires the GM browser, supports
+change checks and preserves the attribution caveat below. Refresh discovery and
+see [the unified contract and migration](journal-writing.md#unified-retrieval).
+Guide copy remains separate from send responses and PF2e wiki inline syntax.
 
 Research points to *Core Rulebook*, “Format of Rules Elements,” p.17
 ([secondary transcription](https://pathfinder2.dragonlash.com/rules/introduction/format-of-rules-elements/)).

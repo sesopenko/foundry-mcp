@@ -14,7 +14,7 @@ from collections.abc import Awaitable, Callable
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import Tool, ToolResult
 from mcp.types import ToolAnnotations
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from . import actors, pdfs
 from . import selective_models as M
@@ -28,7 +28,9 @@ def size(value):
 class SelectiveTool(Tool):
     """One explicit validation boundary, including actual output validation."""
     request_model: type[M.Model]
-    response_model: type[M.Model]
+    # A strict typed union can use RootModel; its alternatives retain Model's
+    # strict/unknown-field policy. Both forms validate the actual MCP output.
+    response_model: type[BaseModel]
     handler: Callable[[M.Model], Awaitable[dict]]
 
     async def run(self, arguments):
@@ -36,7 +38,7 @@ class SelectiveTool(Tool):
             request = self.request_model.model_validate(arguments)
         except ValidationError as exc:
             issues = [{'field': '.'.join(map(str, e['loc'])), 'message': e['msg']} for e in exc.errors(include_input=False, include_url=False)]
-            raise ToolError('InvalidRequest: ' + json.dumps(issues) + '; inspect the published select schema.') from None
+            raise ToolError('InvalidRequest: ' + json.dumps(issues) + '; inspect the published input schema.') from None
         result = await self.handler(request)
         try:
             validated = self.response_model.model_validate(result)

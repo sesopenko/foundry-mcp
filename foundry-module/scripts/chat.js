@@ -3,6 +3,7 @@
  * No PF2e interpretation, enrichment, roll evaluation or deletion.
  */
 import { fail, validateParams } from './actorReadUtils.js';
+import {normalizeTextHTML} from './textHtml.js';
 
 function ready() {
   if (!globalThis.game?.ready || !game.messages) fail('NotReady', 'Wait for the existing world.');
@@ -105,19 +106,7 @@ const sendLedgers=new WeakMap();
  * Browser normalization precedes Foundry's documented HTMLField sanitization.
  */
 export function normalizeChatHTML(content) {
-  const doc=new DOMParser().parseFromString(content,'text/html');
-  const tags=new Set(['P','BR','H1','H2','H3','H4','H5','H6','DIV','SPAN','STRONG','B','EM','I','U','S','SUB','SUP','BLOCKQUOTE','PRE','CODE','UL','OL','LI','TABLE','CAPTION','COLGROUP','COL','THEAD','TBODY','TFOOT','TR','TH','TD','HR']);
-  for(const el of doc.querySelectorAll('*')) {
-    const wrapper=['HTML','HEAD','BODY'].includes(el.tagName);
-    if(!wrapper && !tags.has(el.tagName)) fail('InvalidHTML','Use basic text HTML; images, links and executable HTML are excluded.');
-    for(const a of el.attributes) {
-      const tableSpan=['TH','TD'].includes(el.tagName)&&['colspan','rowspan'].includes(a.name)&&/^(?:[1-9]|[1-9]\d|100)$/.test(a.value);
-      const style=a.name==='style' && a.value.split(';').every(x=>!x.trim()||/^\s*(text-align|font-size|font-family|font-weight|font-style|text-decoration|color|background-color)\s*:\s*[a-zA-Z0-9 #.,%()"'-]+$/.test(x) && !/url|expression|var\(/i.test(x));
-      if(wrapper || !(tableSpan||style)) fail('InvalidHTML','Only basic text styles and table spans (1–100) are accepted; no event/class/data attributes.');
-    }
-  }
-  if(/\[\[(?!\/(?:r|gmr|br|sr)\s)/.test(doc.body.textContent??'')) fail('InvalidHTML','Only deferred inline rolls from create_pf2e_inline_roll are accepted; immediate rolls can evaluate while rendering.');
-  return doc.body.innerHTML;
+  return normalizeTextHTML(content);
 }
 
 /** Explicit audience/speaker creation using configured public Document implementation.

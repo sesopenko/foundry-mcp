@@ -1,4 +1,5 @@
 import { registerPDFManager } from "./pdfManager.js";
+import {registerWritingGuidanceSettings, registerWritingGuidanceMenu} from './writingGuidance.js';
 import { connectFoundryBridge, reconnectFoundryBridge } from "./foundryBridge.js";
 
 let ready = false;
@@ -10,6 +11,7 @@ function connectionChanged() {
 }
 
 Hooks.once("init", () => {
+  registerWritingGuidanceSettings();
   const settings = {
     bridgeUrl: { name: "MCP browser WebSocket URL", hint: "Full ws:// or wss:// URL ending in /ws/foundry, reachable from this GM browser. Saved with this world; changes reconnect automatically.", type: String, default: "ws://localhost:8000/ws/foundry" },
     productionAuthentication: { name: "Authenticate production bridge", hint: "Enable when the MCP server requires production authentication. Remote connections require WSS.", type: Boolean, default: false },
@@ -27,6 +29,7 @@ Hooks.once("ready", () => {
   ready = true;
   if (game.user.isGM) {
     registerPDFManager();
+    registerWritingGuidanceMenu();
     connectFoundryBridge();
   }
 });

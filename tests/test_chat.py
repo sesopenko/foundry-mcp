@@ -5,11 +5,10 @@ from unittest.mock import AsyncMock
 from fastmcp import Client
 from foundry_mcp_server.mcp_server.tools import register_foundry_manager
 from foundry_mcp_server.mcp_server.server import mcp
-from foundry_mcp_server.mcp_server.chat import STYLE_GUIDE
 
 
 class ChatTests(unittest.IsolatedAsyncioTestCase):
-    async def test_discovery_invocation_validation_and_guide(self):
+    async def test_discovery_invocation_and_validation(self):
         manager=AsyncMock()
         register_foundry_manager(manager)
         manager.call.return_value={'messages':[], 'cursor':'cursor','has_more':False,'scope':'loaded_visible_history'}
@@ -22,13 +21,6 @@ class ChatTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.structured_content['messages'],[])
             bad=await client.call_tool('read_chat_messages',{'request':{'after_id':'a','cursor':'b'}},raise_on_error=False)
             self.assertTrue(bad.is_error)
-            guide=await client.call_tool('get_pathfinder_writing_style_guide',{})
-            self.assertEqual(guide.structured_content['text'],STYLE_GUIDE)
-            from pathlib import Path
-            root=Path(__file__).resolve().parents[1]
-            wishlist='\n'.join((root/'docs'/name).read_text() for name in ('feature-wishlist.md','feature-wishlist-finished.md'))
-            expected=wishlist.split('## WISH-007',1)[1].split('```text\n',1)[1].split('\n```',1)[0]
-            self.assertEqual(guide.structured_content['text'],expected)
             print('chat discovery bytes:',len(json.dumps([tools[n].model_dump(mode='json') for n in tools if 'chat_message' in n or 'writing_style' in n],separators=(',',':')).encode()))
 
     async def test_all_send_modes_and_invalid_requests_at_actual_boundary(self):
@@ -59,7 +51,6 @@ class ChatTests(unittest.IsolatedAsyncioTestCase):
                 ('send_chat_message',{'request':dict(request_id='chat-invalid-test',mode=modes[4],content='x')}),
                 ('send_chat_message',{'request':dict(request_id='chat-invalid-test',mode=modes[0],actor_id='x',content='x')}),
                 ('send_chat_message',{'request':dict(request_id='chat-invalid-test',mode=modes[0],content='😀'*4001)}),
-                ('get_pathfinder_writing_style_guide',{'extra':True}),
             ]
             for name,args in invalid:
                 with self.subTest(name=name,args=str(args)[:100]):

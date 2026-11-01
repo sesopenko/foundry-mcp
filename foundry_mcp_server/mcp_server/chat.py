@@ -8,6 +8,7 @@ from fastmcp.tools import Tool, ToolResult
 from mcp.types import ToolAnnotations
 from .selective import rpc
 from .server import mcp
+from .writing_style import STYLE_GUIDE
 
 ChatMode = Literal['Public as User', 'private to game masters', 'blind to game masters', 'self only', 'public as character']
 
@@ -66,31 +67,6 @@ class ContentResult(Model):
 class SendResult(Message):
     mode: ChatMode
     request_id: str
-
-STYLE_GUIDE = """Throughout this rulebook, you will see formatting standards that might look a bit unusual at first. Specifically, the game’s rules are set apart in this text using specialized capitalization and italicization. These standards are in place to make the rules elements in this book easier to recognize.
-
-The names of specific statistics, skills, feats, actions, and some other mechanical elements in Pathfinder are capitalized. This way, when you see the statement “a Strike targets Armor Class,” you know that both Strike and Armor Class are referring to rules.
-
-If a word or a phrase is italicized, it is describing a spell or a magic item. This way, when you see the statement “the door is sealed by lock,” you know that in this case the word denotes the lock spell, rather than a physical item.
-
-Pathfinder also uses many terms that are typically expressed as abbreviations, like AC for Armor Class, DC for Difficulty Class, and HP for Hit Points. If you’re ever confused about a game term or an abbreviation, you can always turn to the Glossary and Index, beginning on page 628, and look it up!"""
-
-
-class GuideResult(Model):
-    text: str
-    attribution_status: Literal['user_supplied_publication_unverified']
-
-
-async def get_pathfinder_writing_style_guide() -> GuideResult:
-    """Retrieve the exact user-supplied Paizo writing-conventions passage on demand.
-
-    No inputs or Foundry connection. Returns text and attribution_status; publication
-    attribution is unverified. The passage's page628 reference applies only to its
-    original book. This is prose capitalization/italicization guidance, separate
-    from PF2e wiki inline syntax; use create_pf2e_inline_check/roll/embed for syntax.
-    """
-    return {'text': STYLE_GUIDE, 'attribution_status': 'user_supplied_publication_unverified'}
-
 
 class ChatRead(Model):
     after_id: str | None = Field(None, min_length=1, max_length=64, description='Exclusive message ID from read_chat_messages or send_chat_message; missing anchors error. Not a UUID/name.')
@@ -157,7 +133,8 @@ class ChatSend(Model):
 async def send_chat_message(request: ChatSend) -> SendResult:
     """Create one HTML chat message as the connected core14 GM; all systems.
 
-    Author always connected GM. Public as User: public, GM alias; private to game
+    Read get_writing_guidance first and follow its critically important GM
+    instructions. Author always connected GM. Public as User: public, GM alias; private to game
     masters: GM recipients, GM alias; blind to game masters: same recipients with
     blind flag (a GM author can still see it); self only: connected GM recipient;
     public as character: public, selected owned character speaker, GM author.
@@ -238,7 +215,6 @@ for name, request_model, response_model, handler, read_only in (
     ('read_chat_messages', ReadArguments, ReadResult, read_chat_messages, True),
     ('read_chat_message_content', ContentArguments, ContentResult, read_chat_message_content, True),
     ('send_chat_message', SendArguments, SendResult, send_chat_message, False),
-    ('get_pathfinder_writing_style_guide', Model, GuideResult, get_pathfinder_writing_style_guide, True),
 ):
     mcp.add_tool(ChatTool(name=name, description=inspect.cleandoc(handler.__doc__),
                           parameters=request_model.model_json_schema(), output_schema=response_model.model_json_schema(),
