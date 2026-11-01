@@ -49,6 +49,33 @@ function imagePath(value) {
   } catch {return false;}
 }
 
+function validateLocation(source, directory, bucket) {
+  if (!['data','public','s3'].includes(source) || !validImageDirectory(directory)) fail('InvalidRequest', 'Use a published source and source-relative directory, without traversal/globs/host paths.');
+  if (source === 's3' ? typeof bucket !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9.-]{1,254}$/.test(bucket) : bucket !== undefined) fail('InvalidRequest', 'S3 requires a bucket; other sources forbid bucket.');
+}
+
+/** Validate the entire canonical image record; no arbitrary URL-only writes. */
+export function validateJournalImageSelector(image) {
+  validateParams(image, ['source', 'directory', 'bucket', 'src']);
+  validateLocation(image.source, image.directory, image.bucket);
+  if (!imagePath(image.src)) fail('InvalidRequest', 'Use an exact image selector returned by browse_journal_images.');
+}
+
+/** Recheck membership through the same bounded public listing used by browsing.
+ * This proves current GM file discovery, not player asset access or file identity.
+ */
+export async function resolveJournalImage(image) {
+  validateJournalImageSelector(image); ready();
+  const world = game.world.id, user = game.user, cls = api();
+  sourceAvailable(cls, image.source, image.bucket);
+  const full = await listing(cls, image.source, image.directory, image.bucket);
+  ready();
+  if (world !== game.world.id || user !== game.user) fail('ContextChanged', 'World or GM changed while checking the image.');
+  const match = full.entries.find(entry => entry.kind === 'image' && entry.image.src === image.src);
+  if (!match || full.directory !== image.directory) fail('ImageNotFound', 'Image is no longer in the selected directory; browse_journal_images again.');
+  return match.image;
+}
+
 /** Load one native directory, never recurse. Native API has no server paging;
  * reject >10000 returned paths or >2MiB listing JSON before projecting output.
  */
@@ -82,8 +109,7 @@ async function listing(cls, source, target, bucket) {
 export async function browseJournalImages(params = {}) {
   validateParams(params, ['source', 'directory', 'bucket', 'name_contains', 'limit', 'cursor', 'max_bytes']);
   const source = params.source ?? 'data', target = params.directory ?? '', filter = params.name_contains ?? '';
-  if (!['data','public','s3'].includes(source) || !validImageDirectory(target)) fail('InvalidRequest', 'Use a published source and source-relative directory, without traversal/globs/host paths.');
-  if (source === 's3' ? typeof params.bucket !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9.-]{1,254}$/.test(params.bucket) : params.bucket !== undefined) fail('InvalidRequest', 'S3 requires a bucket; other sources forbid bucket.');
+  validateLocation(source, target, params.bucket);
   if (typeof filter !== 'string' || filter.length > 256) fail('InvalidRequest', 'name_contains is a literal substring up to256 characters.');
   const limit = integer(params.limit, 10, 1, 100, 'limit'), max = integer(params.max_bytes, 8000, 8000, 48000, 'max_bytes');
   if (params.cursor != null) {

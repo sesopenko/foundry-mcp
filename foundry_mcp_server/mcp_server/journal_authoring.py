@@ -12,6 +12,7 @@ from .selective import SelectiveTool, rpc
 from .selective_models import Model
 from .server import mcp
 from .writing import GuidanceSource, GuidanceTimestamp, guidance_revision
+from .journal_image_models import ImageSelector
 
 LocalId = Annotated[str, Field(pattern=r'^[^.\s#]{1,64}$')]
 PageUuid = Annotated[str, Field(pattern=r'^JournalEntry\.[^.\s#]+\.JournalEntryPage\.[^.\s#]+$', max_length=512)]
@@ -261,6 +262,33 @@ class UpdatePage(Action):
     format: TextFormat | None = None
 
 
+class ImageAnchor(Model):
+    tag: Literal['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'ul', 'ol', 'li', 'table']
+    text: str = Field(min_length=1, max_length=2000, description='Exact decoded textContent of one block; duplicate matches are rejected. Read the page first.')
+
+
+class EmbedImage(Model):
+    operation: Literal['embed_image']
+    page_uuid: PageUuid
+    expected_revision: ChangeMarker
+    image: ImageSelector = Field(description='Copy the complete image record returned by browse_journal_images. Membership and GM loading are checked again before writing.')
+    alt: str = Field(max_length=1000, description='Required alt description, HTML escaped. Empty string allowed for decorative images.')
+    width: int | None = Field(default=None, ge=1, le=8192, description='Optional HTML width in CSS pixels; omit to retain natural size/aspect ratio.')
+    height: int | None = Field(default=None, ge=1, le=8192, description='Optional HTML height in CSS pixels. One dimension preserves natural aspect ratio; both explicitly specify it.')
+    position: Literal['append', 'prepend', 'before', 'after'] = 'append'
+    anchor: ImageAnchor | None = None
+
+    @model_validator(mode='after')
+    def valid_insertion(self):
+        if any(getattr(self, key) is None for key in self.model_fields_set):
+            raise ValueError('omit optional image fields rather than null')
+        if (self.position in ('before', 'after')) != (self.anchor is not None):
+            raise ValueError('before/after requires anchor; append/prepend forbids it')
+        if any((ord(char) < 32 and char not in '\t\n\r') or ord(char) == 127 for char in self.alt):
+            raise ValueError('alt cannot contain control characters')
+        return self
+
+
 Level = Literal['no_change', 'none', 'limited', 'observer', 'owner']
 
 
@@ -327,7 +355,7 @@ class SetOwnership(OwnershipScope):
         return self
 
 
-WriteAction = Annotated[CreateFolder | UpdateFolder | CreateJournal | UpdateJournal | CreatePage | UpdatePage | SetOwnership, Field(discriminator='operation')]
+WriteAction = Annotated[CreateFolder | UpdateFolder | CreateJournal | UpdateJournal | CreatePage | UpdatePage | SetOwnership | EmbedImage, Field(discriminator='operation')]
 
 
 class WriteRequest(Model):
@@ -396,11 +424,33 @@ async def write_journal(request: WriteRequest):
     remain unchanged. Each content fragment is <=16000 UTF-8 bytes; resulting
     text <=1000000 UTF-16 units. Long prose can use sequential appends with fresh
     context. Supported HTML includes blocks/headings/emphasis/lists/tables/hr,
-    safe links and limited font CSS; scripts/events/iframes/images are rejected.
+    safe links and limited font CSS; scripts/events/iframes/raw images are rejected.
     Optional format wraps only the supplied fragment in a styled div: font_family
     comes from get_journal_authoring_options(kind=fonts), font_color is #RRGGBB,
     font_size small/normal/large/huge maps to10/12/18/24pt; custom requires
     custom_size_pt in1–200. Omit format properties to preserve inherited styles.
+
+    embed_image inserts a browsed image into an existing HTML text page. Requires
+    page_uuid,expected_revision,image,alt. Copy image{source,directory,bucket?,src}
+    from browse_journal_images, never guess a URL. Current directory membership
+    and successful GM-browser image loading (5s deadline) are checked before
+    writing; private/missing/broken assets fail ImageNotFound/BrowseFailed/
+    ImageUnavailable. This does not prove player asset access. Read guidance and
+    confirm GM authorization as above; retries use the same request identity.
+    alt is required, <=1000 Unicode characters, HTML escaped; empty decorative
+    alt is allowed. Optional width/height are integers1–8192 CSS pixels, not pt.
+    Omit both for natural size; one dimension retains intrinsic aspect ratio;
+    both explicitly set width/height and can distort it (page CSS still applies).
+    position defaults append; prepend inserts first. before/after requires
+    anchor{tag,text}, exact decoded textContent of one supported block. Match is
+    case/whitespace sensitive, no fuzzy search; find the text in read_journal_page.
+    AnchorNotFound/AmbiguousAnchor: reread and choose a unique tag/text or append.
+    Append/prepend preserves existing source bytes; anchored insertion serializes
+    a detached standard DOM, preserving content while normalizing HTML markup.
+    No enrichment/roll evaluation. Markdown/non-text pages are unsupported.
+    Result is the normal updated/already_applied page receipt. The resulting
+    page still has the1,000,000 UTF-16 limit. Raw img in content remains rejected;
+    use embed_image so source validation cannot be bypassed.
     Use verified PF2e inline builders only on PF2e; immediate rolls are rejected.
 
     One write per call. max_bytes defaults8000 (8000–48000 compact JSON bytes).
@@ -486,10 +536,12 @@ async def write_journal(request: WriteRequest):
         result = WriteResult.model_validate(packet)
         validate_identity(result.identity, result.read_next_call)
         operation = request.action.operation
-        kind = operation.split('_', 1)[1]
+        kind = 'page' if operation == 'embed_image' else operation.split('_', 1)[1]
         if result.request_id != request.request_id or result.identity.kind != kind:
             raise ValueError('wrong receipt')
-        if operation.startswith('update_'):
+        if kind == 'page' and result.identity.type != 'text':
+            raise ValueError('text mutation returned a non-text page')
+        if operation.startswith('update_') or operation == 'embed_image':
             selector = {'folder': 'folder_id', 'journal': 'journal_id', 'page': 'page_uuid'}[kind]
             if getattr(result.identity, selector) != getattr(request.action, selector) or result.status == 'created':
                 raise ValueError('wrong update target')

@@ -9,6 +9,7 @@ import {fail, validateParams, integer, digest} from './actorReadUtils.js';
 import {getWritingGuidance} from './writingGuidance.js';
 import {normalizeTextHTML} from './textHtml.js';
 import {formatJournalHTML, journalPlayers} from './journalAuthoringOptions.js';
+import {validateImageInsertion, verifyJournalImage, insertJournalImage} from './journalImageEmbedding.js';
 
 const encoder = new TextEncoder(), ledgers = new WeakMap();
 const bytes = value => encoder.encode(JSON.stringify(value)).length;
@@ -219,6 +220,7 @@ async function executeOwnership(params, fingerprint, context, state) {
 }
 
 const ACTIONS = {
+  embed_image: ['page_uuid', 'expected_revision', 'image', 'alt', 'width', 'height', 'position', 'anchor'],
   set_ownership: ['target', 'recursive', 'journal_ids', 'user_ids', 'limit', 'expected_revision', 'all_players', 'players'],
   create_folder: ['name', 'parent_folder_id', 'parent_revision', 'color', 'sorting', 'sort'],
   update_folder: ['folder_id', 'expected_revision', 'name', 'parent_folder_id', 'parent_revision', 'color', 'sorting', 'sort'],
@@ -234,8 +236,9 @@ function validateAction(action) {
   const create = action.operation.startsWith('create_');
   if ((create || Object.hasOwn(action, 'name')) && (typeof action.name !== 'string' || !action.name.trim() || [...action.name].length > 256)) fail('InvalidRequest', 'name must contain 1–256 Unicode characters.');
   for (const key of ['folder_id', 'journal_id', 'parent_folder_id']) if (Object.hasOwn(action, key) && action[key] !== null && !localId(action[key])) fail('InvalidRequest', 'Use a returned local ID for ' + key + '.');
-  if (action.operation === 'update_page' && !pageUuid(action.page_uuid)) fail('InvalidRequest', 'Use a returned world page_uuid.');
+  if (['update_page','embed_image'].includes(action.operation) && !pageUuid(action.page_uuid)) fail('InvalidRequest', 'Use a returned world page_uuid.');
   if (!create && !revision(action.expected_revision)) fail('InvalidRequest', 'An update requires expected_revision from get_journal_write_context.');
+  if (action.operation === 'embed_image') {validateImageInsertion(action); return;}
   if (action.operation === 'create_page' && (!localId(action.journal_id) || !revision(action.parent_revision))) fail('InvalidRequest', 'Page creation requires its journal ID and parent revision.');
   if (Object.hasOwn(action, 'type') && action.type !== 'text') fail('InvalidRequest', 'Only type=text is supported.');
   if (Object.hasOwn(action, 'color') && action.color !== null && (typeof action.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(action.color))) fail('InvalidRequest', 'Folder color must be #RRGGBB or null.');
@@ -327,6 +330,16 @@ async function execute(params, fingerprint, context, state) {
   if (kind === 'JournalEntryPage') {
     if (!create && source.type !== 'text') fail('UnsupportedType', 'Only text pages can be edited; choose a text page or create a new one.');
     if (create) data.type = 'text';
+    if (a.operation === 'embed_image') {
+      if (source.text?.format !== CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML) fail('UnsupportedFormat', 'Image insertion requires an existing HTML text page; read and explicitly replace other formats first.');
+      await verifyJournalImage(a.image);
+      // Asset discovery/loading is asynchronous: recheck the entire page and
+      // containing context before applying text computed from the earlier read.
+      await checkedRevision(doc, a.expected_revision);
+      const combined = insertJournalImage(source.text?.content ?? '', a);
+      if (combined.length > 1000000) fail('InvalidRequest', 'The resulting page exceeds one million UTF-16 units.');
+      data['text.content'] = combined;
+    }
     if (Object.hasOwn(a, 'content')) {
       const content = normalizeTextHTML(formatJournalHTML(a.content, a.format), {links: true});
       if (!create && a.mode === 'append' && source.text?.format !== CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML) fail('UnsupportedFormat', 'Appending requires an HTML page; read and explicitly replace other formats.');

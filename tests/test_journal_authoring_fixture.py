@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('journal_probe', ROOT / 'scripts/journal-authoring-live-check.py')
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
+image_spec = importlib.util.spec_from_file_location('image_probe', ROOT / 'scripts/journal-image-embedding-live-check.py')
+image_probe = importlib.util.module_from_spec(image_spec)
+image_spec.loader.exec_module(image_probe)
 
 
 class JournalFixtureTests(unittest.TestCase):
@@ -24,7 +27,7 @@ for(const script of JSON.parse(process.argv[1])){
  catch(error){if(error.message!=='Wrong development runtime')throw error;}
 }
 """
-        self.run_node(source, [probe.code(body, 'a' * 32) for body in (probe.FINGERPRINT, probe.VERIFY, probe.CLEANUP)])
+        self.run_node(source, [probe.code(body, 'a' * 32) for body in (probe.FINGERPRINT, probe.VERIFY, probe.CLEANUP, image_probe.VERIFY)])
 
     def test_cleanup_refuses_unmarked_documents_inside_fixture(self):
         source = """

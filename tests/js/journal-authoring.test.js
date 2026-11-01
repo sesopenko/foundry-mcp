@@ -4,6 +4,7 @@ import {webcrypto} from 'node:crypto';
 import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from '../../foundry-module/scripts/journalAuthoring.js';
 import {registerWritingGuidanceSettings, getWritingGuidance} from '../../foundry-module/scripts/writingGuidance.js';
 import {getJournalAuthoringOptions} from '../../foundry-module/scripts/journalAuthoringOptions.js';
+import {insertJournalImage} from '../../foundry-module/scripts/journalImageEmbedding.js';
 
 globalThis.crypto ??= webcrypto;
 
@@ -262,4 +263,92 @@ test('a folder cannot move beneath itself', async () => {
   await assert.rejects(writeJournal(await request({operation: 'update_folder', folder_id: f.folder.id, expected_revision: ctx.revision,
     parent_folder_id: f.folder.id, parent_revision: ctx.revision})), code('InvalidHierarchy'));
   assert.equal(f.updates.length, 0);
+});
+
+function imageFixture() {
+  const f = fixture(), state = {loads: 0, source: 'assets/α image.png'};
+  class Picker {
+    constructor() {this.sources = {data: {target: ''}};}
+    static async browse() {
+      state.onBrowse?.();
+      return {target: 'assets', dirs: [], files: state.missing ? [] : [state.source]};
+    }
+  }
+  foundry.applications.apps = {FilePicker: {implementation: Picker}};
+  globalThis.Image = class {
+    naturalWidth = 80; naturalHeight = 40;
+    set src(value) {if (value) {state.loads++; queueMicrotask(() => state.broken ? this.onerror?.() : this.onload?.());}}
+  };
+  return {...f, state, image: {source: 'data', directory: 'assets', src: state.source}};
+}
+
+test('embedding validates a selected source, escapes alt/dimensions and preserves surrounding HTML exactly on append', async () => {
+  const f = imageFixture(), original = f.page.data.text.content;
+  const context = await getJournalWriteContext({target: {kind: 'page', page_uuid: f.page.uuid}});
+  const action = {operation: 'embed_image', page_uuid: f.page.uuid, expected_revision: context.revision, image: f.image,
+    alt: 'A "map" & <route>', width: 320, height: 160};
+  const p = await request(action), first = await writeJournal(p);
+  assert.equal(first.identity.page_uuid, f.page.uuid);
+  assert.equal(f.page.data.text.content, original + '<img src="assets/α image.png" alt="A &quot;map&quot; &amp; &lt;route&gt;" width="320" height="160">');
+  assert.equal(f.page.data.ownership.gm, 3);
+  await writeJournal(p); assert.equal(f.updates.length, 1); assert.equal(f.state.loads, 1);
+  const fresh = await import('../../foundry-module/scripts/journalAuthoring.js?image-retry');
+  const replay = await fresh.writeJournal(p);
+  assert.equal(replay.status, 'already_applied'); assert.equal(f.updates.length, 1); assert.equal(f.state.loads, 1);
+});
+
+test('missing/broken images and content changed while checking the asset cause no write', async () => {
+  for (const scenario of ['missing', 'broken', 'changed']) {
+    const f = imageFixture(), context = await getJournalWriteContext({target: {kind: 'page', page_uuid: f.page.uuid}});
+    if (scenario === 'changed') f.state.onBrowse = () => {f.page.data.text.content = 'Manual GM change';};
+    else f.state[scenario] = true;
+    await assert.rejects(writeJournal(await request({operation: 'embed_image', page_uuid: f.page.uuid, expected_revision: context.revision,
+      image: f.image, alt: ''})), code({missing: 'ImageNotFound', broken: 'ImageUnavailable', changed: 'ContentChanged'}[scenario]));
+    assert.equal(f.updates.length, 0);
+  }
+});
+
+test('insertion validates dimensions and anchor combinations before native image reads', async () => {
+  const f = imageFixture();
+  const base = {operation: 'embed_image', page_uuid: f.page.uuid, expected_revision: 'before', image: f.image, alt: ''};
+  for (const extra of [{width: 0}, {height: 8193}, {width: true}, {position: 'after'}, {anchor: {tag: 'p', text: 'Before'}},
+    {image: {...f.image, src: 'javascript:bad.png'}}, {image: {...f.image, src: 'assets/image.txt'}}, {alt: '\0'}]) {
+    await assert.rejects(writeJournal(await request({...base, ...extra})), code('InvalidRequest'));
+  }
+  assert.equal(f.state.loads, 0); assert.equal(f.updates.length, 0);
+});
+
+test('anchored insertion chooses exact unique block text and rejects absent or ambiguous matches', () => {
+  const f = imageFixture();
+  globalThis.DOMParser = class {parseFromString(source) {
+    let value = source;
+    const blocks = [...source.matchAll(/<(p|h2)>([^<]*)<\/\1>/g)];
+    return {body: {get innerHTML() {return value;}, querySelectorAll: tag => blocks.filter(match => match[1] === tag).map(match => ({
+      textContent: match[2], insertAdjacentHTML(position, html) {value = value.replace(match[0], position === 'beforebegin' ? html + match[0] : match[0] + html);}
+    }))}};
+  }};
+  const action = {image: f.image, alt: 'Map', position: 'after', anchor: {tag: 'h2', text: 'Map location'}};
+  const source = '<p>Keep before</p><h2>Map location</h2><p>Keep after</p>';
+  assert.equal(insertJournalImage(source, action), '<p>Keep before</p><h2>Map location</h2><img src="assets/α image.png" alt="Map"><p>Keep after</p>');
+  assert.throws(() => insertJournalImage(source, {...action, anchor: {tag: 'h2', text: 'Missing'}}), code('AnchorNotFound'));
+  assert.throws(() => insertJournalImage(source + '<h2>Map location</h2>', action), code('AmbiguousAnchor'));
+});
+
+test('image load deadline is bounded and cannot mutate a page on timeout', async () => {
+  const f = imageFixture(), context = await getJournalWriteContext({target: {kind: 'page', page_uuid: f.page.uuid}});
+  const timers = {setTimeout, clearTimeout};
+  globalThis.Image = class {set src(value) {}};
+  globalThis.setTimeout = (callback, delay) => {assert.equal(delay, 5000); queueMicrotask(callback); return 1;};
+  globalThis.clearTimeout = () => {};
+  try {
+    await assert.rejects(writeJournal(await request({operation: 'embed_image', page_uuid: f.page.uuid, expected_revision: context.revision, image: f.image, alt: ''})), code('ImageUnavailable'));
+    assert.equal(f.updates.length, 0);
+  } finally {Object.assign(globalThis, timers);}
+});
+
+test('image insertion retains source-size bounds without truncating the existing page', async () => {
+  const f = imageFixture(); f.page.data.text.content = '<p>' + 'x'.repeat(999990) + '</p>';
+  const context = await getJournalWriteContext({target: {kind: 'page', page_uuid: f.page.uuid}});
+  await assert.rejects(writeJournal(await request({operation: 'embed_image', page_uuid: f.page.uuid, expected_revision: context.revision, image: f.image, alt: ''})), code('InvalidRequest'));
+  assert.equal(f.updates.length, 0); assert.equal(f.page.data.text.content.length, 999997);
 });

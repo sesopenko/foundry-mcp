@@ -24,7 +24,7 @@ function safeLink(value) {
 
 /** Normalize the common text subset. links=true is the journal profile;
  * default retains chat's existing tag/style restrictions. Images remain outside
- * both profiles until the separate image-authoring feature is implemented.
+ * both raw-HTML profiles; use the validated embed_image action for images.
  */
 export function normalizeTextHTML(content, {links = false} = {}) {
   const doc = new DOMParser().parseFromString(content, 'text/html');

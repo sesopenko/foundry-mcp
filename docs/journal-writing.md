@@ -3,7 +3,8 @@
 WISH-010 adds GM-guided world journal authoring after v2.5.0, unreleased.
 The tools use the existing readers' canonical folder/entry IDs and page UUIDs,
 with bounded text writes and explicit ownership previews. Compendiums remain
-read-only. Image browsing and embedding are separate wishlist items.
+read-only. [Image browsing and embedding](journal-images.md) extend this workflow
+in the same unreleased source tree.
 
 ## Authoring workflow
 
@@ -41,6 +42,7 @@ Foundry14.369/PF2e8.6.1; this is not a promise about other core builds.
 | `update_journal` | `journal_id`, `expected_revision` | `name`, `folder_id`, `parent_revision`, `sort` |
 | `create_page` | `journal_id`, `parent_revision`, `name`, `content` | `type:"text"`, `sort`, `format` |
 | `update_page` | `page_uuid`, `expected_revision` | `name`, `content`, `mode`, `sort`, `format` |
+| `embed_image` | `page_uuid`, `expected_revision`, browsed `image`, `alt` | `width`, `height`, `position`, `anchor` |
 | `set_ownership` | scope and `expected_revision` from ownership preview | `all_players`, individual `players` |
 
 Omit update fields to preserve them. Null parent/folder moves to root; a non-null
@@ -70,6 +72,7 @@ horizontal dividers, simple tables and safe links. Table colspan/rowspan is 1–
 Links allow HTTP, HTTPS, mailto, relative paths and anchors, with no controls or
 whitespace in URLs; href is bounded to 2,048 characters, title to 512. No event,
 class/data attributes, scripts, iframes, images or arbitrary CSS declarations.
+Raw image markup is rejected; use `embed_image` with a browsed source instead.
 Immediate inline rolls are rejected. Deferred PF2e notation should come from the
 verified PF2e builders when that system is active; these APIs do not roll dice.
 

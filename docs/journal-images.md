@@ -4,7 +4,7 @@ WISH-011 adds read-only `browse_journal_images` after v2.5.0, unreleased. It hel
 the GM select existing illustrations by navigating Foundry file directories.
 These directories are separate from journal folders. It does not upload,
 delete, generate, download or visually inspect images, and never scans recursively.
-Image embedding is the separate WISH-012 dependency consumer.
+WISH-012 adds image embedding through the journal writer described below.
 
 ## Navigation and selectors
 
@@ -97,3 +97,119 @@ Before this item the catalog held40 tools/233,894 bytes; afterward41 tools/242,9
 bytes. The new tool record measured9,025 bytes. A smaller selected result is not
 equal-content savings; the complete workflow's calls/bytes are reported separately.
 Bytes are not billed tokens; provider token usage was not measured.
+
+## Embedding in a text page
+
+After browsing, read `get_writing_guidance`, follow its GM instructions and obtain
+any permission required for protected material. Read the target with
+`read_journal_page` and get its revision from `get_journal_write_context`. Then
+call `write_journal` with the usual request_id/gm_authorized/guidance_timestamp
+and this action shape:
+
+```json
+{
+  "operation": "embed_image",
+  "page_uuid": "JournalEntry.entryId.JournalEntryPage.pageId",
+  "expected_revision": "copy the returned page revision",
+  "image": {
+    "source": "public",
+    "directory": "icons/svg",
+    "src": "icons/svg/anchor.svg"
+  },
+  "alt": "An anchor marking the harbour",
+  "width": 320,
+  "height": 160,
+  "position": "after",
+  "anchor": {"tag": "h2", "text": "Map location"}
+}
+```
+
+The example IDs/revision are placeholders: copy real reader selectors and the
+entire `image` record from browsing, including bucket for S3. The writer checks
+current membership through the same bounded FilePicker listing, then confirms
+the GM browser can load the selected asset within5 seconds. It rechecks the
+page revision after this asynchronous work and checks guidance again before
+writing. Neither source strings nor alt text are treated as HTML or instructions.
+There is no arbitrary URL-only embedding, file upload or standalone image page.
+
+`alt` is required, bounded to1,000 Unicode characters, and HTML escaped. Empty
+alt is allowed for decorative images. Width and height are optional integer
+HTML attributes in CSS pixels, each1–8,192; these are not point sizes. Omit both
+for natural dimensions; one dimension retains the intrinsic aspect ratio. Both
+dimensions explicitly specify it and can distort the image. Foundry/page CSS can
+still constrain its final display. No other image attributes are accepted.
+
+`position` defaults to append; prepend inserts first. These preserve existing
+HTML source bytes around the inserted image. Before/after requires an
+`anchor:{tag,text}` matching exactly one block's decoded `textContent`, including
+case and whitespace. Supported tags are p/div/h1–h6/blockquote/pre/ul/ol/li/table.
+Use existing page text to identify a unique paragraph or heading, without
+inventing UTF-16 offsets or a second page hierarchy. No match is `AnchorNotFound`;
+multiple matches are `AmbiguousAnchor`. Reread and choose a unique tag/text or
+append/prepend. Anchored insertion uses a detached standard DOM and serializes
+it: surrounding content remains, but source markup formatting can normalize.
+It performs no Foundry enrichment or roll evaluation.
+
+The target must be an existing world HTML text page. Markdown and non-text
+content are unsupported; compendiums stay read-only. The resulting page retains
+the1,000,000 UTF-16 source bound. Raw img in create/update content is still
+rejected, so source checking cannot be bypassed; text appends preserve existing
+embedded images. The normal compact updated/already_applied page receipt and
+reader follow-up are returned without echoing source or image bytes.
+
+Missing membership returns `ImageNotFound`; missing/denied/unavailable listings
+return `BrowseFailed`. Broken, denied or slow loads return `ImageUnavailable`
+before mutation. Changing a file after discovery remains possible; listing
+revisions do not hash file bodies or lock assets. The browser may load/cache the
+selected image body; no body is returned to the LLM. Player asset access is
+independent of GM discovery/loading and journal ownership. Do not promise every
+GM-visible file will be accessible to players.
+
+All GM access, explicit-authorization assertions, stale guidance/page handling,
+request coalescing/persisted retry flags and response budgets follow
+[journal authoring](journal-writing.md). A timeout requires reconciliation before
+retrying with identical input. No duplicate images are inserted by an identical
+retry, including after a module reload. No existing game documents are used as
+verification fixtures.
+
+## Embedding verification — 2026-10-31
+
+Public core14 page updates store standard img src/alt/width/height attributes in
+the HTML text field. No new private Foundry API is introduced; source verification
+reuses the public FilePicker boundary above. Standard Image/DOMParser APIs handle
+asset loading and anchored insertion, and the shared typed image selector
+contract is used by both browsing and writing. Shared fixture guard/fingerprints/
+cleanup are reused instead of duplicating mutation safety logic.
+
+Unit tests cover escaping, exact append preservation, unique/ambiguous/missing
+anchors, dimensions, malformed selectors, missing/broken assets, load deadlines,
+large pages, page changes during asset checks, retained GM ownership and retries
+after reload. Actual MCP tests verify published input/output schemas and image
+mutation receipts. A focused failing test demonstrated that a text mutation
+receipt could claim a non-text page; validating the returned page type fixed
+the root cause, and the same test now passes.
+
+Final full host suites passed 660 Python tests (one existing skip) and 688
+JavaScript tests before the local commit.
+
+`scripts/journal-image-embedding-live-check.py` passed22 tool calls plus discovery
+in the existing Foundry14.369/PF2e8.6.1 test world. It browsed/selected a public
+SVG, created one marked temporary entry with two pages, inserted images after a
+heading and at both ends, and read/rendered them back. Escaped alt descriptions,
+both/one/natural dimensions and aspect ratio survived persistence/rendering.
+The public fixture asset accepted a HEAD request without GM credentials; this
+is evidence for that public asset, not every configured file source. Stale and
+missing-image requests were rejected, an identical retry inserted once, every
+GM retained access, the sibling and existing-source fingerprints were unchanged,
+and the marked journal was deleted. Browser console errors were zero.
+
+| Embedding scenario | Calls | Compact UTF-8 JSON bytes | Complete |
+| --- | ---: | ---: | --- |
+| Image mutation receipt | 1 | 624 | Yes |
+| Three embedded images, full page readback | 1 | 937 | Yes |
+
+The catalog remains41 tools and now measures247,069 bytes (previously242,920).
+The write/browse tool records measure27,019/8,898 bytes. Shared model extraction
+avoids divergent selector contracts; the write schema expands to describe the
+new action. Receipt sizes remain bounded and omit image bodies. This is added
+functionality, not equal-content compression or measured provider token savings.

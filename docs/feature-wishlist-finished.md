@@ -834,3 +834,37 @@ spaces/Unicode, inaccessible sources, large directories and changed listings.
 Measure actual discovery/response sizes; never equate a filtered or partial
 listing with all images on the server.
 
+## WISH-012 — Embed images in journal text
+
+- **Status:** Implemented after v2.5.0, unreleased; verified 2026-10-31
+- **Requested:** 2026-10-31
+- **Scope:** Add image embedding to journal text authoring.
+- **Depends on:** WISH-010 (journal writing) and WISH-011 (image browsing).
+
+The implemented action, bounds and offline/live acceptance are documented in
+[image embedding](journal-images.md#embedding-in-a-text-page).
+
+Let the GM select an existing Foundry image and ask the LLM to insert it at a
+specified location in a journal text page, with **source**, **alt description**,
+**width** and **height**. Reuse the browser's canonical image source and the
+journal reader/writer's page identity; preserve surrounding text and GM writing
+constraints. Publish dimension units, defaults/aspect-ratio behavior, bounds and
+escaping/source validation. Report unsupported or inaccessible sources explicitly.
+This extends text-page HTML; standalone image-type journal pages, uploads and
+image generation are not required by this item.
+
+### API feasibility and acceptance direction — 2026-10-31
+
+The documented core [page text schema](https://foundryvtt.com/api/v14/interfaces/foundry.documents.types.JournalEntryPageTextData.html)
+can store HTML content through the public document updates identified in WISH-010.
+Standard HTML `img` provides `src`, `alt`, `width` and `height`; these are HTML
+attributes, not invented JournalEntry schema fields. No PF2e-specific mutation
+API is needed. Actual Foundry sanitization, attribute retention, rendering and
+player asset access remain implementation/live-verification gates; do not claim
+that a GM-visible file automatically becomes player-accessible through ownership.
+
+Verify browse → select → embed → read back and render using safe marked fixtures
+in the existing test world after offline tests. Check alt text, dimensions,
+escaping, inaccessible files, stale pages and unchanged surrounding content.
+Apply WISH-010's GM-access, guidance, retry and response-budget requirements.
+

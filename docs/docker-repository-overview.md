@@ -20,7 +20,7 @@ and exact rules reading. Update both the server and companion module; see
 
 Source builds after 2.5.0 add GM-guided world-journal text authoring, organization,
 player sharing and read-only
-[image selection](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
+[image selection and embedding](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
 This is not yet a published image release; see
 [journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
 for guidance configuration, limits and retry/ownership behavior. Compendiums

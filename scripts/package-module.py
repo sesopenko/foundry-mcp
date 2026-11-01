@@ -24,6 +24,7 @@ RUNTIME_SCRIPTS += ('textHtml.js',)
 RUNTIME_SCRIPTS += ('journalAuthoring.js',)
 RUNTIME_SCRIPTS += ('journalAuthoringOptions.js',)
 RUNTIME_SCRIPTS += ('journalImages.js',)
+RUNTIME_SCRIPTS += ('journalImageEmbedding.js',)
 
 
 def manifest(root=ROOT, tag=None):

@@ -130,6 +130,35 @@ class JournalWriteTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(result.is_error)
             self.manager.call.assert_not_awaited()
 
+    async def test_actual_mcp_image_embedding_uses_browsed_selector_and_page_receipt(self):
+        action = dict(operation='embed_image', page_uuid=self.receipt['identity']['page_uuid'], expected_revision='before',
+            image=dict(source='public', directory='icons/svg', src='icons/svg/anchor.svg'),
+            alt='A "map" & <route>', width=320, height=160, position='after', anchor=dict(tag='p', text='Map location'))
+        self.manager.call.side_effect = [self.source.model_dump(), {**self.receipt, 'status': 'updated'}]
+        async with Client(mcp, timeout=5, init_timeout=5) as client:
+            result = (await client.call_tool('write_journal', {**self.request, 'action': action})).structured_content
+            self.assertEqual(result['status'], 'updated')
+            self.assertEqual(result['identity']['page_uuid'], action['page_uuid'])
+            self.assertEqual(self.manager.call.await_args.args[2]['action'], action)
+
+    async def test_invalid_image_fields_fail_before_guidance_or_native_reads(self):
+        action = dict(operation='embed_image', page_uuid=self.receipt['identity']['page_uuid'], expected_revision='before',
+            image=dict(source='public', directory='icons/svg', src='icons/svg/anchor.svg'), alt='Map')
+        async with Client(mcp, timeout=5, init_timeout=5) as client:
+            for change in [dict(width=0), dict(height=8193), dict(width=True), dict(height=None), dict(position='after'),
+                    dict(anchor=dict(tag='p', text='Map')), dict(alt='\0'), dict(alt='x'*1001),
+                    dict(image=dict(src='icons/svg/anchor.svg')), dict(image={**action['image'], 'src': 'javascript:bad.png'})]:
+                result = await client.call_tool('write_journal', {**self.request, 'action': {**action, **change}}, raise_on_error=False)
+                self.assertTrue(result.is_error, change)
+            self.manager.call.assert_not_awaited()
+
+    async def test_nontext_receipt_cannot_claim_successful_text_page_mutation(self):
+        self.manager.call.side_effect = [self.source.model_dump(), {**self.receipt, 'identity': {**self.receipt['identity'], 'type': 'image'}}]
+        async with Client(mcp, timeout=5, init_timeout=5) as client:
+            result = await client.call_tool('write_journal', self.request, raise_on_error=False)
+            self.assertTrue(result.is_error)
+            self.assertIn('InvalidFoundryResponse', str(result.content))
+
 
 class AuthoringOptionsTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
