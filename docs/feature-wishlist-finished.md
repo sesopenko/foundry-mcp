@@ -795,3 +795,42 @@ HTML persistence/rendering and permission behavior during implementation.
   [verified PF2e inline builders](pf2e-inline-builders.md) where requested;
   keep system-specific syntax conditional and verify journal rendering.
 
+## WISH-011 — Browse Foundry images for content selection
+
+- **Status:** Implemented after v2.5.0, unreleased; verified 2026-10-31
+- **Requested:** 2026-10-31
+- **Scope:** GM-only, read-only discovery of existing image files accessible
+  through Foundry's file browsing API, for journal display and later embedding.
+
+The implemented contract and offline/live evidence are recorded in
+[image browsing](journal-images.md). Local verification covers data/public;
+configured S3 browsing remains unverified.
+
+Let the GM ask the LLM to find an existing illustration in a selected Foundry
+directory and choose its canonical source path without guessing filenames.
+Return bounded directory/image listings with names, source location, paths and
+follow-up selectors. Distinguish server file directories from JournalEntry
+folders. Document supported sources, extension filtering, empty/denied/missing
+locations and completion; avoid automatic recursive scans of the whole server.
+No uploads, file writes/deletes or arbitrary host filesystem access are included.
+Do not promise semantic image search or visual inspection from filenames alone.
+
+### API feasibility and acceptance direction — 2026-10-31
+
+The official v14
+[FilePicker](https://foundryvtt.com/api/v14/classes/foundry.applications.apps.FilePicker.html#browse-2)
+documents public static `browse(source, target, {bucket, extensions, wildcard})`
+returning directory/file results. Use the configured public implementation and
+respect Foundry permissions/source availability. This is core Foundry behavior;
+PF2e-specific filesystem internals are unnecessary. It does not establish native
+server-side pagination or semantic search. Define bounded loading/output and
+continuation behavior, verifying exact result fields and permitted sources in
+the existing runtime before implementation. This review establishes documented
+feasibility only; no new live file browsing was performed.
+
+Verify a fresh LLM can navigate directories, select an image and pass its
+returned source to WISH-012 without path reconstruction. Cover duplicate names,
+spaces/Unicode, inaccessible sources, large directories and changed listings.
+Measure actual discovery/response sizes; never equate a filtered or partial
+listing with all images on the server.
+

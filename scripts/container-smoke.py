@@ -25,6 +25,7 @@ TOOLS = {
     'write_journal',
     'get_journal_authoring_options',
     'get_journal_ownership_context',
+    'browse_journal_images',
     'get_bridge_versions', 'get_player_names',
     'get_journal_tree', 'get_journal_contents', 'search_journals',
     'read_journal_page', 'resolve_journal_reference',

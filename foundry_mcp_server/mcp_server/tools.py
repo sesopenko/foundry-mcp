@@ -188,3 +188,4 @@ install_inline_tools(mcp)
 from . import chat  # noqa: E402,F401
 from . import writing  # noqa: E402,F401
 from . import journal_authoring  # noqa: E402,F401
+from . import journal_images  # noqa: E402,F401

@@ -11,6 +11,7 @@ import { getPartyMembers, getPartyStash } from "./actorParty.js";
 import {getWritingGuidance} from './writingGuidance.js';
 import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from './journalAuthoring.js';
 import {getJournalAuthoringOptions} from './journalAuthoringOptions.js';
+import {browseJournalImages} from './journalImages.js';
 import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
@@ -62,6 +63,7 @@ const rpcHandlers = {
   getJournalOwnershipContext,
   writeJournal,
   getJournalAuthoringOptions,
+  browseJournalImages,
   getWritingGuidance,
   readChatMessages,
   readChatMessageContent,

@@ -31,7 +31,8 @@ These builders are included in v2.3.0.
 
 Journal tools navigate and read [world journals](docs/journal-tools.md) and
 [compendium rules](docs/compendium-tools.md); source builds also support
-[GM-guided text authoring and sharing](docs/journal-writing.md). Compendium
+[GM-guided text authoring and sharing](docs/journal-writing.md) and
+[image selection](docs/journal-images.md). Compendium
 content remains read-only.
 
 Chat tools provide bounded reading and HTML sending with explicit

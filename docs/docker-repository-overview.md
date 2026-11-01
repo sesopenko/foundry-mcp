@@ -18,8 +18,10 @@ Version 2.5.0 adds read-only compendium pack discovery, journal page-title searc
 and exact rules reading. Update both the server and companion module; see
 [compendium contracts and verification](https://github.com/sesopenko/foundry-mcp/blob/main/docs/compendium-tools.md).
 
-Source builds after 2.5.0 add GM-guided world-journal text authoring, organization
-and player sharing. This is not yet a published image release; see
+Source builds after 2.5.0 add GM-guided world-journal text authoring, organization,
+player sharing and read-only
+[image selection](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
+This is not yet a published image release; see
 [journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
 for guidance configuration, limits and retry/ownership behavior. Compendiums
 remain read-only.

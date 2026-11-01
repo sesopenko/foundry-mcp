@@ -23,6 +23,7 @@ RUNTIME_SCRIPTS += ('writingGuidance.js',)
 RUNTIME_SCRIPTS += ('textHtml.js',)
 RUNTIME_SCRIPTS += ('journalAuthoring.js',)
 RUNTIME_SCRIPTS += ('journalAuthoringOptions.js',)
+RUNTIME_SCRIPTS += ('journalImages.js',)
 
 
 def manifest(root=ROOT, tag=None):
