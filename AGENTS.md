@@ -316,6 +316,23 @@ it. This stop-and-wait requirement takes precedence over autonomous continuation
 
 ## Continuous testing
 
+Run all tests outside the agent sandbox, including focused Python/JavaScript
+checks, fixed verification runners, full suites and test-running Git hooks.
+Use the command tool's `sandbox_permissions: "require_escalated"` execution
+mode from the first test invocation; retain existing approval rules and use
+the normal approval mechanism when required. Do not first attempt tests inside
+the sandbox or repeatedly rerun sandbox failures to diagnose project code.
+
+The sandbox can reject local `socket.socketpair().send()` with `PermissionError`.
+Asyncio uses that socket to wake its event loop when worker threads finish;
+blocking it can hang in-memory FastMCP calls and PDF setup despite passing
+outside the sandbox. “Offline” means no external service is needed, not that
+tests can run without local IPC. This was verified during the FastMCP 4
+migration; see [the verification record](docs/oauth-verification.md#automated-evidence).
+Report an execution-permission blocker if outside-sandbox execution is denied;
+do not skip assertions, disable threaded coverage or alter production code to
+make sandbox execution pass.
+
 For behavioral MCP evaluation, follow
 [the budgeted evaluation process](docs/mcp-tool-evaluation.md). Prefer focused
 deterministic checks. When fresh-agent testing is warranted, select one relevant
@@ -340,8 +357,8 @@ this exception. Both old and new rename paths must end in `.md`. Empty staging,
 non-Markdown and mixed commits still require tests; Git inspection failures
 block commits. The pre-commit hook enforces this rule and prints a short skip
 message. GitHub Actions continues running tests for Markdown changes.
-This offline runner uses the existing `.venv` and Node directly, avoiding uv
-cache writes outside the sandbox. For focused Python checks use
+This offline runner uses the existing `.venv` and Node directly.
+For focused Python checks use
 `.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`;
 for focused JavaScript checks use `node --test tests/js/<area>.test.js`.
 Provision dependencies separately with `uv sync --locked` when needed.

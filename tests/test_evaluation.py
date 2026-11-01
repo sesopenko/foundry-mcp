@@ -4,17 +4,73 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastmcp import Client, FastMCP
-from fastmcp.server.middleware import MiddlewareContext
+from fastmcp.exceptions import McpError
+from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
-from mcp.types import CallToolRequestParams
+from mcp.types import CallToolRequestParams, REQUEST_TIMEOUT
 
 from foundry_mcp_server.config import Settings
 from foundry_mcp_server.evaluation import EvaluationMiddleware, TraceRecorder
 from foundry_mcp_server.evaluation_stats import summarize
+
+EVALUATION_REQUEST_TIMEOUT = 5
+EVALUATION_INIT_TIMEOUT = 5
+EVALUATION_SESSION_TIMEOUT = 15
+
+
+async def evaluation_requests(server, meta):
+    """Bound discovery, invocation and cleanup; expose timeouts as test failures.
+
+    FastMCP dispatches synchronous tools to worker threads. Run outside the
+    agent sandbox so asyncio's local socket-pair wakeups are permitted.
+    """
+    async with asyncio.timeout(EVALUATION_SESSION_TIMEOUT):
+        async with Client(server, timeout=EVALUATION_REQUEST_TIMEOUT,
+                          init_timeout=EVALUATION_INIT_TIMEOUT) as client:
+            await client.list_tools()
+            result = await client.call_tool("search_journals", {"query": "Ripnugget"}, meta=meta)
+            bad = await client.call_tool("search_journals", {"query": "x", "limit": "invalid"}, meta=meta, raise_on_error=False)
+            missing = await client.call_tool("missing", {}, meta=meta, raise_on_error=False)
+    return result, bad, missing
+
+
+class EvaluationDeadlineTests(unittest.IsolatedAsyncioTestCase):
+    async def test_unresponsive_tool_has_a_request_deadline(self):
+        server = FastMCP('evaluation-stalled-request')
+        entered = asyncio.Event()
+
+        @server.tool
+        async def search_journals(query: str, limit: int = 20):
+            entered.set()
+            await asyncio.Event().wait()
+
+        # The outer guard bounds a broken harness; only its own request timeout
+        # produces the required McpError rather than this guard's TimeoutError.
+        async with asyncio.timeout(1):
+            with patch(__name__ + '.EVALUATION_REQUEST_TIMEOUT', 0.05):
+                with self.assertRaises(McpError) as caught:
+                    await evaluation_requests(server, {})
+        self.assertTrue(entered.is_set())
+        self.assertEqual(caught.exception.error.code, REQUEST_TIMEOUT)
+
+    async def test_stalled_discovery_has_a_session_deadline(self):
+        entered = asyncio.Event()
+
+        class StalledDiscovery(Middleware):
+            async def on_list_tools(self, context, call_next):
+                entered.set()
+                await asyncio.Event().wait()
+
+        server = FastMCP('evaluation-stalled-discovery')
+        server.add_middleware(StalledDiscovery())
+        async with asyncio.timeout(1):
+            with patch(__name__ + '.EVALUATION_SESSION_TIMEOUT', 0.05):
+                with self.assertRaises(TimeoutError):
+                    await evaluation_requests(server, {})
+        self.assertTrue(entered.is_set())
 
 
 class EvaluationTests(unittest.IsolatedAsyncioTestCase):
@@ -37,14 +93,10 @@ class EvaluationTests(unittest.IsolatedAsyncioTestCase):
             return {"matches": [], "total": 0, "complete": False, "next_cursor": "cursor", "foundry_version": "14.369"}
 
         meta = {"evaluation": {"run_id": "baseline", "task_id": "lookup", "attempt_id": "1"}}
-        async with Client(server) as client:
-            await client.list_tools()
-            result = await client.call_tool("search_journals", {"query": "Ripnugget"}, meta=meta)
-            self.assertFalse(result.is_error)
-            bad = await client.call_tool("search_journals", {"query": "x", "limit": "invalid"}, meta=meta, raise_on_error=False)
-            self.assertTrue(bad.is_error)
-            missing = await client.call_tool("missing", {}, meta=meta, raise_on_error=False)
-            self.assertTrue(missing.is_error)
+        result, bad, missing = await evaluation_requests(server, meta)
+        self.assertFalse(result.is_error)
+        self.assertTrue(bad.is_error)
+        self.assertTrue(missing.is_error)
         records = self.records()
         discovery = next(r for r in records if r["event"] == "discovery")
         self.assertEqual(discovery["tools"][0]["name"], "search_journals")
