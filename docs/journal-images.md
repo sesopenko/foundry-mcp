@@ -1,5 +1,13 @@
 # Browsing Foundry images
 
+Version 3.3.0 also supports [User Data folder creation and image uploads](image-uploads.md).
+Browser results include current-location and directory-node `capabilities`:
+`can_upload`, `can_create_directory`, and `reasons`. These are advisory public
+FilePicker checks with User Data-only mutation scope. Core Data/S3 remain
+read-only; User Data root permits folder creation but not uploads. Capability
+changes participate in revisions. Upload receipts carry the same canonical
+`image` selector used below, so no additional browse is needed before embedding.
+
 Version 3.0.0 adds read-only `browse_journal_images` (WISH-011). It helps
 the GM select existing illustrations by navigating Foundry file directories.
 These directories are separate from journal folders. It does not upload,
@@ -125,12 +133,13 @@ and this action shape:
 ```
 
 The example IDs/revision are placeholders: copy real reader selectors and the
-entire `image` record from browsing, including bucket for S3. The writer checks
+entire `image` record from browsing or `upload_image`, including bucket for S3 browsing. The writer checks
 current membership through the same bounded FilePicker listing, then confirms
 the GM browser can load the selected asset within5 seconds. It rechecks the
 page revision after this asynchronous work and checks guidance again before
 writing. Neither source strings nor alt text are treated as HTML or instructions.
-There is no arbitrary URL-only embedding, file upload or standalone image page.
+There is no arbitrary URL-only embedding or standalone image page. File upload
+is a separate `upload_image` tool.
 
 `alt` is required, bounded to1,000 Unicode characters, and HTML escaped. Empty
 alt is allowed for decorative images. Width and height are optional integer

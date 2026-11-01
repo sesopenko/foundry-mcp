@@ -14,6 +14,7 @@ class JournalImageTests(unittest.IsolatedAsyncioTestCase):
         self.image = dict(kind='image', name='α image.png', name_truncated=False,
             image=dict(source='data', directory='assets', src='assets/α image.png'))
         self.result = dict(location=dict(source='data', directory='assets'), sources=[dict(source='data'), dict(source='public')],
+            capabilities=dict(can_upload=True, can_create_directory=True, reasons=[]),
             revision='opaque', entries=[self.image], total=1, unfiltered_total=1, complete=True, next_cursor=None, limitations=['One directory.'])
         self.manager.call.return_value = self.result
 
@@ -50,6 +51,7 @@ class JournalImageTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_directory_followups_and_complete_pagination(self):
         directory = dict(kind='directory', name='sub folder', name_truncated=False, directory='assets/sub folder',
+            capabilities=dict(can_upload=True, can_create_directory=True, reasons=[]),
             next_call=dict(tool='browse_journal_images', arguments=dict(source='data', directory='assets/sub folder')))
         first = {**self.result, 'entries': [directory], 'total': 2, 'unfiltered_total': 2, 'complete': False, 'next_cursor': dict(offset=1, revision='opaque')}
         second = {**self.result, 'total': 2, 'unfiltered_total': 2}

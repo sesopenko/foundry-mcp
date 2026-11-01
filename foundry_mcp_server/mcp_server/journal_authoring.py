@@ -271,7 +271,7 @@ class EmbedImage(Model):
     operation: Literal['embed_image']
     page_uuid: PageUuid
     expected_revision: ChangeMarker
-    image: ImageSelector = Field(description='Copy the complete image record returned by browse_journal_images. Membership and GM loading are checked again before writing.')
+    image: ImageSelector = Field(description='Copy the complete image record returned by browse_journal_images or upload_image. No extra image discovery is required after upload. Membership and GM loading are checked again before writing.')
     alt: str = Field(max_length=1000, description='Required alt description, HTML escaped. Empty string allowed for decorative images.')
     width: int | None = Field(default=None, ge=1, le=8192, description='Optional HTML width in CSS pixels; omit to retain natural size/aspect ratio.')
     height: int | None = Field(default=None, ge=1, le=8192, description='Optional HTML height in CSS pixels. One dimension preserves natural aspect ratio; both explicitly specify it.')
@@ -442,7 +442,7 @@ async def write_journal(request: WriteRequest):
 
     embed_image inserts a browsed image into an existing HTML text page. Requires
     page_uuid,expected_revision,image,alt. Copy image{source,directory,bucket?,src}
-    from browse_journal_images, never guess a URL. Current directory membership
+    from browse_journal_images or upload_image, never guess a URL. Current directory membership
     and successful GM-browser image loading (5s deadline) are checked before
     writing; private/missing/broken assets fail ImageNotFound/BrowseFailed/
     ImageUnavailable. This does not prove player asset access. Read guidance and

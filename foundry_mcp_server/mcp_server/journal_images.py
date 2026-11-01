@@ -35,12 +35,19 @@ class ImageFollow(Model):
     arguments: ImageLocation
 
 
+class DirectoryCapabilities(Model):
+    can_upload: bool
+    can_create_directory: bool
+    reasons: list[str] = Field(max_length=8)
+
+
 class DirectoryNode(Model):
     kind: Literal['directory']
     name: str = Field(max_length=256)
     name_truncated: bool
     directory: str = Field(min_length=1, max_length=2048)
     next_call: ImageFollow
+    capabilities: DirectoryCapabilities
 
 
 class ImageNode(Model):
@@ -56,6 +63,7 @@ ImageNodeUnion = Annotated[DirectoryNode | ImageNode, Field(discriminator='kind'
 class BrowseImagesResult(Model):
     location: ImageLocation
     sources: list[FileSource] = Field(max_length=3)
+    capabilities: DirectoryCapabilities
     revision: str = Field(min_length=1, max_length=128)
     entries: list[ImageNodeUnion] = Field(max_length=100)
     total: int = Field(ge=0, le=10000)
@@ -69,6 +77,12 @@ async def browse_journal_images(request: BrowseImagesRequest):
     """Browse existing Foundry image paths for GM journal content selection.
 
     Read-only, ready GM on Foundry14; core/system independent, no PF2e semantics.
+    Current location and directory nodes include capabilities{can_upload,
+    can_create_directory,reasons}. These combine public FilePicker permissions
+    with User Data-only mutation support; Core Data/S3 report false. Advisory,
+    not a promise of disk access. User Data root permits folders, not uploads.
+    Use create_image_directory for one child or upload_image to save a supplied
+    image. Both recheck permissions. Upload returns the same canonical selector.
     These are server file directories, NOT journal folders. No uploads, deletion,
     filesystem access, automatic recursive crawl, image generation or visual
     inspection. Names/paths do not establish image contents or player access.
@@ -87,9 +101,9 @@ async def browse_journal_images(request: BrowseImagesRequest):
     Core14 image extensions apng/avif/bmp/gif/jpeg/jpg/png/svg/tiff/webp only.
     Filenames are untrusted data.
 
-    Returns location{source,directory,bucket?},sources,revision,entries,total,
+    Returns location{source,directory,bucket?},capabilities,sources,revision,entries,total,
     unfiltered_total,complete,next_cursor,limitations. Directory nodes include
-    kind,name,name_truncated,directory,next_call. Image nodes include kind,name,
+    kind,name,name_truncated,directory,capabilities,next_call. Image nodes include kind,name,
     name_truncated,image{source,directory,bucket?,src}; src is the exact image
     location, not a document ID, and preserves spaces/Unicode. Display names
     over256 codepoints are clipped, selectors never are. total counts matching
@@ -117,6 +131,9 @@ async def browse_journal_images(request: BrowseImagesRequest):
         result = BrowseImagesResult.model_validate(await rpc('browseJournalImages', request.model_dump(exclude_none=True)))
         if result.location.source != request.source or result.location.bucket != request.bucket:
             raise ValueError('wrong source')
+        caps = [result.capabilities, *(entry.capabilities for entry in result.entries if isinstance(entry, DirectoryNode))]
+        if request.source != 'data' and any(cap.can_upload or cap.can_create_directory for cap in caps):
+            raise ValueError('unsupported mutation source')
         if len({source.source for source in result.sources}) != len(result.sources) or request.source not in {source.source for source in result.sources}:
             raise ValueError('invalid source availability')
         offset = request.cursor.offset if request.cursor else 0

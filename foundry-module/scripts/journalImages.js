@@ -32,6 +32,20 @@ function api() {
   return cls;
 }
 
+/** Core14 public FilePicker permissions at a source-relative directory.
+ * Public source state and getters only; advisory User Data-only policy.
+ * Server permissions are rechecked on writes. Tested on core14.369.
+ */
+export function imageDirectoryCapabilities(source, directory) {
+  if (source !== 'data') return {can_upload: false, can_create_directory: false, reasons: ['Mutations support User Data only.']};
+  const picker = new (api())({type: 'image'});
+  if (!picker.sources.data) fail('UnsupportedSource', 'User Data is unavailable.');
+  picker.activeSource = 'data';
+  picker.sources.data.target = directory;
+  const can_upload = picker.canUpload === true, can_create_directory = picker.canCreateFolder === true;
+  return {can_upload, can_create_directory, reasons: can_upload && can_create_directory ? [] : ['FilePicker restricts this operation at this directory.']};
+}
+
 function sourceAvailable(cls, source, bucket) {
   const sources = new cls({type: 'image'}).sources;
   if (!sources?.[source]) fail('UnsupportedSource', 'This file source is not configured; use a source returned by browse_journal_images.');
@@ -58,7 +72,7 @@ function validateLocation(source, directory, bucket) {
 export function validateJournalImageSelector(image) {
   validateParams(image, ['source', 'directory', 'bucket', 'src']);
   validateLocation(image.source, image.directory, image.bucket);
-  if (!imagePath(image.src)) fail('InvalidRequest', 'Use an exact image selector returned by browse_journal_images.');
+  if (!imagePath(image.src)) fail('InvalidRequest', 'Use an exact image selector returned by browse_journal_images or upload_image.');
 }
 
 /** Recheck membership through the same bounded public listing used by browsing.
@@ -122,7 +136,9 @@ export async function browseJournalImages(params = {}) {
   const full = await listing(cls, source, target, params.bucket);
   ready();
   if (world !== game.world.id || user !== game.user) fail('ContextChanged', 'World or GM changed during browsing; restart.');
-  const selection = [world, source, target, params.bucket ?? null, filter, full];
+  const capabilities = imageDirectoryCapabilities(source, full.directory);
+  for (const entry of full.entries) if (entry.kind === 'directory') entry.capabilities = imageDirectoryCapabilities(source, entry.directory);
+  const selection = [world, source, target, params.bucket ?? null, filter, full, capabilities];
   const revision = await digest(selection);
   ready();
   if (world !== game.world.id || user !== game.user) fail('ContextChanged', 'World or GM changed during browsing; restart.');
@@ -136,7 +152,7 @@ export async function browseJournalImages(params = {}) {
   const offset = params.cursor?.offset ?? 0;
   if (offset > entries.length) fail('InvalidCursor', 'Offset exceeds current selection; restart.');
   const result = {location: {source, directory: full.directory, ...(params.bucket ? {bucket: params.bucket} : {})},
-    sources, revision, entries: [], total: entries.length, unfiltered_total: full.entries.length,
+    sources, capabilities, revision, entries: [], total: entries.length, unfiltered_total: full.entries.length,
     complete: false, next_cursor: null,
     limitations: ['One directory only; name matching is literal, not semantic or recursive.',
       'Paths do not establish image contents, suitability or player access. Native FilePicker loads a complete directory before output pagination.']};

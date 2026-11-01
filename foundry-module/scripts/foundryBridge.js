@@ -12,6 +12,7 @@ import {getWritingGuidance} from './writingGuidance.js';
 import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from './journalAuthoring.js';
 import {getJournalAuthoringOptions} from './journalAuthoringOptions.js';
 import {browseJournalImages} from './journalImages.js';
+import {prepareImageUpload, createImageDirectory, uploadImage} from './imageUploads.js';
 import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
@@ -64,6 +65,9 @@ const rpcHandlers = {
   writeJournal,
   getJournalAuthoringOptions,
   browseJournalImages,
+  prepareImageUpload,
+  createImageDirectory,
+  uploadImage,
   getWritingGuidance,
   readChatMessages,
   readChatMessageContent,
@@ -138,9 +142,10 @@ const rpcHandlers = {
  * Handle a single incoming RPC request message and return the response object.
  *
  * @param {object} message - Parsed JSON message from the WebSocket.
+ * @param {function(): boolean} isCurrent - Exact socket still owns this RPC.
  * @returns {Promise<object>} - Response object to send back over WebSocket.
  */
-export async function handleRpcMessage(message) {
+export async function handleRpcMessage(message, isCurrent = () => true) {
   if (!message || typeof message !== "object") return null;
   const { id, method, params } = message;
 
@@ -171,7 +176,8 @@ export async function handleRpcMessage(message) {
   }
 
   try {
-    const result = await handler(params ?? {});
+    const result = ['prepareImageUpload', 'createImageDirectory', 'uploadImage'].includes(method)
+      ? await handler(params ?? {}, isCurrent) : await handler(params ?? {});
     return { id, result };
   } catch (err) {
     console.debug("[foundryBridge] RPC failed", method, err?.rpcError?.type || "RpcError");
@@ -318,7 +324,7 @@ function openWebSocket() {
     if (handlePdfMessage(message)) return;
     console.debug("[foundryBridge] RPC", message?.id, message?.method);
 
-    const response = await handleRpcMessage(message);
+    const response = await handleRpcMessage(message, () => currentSocket === socket && socket.readyState === WebSocket.OPEN);
     if (!response) {
       return;
     }

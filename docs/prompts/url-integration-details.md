@@ -1,0 +1,916 @@
+# ChatGPT Image URL Integration with Foundry MCP
+
+> November 1, 2026 implementation update: [current contracts](../image-uploads.md)
+> supersede the proposed phases and HTTP relay below. `upload_image` accepts
+> ChatGPT file parameters, validates bytes in Python and sends them privately
+> over the authenticated WebSocket. User Data folders are selectable/creatable,
+> extensions are detected and overwrites require an explicit flag. Public
+> FilePicker upload was verified on Foundry14.369 with identical saved bytes and
+> a user-confirmed rendered checkerboard journal. ChatGPT-generated handoff
+> remains unverified. The original investigation below is historical proposal
+> material, not the implementation contract or authorization for a new instance.
+
+## Technical Interface Specification and Development Investigation
+
+**Repository:** https://github.com/sesopenko/foundry-mcp
+
+**Target:** ChatGPT custom MCP integration, FastMCP 4.1.4, Foundry VTT 14
+
+**Date:** October 31, 2026
+
+## 1. Objective
+
+Enable ChatGPT to generate an image and transfer it into Foundry VTT using a URL-accessible image resource.
+
+The desired experience:
+
+> "Generate a portrait of a goblin warrior and add it to my Foundry image library."
+
+ChatGPT should:
+
+1. Generate the image using its native image-generation capability.
+2. Obtain an HTTPS URL from which the generated image can be retrieved.
+3. Pass that URL to `foundry-mcp`.
+4. Have the MCP server retrieve the image.
+5. Upload the image into Foundry's persistent image storage.
+6. Return the canonical Foundry image path for use in journals, Actors, Items, and tokens.
+
+**The entire image transfer should happen over HTTP(S), independently of the language model's text context.**
+
+The primary question for the development agent is how ChatGPT can expose a generated image through a URL usable by a remote MCP server.
+
+---
+
+## 2. What ChatGPT Can Expose
+
+### 2.1 Native image generation
+
+ChatGPT provides a native image-generation capability.
+
+Images created in ChatGPT are saved in its Images experience, where users can view, reuse, save, and share them.
+
+Documentation:
+
+https://help.openai.com/en/articles/11084440-chatgpt-images
+
+However, **generating an image does not automatically provide the assistant with a publicly accessible HTTPS URL pointing directly to its image contents.**
+
+The rendered image may be available in the ChatGPT interface without being publicly retrievable by a third-party service.
+
+A normal ChatGPT sharing link must not be assumed to be a direct image download URL.
+
+### 2.2 Public HTTPS image URLs
+
+The simplest interface for `foundry-mcp` would be:
+
+```json
+{
+  "image_url": "https://example.com/images/goblin.webp"
+}
+```
+
+The MCP server performs an HTTP GET against the supplied URL and obtains the actual image.
+
+This works when the URL:
+
+- Is reachable from the MCP server.
+- Returns actual image content rather than an HTML page.
+- Does not require interactive browser authentication.
+- Has not expired.
+- Allows the server to retrieve the content.
+
+For a genuinely public image URL, no additional ChatGPT-specific file integration is required.
+
+**The unresolved issue is how a newly generated ChatGPT image becomes available at such a URL.**
+
+Do not assume a public URL can be derived from an image's internal identifier or its location in ChatGPT's interface.
+
+### 2.3 ChatGPT's documented temporary HTTPS download URLs
+
+OpenAI provides another mechanism that may solve the problem without requiring publicly hosted images.
+
+ChatGPT supports file parameters for MCP tools.
+
+When ChatGPT passes an eligible file to a tool, the tool can receive:
+
+```json
+{
+  "file": {
+    "download_url": "https://...",
+    "file_id": "file_...",
+    "mime_type": "image/png",
+    "file_name": "goblin.png"
+  }
+}
+```
+
+The `download_url` is supplied by ChatGPT.
+
+It allows the receiving MCP server to retrieve the file over HTTPS.
+
+Unlike a permanently public image URL, this can be a short-lived, access-controlled URL.
+
+This is still compatible with the proposed URL-based architecture:
+
+```text
+ChatGPT
+  |
+  | Temporary HTTPS download URL
+  v
+foundry-mcp
+  |
+  | HTTP GET
+  v
+Image contents
+```
+
+No model-mediated image-content transfer is necessary.
+
+Official documentation:
+
+https://developers.openai.com/plugins/reference
+
+### 2.4 Important compatibility question
+
+OpenAI documents MCP file parameters and temporary download URLs for eligible files.
+
+**It has not been established that an image generated during a ChatGPT conversation can automatically be passed to an MCP tool as an eligible file.**
+
+Investigate these separately:
+
+| Image source | URL availability |
+|---|---|
+| Public image on an external website | Standard HTTPS URL |
+| Image uploaded into ChatGPT | Documented MCP file parameter mechanism |
+| Image selected through ChatGPT's file picker | Temporary download URL, when supported |
+| Image newly generated by ChatGPT | Must be experimentally verified |
+| Image previously generated by ChatGPT | Must be experimentally verified |
+
+The seamless generated-image workflow depends on resolving the final two cases.
+
+---
+
+## 3. Preferred MCP Interface: Import Image from URL
+
+Expose a production MCP tool:
+
+```text
+import_image_from_url
+```
+
+### 3.1 Proposed input
+
+```json
+{
+  "image_url": "https://example.com/images/goblin.webp",
+  "purpose": "portrait",
+  "label": "Goblin Warrior",
+  "request_id": "goblin-image-import-001"
+}
+```
+
+| Field | Type | Purpose |
+|---|---|---|
+| `image_url` | string | HTTPS image URL |
+| `purpose` | enum | `portrait`, `token`, `journal`, `scene` |
+| `label` | string | Human-readable image name |
+| `request_id` | string | Unique operation identity for safe retries |
+
+The `image_url` may be either a public image URL or an authorized temporary download URL.
+
+The server should not require the URL to be permanently public. It only needs to retrieve the image while authorization remains valid.
+
+The tool must not accept arbitrary destination directories. Store imported assets under a restricted, configurable Foundry image directory.
+
+### 3.2 Proposed output
+
+```json
+{
+  "status": "uploaded",
+  "asset_id": "opaque-import-identity",
+  "image": {
+    "source": "data",
+    "directory": "foundry-mcp/generated",
+    "src": "foundry-mcp/generated/goblin-warrior-a1b2c3.webp"
+  },
+  "mime_type": "image/webp",
+  "width": 1024,
+  "height": 1024,
+  "size_bytes": 95000
+}
+```
+
+All values are illustrative.
+
+The returned image path must come from a successful Foundry upload and subsequent verification, not from guessing the destination path.
+
+### 3.3 Expected behavior
+
+The tool should:
+
+1. Authenticate the MCP caller.
+2. Validate the supplied URL.
+3. Retrieve the image over HTTPS.
+4. Validate the downloaded content.
+5. Transfer the image to the authenticated Foundry GM browser.
+6. Upload it using Foundry's supported API.
+7. Verify that the uploaded file exists and is loadable.
+8. Return the canonical image selector.
+
+The tool should return a compact status object, never the image contents.
+
+---
+
+## 4. Native ChatGPT File URL Integration
+
+To make generated images importable without manually entering URLs, investigate OpenAI's file-parameter mechanism.
+
+### 4.1 Tool metadata
+
+An MCP tool declares file parameters using:
+
+```json
+{
+  "_meta": {
+    "openai/fileParams": ["file"]
+  }
+}
+```
+
+The `file` property must be present in the tool's top-level input schema.
+
+Its value must have the following object schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "download_url": {
+      "type": "string"
+    },
+    "file_id": {
+      "type": "string"
+    },
+    "mime_type": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "download_url",
+    "file_id"
+  ],
+  "additionalProperties": false
+}
+```
+
+OpenAI requires all four properties to be declared, with only `download_url` and `file_id` required inside the file object.
+
+Codex must verify how FastMCP 4.1.4 exposes tool-level `_meta` fields and whether its schema generation preserves the required structure.
+
+### 4.2 Proposed ChatGPT-specific MCP tool
+
+```text
+import_chatgpt_image
+```
+
+Example invocation:
+
+```json
+{
+  "file": {
+    "download_url": "https://temporary-url.example/...",
+    "file_id": "file_...",
+    "mime_type": "image/png",
+    "file_name": "goblin.png"
+  },
+  "purpose": "portrait",
+  "label": "Goblin Warrior",
+  "request_id": "goblin-image-import-001"
+}
+```
+
+This tool should use exactly the same image-download and Foundry-upload implementation as `import_image_from_url`.
+
+The distinction is only how the URL is obtained.
+
+```text
+import_image_from_url
+           |
+           |
+           v
+    Shared URL Import
+           ^
+           |
+           |
+import_chatgpt_image
+```
+
+This provides a clean separation:
+
+- `import_image_from_url`: works with supplied HTTPS image URLs.
+- `import_chatgpt_image`: works with URLs obtained through ChatGPT's native MCP file interface.
+
+Avoid duplicating image validation, uploading, or storage logic.
+
+### 4.3 ChatGPT plugin file selection APIs
+
+OpenAI also documents these optional widget APIs:
+
+```javascript
+window.openai.selectFiles()
+```
+
+```javascript
+window.openai.getFileDownloadUrl({
+  fileId
+})
+```
+
+`selectFiles()` can allow a user to choose an authorized file from ChatGPT's Library when the feature is available.
+
+`getFileDownloadUrl()` can provide a temporary HTTPS download URL for eligible files.
+
+Potential workflow:
+
+```text
+ChatGPT Images / Library
+          |
+          v
+User selects generated image
+          |
+          v
+ChatGPT plugin receives fileId
+          |
+          v
+getFileDownloadUrl(fileId)
+          |
+          v
+Temporary HTTPS image URL
+          |
+          v
+foundry-mcp imports image
+```
+
+This is a potential user-assisted fallback if direct generated-image handoff is unavailable.
+
+Confirm experimentally whether generated images appear in the supported file selector.
+
+Do not confuse ChatGPT's Images experience with its general-purpose file Library; their availability and integration behavior may differ.
+
+---
+
+## 5. First Development Task: Prove the URL Handoff
+
+Before implementing Foundry upload functionality, create two small read-only probes.
+
+### 5.1 Probe A: Public URL import
+
+Proposed tool:
+
+```text
+probe_image_url
+```
+
+Input:
+
+```json
+{
+  "image_url": "https://example.com/goblin.png"
+}
+```
+
+The tool should:
+
+1. Retrieve the URL over HTTPS.
+2. Apply strict URL and download safety controls.
+3. Verify that the response contains a supported image.
+4. Determine its actual format and dimensions.
+5. Return the response status, size, dimensions, and content checksum.
+
+Example response:
+
+```json
+{
+  "status": "success",
+  "http_status": 200,
+  "format": "png",
+  "width": 1024,
+  "height": 1024,
+  "size_bytes": 95000,
+  "image_valid": true
+}
+```
+
+This proves the URL retrieval functionality independently of ChatGPT's image-generation mechanism.
+
+### 5.2 Probe B: ChatGPT image URL
+
+Proposed tool:
+
+```text
+probe_chatgpt_image_url
+```
+
+Register it with the documented `openai/fileParams` metadata.
+
+It should receive the ChatGPT file object, download the resource using `download_url`, and return validated image metadata.
+
+It must not modify Foundry.
+
+Test scenarios:
+
+1. User uploads an existing image.
+2. ChatGPT generates an image immediately before invoking the probe.
+3. ChatGPT references an image generated earlier in the conversation.
+4. User selects a generated image through any supported file picker.
+5. The supplied URL has expired or cannot be retrieved.
+
+The critical test:
+
+> "Generate an image of a goblin and send that image to `probe_chatgpt_image_url`."
+
+No manual image reattachment should be used during this particular test.
+
+### 5.3 Decision criteria
+
+**If ChatGPT successfully supplies a temporary image URL:**
+
+Proceed with implementing the full upload pipeline.
+
+**If ChatGPT cannot directly provide a generated image URL:**
+
+Investigate whether a generated image can be selected through ChatGPT's documented file-selection APIs.
+
+**If neither mechanism exposes the generated image:**
+
+Document that the seamless native generation-to-MCP workflow is unavailable with the tested host capabilities.
+
+The URL-import tool remains useful for externally hosted image assets.
+
+Do not invent an OpenAI image-hosting endpoint or construct undocumented image URLs.
+
+---
+
+## 6. Foundry MCP Architecture
+
+The existing repository uses:
+
+```text
+ChatGPT
+   |
+   | MCP over HTTPS
+   v
+Python FastMCP Server
+   |
+   | Authenticated WebSocket
+   v
+Foundry Browser Module
+   |
+   | Foundry APIs
+   v
+Foundry VTT
+```
+
+The relevant files include:
+
+```text
+foundry_mcp_server/main.py
+foundry_mcp_server/ws/connection.py
+foundry_mcp_server/mcp_server/tools.py
+
+foundry-module/scripts/foundryBridge.js
+foundry-module/scripts/journalImages.js
+foundry-module/scripts/journalImageEmbedding.js
+```
+
+The image import should fit into this architecture without introducing a separate authentication system.
+
+### 6.1 Existing image tooling
+
+`browse_journal_images` already:
+
+- Uses Foundry's public FilePicker API.
+- Discovers existing images.
+- Supports configured Foundry storage sources.
+- Returns canonical image selectors.
+
+`write_journal` already supports:
+
+```json
+{
+  "operation": "embed_image",
+  "page_uuid": "...",
+  "expected_revision": "...",
+  "image": {
+    "source": "data",
+    "directory": "foundry-mcp/generated",
+    "src": "foundry-mcp/generated/goblin.webp"
+  },
+  "alt": "Goblin Warrior"
+}
+```
+
+The journal operation currently requires an image that can be discovered and validated through Foundry's image browser.
+
+A new upload tool should return an image selector compatible with this existing interface.
+
+Documentation:
+
+https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md
+
+---
+
+## 7. Importing an HTTPS Image into Foundry
+
+Foundry 14 exposes a public FilePicker API supporting file uploads.
+
+Official documentation:
+
+https://foundryvtt.com/api/v14/classes/foundry.applications.apps.FilePicker.html
+
+Relevant methods:
+
+```javascript
+FilePicker.browse(...)
+FilePicker.createDirectory(...)
+FilePicker.upload(...)
+```
+
+### 7.1 Direct browser retrieval
+
+For a publicly accessible image, the browser may be able to retrieve it directly:
+
+```javascript
+const response = await fetch(imageUrl);
+
+if (!response.ok) {
+  throw new Error("Image download failed");
+}
+
+const blob = await response.blob();
+
+const file = new File(
+  [blob],
+  "goblin.webp",
+  { type: blob.type }
+);
+
+const Picker =
+  foundry.applications.apps.FilePicker.implementation;
+
+const result = await Picker.upload(
+  "data",
+  "foundry-mcp/generated",
+  file,
+  {},
+  { notify: false }
+);
+```
+
+This is conceptual implementation guidance.
+
+Codex must verify the exact Foundry 14 API behavior and response format.
+
+**Limitation: cross-origin browser requests may be blocked by CORS.**
+
+An image URL being publicly viewable does not establish that JavaScript running in the Foundry browser may retrieve its contents.
+
+This makes direct browser retrieval a conditional optimization rather than the most reliable default.
+
+### 7.2 Recommended approach: Server-side retrieval with an HTTPS relay
+
+The more reliable architecture is for Python to retrieve the external image URL.
+
+Then the Foundry browser retrieves the validated image through a restricted HTTP endpoint on the MCP server.
+
+```text
+ChatGPT
+   |
+   | image_url
+   v
+foundry-mcp Python server
+   |
+   | HTTPS GET
+   v
+External image provider
+   |
+   | Image response
+   v
+Python validation
+   |
+   | Short-lived authenticated image endpoint
+   v
+Foundry browser module
+   |
+   | HTTPS GET
+   v
+Browser File object
+   |
+   | FilePicker.upload()
+   v
+Foundry image storage
+```
+
+The image contents travel over HTTP(S), not through the language model or WebSocket RPC arguments.
+
+### 7.3 Proposed internal URL endpoint
+
+An internal FastAPI endpoint could provide a validated import to the authorized Foundry browser:
+
+```text
+GET /image-imports/{transfer_id}/content
+```
+
+Requirements:
+
+- Only the authenticated GM transfer session can retrieve the image.
+- Use a short-lived, scoped access capability or authenticated request.
+- Prevent access to other transfers.
+- Enforce transfer expiration.
+- Return the correct image MIME type.
+- Use `Cache-Control: no-store`.
+- Avoid leaking credentials through logs or browser referrers.
+- Support the exact trusted Foundry browser origin through CORS, if required.
+- Delete staged transfer contents after completion or expiry.
+
+The server should communicate the transfer identity to the connected GM browser through its existing authenticated RPC bridge.
+
+The browser retrieves the image over HTTPS, constructs a `File`, and invokes Foundry's upload API.
+
+Do not expose staged image endpoints without authorization merely because the original image was publicly available.
+
+### 7.4 Foundry-side operation
+
+A new RPC operation might be named:
+
+```text
+importImageFromMcp
+```
+
+It would receive:
+
+```json
+{
+  "transfer_id": "opaque-transfer-id",
+  "download_url": "https://mcp.example.com/image-imports/.../content",
+  "file_name": "goblin-warrior.webp",
+  "mime_type": "image/webp",
+  "destination": "foundry-mcp/generated"
+}
+```
+
+This is a private server-to-browser message, not an LLM tool argument.
+
+The Foundry module should:
+
+1. Verify the active GM and connected world.
+2. Retrieve the image from the authorized relay endpoint.
+3. Construct the browser `File`.
+4. Call Foundry's FilePicker upload API.
+5. Verify the returned path.
+6. Confirm the uploaded image is discoverable and loadable.
+7. Return the verified image selector through the RPC response.
+
+The Python server then returns the selector through the original MCP call.
+
+The transfer endpoint should use a bounded lifetime and authenticated access, and the implementation must handle CORS between the Foundry and MCP server origins.
+
+---
+
+## 8. Public URL Reference Versus Permanent Import
+
+There are two possible behaviors for image URLs.
+
+### Option A: Reference the external image directly
+
+An Actor or other Foundry document could potentially refer to an external image URL.
+
+For example:
+
+```text
+https://example.com/images/goblin.webp
+```
+
+Potential advantages:
+
+- No image copying.
+- Minimal import processing.
+
+Disadvantages:
+
+- The external URL can disappear or expire.
+- Players need access to the external asset.
+- Remote image hosting can change or deny requests.
+- Temporary ChatGPT download URLs are not appropriate as permanent Foundry image references.
+- Existing `browse_journal_images` and `write_journal` contracts do not support arbitrary external URLs as canonical image selectors.
+
+### Option B: Download and import the image
+
+The MCP server retrieves the image and uploads a permanent copy through Foundry.
+
+Advantages:
+
+- Foundry controls the resulting asset.
+- The asset is available through Foundry's normal file browser.
+- Existing journal image tooling can reuse it.
+- Temporary source URL expiration does not affect the stored image.
+- Future Actor and token tools can use the canonical path.
+
+**Recommendation: implement Option B as the primary workflow.**
+
+The purpose of the external URL is to transfer the image into Foundry, not to become its permanent location.
+
+---
+
+## 9. Security Requirements
+
+Because the tool accepts remote URLs and uploads files into Foundry, it requires explicit security controls.
+
+### URL validation
+
+- Require HTTPS.
+- Reject localhost, private, loopback, link-local, and cloud metadata destinations.
+- Validate DNS resolution and actual connection targets.
+- Prevent DNS rebinding bypasses.
+- Reject unsafe redirect targets.
+- Enforce connection and download deadlines.
+- Limit response size.
+- Do not forward server credentials to external image hosts.
+- Do not log temporary signed download URLs.
+
+### Image validation
+
+Initially support:
+
+```text
+image/png
+image/jpeg
+image/webp
+```
+
+Validate actual decoded image content, not just the response `Content-Type` or URL extension.
+
+Suggested initial limits:
+
+- Maximum 10 MiB per image.
+- Maximum configured image dimensions and pixel count.
+- Bounded image decoding resources.
+- Rejection of unsupported or malformed content.
+
+A pinned image-processing dependency may be useful for validation, metadata removal, and normalization.
+
+### Authorization
+
+- Require authenticated MCP access.
+- Require a ready authenticated GM browser.
+- Enforce the selected Foundry world.
+- Restrict upload destinations.
+- Never allow arbitrary file uploads outside the configured image directory.
+- Use collision-safe filenames.
+- Support idempotent retries.
+- Never modify existing Actors or game documents as an implicit upload side effect.
+
+---
+
+## 10. Implementation Sequence
+
+### Phase 1 — Establish ChatGPT URL availability
+
+- [ ] Confirm the `openai/fileParams` specification.
+- [ ] Determine how FastMCP 4.1.4 publishes the necessary tool metadata.
+- [ ] Implement `probe_image_url`.
+- [ ] Implement `probe_chatgpt_image_url`.
+- [ ] Test ordinary public image URLs.
+- [ ] Test ChatGPT-uploaded images.
+- [ ] Test a newly generated ChatGPT image.
+- [ ] Test images previously generated in ChatGPT.
+- [ ] Investigate the optional ChatGPT file picker if necessary.
+- [ ] Document which workflows provide usable HTTPS download URLs.
+
+**Deliverable:** Experimental confirmation of whether ChatGPT can hand a newly generated image to an MCP tool through a retrievable URL.
+
+### Phase 2 — Implement persistent Foundry import
+
+- [ ] Implement URL validation and image retrieval in Python.
+- [ ] Add an authenticated, short-lived HTTPS image relay endpoint.
+- [ ] Integrate transfer identity with the existing GM bridge.
+- [ ] Implement the Foundry browser-side import operation.
+- [ ] Use Foundry's public FilePicker upload API.
+- [ ] Verify image availability through FilePicker browse and load checks.
+- [ ] Return canonical image selectors.
+- [ ] Add timeout, cleanup, and retry reconciliation.
+
+### Phase 3 — Publish MCP tools
+
+- [ ] Implement `import_image_from_url`.
+- [ ] Implement `import_chatgpt_image`.
+- [ ] Share the same URL retrieval and upload implementation.
+- [ ] Validate schemas and tool metadata.
+- [ ] Verify authentication and authorization.
+- [ ] Test against a disposable Foundry world.
+
+### Phase 4 — Integrate existing journal tooling
+
+- [ ] Import a goblin portrait.
+- [ ] Confirm that `browse_journal_images` finds it.
+- [ ] Insert the image into a journal using `write_journal`.
+- [ ] Read the journal page back.
+- [ ] Verify image rendering in Foundry.
+- [ ] Verify the intended player audience can access the image.
+
+### Phase 5 — Future Actor and token integration
+
+Once import is stable, investigate separate tools:
+
+```text
+set_actor_portrait
+set_actor_prototype_token_image
+set_item_image
+set_scene_background_image
+```
+
+These operations should consume canonical Foundry image selectors and require explicit authorization for document modifications.
+
+---
+
+## 11. Definition of Success
+
+The ideal acceptance scenario:
+
+> The user asks ChatGPT to generate a goblin portrait, then place it in Foundry.
+
+1. ChatGPT generates the image.
+2. ChatGPT obtains a usable HTTPS download URL through a supported interface.
+3. ChatGPT invokes `import_chatgpt_image`.
+4. The MCP server retrieves the image over HTTPS.
+5. The Foundry browser retrieves the validated image through the authorized MCP relay.
+6. Foundry uploads and stores the image.
+7. The MCP server returns the verified image selector.
+8. The image can be selected and embedded using existing Foundry MCP tooling.
+
+The image should survive expiration of the original external URL.
+
+A public external image URL can also be used with `import_image_from_url`.
+
+**The major unknown is step 2.** No automatic generated-image URL capability should be claimed without testing.
+
+---
+
+## 12. Key Documentation
+
+### OpenAI
+
+ChatGPT plugin reference, including file parameters and temporary download URLs:
+
+https://developers.openai.com/plugins/reference
+
+ChatGPT image generation and image management:
+
+https://help.openai.com/en/articles/11084440-chatgpt-images
+
+### Foundry VTT
+
+Foundry 14 FilePicker API:
+
+https://foundryvtt.com/api/v14/classes/foundry.applications.apps.FilePicker.html
+
+### Repository
+
+Image browsing and journal image embedding:
+
+https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md
+
+Python MCP server:
+
+https://github.com/sesopenko/foundry-mcp/blob/main/foundry_mcp_server/mcp_server/server.py
+
+WebSocket bridge:
+
+https://github.com/sesopenko/foundry-mcp/blob/main/foundry_mcp_server/ws/connection.py
+
+Foundry browser module:
+
+https://github.com/sesopenko/foundry-mcp/blob/main/foundry-module/scripts/foundryBridge.js
+
+---
+
+## 13. Instructions for Codex CLI
+
+Start by proving that ChatGPT can provide an HTTPS download URL for a newly generated image.
+
+The preferred mechanism to investigate is OpenAI's documented MCP file-parameter interface and its `download_url` property.
+
+Confirm the behavior through a real connected ChatGPT MCP tool, not by assuming that generated-image assets are interchangeable with user-uploaded files.
+
+If this works, implement a shared URL importer that retrieves the image server-side, validates it, makes it temporarily available to the authenticated Foundry browser, and persists it through Foundry's public FilePicker upload API.
+
+Prioritize HTTP(S) transfer throughout the pipeline, compact MCP tool arguments, and reuse of the existing Foundry image selector contracts.
+
+If direct generated-image URL access is unsupported, report that limitation and determine whether the supported ChatGPT Library selection workflow can provide an authorized download URL.
+
+The first development milestone is **a working ChatGPT-generated-image-to-HTTPS-URL handoff test**. The second is **persistent Foundry import from that URL**.
+
+Do not begin implementing Actor or token modification tools until those two milestones have been demonstrated successfully.

@@ -71,6 +71,12 @@ Key properties:
 
 ## Components
 
+User Data [image uploads](image-uploads.md) retrieve and validate HTTPS images in
+bounded Python workers. Validated bytes travel privately over the existing GM
+WebSocket; the browser persists them with public FilePicker APIs and verifies
+saved bytes before returning an image selector. Folder creation uses the same
+public boundary. No HTTP relay or direct Foundry disk access is introduced.
+
 ### 1. Python MCP Proxy Server
 
 Responsibilities:

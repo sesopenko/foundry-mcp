@@ -73,6 +73,8 @@ async def probe(mode):
             encoded = lambda value: json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
             catalog_bytes = len(encoded(catalog))
             for tool in catalog:
+                if tool['name'] == 'upload_image':
+                    assert tool['_meta']['openai/fileParams'] == ['file']
                 if mode == 'oauth':
                     assert tool['_meta'].pop('securitySchemes') == [{'type': 'oauth2', 'scopes': ['foundry:gm']}]
                 else: assert 'securitySchemes' not in tool.get('_meta', {})

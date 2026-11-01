@@ -1,5 +1,11 @@
 # foundry-module/scripts
 
+`imageUploads.js` implements User Data directory creation and image upload through
+public core14 FilePicker APIs. `journalImages.js` exposes directory capabilities.
+Python-validated bytes arrive over the authenticated bridge; socket/world/GM
+checks precede mutation and stored-byte verification follows it. See
+[image upload contracts](../../docs/image-uploads.md).
+
 `compendiumJournals.js` adds core14 read-only pack discovery, bounded entry/page
 search and exact compendium journal reading. It reuses authorized-entry journal
 processors, public getIndex/getDocument and lazy fromUuid reference resolution;

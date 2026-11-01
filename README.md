@@ -1,8 +1,8 @@
 # sesopenko/foundry-mcp
 
-Version 3.2.0 expands [journal authoring](docs/journal-writing.md) to preserve
-publisher-style sections, classes, images and layout while rejecting executable
-HTML.
+Version 3.3.0 adds [User Data folders and image uploads](docs/image-uploads.md),
+returning image selectors ready for journal embedding. ChatGPT-generated image
+handoff awaits host acceptance testing.
 
 Upgrade the server and module together and refresh client discovery. When upgrading from 2.x, the old
 style-guide tool is replaced by the GM-connected `get_writing_guidance` tool;
@@ -91,7 +91,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.2.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.3.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -286,14 +286,14 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v3.2.0)
+## Actor and Item source reading (v3.3.0)
 
 Read official PF2e party membership and shared possessions separately, with
 named characters and Items for follow-up reads. Compare characters' wealth and
 encumbrance using the [metric tools](docs/character-inventory-metrics.md);
 see [party contracts](docs/party-tools.md) for stash access and limits.
 
-Version 3.2.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 3.3.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and
