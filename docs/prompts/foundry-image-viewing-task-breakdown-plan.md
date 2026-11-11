@@ -22,6 +22,28 @@ feature-design requirements; points estimate effort/uncertainty, not hours or
 external waiting time. Do not execute historical parent tasks in addition to
 their replacements. All context-recovery instructions below still apply.
 
+## Map extension and second sizing pass — 2026-11-11
+
+The user authorized augmenting the plan with Scene-folder map browsing, grid/
+dimension/level-image file reading, and opt-in compact note identifiers rendered
+on map previews, then repeating the no-13-point-task constraint. Read the
+[map research](../plans/image-viewing/map-browsing-notes-research.md) after every
+compression/resume along with both prompts and the current index/task.
+
+The source design now includes the normative map extension. The current index
+adds M01/M02 discovery/readers, M03a/M03b note identity/mapping, M04a/M04b text/
+layout, M05 image-tool integration, and M06 map-workflow verification. The first
+augmented estimate had two 13-point groups, split 5+8 each. Final visual handoff
+14b grows from 3 to 5; other original estimates remain unchanged.
+
+Current execution plan: **30 tasks, 200 points, maximum 8; zero 13-point tasks**.
+The previous 22-task/140-point result and original fourteen-task assignment
+below are historical checkpoints. The current index/graph supersedes them.
+Each new executable task has its own unit tests, acceptance criteria, context
+recovery, and local commit. Final packaging depends on M05; final visual handoff
+depends on M06. Do not move all new scope into existing base tasks or accept
+point reductions without actual responsibility/test boundaries.
+
 ## Preserve planning context
 
 Before drafting task files, the build agent must snapshot this complete planning

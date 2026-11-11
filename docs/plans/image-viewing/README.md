@@ -1,6 +1,6 @@
 # Foundry image viewing: unattended implementation plan
 
-Implement the two tools and private preview service specified in the
+Implement the image tools, map browsing, note overlays, and private preview service in the
 [source design](../../prompts/foundry-image-previews-plan.md). This directory
 breaks that design into independently tested local commits. No feature work has
 been completed merely by creating this plan.
@@ -13,8 +13,9 @@ the next action:
 
 1. [Planning assignment snapshot](../../prompts/foundry-image-viewing-task-breakdown-plan.md)
 2. [Authoritative feature design](../../prompts/foundry-image-previews-plan.md)
-3. This index and the current task file, including its dependencies' evidence.
-4. [Repository instructions](../../../AGENTS.md) and their required reading.
+3. [Map browsing and note research](map-browsing-notes-research.md), including its verification gaps.
+4. This index and the current task file, including its dependencies' evidence.
+5. [Repository instructions](../../../AGENTS.md) and their required reading.
 
 This rule applies both to the agent maintaining these planning documents and
 the agent implementing the feature. A compressed summary is not a substitute.
@@ -25,7 +26,7 @@ start from the current checkout and preserve unrelated changes.
 Use this kickoff instruction for the implementation agent:
 
 > Implement `docs/plans/image-viewing/README.md`. Read its context-recovery
-> instructions and both referenced prompts in full before starting. Complete
+> instructions, both referenced prompts, and the map research in full before starting. Complete
 > ready tasks with their unit tests and separate local commits. After every
 > context compression or resume, reread those files and the current task from
 > disk before continuing. Record unavailable external checks precisely and
@@ -56,7 +57,15 @@ flowchart TD
     T12b["12b Large-map and payload measurement · 8"]
     T13["13 Deployment and packaged verification · 8"]
     T14a["14a Local runtime acceptance · 8"]
-    T14b["14b Target-client visual handoff · 3"]
+    T14b["14b Target-client visual handoff · 5"]
+    M01["M01 Map folder browsing · 8"]
+    M02["M02 Grid and image files · 8"]
+    M03a["M03a Note identities and legend · 5"]
+    M03b["M03b Coordinates and revision binding · 8"]
+    M04a["M04a Bundled font and glyphs · 5"]
+    M04b["M04b Label layout and encoding · 8"]
+    M05["M05 Map-aware image tools · 8"]
+    M06["M06 Complete map workflow verification · 8"]
     VISUAL["External gate: ChatGPT visual acceptance"]
 
     T01 --> T02
@@ -80,17 +89,30 @@ flowchart TD
     T09b --> T11
     T11 --> T12a
     T12a --> T12b
-    T11 --> T13
+    M05 --> T13
     T12b --> T14a
     T13 --> T14a
-    T14a --> T14b
+    T14a --> M06
+    M06 --> T14b
     T14b --> VISUAL
+    T01 --> M01
+    M01 --> M02
+    T02 --> M02
+    M02 --> M03a
+    M03a --> M03b
+    T06a --> M03b
+    T06b --> M04a
+    M04a --> M04b
+    M03b --> M04b
+    M04b --> M05
+    T11 --> M05
 ```
 
 Direct dependencies are listed below; their ancestors are also prerequisites.
-Default execution is a single agent, in the table's order (a before b).
-If a task cannot proceed,
-take the lowest numbered ready independent task. The graph does not authorize
+Default execution is a single agent: choose the first unfinished task in table
+order whose dependency commits are complete. Lettered tasks are separate commits;
+M tasks implement the map extension. Skip a task awaiting an independent branch
+and continue ready work, preserving precise external gaps. The graph does not authorize
 spawning agents or concurrent writes to this checkout.
 
 | ID and task | Points | Direct dependencies | Implementation status | Commit |
@@ -114,9 +136,17 @@ spawning agents or concurrent writes to this checkout.
 | [11 Image URL MCP tool](tasks/11-image-url-mcp-tool.md) | 8 | 07b, 09b, 10 | Not started | — |
 | [12a Workflow and failure integration](tasks/12a-workflow-and-failure-integration.md) | 8 | 11 | Not started | — |
 | [12b Large-map and payload measurements](tasks/12b-large-map-and-payload-measurements.md) | 8 | 12a | Not started | — |
-| [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | 11 | Not started | — |
+| [M01 Map folder browsing](tasks/m01-map-folder-browsing.md) | 8 | 01 | Not started | — |
+| [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Not started | — |
+| [M03a Note identities and legend](tasks/m03a-map-note-identities-and-legend.md) | 5 | M02 | Not started | — |
+| [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Not started | — |
+| [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Not started | — |
+| [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Not started | — |
+| [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Not started | — |
+| [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Not started | — |
 | [14a Local runtime acceptance](tasks/14a-local-runtime-acceptance.md) | 8 | 12b, 13 | Not started | — |
-| [14b Target-client visual handoff](tasks/14b-target-client-visual-handoff.md) | 3 | 14a | Not started | — |
+| [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Not started | — |
+| [14b Target-client visual handoff](tasks/14b-target-client-visual-handoff.md) | 5 | M06 | Not started | — |
 
 Task files name intended local commit subjects. Each task's implementation,
 unit tests, relevant documentation, and evidence must be committed together;
@@ -124,6 +154,28 @@ never defer its tests to task 12a. Foundation code may remain internal until the
 tool tasks register it; do not publish placeholder MCP tools.
 
 ## Relative estimates and splits
+
+Current plan: **30 executable tasks / 200 points**, maximum **8**, with no
+13-point tasks. Compared with the committed 22-task/140-point plan, the map
+extension adds 8 tasks/58 points and expands final visual handoff from 3 to 5.
+Existing base contracts remain staged work: M05 owns map inputs/annotations;
+do not silently grow tasks 01/10/11 with that integration. Final packaging stays
+8 because font implementation/tests and full map workflows have separate owners.
+
+| Map addition or affected task | First augmented estimate | Final task sizes |
+| --- | --- | --- |
+| Map folder browsing | 8 | M01: 8 |
+| Grid/level image file reading | 8 | M02: 8 |
+| Note extraction plus coordinate/revision mapping | 13 | M03a: 5; M03b: 8 |
+| Note text rasterization plus collision/layout/retries | 13 | M04a: 5; M04b: 8 |
+| Map-aware image tool integration | 8 | M05: 8 |
+| Complete map workflow verification | 8 | M06: 8 |
+| Final target-client handoff (previously 3) | 5 | 14b: 5 |
+
+The augmented draft had 28 tasks/200 points and two 13s; splitting them produces
+30 tasks/200 points with maximum 8. Each child owns its tests and local commit.
+All other existing task estimates stay unchanged. IDs such as task 13 are not
+point values. The earlier before/after sizing below is retained as history.
 
 Points combine implementation effort, test/verification effort, and technical
 uncertainty relative to this task set; they are not hours. Allowed values are
@@ -156,7 +208,7 @@ such as 13 are identifiers, separate from point values.
 | 13 Deployment/package verification | 8 | 13: 8 |
 | 14 Local acceptance/handoff | 13 | 14a Local acceptance: 8; 14b Visual handoff: 3 |
 
-Result: **14 tasks / 142 points before; 22 tasks / 140 points after**. Maximum
+Historical first pass: **14 tasks / 142 points before; 22 tasks / 140 points after**. Maximum
 task size falls from 13 to 8. Split estimates are made independently rather than
 forced to sum to the parent's estimate; the slight total change is estimation
 refinement, not a claim of reduced feature scope or guaranteed time savings.
@@ -205,11 +257,18 @@ from verification commands.
 
 ## Interfaces and fixed budgets
 
-The source design owns the exact public fields and semantics. Task 01 defines
-shared models; tasks 10/11 expose them through actual FastMCP discovery and
-invocation with OAuth metadata. Both tools use existing canonical selectors or
-bare stored references without a mandatory prior browse. Only the URL tool
-accepts `source_id` and `crop`. Private byte-transfer RPCs are not MCP tools.
+The source design owns exact public fields and semantics. Tasks 01/10/11 define
+and expose the base file/handle tools; M01/M02 add `browse_maps`/`get_map_info`,
+M03a adds the bounded note legend, and M05 extends image tools with explicit
+scene/level/role `map` selectors. Only the URL tool accepts `source_id`, `crop`,
+and opt-in `map_notes`. Private byte-transfer RPCs are not MCP tools.
+
+The intended map workflow is returned folder next calls → exact map/level/file
+metadata and grid → image info using `map` → URL using bound `source_id` with
+`map_notes:true` and optional crop → revision-bound, paginated key/UUID legend.
+Map browsing requires no active canvas or PF2e semantics. Raw image/portrait
+workflows retain their original behavior. A single background is explicitly
+distinct from foreground/Tile assets or a fully composed Scene.
 
 | Boundary | Required budget or lifetime | Owner |
 | --- | --- | --- |
@@ -221,6 +280,8 @@ accepts `source_id` and `crop`. Private byte-transfer RPCs are not MCP tools.
 | Preview worker | One render at a time; 1 GiB resident memory; 2 GiB private scratch; 90 seconds/render | 05b |
 | Public derivative | Exactly 604,800 seconds from publication; fresh UUIDv4 per issuance | 08, 09a |
 | Live derivative store | 1 GiB and 4,096 rows; prune expired records before rejecting issuance | 08 |
+| Map browsing/info/legend | 10 entries and 8,000 JSON bytes by default; 100 entries and 48,000 bytes max | M01–M03a |
+| Rendered note keys | 16-pixel final-output target; <=20-pixel outlined ink height; <=100 keys; <=5% label-box area | M04a–M04b |
 
 Keep quotas and clocks injectable for tests without weakening production
 defaults. Plain unauthenticated mode cannot issue links. Authenticated image
@@ -244,6 +305,13 @@ readable without a connected GM until their own expiry.
 | Discovery/payload baseline and comparable final measurements | 01, 12b, 14a | Bounded scripts, calls/bytes/completion, catalog delta |
 | Public/operator guidance and synchronized module upgrade instructions | 10–11, 13 | Examples, links, discovery prose, packaged checks |
 | Target ChatGPT reads pixels and controlled query comparison | 14b external gate | Only a demonstrated target-client result qualifies |
+| Scene folder hierarchy, duplicate names, correct ordering and inactive maps | M01 | Actual MCP, non-PF2e and live catalog checks in M06 |
+| Grid, dimensions, level background/foreground and Tile files | M02 | Screenshot-field fixtures, paginated assets and exact selector workflow in M06 |
+| Note UUID/journal/page identity, level applicability and revision-bound aliases | M03a | Bounded legend, denial/changed revision and key follow-up in M06 |
+| Verified padding/shift/size/orientation and annotation snapshot mapping | M03b | Independent geometry, mutation/isolation and supported-transform gates |
+| Bundled legible glyphs, safe markup, dense/edge layouts and byte retries | M04a–M04b | Glyph/pixel/coverage tests; service-user package in 13; visual review in M06 |
+| Strict map selectors/flag with backwards-compatible raw-image paths | M05 | Actual discovery/invocation, one-transfer repeated crops and immutable HTTP bytes |
+| Fresh folder-to-map-to-annotated-crop-to-journal workflow | M06, 14b | Bounded local evidence and separate target-client acceptance |
 
 Local completion requires all task implementations committed, required offline
 checks passing, and available local/package evidence recorded. Keep three facts

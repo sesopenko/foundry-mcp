@@ -21,6 +21,10 @@ store, issuance policy, and trusted origin interfaces from dependencies.
 
 ## Implementation and interfaces
 
+- Deliver base file/handle previews here. The source design's map selector,
+  `map_notes` flag, map-context revision checks and legend output are explicitly
+  deferred to [M05](m05-map-aware-image-tool-integration.md), which depends on
+  this complete base tool and the separately tested map renderer.
 - Register `get_foundry_image_url` through actual FastMCP with strict typed
   request/response validation and OAuth metadata. Require exactly one of
   canonical `image`, bare `src`, or `source_id`, plus optional `crop`.

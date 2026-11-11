@@ -6,7 +6,7 @@ Implement two production MCP tools in `sesopenko/foundry-mcp`. A GM should be ab
 
 ## Contract and example
 
-Add `get_foundry_image_info` and `get_foundry_image_url` to actual FastMCP discovery with strict typed inputs and outputs. Accept the existing canonical `image` selector (`source`, `directory`, optional `bucket`, exact `src`) or a single `src` taken from stored journal HTML or a portrait reference. Both work without a previous browse call. The URL tool also accepts `source_id` from the info tool. Require exactly one of those input forms. The URL tool alone accepts optional `crop`.
+Add `get_foundry_image_info` and `get_foundry_image_url` to actual FastMCP discovery with strict typed inputs and outputs. Accept the existing canonical `image` selector (`source`, `directory`, optional `bucket`, exact `src`), a single `src` taken from stored journal HTML or a portrait reference, or the scene-aware `map` selector described below. These work without a previous browse call. The URL tool also accepts `source_id` from the info tool. Require exactly one of those input forms. The URL tool alone accepts optional `crop` and `map_notes` (default false).
 
 | Tool | Required result |
 | --- | --- |
@@ -85,3 +85,154 @@ Add focused tests alongside each behavior, then run `./scripts/test.sh` using th
 - [ ] **Actual visual acceptance.** Use the existing authorized Foundry development world after offline tests pass. Give the target ChatGPT client a journal with an opaque map filename. Ask it to inspect a particular area and identify a randomized symbol, short label or color pair present only in the crop. The expected answer stays outside the prompt, caption, filename, alt text and tool result. Record whether the client called info, requested the correct rectangle, fetched the returned URL and answered correctly from pixels. In a separate controlled host comparison, try the exact link and its `?probe=1` variant with equivalent fresh context and record each observed outcome. An HTTP pass establishes server behavior. Mark ChatGPT visual acceptance passed only after the target client demonstrates it. If the client or public deployment is unavailable, leave that result pending with the exact prerequisite and verification prompt.
 
 - [ ] **Finish.** Update tool descriptions, schema and minimal journal/browse guidance so a fresh LLM can discover both paths. Document snapshot lifetime, seven-day expiry, limits, coordinates and concrete recovery for expired handles, unsupported files and invalid crops. Report tests and measured results, compact MCP sizes and remaining live checks. Work in the development checkout and existing test world. Publication, release and changes to live game assets are outside this handoff.
+
+## Map browsing and note-overlay extension — 2026-11-11
+
+This extension is part of the target design. Read the
+[research handoff](../plans/image-viewing/map-browsing-notes-research.md) after
+every context compression/resume as well as this entire prompt. Research facts
+and verification gaps remain distinct from the implementation requirements here.
+The [task index](../plans/image-viewing/README.md) owns the sized execution graph.
+
+### Browse maps and choose a file
+
+Add typed `browse_maps` and `get_map_info` tools to actual MCP discovery with
+OAuth metadata. Both are authenticated, ready-GM, read-only core Foundry tools;
+they do not require PF2e or an active/rendered Scene. Scope is world Scenes and
+Scene folders, including imported adventure Scenes. Unimported compendium Scene
+catalogs and reconstruction of the sidebar's DOM/prepared tree are excluded.
+
+- `browse_maps` accepts optional `folder_uuid` (null = root), `name_contains`
+  (default empty), `limit`, `max_bytes`, and `cursor`. Return immediate child
+  folders and maps, canonical UUIDs, names, named ancestry, sort context, and
+  concrete next calls. Build hierarchy from public folder parent/membership
+  fields. Preserve duplicate names and empty readable folders. Show all Scenes,
+  including those without a usable background, with explicit capability limits.
+  Matching is a literal case-insensitive substring of immediate child names,
+  not image contents or recursive server search. Folders precede maps; respect
+  alphabetical/manual folder sorting, with UUID as the deterministic final tie.
+- `get_map_info` requires `scene_uuid`, accepts optional `level_id`, and selects
+  `section: assets|tiles|notes` (default assets), plus bounds/cursor and optional
+  `expected_revision`. `notes` requires explicit `level_id`; it may filter up to
+  100 exact returned `note_keys`. Other sections reject note-only arguments.
+  Assets list every selected level, even missing-media levels, with separate
+  background/foreground role records. Tiles are a separate optional file
+  inventory, not an implicit part of a background image preview.
+- Return scene identity/ancestry, `geometry` (width, height, padding, shiftX/Y,
+  and public scene rectangle), complete `grid` fields (type, size, distance,
+  units, style, thickness, color, alpha), `initial_level_id`, selected section,
+  and paged `entries`. Preserve absent/null/zero fields without inventing grid
+  defaults or interpreting Scene dimensions as original file dimensions.
+- Asset records retain level identity, role, safe exact stored file reference,
+  media/support status, and info/preview next calls. Redact credential-bearing
+  or signed references and resolve them privately through the map selector.
+  Do not infer that a stored path exists: byte reading still uses fresh picker
+  membership and browser access. Identify foregrounds, videos, tiles, and missing
+  files explicitly. Do not promise fog, lights, tokens, walls, or full Scene
+  composition from a single image.
+- Both tools default to 10 entries and 8,000 compact JSON bytes; limits are
+  1–100 entries and 1,024–48,000 bytes. Return `revision`, `total`, `complete`,
+  `next_cursor`, `scope_status`, and `limitations`; browse additionally returns
+  `location` and named ancestry. Completion covers the selected page stream;
+  `scope_status: partial` cannot establish exhaustive availability. Denied data
+  must not leak names/paths. Fail explicitly if identity alone cannot fit.
+- Cursors bind world, caller/scope, selection/filter, and observed document/
+  permission revision. Return cursors verbatim with identical semantic inputs;
+  bounds may change. `ContentChanged`/expected-revision mismatch requires
+  discarding prior pages and restarting. The revision describes metadata, not
+  replacement bytes at an unchanged file path. Do not silently truncate levels,
+  tiles, note keys, names without markers, or hierarchy.
+- For a selected level, use the same map/note metadata revision across asset
+  and notes views and note-key filters; pagination bounds/filtering do not
+  renumber aliases or create an agreeing legend for a changed snapshot. Order
+  level entries by declared sort then UUID. Include exact scene/level identity
+  in every legend follow-up, not just its revision token.
+
+The new exclusive image input is
+`map:{scene_uuid,level_id,role:background|foreground}`. Explicit level IDs come
+from map info; never silently substitute the viewed/active level. Info stages
+the selected file through the existing resolver/transfer/probe and binds map
+context to its source handle. URL accepts this selector directly or a bound
+`source_id`. Existing `image`, `src`, and unbound handles retain their original
+behavior. Annotating a bare file without map context returns `MapContextRequired`
+with a map-discovery recovery call. A map reference never bypasses authorization,
+source validation, transfer limits, or snapshot isolation.
+
+### Render compact note identifiers
+
+`get_foundry_image_url(..., map_notes=true)` is opt-in. V1 annotates supported
+background-image mappings. Foregrounds remain fetchable without annotations;
+tile-only/composited maps and unverified transforms return
+`UnsupportedMapMapping` for annotation requests. Preserve ordinary previews.
+
+- Use public NoteDocument coordinates/label/entry/page and verified per-level
+  applicability. Read no journal bodies. Verify empty/null level membership and
+  transform semantics through official contracts plus focused runtime checks;
+  never depend on protected tooltip styling or internal mesh transforms. For
+  unsupported/unclear configurations, fail clearly rather than guess positions.
+- Assign N1, N2, ... by canonical Note UUID order within the complete authorized
+  level snapshot, before crop filtering. Keep aliases stable across repeated
+  crops of the same snapshot, retain distinct pins linking the same journal,
+  and map keys to full Note/journal/page UUIDs through the bounded notes section.
+  Missing/unlinked targets are explicit, not permission to read denied labels.
+- Pin annotation identity/revision, note aliases, and the verified coordinate
+  mapping with map-bound original snapshots. Recheck scene/level/asset membership,
+  permission, and mapping/note revision before new annotated issuance. A change
+  returns `MapContextChanged` and fresh-info recovery. An unchanged source path
+  still refers to the handle's pinned original bytes. Issued links remain
+  immutable and readable for their independent seven-day lifetime.
+- Convert Scene coordinates using `getDimensions()` and verified inverse image
+  placement before crop coordinates. Account for grid-rounded padding and shift,
+  source-vs-Scene size, display orientation, and supported level transforms.
+  For the measured normal rectangle: source_x = (note_x-sceneX) ×
+  original_width/sceneWidth, with the analogous Y rule. Crop/output conversion
+  then uses the existing region contract; reject guessed transforms.
+- Render generated ASCII keys only using a bundled fixed font, targeting **16
+  pixels at final output resolution**, white fill with a 1-pixel dark outline.
+  No journal body, full raw UUID, or arbitrary Pango markup is rendered. Measure
+  actual font output; cap ink height including outline at 20 output pixels.
+  Keep source originals unchanged. Recompose labels at final size on every
+  encoding/reduction attempt under the existing 90-second and byte budgets.
+- Use deterministic placements around the pin (NE, NW, SE, SW, E, W, N, S), with
+  4-pixel gaps and leader marks to preserve location. Include outline/leader/pin
+  extents in bounds and collision checks; never wrap or cut a key at image edges.
+  Do not move a key to another room without its leader. Require disjoint label
+  boxes and cap their aggregate box area at **5% of delivered image area**.
+  Render at most **100** keys per image. These conservative defaults bound
+  obstruction; they do not prove that every map feature stays unobscured.
+  Process keys by numeric alias ordinal (N1, N2, ...), not lexical N1/N10/N2.
+- Select notes whose pin centers lie inside the source crop. If no valid
+  placement fits, omit that key with an explicit reason (density, collision,
+  edge, or tiny image) and recommend a tighter/detail crop. Never shrink keys
+  below the fixed legibility target to hide a crowded-layout failure.
+- When enabled, add a typed `map_notes` result containing map identity,
+  `revision`, `total_in_region`, `rendered_count`, `omitted_count`, `complete`,
+  rendered `keys` (at most 100), `omission_reasons`, `scope_status`, `limitations`,
+  and `legend_next_call`.
+  The follow-up is `get_map_info(section=notes, expected_revision=..., note_keys=...)`
+  for the rendered keys; paginate it to completion. Zero rendered keys uses a
+  null follow-up. `complete` means every applicable in-region pin was rendered,
+  independent of legend pagination. `scope_status`/limitations must separately
+  expose unsupported or denied note content. Omit this result section when the
+  flag is false; a true flag with no notes returns explicit zero counts.
+
+### Additional acceptance
+
+Cover folder hierarchy/duplicate names/manual ordering, all grid values in the
+user screenshots, multiple levels, missing/video/background/foreground/Tile
+references, unchanged active Scene during browsing, and non-PF2e worlds. Test
+actual MCP discovery/calls, pagination/budgets, stale revisions, forged map
+selectors, permission isolation, and reuse of one transfer for annotated crops.
+Verify padding/shift/size/orientation with independent pixel oracles; treat
+unverified transforms and level applicability as explicit implementation gates.
+Exercise label font metrics, dark/light maps, edges, one-pixel crops, dense pins,
+alias/legend identity, byte-budget retries, and honest omission reporting.
+
+Measure map catalog and complete legend workflows alongside existing payload
+baselines. Test the bundled font and annotations as UID 10001 in the shipped
+image. Reuse the existing local world and marked fixtures after offline tests.
+Target-client acceptance must demonstrate browsing a map, choosing its correct
+level file, fetching an annotated crop, and following a rendered key to its
+journal/page. Retain the separate hidden-pixel-answer test; do not put its answer
+in labels, captions, filenames, legends, or tool results. Leave unavailable
+public-host/client acceptance precisely pending rather than claim it passed.

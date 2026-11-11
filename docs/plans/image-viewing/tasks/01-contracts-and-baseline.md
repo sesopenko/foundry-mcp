@@ -20,6 +20,11 @@ ImageSelector validation, worker lifecycle, browser resolver, and socket guard.
 
 ## Implementation and interfaces
 
+- This task establishes the original image/src/source_id base contracts.
+  [M05](m05-map-aware-image-tool-integration.md) later adds the source design's
+  map-selector/annotation extension with its own strict schemas and tests; map
+  discovery/detail models belong to M01/M02. Do not fold that work into this
+  task's estimate or publish placeholders for it.
 - Add preview-specific strict Pydantic request/response models in a new
   `foundry_mcp_server/mcp_server/image_preview_models.py`. Reuse ImageSelector;
   forbid extra fields and avoid changing unrelated model behavior.

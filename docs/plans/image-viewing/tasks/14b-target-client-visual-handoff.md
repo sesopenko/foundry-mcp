@@ -1,10 +1,11 @@
 # 14b — Target-client visual handoff
 
-Points: **3** — a bounded handoff/reporting addition using existing tested fixtures.
+Points: **5** — journal and map-browsing handoffs with separate pixel/key evidence.
+Re-estimated from 3 after adding map selection and annotation/legend acceptance.
 Split from original task 14, estimated at 13 points. External availability is
 recorded as a prerequisite rather than estimated as agent implementation effort.
 
-Dependencies: [14a](14a-local-runtime-acceptance.md).
+Dependencies: [M06](m06-map-workflow-verification.md).
 Intended commit: `test(images): prepare private-answer ChatGPT visual acceptance`.
 
 ## Context recovery and reading
@@ -15,8 +16,9 @@ in full the [assignment snapshot](../../../prompts/foundry-image-viewing-task-br
 [plan index](../README.md), and this task. Reconcile dependency commits and test
 evidence. Follow the index's execution and commit protocol.
 
-Read source-design visual acceptance and 14a's harness/results. Reuse its bounded
-fixture setup, redaction, and cleanup; do not implement another live harness.
+Read source-design visual acceptance, [map research](../map-browsing-notes-research.md),
+and M06/14a harness results. Reuse their bounded fixture setup, redaction, and
+cleanup; do not implement another live harness.
 
 ## Implementation and unit tests
 
@@ -28,6 +30,11 @@ fixture setup, redaction, and cleanup; do not implement another live harness.
   redacted report fields, pending versus demonstrated pass, equivalent exact-link
   and query-variant trials, and cleanup delegation. Use deterministic fixtures;
   these tests do not prove ChatGPT can read pixels.
+- Add a separate map-browsing prompt and unit assertions: choose an exact folder/
+  map/level using only discovered next calls, request `map_notes=true`, identify
+  a rendered key and follow the revision-bound legend to the right journal/page.
+  Test prompt/report construction, omission visibility and separate pending/pass
+  states. Do not count a legend lookup as proof of reading hidden map pixels.
 
 Run outside the sandbox:
 
@@ -69,6 +76,15 @@ evidence. Report all task commit SHAs, verification results, exact gaps, and
 cleanup outcome. Implementation completion, local verification, and demonstrated
 visual acceptance remain distinct. No release, publication, push, or tag.
 
+In a separate fresh target-client context, run M06's folder-to-annotated-crop
+scenario. Supply the desired map's name and named folder ancestry, not its
+preselected file or source handle. Observe actual map browsing, level/file
+selection, annotated image fetch, rendered key identification, and journal/page
+follow-up. Record complete/partial annotation and whether placement obscures
+relevant features. Keep the hidden answer from the original pixel test absent
+from every note label, caption, legend, filename and tool result. Both scenarios
+retain explicit pending status when client/public HTTPS prerequisites are absent.
+
 ## Completion record
 
 - Implementation: not started.
@@ -77,4 +93,5 @@ visual acceptance remain distinct. No release, publication, push, or tag.
 - Focused/full handoff tests: not run.
 - Target-client prerequisites and ready-to-use prompt: pending.
 - Observed visual workflow and exact/query controlled comparison: pending.
+- Map browsing/annotated-key/legend target-client scenario: pending.
 - Cleanup and final redacted evidence: pending.

@@ -21,6 +21,9 @@ Consume 04b's authenticated staging/handle service and 05b's supervised real pro
 
 ## Implementation and interfaces
 
+- Deliver the base image/src tool in this checkpoint. The later map input and
+  context-binding changes are [M05](m05-map-aware-image-tool-integration.md)'s
+  independently tested work; task 10's small wiring estimate excludes them.
 - Add `get_foundry_image_info` with task 01's strict typed inputs and output,
   registering through the existing tools import boundary. Use actual FastMCP
   validation in both directions; do not return unchecked browser/worker payloads.

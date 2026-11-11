@@ -2,7 +2,7 @@
 
 Points: **8** — final service-user image checks, persistence, and deployment examples.
 
-Dependencies: [11](11-image-url-mcp-tool.md).
+Dependencies: [M05](m05-map-aware-image-tool-integration.md).
 Intended commit: `build(images): verify packaged previews and persistent deployment storage`.
 
 ## Context recovery and reading
@@ -16,12 +16,14 @@ evidence. Follow the index's execution and commit protocol.
 Read current Dockerfile, deployment Compose and environment examples,
 [operations](../../../operations.md), [Docker Hub overview](../../../docker-repository-overview.md),
 and existing packaging tests. Tasks 05a–05b and 07a–07b supply dependency/codec
-implementation; this task verifies the complete production artifact and setup.
+implementation; M04a adds verified packaged fonts. This task verifies the
+complete production artifact and setup after all map/image inputs are wired.
 
 ## Implementation and interfaces
 
 - Complete final production-image packaging for pinned pyvips/libvips and every
-  advertised loader, including safe SVG rasterization. Test as service UID
+  advertised loader, including safe SVG rasterization and the bundled map-note
+  font/Pango support. Test a real annotated crop and font metrics as service UID
   10001 with no source mount or host-native decoder dependency. Preserve locked
   unrelated dependencies, existing upload behavior, build identities, and
   current release version; do not bump, tag, push, or publish.
@@ -40,6 +42,12 @@ implementation; this task verifies the complete production artifact and setup.
   30-minute snapshots, resource/format limits, crop coordinates/recovery, and
   simultaneous server/module upgrade plus browser refresh. Show generic hosts
   and placeholders only. Do not misstate pending target-client acceptance.
+- Include folder-to-map browsing, duplicate-name ancestry, level/background/
+  foreground/Tile inventory, grid/file versus original-image dimensions, the
+  map selector, `map_notes` defaults, compact keys and bounded legend follow-ups,
+  mapping support limits, and honest dense-layout omissions. M04a already owns
+  font implementation/packaged glyph tests; M06 owns complete live map workflow
+  acceptance. Keep this task focused on final artifact/configuration integration.
 - Document direct uncached proxy routing for `/image-previews/`, no redirects
   or authentication added to that route, and suppression/redaction of capability
   paths/query strings in proxy access/error logs. Preserve protection of MCP,
@@ -55,7 +63,8 @@ implementation; this task verifies the complete production artifact and setup.
 Add `tests/test_image_preview_packaging.py` to check packaging/configuration
 contracts and example consistency, with real packaged behavior covered by a
 bounded container smoke harness. Verify every codec and an unsafe SVG rejection
-inside the shipped image as UID 10001, private permissions, successful writes,
+inside the shipped image as UID 10001, deterministic font/annotated output,
+private permissions, successful writes,
 restart persistence, missing-origin behavior, malformed origin/data-directory
 configuration, and unprivileged health. Verify named-volume examples using
 Compose config validation with placeholders, not private environment values.
