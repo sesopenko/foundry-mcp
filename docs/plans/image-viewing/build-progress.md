@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M03a, [note identities and legend](tasks/m03a-map-note-identities-and-legend.md).
+- Current task: M03b, [coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md).
 - Stage: commit.
-- Last completed task: M02, commit `af58e0d`.
+- Last completed task: M03a, commit `26bb4e6`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified M03a with required hook, then read M03b and establish independent mapping/context evidence. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified M03b with required hook, then read M04a and establish bundled-font/text baselines. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -31,6 +31,7 @@
 |12b large maps/payloads |5bae8bb |899 Python (1 existing skip)/750JS full passed; hook passed both |
 |M01 map browsing |e9ea43e |912 Python (1 existing skip)/761JS full passed; hook passed both |
 |M02 grid/image files |af58e0d |928 Python (1 existing skip)/777JS full passed; hook passed both after final declarations/test |
+|M03a note identities |26bb4e6 |942 Python (1 existing skip)/783JS full and hook passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -863,3 +864,87 @@ the linked evidence pages; Git history retains prior milestone records.
   entry point and dynamic MCP registry; exact RPC searches and Node/mock usages
   updated. Final diff/whitespace and commit hook next; no active failure or
   unsuccessful correction attempt. Geometry/overlays remain separate tasks.
+- Commit26bb4e6 completed after both hook suites passed; clean worktree before
+  next-task checkpoint. No publication or uncleaned persisted game fixture.
+
+## CurrentM03b checkpoint
+
+- Dependencies M03a26bb4e6/06a49e8aaf committed;22/30 tasks,142/200 points
+  (71%) complete. Current task read fully. Source snapshots currently pin only
+  original bytes/principal/browser context; M05 attaches map state, so this task
+  defines immutable private geometry/context/revalidation helpers first.
+- Grounded Docs official LevelData/LevelTexture/TextureData and SceneDimensions/
+  public getDimensions revisited. Level page incorrectly says BaseTile in prose,
+  but hierarchy shows BaseLevel. Do not infer arbitrary image transforms from
+  mesh/private configuration or field-name intuition.
+- Installed14.369 public getDimensions implementation corroborates sceneX/Y
+  already subtract Scene shiftX/Y after grid padding calculation; production
+  must consume its returned rectangle and never apply shift twice.
+- Investigate public DataField getInitialValue(source)/clean and declared
+  Level.textures source schema defaults to establish a default-placement subset
+  without adopting undocumented individual texture properties just for guards.
+  No M03b source implementation or new runtime probe yet. Next freeze supported
+  mapping/immutable alias-witness/candidate interface with independent tests.
+- Added baseline helper/tests2 pass. Actual2 calls/120s:47 tools/314317B,
+  all50 Level.textures values match public schema cleaned defaults. Public
+  unpersisted Scene constructors confirm normal6800x9000 origin1800/2400,
+  shift120/-80 moves origin1680/2480, smaller3400x4500 origin1000/1200.
+  Active Scene/collection unchanged,0 persisted fixtures. All initial/cleaned
+  values are objects; no arbitrary texture-field detection is required.
+- Saved map-context.md before implementation: default whole-schema placement
+  subset on14.369, private reference/canonical-source+revision/alias proofs,
+  frozen source-bound context and crop-filtered bounded candidate RPCs. M05
+  owns cache attachment/public selectors; no public image signature change here.
+- Pure Python mapping4/baseline2 and JS geometry4/notes6 pass. Added private
+  context/crop-candidate readers, frozen Python resolution/source-bound records,
+  revalidation coordinator and private typed DTOs; no public image API changes.
+- Initial private JS6 failed because new external fixture omitted documented
+  FilePicker.implementation wrapper used by existing resolver. Corrected the
+  fixture to the established public API shape, not production behavior; unchanged
+  tests now verifying. Source/reference mutation, typed unsupported placement,
+  exact crop/frame bounds and async final-hash mutation are covered.
+- Next add SourceSnapshots/real-byte/native-orientation context tests, validate
+  private protocol/schema/error behavior, run full/package/runtime checks and
+  commit M03b. Current stage implementation; no production defect/fix attempts.
+- JS private geometry/context16 passed after fixture correction. Python context
+  initial13:12 pass, changed bound asset reference to a missing new file returns
+  ImageNotFound instead of MapContextChanged. Failing unit proves resolver runs
+  before original reference comparison on ordinary revalidation. Add pinned
+  expected_reference_digest to private request and compare before picker lookup;
+  same unchanged unit rerunning. No unsuccessful correction attempts.
+- Existing SourceSnapshots/actual file tests cover one-transfer crop reuse,
+  caller/socket/expiry rejection before metadata reads, unchanged-path replacement
+  bytes,150-pin limit reporting and N101 detail aliases. Native independent Pillow
+  oracle plus real worker probes/crops pass all8 display orientations. No public
+  image signature, game assets or persisted fixture changes.
+- Expected-reference guard fixes the unchanged bound-asset test; Python13 pass
+  6.570s. JS17 passes including before-picker expected-reference rejection.
+- Two further focused failures proved: empty crop{} wrongly selected full image
+  via truthiness fallback, and malformed private cursor escaped as raw binascii
+  error. Use None-only default and fixed InvalidFoundryResponse cursor boundary;
+  same unchanged tests now rerun with full context/regression suites. Both first
+  corrections, unsuccessful count0. Added forged pose and actual2000-byte frame
+  reply checks; no arbitrary payload-limit increase or weakened assertion.
+- Same regressions pass; context17 passed9.246s, private JS17 passed. First full
+  runner959 Python (1 existing skip)/794 JS passed. Native eight-orientation
+  pixels and actual2000-byte browser replies are included in these tests.
+- Added a bounded6-call/600s native verifier using authenticated development
+  RPC + real module dispatch, public assets follow-up and existing source-info
+  staging/probe. It measures context/region geometry against actual decoded
+  dimensions and a one-pixel detail without publishing private context or URLs.
+  Source-cache attachment to public map image inputs remains M05 by design.
+  Verifier unit assertions/final native refresh/readiness execution next.
+- Final focused context21 passes11.904s; JS geometry/context11+notes6 passes17.
+  Direct final full961 Python (1 existing skip)/794 JS passes; two subsequent
+  moved/missing/denied/renumbered-note and duplicate-path/changed-socket cases
+  pass in focused21, and final commit hook will check both full suites.
+- Actual native verifier6 calls/600s passes real6800x9000 source4405816B,25
+  candidates, independently mapped coordinates and one-pixel detail same alias.
+  Context1034B/candidates4298B/detail1357B handler-result sizes, not direct live
+  private GM frame measurements. Catalog unchanged47/314317B; browser readyGM
+  14.369/test/console0, active Scene unchanged. Module packaging3.3.1 passes.
+- Native info staged one normal private original retained for1800s by SourceRuntime;
+  no game fixtures/assets/public URLs or extra instances. M05 owns actual public
+  map-source attachment; no foundation stub/tool signature change here. Final
+  support matrix and evidence in map-context.md; diff/commit next, no active
+  failure or unsuccessful correction attempts.

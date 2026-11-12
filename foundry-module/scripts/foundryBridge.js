@@ -14,6 +14,7 @@ import {getJournalAuthoringOptions} from './journalAuthoringOptions.js';
 import {browseJournalImages} from './journalImages.js';
 import {browseMaps} from './mapBrowse.js';
 import {getMapInfo} from './mapInfo.js';
+import {getMapImageContext,getMapRegionCandidates} from './mapContext.js';
 import {prepareImageUpload, createImageDirectory, uploadImage} from './imageUploads.js';
 import {previewTransfers, getImagePreviewContext, validateImagePreviewSource, beginImagePreviewTransfer, readImagePreviewChunk, releaseImagePreviewTransfer} from './imagePreviewTransfer.js';
 import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
@@ -36,6 +37,7 @@ const RECONNECT_BACKOFF_FACTOR = 2;
 let currentSocket = null;
 const directPreviewOwner = Object.freeze({});
 const previewMethods = ['getImagePreviewContext','validateImagePreviewSource','beginImagePreviewTransfer','readImagePreviewChunk','releaseImagePreviewTransfer'];
+const mapContextMethods=['getMapImageContext','getMapRegionCandidates'];
 let clearCurrentAuthTimer = null;
 let reconnectAttempts = 0;
 let reconnectTimeoutId = null;
@@ -77,6 +79,8 @@ const rpcHandlers = {
   browseJournalImages,
   browseMaps,
   getMapInfo,
+  getMapImageContext,
+  getMapRegionCandidates,
   prepareImageUpload,
   createImageDirectory,
   uploadImage,
@@ -190,7 +194,7 @@ export async function handleRpcMessage(message, isCurrent = () => true, rpcOwner
   try {
     const result = previewMethods.includes(method)
       ? await handler(params ?? {}, isCurrent, {owner:rpcOwner,rpc_id:id})
-      : ['prepareImageUpload', 'createImageDirectory', 'uploadImage','browseMaps','getMapInfo'].includes(method)
+      : [...mapContextMethods,'prepareImageUpload', 'createImageDirectory', 'uploadImage','browseMaps','getMapInfo'].includes(method)
       ? await handler(params ?? {}, isCurrent) : await handler(params ?? {});
     return { id, result };
   } catch (err) {
@@ -199,6 +203,8 @@ export async function handleRpcMessage(message, isCurrent = () => true, rpcOwner
       id,
       error: err?.rpcError || (previewMethods.includes(method)
         ? {type:'ImageTransferFailed',code:'ImageTransferFailed',message:'Private transfer failed; begin a fresh transfer.'}
+        : mapContextMethods.includes(method)
+        ? {type:'MapContextReadFailed',code:'MapContextReadFailed',message:'Private map context failed; refresh map/image info.'}
         : { type: "RpcError", message: err?.message || "RPC handler failed" }),
     };
   }

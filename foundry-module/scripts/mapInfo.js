@@ -131,6 +131,10 @@ function snapshot(scene_uuid){
       foreground_references:assetRows.filter(r=>!['missing','null','empty'].includes(r.foreground.reference_status)).length}};
 }
 
+// Private project API for map image context; never exposed directly as MCP data.
+export {snapshot as readMapSnapshot};
+export const selectedMapRevision=(owner,data,level_id)=>mapHash([owner,data,level_id]);
+
 /** Exact Scene/optional level metadata; caller_key is injected by authenticated Python. */
 export async function getMapInfo(params={},isCurrent=()=>true){
   const allowed=['scene_uuid','level_id','section','note_keys','expected_revision','limit','max_bytes','cursor','caller_key'];
@@ -150,7 +154,7 @@ export async function getMapInfo(params={},isCurrent=()=>true){
     if(data.unavailable[0].includes(level_id))fail('PermissionDenied','Selected level is unavailable; choose a readable level.');
     fail('LevelNotFound','Level does not belong to this Scene; use get_map_info assets without level_id.');
   }
-  const revision=await mapHash([owner,data,level_id]),scope=await mapHash([owner,caller_key,scene_uuid,level_id,section,note_keys===null?null:[...note_keys].sort()]);
+  const revision=await selectedMapRevision(owner,data,level_id),scope=await mapHash([owner,caller_key,scene_uuid,level_id,section,note_keys===null?null:[...note_keys].sort()]);
   if(JSON.stringify(mapContext(isCurrent))!==JSON.stringify(owner)||JSON.stringify(snapshot(scene_uuid))!==JSON.stringify(data))fail('ContentChanged','Map metadata or permissions changed; restart get_map_info.');
   if(expected_revision!==null&&expected_revision!==revision)fail('ContentChanged','Expected map revision changed; discard prior pages and restart.');
   let entries=section==='assets'?data.assets.filter(l=>level_id===null||l.level_id===level_id)

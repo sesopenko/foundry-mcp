@@ -71,8 +71,26 @@ runtime evidence remains a precise gap; it is not verified map support.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, independent geometry cases: not run.
-- Supported transform matrix, official evidence and live gaps: pending.
+- Implementation: complete; [private contract/support matrix/evidence](../map-context.md).
+- Dependency commit SHA(s): M03a `26bb4e6`,06a `49e8aaf`.
+- Commit: this commit.
+- Focused context21 pass11.904s, private geometry/notes JS17 pass. Full
+  `./scripts/test.sh` passes961 Python (1 existing skip)/794 JS before two final
+  context-mutation tests; required commit hook checks the final staged revision.
+  Native independent pixel oracles cover all8 display orientations. Actual
+  SourceSnapshots and production Node dispatch cover identity/expiry, one-transfer
+  crops, replacement bytes, stale mappings/aliases and2000-byte private frames.
+- Baseline2 calls: all50 Level textures match public cleaned defaults; normal,
+  shifted and differently sized public Scene instances corroborate rectangles,
+  with unchanged active Scene/collection and0 persisted fixtures.
+- Native verifier6 calls under600s passes actual6800×9000/4405816B source probe,
+  25 region candidates and one-pixel detail alias preservation. Module dispatch
+  context1034B/full candidates4298B/detail1357B; these are handler-result bytes,
+  not a claim of direct private live GM frame measurements. Browser readyGM
+  14.369/test,console0; module ZIP packaging passes.
+- Verified mapping:14.369 default whole-schema background placement, public
+  rectangle padding/shift and source-size/display-axis conversion. Arbitrary
+  nondefault transforms, other builds and foreground annotation explicitly fail;
+  ordinary image access remains available. Public image-tool map inputs and
+  source-cache attachment remain M05's integration responsibility. Live S3 and
+  external target-client prerequisites retain later gates.

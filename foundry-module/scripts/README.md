@@ -15,6 +15,10 @@ aliases through public includedInLevel and linked-target permissions. The same
 selected-level revision governs assets, bounded legends and private candidates;
 no journal bodies or pixel overlays are produced. See
 [map note identities](../../docs/plans/image-viewing/map-note-identities.md).
+`mapContext.js` and pure `mapGeometry.js` provide private default-background
+context/crop candidates with verified rectangle conversion and immutable Python
+source binding. Public image-tool integration is a separate step; see
+[map context support](../../docs/plans/image-viewing/map-context.md).
 
 `imageUploads.js` implements User Data directory creation and image upload through
 public core14 FilePicker APIs. `journalImages.js` exposes directory capabilities.
