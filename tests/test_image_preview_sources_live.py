@@ -17,12 +17,13 @@ class SourceProbeTests(unittest.IsolatedAsyncioTestCase):
         data = {'version': '14.369', 'secret': 'signed URL', 'rows': {
             'canonical': {'passed': True, 'secret': 'native path'},
             'bare': {'passed': False, 'error_code': 'BrowseFailed'},
-            'absolute': {'passed': True}, 'fetch': {'passed': True}}}
+            'absolute': {'passed': True}, 'fetch': {'passed': True}, 'transfer': {'passed': True}}}
         client.call_tool.return_value = SimpleNamespace(structured_content={'value': json.dumps(data)})
         report = await probe.verify(client)
         self.assertFalse(report['passed'])
         self.assertEqual(report['rows']['bare']['error_code'], 'BrowseFailed')
         self.assertNotIn('secret', json.dumps(report))
+        self.assertEqual(report['metrics'], {})
         client.call_tool.assert_awaited_once_with('execute_javascript', {'code': probe.CODE})
         self.assertIn("location.origin!=='http://localhost:30000'", probe.CODE)
         self.assertIn("game.world.id!=='test'", probe.CODE)

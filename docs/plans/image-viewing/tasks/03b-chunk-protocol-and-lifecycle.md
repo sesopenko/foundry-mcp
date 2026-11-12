@@ -59,8 +59,16 @@ the development-loop skill when available. Commit RPCs, tests, and wire docs.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, frame/window measurements: not run.
-- Browser evidence and exact pending prerequisites: pending.
+- Implementation: complete; three private RPCs, no MCP tools, exact-socket cleanup.
+- Dependency commit SHA(s):03a `e4121a4`.
+- Commit: this commit.
+- Focused:37 JavaScript transfer/fetch/auth/bridge/main tests passed; Python
+  packaging3 and probe-privacy1 passed outside sandbox. Final `./scripts/test.sh`
+  passed710 Python tests (1existing skip) and748 JavaScript tests.
+- Wire/frame/window and diagnosis evidence: [protocol](../transfer-protocol.md).
+- Live browser dispatch: refreshed ready14.369 test-world GM, zero console errors;
+ 5 reverse-order chunks, maximum534-byte envelope under1,024-byte ceiling,
+  identical reconstructed digest, release verified. Browser-only probe summary
+  crossed MCP; actual Python socket assembly remains04a/integration work.
+- Pending external prerequisite: configured browser-readable S3 bucket/CORS;
+  public HTTPS/target-client visual acceptance remains downstream. No mutations.

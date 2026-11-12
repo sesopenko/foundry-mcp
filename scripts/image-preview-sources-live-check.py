@@ -2,7 +2,8 @@
 
 At most two tool calls/60 seconds. No fixtures, bytes fetched or game mutations.
 Prints booleans/fixed error categories only. Run after offline checks and refresh.
-Also verifies a real private source fetch/copy/release through the03a service.
+Also verifies a real private source fetch/copy/release through the03a service
+and bounded multichunk dispatch entirely inside the browser (no bytes via MCP).
 """
 import asyncio
 import json
@@ -21,17 +22,38 @@ for(const [name,args] of [['canonical',{image}],['bare',{src:image.src}],['absol
   catch(error){const code=error.rpcError?.code;rows[name]={passed:false,error_code:['BrowseFailed','ImageNotFound','InvalidRequest','ContextChanged','UnsupportedSource','AmbiguousSource'].includes(code)?code:'ProbeFailed'};}
 }
 const {previewSourceFetch}=await import(foundry.utils.getRoute('modules/foundry-mcp/scripts/imagePreviewFetch.js'));
-let lease;
+let lease, expectedDigest;
 try{
   lease=await previewSourceFetch.begin({image});
   const first=await lease.read(0,Math.min(lease.size_bytes,32768)), original=first[0];
   first[0]^=255;
   const second=await lease.read(0,1);
   rows.fetch={passed:lease.size_bytes>0&&lease.size_bytes<=134217728&&second[0]===original};
+  first[0]=original;
+  if(first.length===lease.size_bytes)expectedDigest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',first))).join(',');
 }catch(error){const code=error.rpcError?.code;rows.fetch={passed:false,error_code:['ImageUnavailable','ImageTooLarge','ImageReadTimeout','IncompleteTransfer','TransferTimeout'].includes(code)?code:'ProbeFailed'};}
 finally{lease?.release();}
 rows.fetch.passed=rows.fetch.passed&&!previewSourceFetch.busy;
-return JSON.stringify({version:game.version,rows});
+const {handleRpcMessage}=await import(foundry.utils.getRoute('modules/foundry-mcp/scripts/foundryBridge.js'));
+let transfer, chunkCount=0, maxFrame=0;
+const rpc=async(method,params)=>{
+  const response=await handleRpcMessage({id:crypto.randomUUID(),method,params});
+  maxFrame=Math.max(maxFrame,new TextEncoder().encode(JSON.stringify(response)).length);
+  if(response.error)throw Error('Private dispatch failed');return response.result;
+};
+try{
+  transfer=await rpc('beginImagePreviewTransfer',{image,max_frame_bytes:1024});
+  const output=new Uint8Array(transfer.size_bytes);
+  for(let index=transfer.chunk_count-1;index>=0;index--){
+    const offset=index*transfer.chunk_bytes,length=Math.min(transfer.chunk_bytes,transfer.size_bytes-offset);
+    const part=await rpc('readImagePreviewChunk',{transfer_id:transfer.transfer_id,index,offset,length});
+    output.set(Uint8Array.from(atob(part.data_base64),c=>c.charCodeAt(0)),offset);chunkCount++;
+  }
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',output))).join(',');
+  rows.transfer={passed:chunkCount>1&&maxFrame<=1024&&digest===expectedDigest};
+}catch{rows.transfer={passed:false,error_code:'ProbeFailed'};}
+finally{if(transfer)await rpc('releaseImagePreviewTransfer',{transfer_id:transfer.transfer_id});}
+return JSON.stringify({version:game.version,rows,metrics:{chunks:chunkCount,max_frame_bytes:maxFrame}});
 """
 
 
@@ -43,8 +65,11 @@ async def verify(client):
         **({'error_code': data['rows'][name]['error_code']} if data['rows'][name].get('error_code') in
             ('BrowseFailed','ImageNotFound','InvalidRequest','ContextChanged','UnsupportedSource','AmbiguousSource','ProbeFailed',
              'ImageUnavailable','ImageTooLarge','ImageReadTimeout','IncompleteTransfer','TransferTimeout') else {})}
-        for name in ('canonical','bare','absolute','fetch')}
-    return {'passed': all(row['passed'] for row in rows.values()), 'calls': 1, 'rows': rows}
+        for name in ('canonical','bare','absolute','fetch','transfer')}
+    metrics = data.get('metrics', {})
+    bounded = {key: value for key in ('chunks', 'max_frame_bytes')
+        if type(value := metrics.get(key)) is int and 0 <= value <= 134217728}
+    return {'passed': all(row['passed'] for row in rows.values()), 'calls': 1, 'rows': rows, 'metrics': bounded}
 
 
 async def main():

@@ -32,6 +32,7 @@ class PackagingTests(unittest.TestCase):
             self.assertIn('module.json', archive.namelist())
             self.assertIn('scripts/connectionConfig.js', archive.namelist())
             self.assertIn('scripts/imagePreviewFetch.js', archive.namelist())
+            self.assertIn('scripts/imagePreviewTransfer.js', archive.namelist())
             self.assertEqual(archive.read('module.json'), (output / 'module.json').read_bytes())
             self.assertFalse(any('private' in n or '.env' in n or n.endswith('.map') for n in archive.namelist()))
             self.assertIn('LICENSE.txt', archive.namelist())

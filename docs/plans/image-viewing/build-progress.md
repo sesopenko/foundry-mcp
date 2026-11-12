@@ -1,8 +1,8 @@
 # Image viewing build progress
 
-- Current task: 03a, [bounded browser source fetch](tasks/03a-browser-source-fetch.md).
+- Current task: 03b, [browser chunk protocol and lifecycle](tasks/03b-chunk-protocol-and-lifecycle.md).
 - Stage: commit.
-- Last completed task/commit: 02, `141ede6`; 01 is `b0cc01e`. Baseline checkout: `2cd3d88`.
+- Last completed task/commit: 03a, `e4121a4`; 02 is `141ede6`, 01 is `b0cc01e`. Baseline checkout: `2cd3d88`.
 - Assignment preserved in [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
 - Persistent goal: active; environment objective points to the attachment containing the complete persistent goal, read at kickoff.
 - Baseline checks outside sandbox: `.venv/bin/python -m unittest discover -s tests -p 'test_journal_images.py' -v` passed 4 tests; `node --test tests/js/journal-images.test.js` passed 6 tests.
@@ -23,4 +23,10 @@
 - Task03a diagnoses: ZIP regression failed before allowlist entry, unchanged test passed after entry. HTTP content-encoding regression failed before distinguishing encoded wire length from fetch-exposed file bytes, unchanged test passed after correction. First full run overlapped failing regression addition and reported1 JS failure; final full run pending. Unsuccessful correction counts0.
 - Task03a runtime: dedicated refresh/readiness/console check passed; one MCP development invocation passed real SVG streaming, returned-copy mutation isolation, release/empty slot. No fixture or mutation. Details/private lease contract in source-fetch.md.
 - Final03a `./scripts/test.sh` passed710 Python tests (1existing skip) and739 JavaScript tests.
-- Next action: inspect/stage/commit03a, then start03b wire protocol. No transfer RPC registration until03b.
+- Task03a hook passed710 Python (1existing skip)/739 JS.
+- Task03b implementation: private begin/read/release with exact socket owner, indexed offsets/lengths,32KiB raw ceiling,16 in-flight,5-minute lifetime, automatic full-coverage cleanup, immutable fetch lease and packaged module.
+- Task03b diagnoses: unchanged regression failed for late lease cleanup after early close, passed after cleanup correction. Another unchanged regression failed because malformed identified commands skipped cleanup, passed after moving them into owner-specific cleanup. Unsuccessful correction counts0. Details in transfer-protocol.md.
+- Task03b focused commands: listed transfer/fetch/bridge/authentication/main Node command passed37 tests; Python packaging passed3; probe-privacy passed1. All outside sandbox. First full run passed710 Python(1skip)/747 JS before final malformed-command regression; final full run pending.
+- Task03b runtime: after refresh, one MCP development call verified browser-only5-chunk reverse reconstruction, max534-byte envelope under1024 ceiling, digest equality and release. ReadyGM14.369/test, consoleerrors0 before/after, no fixtures/mutations. Actual Python socket assembly is still04a/integration work.
+- Final03b `./scripts/test.sh` passed710 Python tests(1existing skip)/748 JS. Final refreshed browser probe repeated5chunks/max534bytes, passed.
+- Next action: review/stage/commit03b, then04a private Python assembly.
