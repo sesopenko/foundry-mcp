@@ -11,11 +11,13 @@ Before starting, and **immediately after every context compression, session
 resume, or handoff**, reopen and read these files **in full** before selecting
 the next action:
 
-1. [Planning assignment snapshot](../../prompts/foundry-image-viewing-task-breakdown-plan.md)
-2. [Authoritative feature design](../../prompts/foundry-image-previews-plan.md)
-3. [Map browsing and note research](map-browsing-notes-research.md), including its verification gaps.
-4. This index and the current task file, including its dependencies' evidence.
-5. [Repository instructions](../../../AGENTS.md) and their required reading.
+1. [Execution assignment](../../prompts/foundry-image-viewing-build-agent.md) and
+   [durable build progress](build-progress.md).
+2. [Planning assignment snapshot](../../prompts/foundry-image-viewing-task-breakdown-plan.md)
+3. [Authoritative feature design](../../prompts/foundry-image-previews-plan.md)
+4. [Map browsing and note research](map-browsing-notes-research.md), including its verification gaps.
+5. This index and the current task file, including its dependencies' evidence.
+6. [Repository instructions](../../../AGENTS.md) and their required reading.
 
 This rule applies both to the agent maintaining these planning documents and
 the agent implementing the feature. A compressed summary is not a substitute.
@@ -117,7 +119,7 @@ spawning agents or concurrent writes to this checkout.
 
 | ID and task | Points | Direct dependencies | Implementation status | Commit |
 | --- | --- | --- | --- | --- |
-| [01 Contracts and baseline](tasks/01-contracts-and-baseline.md) | 5 | None | Not started | — |
+| [01 Contracts and baseline](tasks/01-contracts-and-baseline.md) | 5 | None | Complete | this commit |
 | [02 Browser source resolution](tasks/02-browser-source-resolution.md) | 8 | 01 | Not started | — |
 | [03a Browser source fetch](tasks/03a-browser-source-fetch.md) | 8 | 02 | Not started | — |
 | [03b Chunk protocol and lifecycle](tasks/03b-chunk-protocol-and-lifecycle.md) | 5 | 03a | Not started | — |

@@ -82,8 +82,18 @@ discovery is added yet. Commit models, tests, baseline harness, and evidence.
 
 ## Completion record
 
-- Implementation: not started.
-- Commit: pending; use `this commit` in the completing commit, resolved by successor.
-- Focused/full checks: not run.
-- Baseline calls/bytes/completion/catalog and API evidence: pending.
-- Pending external evidence and exact prerequisites: none assessed yet.
+- Implementation: complete; strict internal base request/response models, shared
+  limits/fixed errors, exact-selector characterization and bounded audit. No stub
+  tools or changes to browse/upload contracts.
+- Commit: this commit; resolved by successor.
+- Focused checks outside sandbox: preview models/audit 13 Python tests passed;
+  existing MCP journal images 4 passed; browser image characterization 8 passed.
+  Full `./scripts/test.sh`: both suites passed (717 JavaScript tests, no failures;
+  Python suite retains its existing skip).
+- Baseline/API evidence: [record](../baseline.md); actual MCP 25 calls including
+  discovery, 0.563 seconds, catalog 43 tools/262,218 bytes. Data/public traversal,
+  filtering, expansion and journal selected/detail reads passed. Harness SDK
+  defect reproduced with a failing unit test, corrected, unchanged test passed.
+- Pending external evidence: configured S3 runtime unavailable; exact prerequisite
+  is a configured browser-readable S3 bucket (mocks in 02, live check in 14a).
+  Public HTTPS/target ChatGPT visual acceptance remains the separate 14b gate.
