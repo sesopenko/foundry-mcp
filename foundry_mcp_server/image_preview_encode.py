@@ -41,11 +41,13 @@ def verify_candidate(path, width, height, mime):
 
 def encode_region(region, scratch, *, max_bytes=limits.OUTPUT_MAX_BYTES,
                   writer=write_candidate,verify=verify_candidate,
-                  clock=time.monotonic,deadline=None):
+                  clock=time.monotonic,deadline=None,compose=None):
     """PNG→WebP90→WebP82, then15% dimension reduction from original region.
 
     Injected budgets/encoder/clock are internal unit-test seams, never RPC inputs.
     Every candidate and the final verification stay in one supervised process.
+    Optional trusted compose(image) returns final-size pixels and private notes
+    for each encoding attempt; it always receives an unannotated resample.
     """
     scratch = Path(scratch)
     candidate = scratch/'candidate.bin'
@@ -58,7 +60,8 @@ def encode_region(region, scratch, *, max_bytes=limits.OUTPUT_MAX_BYTES,
         for mime,quality in (('image/png',None),('image/webp',90),('image/webp',82)):
             try:
                 if clock()>=deadline:raise PreviewFailure('ImageProcessingTimeout')
-                writer(image,candidate,mime,quality)
+                annotated,notes=compose(image) if compose is not None else (image,None)
+                writer(annotated,candidate,mime,quality)
                 size = candidate.stat().st_size
                 if size<1:
                     raise PreviewFailure('ImageProcessingFailed')
@@ -69,7 +72,7 @@ def encode_region(region, scratch, *, max_bytes=limits.OUTPUT_MAX_BYTES,
                     raise PreviewFailure('ImageProcessingFailed')
                 if clock()>=deadline:raise PreviewFailure('ImageProcessingTimeout')
                 candidate.rename(target)
-                return actual
+                return {**actual,'map_notes':notes} if compose is not None else actual
             finally:
                 candidate.unlink(missing_ok=True)
         if (width,height)==(1,1):raise PreviewFailure('ImageProcessingFailed')

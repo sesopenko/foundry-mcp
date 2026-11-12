@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M04a, [bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md).
+- Current task: M04b, [layout and annotated encoding](tasks/m04b-note-layout-and-annotated-encoding.md).
 - Stage: commit.
-- Last completed task: M03b, commit `8155684`.
+- Last completed task: M04a, commit `a07630f`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified M04a with required hook, then read M04b and freeze placement/recomposition interfaces before implementation. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: finish final M04b package/diff review and required hook/local commit, then read M05 integration task. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -33,6 +33,7 @@
 |M02 grid/image files |af58e0d |928 Python (1 existing skip)/777JS full passed; hook passed both after final declarations/test |
 |M03a note identities |26bb4e6 |942 Python (1 existing skip)/783JS full and hook passed |
 |M03b geometry/context |8155684 |963 Python (1 existing skip)/794JS hook passed |
+|M04a fixed glyphs |a07630f |975 Python (1 existing skip)/794JS full/hook passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -996,3 +997,62 @@ the linked evidence pages; Git history retains prior milestone records.
   unused imports removed afterward. Documentation records license, support and
   measured glyphs. Hook will verify final staged files before M04a commit; no
   publication, new instance or live game changes.
+
+## CurrentM04b implementation plan
+
+- Dependencies M04aa07630f/M03b8155684 committed;24/30 tasks,155/200 points
+  (77.5%) complete. Read complete task/current region/encoding/process and
+  focused render tests. Code-graph encode_region impact inspected; exact uses
+  include injected policy tests. Official libvips8.18 draw_line/draw_circle and
+  earlier composite docs read. Existing M04a12/encoding15/full975+794 baseline
+  is passing. No new Foundry API calls or browser/module edit required.
+- Freeze separate boundaries before code: pure layout consumes only <=100
+  generated-key/source-XY triples, crop and measured fixed glyph boxes, plus
+  total_in_region for honest over-limit counts. Sort numeric aliases; project
+  with floor to output pixels. Try NE/NW/SE/SW/E/W/N/S using4 blank pixels
+  between a radius2 pin extent and outlined label. Conservative disjoint
+  rectangular footprints include pin/leader/outlined label; label area alone
+  has exact integer5% cap. Tiny image, edge, collision, density and limit
+  omission counts are explicit, independent of denied scope owned by M05.
+- Native composition owns a private transparent overlay, dark1px leaders,
+  dark radius2/white radius1 pin and measured glyph source-over compositing.
+  No label backgrounds, UUIDs or game text. Glyph pixels remain final-size.
+- Extend existing encoder with optional trusted compose callback per encoding
+  attempt, always receiving unannotated original-region resampling at current
+  dimensions. Return only successful attempt metadata; retain existing PNG/
+  WebP90/82/15% reduction, byte/deadline checks and cleanup. Private annotated
+  worker operation and strict parent collector return artifact+counts/keys;
+  public map identity/revision/legend remains M05. Request stays <=8192B and
+  stdout<=4096B. No public stub tool or configuration-limit increase.
+- Tests: pure geometry/order/allplacements/edge/dense/5%/longkey/limit/onepixel/
+  zero cases; native changed-pixel bounds/alpha/dark/light maps; forced per-format
+  and actual reduction retries with final14px outlined ink; invalid private
+  payloads/forged metadata, cleanup on cancellation/resource failure. Inspect
+  synthetic overview/detail artifacts, record obstruction limits and exact
+  metrics, full suites and separate local commit. No game fixture needed.
+- Implemented pure placement/summary, native final-size composition, optional
+  encoder callback per encoding attempt, private annotated worker operation and
+  typed parent collector. Initial geometry/native checks pass. Timeout fixture
+  used supervisor constructor deadline overridden by operation default90s;
+  passed intended timeout explicitly, unchanged rejection passes. No production
+  deadline change or failed correction. Added actual after-spawn cancellation.
+- Nonfinite pin escaped JSON ValueError before fixed-error boundary. Focused
+  unit failed first; explicit bounded key/finite-position validation before JSON
+  serialization fixes it, same unchanged test passes. Unsuccessful corrections0.
+- Focused layout15 passes5.565s, glyph12 passes0.541s, encoding15 passes5.792s.
+  Full runner17358 terminal988 Python (1 existing skip)/794JS pass104.168s
+  before two final forged-reply/audit cases. Hook will verify final revision.
+- Docker build/smokes pass; packaged layout14 passes5.971s UID10001 read-only/
+  no-network/tests-only mount. No app override/new instance/game fixture.
+- Unit-tested synthetic audit3renders/120s passes. Agent inspected overview
+  1717x1373/97754B20keys,detail800²/9101B4keys N1/N2/N6/N7,dense800²/6741B1key
+  with99collision omissions. Overview sampledRSS86974464/scratch98304B/.25989s.
+  Dark/light labels legible with short leaders; nearby pixels can be covered,
+  so no promise of complete map-feature visibility or external visual acceptance.
+  Real noisy byte-reduction test verifies final14px key alpha mask, no shrinking.
+- Contract/task docs record boundaries/limits/measurements and no active failure;
+  generated public synthetic review artifacts remain only in/tmp, no game data.
+- Final packaged layout15 passes6.877s, including unit-tested synthetic audit.
+  Final staged/source review complete; required hook will run both full suites
+  with15 final layout cases. No active failure, failed corrections or local
+  fixture cleanup prerequisite. M05 integration is the next ready task.

@@ -63,8 +63,20 @@ documented limitations together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, pixel/coverage/byte/resource metrics: not run.
-- Visual obstruction review and exact pending prerequisites: pending.
+- Implementation: complete; [layout/retry contract and evidence](../note-layout.md).
+- Dependency commit SHA(s): M04a `a07630f`, M03b `8155684`.
+- Commit: this commit.
+- Focused layout15/glyph12/encoding15 pass; first full988 Python (1 existing
+  skip)/794JS passes before final two cases. Final hook verifies staged files.
+  Docker build/smokes and final packaged layout15/6.877s pass asUID10001 with no
+  network/app override/game data, including the final synthetic audit case.
+- Synthetic visual overview1717×1373/97754B renders20/20; detail800²/9101B
+  renders4/4 with preserved aliases; dense800²/6741B renders1/100 and99 explicit
+  collisions. Agent inspected all3 images; leaders/keys legible on dark/light
+  rooms, no clipped labels. Overview sampledRSS86974464B/scratch98304B/0.25989s.
+- Real alpha-noise reduction preserves14px glyph mask at final coordinates;
+  per-format composition tests, forged replies, exact5%/all-edge bounds and
+  cancellation/resource cleanup pass. Original source bytes unchanged.
+- No local prerequisite/fixture cleanup remains. M05 owns public context/legend
+  integration; M06/14b own native-map/target-client acceptance.5% obstruction
+  bound is explicit and does not promise every underlying map feature is visible.
