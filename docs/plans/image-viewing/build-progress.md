@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 11, [image URL MCP tool](tasks/11-image-url-mcp-tool.md).
+- Current task: 12a, [workflow and failure integration](tasks/12a-workflow-and-failure-integration.md).
 - Stage: commit.
-- Last completed task: 10, commit `85236ce`.
+- Last completed task: 11, commit `f5d04c3`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: review/stage/commit verified11, then read12a. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified12a, then read12b and implement bounded large-map measurements. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -26,6 +26,7 @@
 |09a HTTP/config/lifecycle |37977ee |Both full suites/hook passed;749JS |
 |09b auth/privacy |4023ed2 |859 Python (1 existing skip)/749JS full passed; hook passed both |
 |10 image info |85236ce |871 Python (1 existing skip)/749JS full passed; hook passed both |
+|11 image URL |f5d04c3 |885 Python (1 existing skip)/749JS full passed; hook passed both |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -536,3 +537,49 @@ the linked evidence pages; Git history retains prior milestone records.
   refreshed for clean readiness/console check before commit. No JS/game changes.
 - Dedicated browser now readyGM14.369/console0; health gm connected. Final
   diff/whitespace reviewed and task11 evidence ready for its local commit.
+- Commitf5d04c3 completed with both hook suites passing,exit0.
+
+## Current12a checkpoint
+
+- Task/source acceptance, baseline and budgeted-evaluation reading complete.
+  Dependency11 f5d04c3 committed;17/30 tasks,105/200 points (52.5%) complete.
+- Planned fixture: real production Foundry bridge dispatch in a Node subprocess,
+  mocked external Foundry public documents/FilePicker/fetch only; real Python
+  RPC manager/correlation and HTTP-authenticated MCP app/cache/store/decoder.
+  Reconstruct actual paged journal HTML before extracting src, browse an exact
+  image selector, transfer multichunk bytes, request repeated independent crops,
+  verify anonymous HTTP bytes and deterministic faults/ownership/cleanup.
+  Harness cap40 MCP calls/600s; aggregate output only, private small synthetic
+  images. Full-size generation/resources/comparable final measurements remain12b.
+- Baseline browser sources/transfer21 passed. Added Node fixture that runs real
+  journal/image bridge dispatch and returns each negotiated chunk window in
+  deterministic reverse order; real Python correlation reconstructs correct bytes.
+  New JS workflow test passed; focused JS sources/transfer/workflow22 passed.
+- Initial JS test assumed two HTML fragments when the stored text requires3.
+  Followed actual returned cursors until complete; unchanged full-content equality
+  passes. This was a fixture expectation mistake, not a production defect/fix.
+- Python workflows7 pass: actual Basic-auth MCP discovery/invocation, real Node
+  handlers/private multichunk bytes/native subprocess/SQLite/anonymous HTTP,
+  journal and browse input paths, mirrored/rotated transparency, missing/short
+  replies, cancellation/new socket, pinned replacement bytes, expiry/permission,
+  worker-error propagation and quota retention. Private roots removed on exit;
+  call/time guards exercised. Existing actual OAuth cross-principal tests rerun
+  separately; no fresh-agent benchmark or live game fixtures needed.
+- Final focused/full checks running after deterministic out-of-order transport
+  and whole-image pixel assertions. No production code changed or active defect.
+- Full ./scripts/test.sh passed892 Python (1 existing skip)/750JS,exit0.
+  Actual identity3 passed; final canonical-prefixed-fetch assertion passes in
+  focused workflows7 and JS workflow1 (combined JS22 already passed). Hook will
+  repeat both suites with the final assertion. No production files changed.
+- Complete small workflow measured10 MCP calls/3 fragments/3 source transfers/
+  12 reversed chunks/4 anonymous reads; linked workflow table records compact
+  bytes and completion. Private roots/processes/pending RPCs/leases cleaned.
+  No external client/runtime claim or new game fixture was introduced.
+- Final simulated-browser EOF test failed promptly-required behavior with2s
+  TimeoutError. Root was test transport receive() lacking the production
+  WebSocket route's unregister-on-close finally callback. Added that exact
+  callback to the fixture only; same unchanged test/full suite now verifying.
+  No production defect/correction or unsuccessful fix attempt; no scope reduction.
+- Same unchanged EOF test passes; final workflows8 pass3.996s. Final full
+  ./scripts/test.sh passed893 Python (1 existing skip)/750JS,exit0, after the
+  fixture callback correction. Final whitespace/diff review passed; ready12a.

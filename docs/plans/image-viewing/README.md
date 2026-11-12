@@ -135,8 +135,8 @@ spawning agents or concurrent writes to this checkout.
 | [09a HTTP delivery and configuration](tasks/09a-http-delivery-and-configuration.md) | 5 | 08 | Complete | 37977ee |
 | [09b Auth boundaries and capability privacy](tasks/09b-auth-boundaries-and-capability-privacy.md) | 5 | 09a | Complete | 4023ed2 |
 | [10 Image info MCP tool](tasks/10-image-info-mcp-tool.md) | 1 | 04b, 05b | Complete | 85236ce |
-| [11 Image URL MCP tool](tasks/11-image-url-mcp-tool.md) | 8 | 07b, 09b, 10 | Complete | this commit |
-| [12a Workflow and failure integration](tasks/12a-workflow-and-failure-integration.md) | 8 | 11 | Not started | — |
+| [11 Image URL MCP tool](tasks/11-image-url-mcp-tool.md) | 8 | 07b, 09b, 10 | Complete | f5d04c3 |
+| [12a Workflow and failure integration](tasks/12a-workflow-and-failure-integration.md) | 8 | 11 | Complete | this commit |
 | [12b Large-map and payload measurements](tasks/12b-large-map-and-payload-measurements.md) | 8 | 12a | Not started | — |
 | [M01 Map folder browsing](tasks/m01-map-folder-browsing.md) | 8 | 01 | Not started | — |
 | [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Not started | — |

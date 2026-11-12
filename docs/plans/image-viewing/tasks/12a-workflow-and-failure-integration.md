@@ -64,9 +64,24 @@ fault/workflow evidence; never commit generated bulk maps or real URLs.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and bounded workflow command/result: not run.
-- Workflow calls/completion, private fixture cleanup: pending.
-- Runtime gaps and exact prerequisites: pending.
+- Implementation: complete; [workflow boundaries and measurements](../workflow-integration.md).
+- Dependency commit SHA(s):11 `f5d04c3`.
+- Commit: this commit.
+- Focused: workflow8 passed3.996s including canonical URL and EOF assertions.
+  JS workflow/source/transfer22 and
+  actual HTTP identity3 passed outside sandbox. The normal focused Python
+  command above exercises the whole bounded harness; no separate live command
+  or model benchmark is required for this synthetic boundary checkpoint.
+- Full `./scripts/test.sh`:893 Python (1 existing skip),750 JavaScript passed,
+  including the final EOF assertion. No production behavior changed.
+- Measured main workflow:10 actual MCP calls,3 HTML fragments,3 original
+  transfers/12 reversed private chunks,4 anonymous HTTP reads, all complete.
+  The linked table records actual structured/protocol bytes without paths,
+  capabilities, expected visual answers or billed-token claims.
+- Cleanup: source/store private roots deleted, Node subprocesses reaped,
+  pending RPCs and browser transfer/worker leases empty. Only temporary synthetic
+  fixture data was used; no game asset/document/instance mutation.
+- Pending scope/gates: large-map/resources/equal-content replay12b; packaged
+  release verification13; live local runtime14a; configured S3/CORS and external
+  public HTTPS/target-client14b. This test-only checkpoint changes no production
+  API/runtime and does not claim those separate checks passed.
