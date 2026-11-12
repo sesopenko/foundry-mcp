@@ -42,6 +42,8 @@ const rpc=async(method,params)=>{
   if(response.error)throw Error('Private dispatch failed');return response.result;
 };
 try{
+  const membership=await rpc('validateImagePreviewSource',{image});
+  rows.membership={passed:membership.world_id==='test'&&membership.user_id===game.user.id&&membership.image.src===image.src&&!Object.hasOwn(membership,'fetch_url')};
   const expected_context=await rpc('getImagePreviewContext',{}),transfer_id=crypto.randomUUID();
   transfer=await rpc('beginImagePreviewTransfer',{image,max_frame_bytes:1024,expected_context,transfer_id});
   if(transfer.transfer_id!==transfer_id||transfer.world_id!==expected_context.world_id||transfer.user_id!==expected_context.user_id)throw Error('Context changed');
@@ -53,7 +55,7 @@ try{
   }
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',output))).join(',');
   rows.transfer={passed:chunkCount>1&&maxFrame<=1024&&digest===expectedDigest};
-}catch{rows.transfer={passed:false,error_code:'ProbeFailed'};}
+}catch{rows.transfer={passed:false,error_code:'ProbeFailed'};rows.membership??={passed:false,error_code:'ProbeFailed'};}
 finally{if(transfer)await rpc('releaseImagePreviewTransfer',{transfer_id:transfer.transfer_id});}
 return JSON.stringify({version:game.version,rows,metrics:{chunks:chunkCount,max_frame_bytes:maxFrame}});
 """
@@ -67,7 +69,7 @@ async def verify(client):
         **({'error_code': data['rows'][name]['error_code']} if data['rows'][name].get('error_code') in
             ('BrowseFailed','ImageNotFound','InvalidRequest','ContextChanged','UnsupportedSource','AmbiguousSource','ProbeFailed',
              'ImageUnavailable','ImageTooLarge','ImageReadTimeout','IncompleteTransfer','TransferTimeout') else {})}
-        for name in ('canonical','bare','absolute','fetch','transfer')}
+        for name in ('canonical','bare','absolute','fetch','transfer','membership')}
     metrics = data.get('metrics', {})
     bounded = {key: value for key in ('chunks', 'max_frame_bytes')
         if type(value := metrics.get(key)) is int and 0 <= value <= 134217728}

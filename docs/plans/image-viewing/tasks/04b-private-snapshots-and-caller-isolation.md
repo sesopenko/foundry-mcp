@@ -72,8 +72,24 @@ plumbing, tests, and snapshot recovery documentation together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, cache/lease/expiry measurements: not run.
-- Auth-context API evidence and pending live prerequisites: pending.
+- Implementation: complete; process-local1800-second/512-MiB snapshot cache,
+  pre-write reservations, protected file leases, authenticated principal binding
+  and byte-free current membership checks. Runtime cache lifecycle wiring belongs
+  to task10's first production image tool.
+- Dependency commit SHA(s):04a `fe47d21`.
+- Commit: this commit.
+- Focused outside sandbox:10 source-cache tests;3 actual HTTP identity/isolation
+  tests (`.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_identity.py' -v`);
+ 10 assembly,6 connection,13 production-auth,19 OAuth and27 JS transfer/auth/
+  bridge/main tests passed. Full `./scripts/test.sh`:733 Python (1existing skip)
+  and749 JavaScript tests passed.
+- Contracts/API/auth evidence: [snapshot cache](../snapshot-cache.md); public
+  FastMCP4.1.4 get_http_request/get_access_token verified against pinned source
+  and upstream docs. Real RS256 fixture tokens exercise two authorized users/
+  clients, refresh-stable identity, forged headers/session IDs and anonymous/
+  in-memory denial through actual HTTP/FastMCP. No real Auth0 login/refresh claim.
+- Runtime: existing service restarted and dedicated browser refreshed; ready
+  GM14.369/test, consoleerrors0. Private membership/5-chunk browser dispatch
+  probe passed. Replayed baseline:23 calls/0.522s; catalog43 tools/262,218 bytes,
+  equal-content scenarios unchanged. Public image-tool/cache use awaits10/12a;
+  live S3 requires configured readable bucket/CORS. No game assets changed.

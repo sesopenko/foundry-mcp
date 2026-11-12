@@ -3,6 +3,7 @@
  */
 import {previewSourceFetch, PREVIEW_FETCH_LIMITS} from './imagePreviewFetch.js';
 import {fail, validateParams} from './actorReadUtils.js';
+import {resolvePreviewSource} from './journalImages.js';
 
 const bytes = value => new TextEncoder().encode(JSON.stringify(value)).length;
 const WINDOW = 16;
@@ -28,6 +29,17 @@ export function getImagePreviewContext(input = {}, isCurrent = () => true) {
   if (!String(game.version).startsWith('14.')) fail('UnsupportedVersion','Private image sources require Foundry14.');
   if (!isCurrent()) rejected('ContextChanged');
   return {world_id:game.world.id,user_id:game.user.id};
+}
+
+/** Fresh private identity/membership recheck for a pinned source snapshot.
+ * Uses the same core14 public FilePicker resolver; never fetches source bytes.
+ * Returns canonical image/world/GM and scope only, excluding fetch credentials.
+ */
+export async function validateImagePreviewSource(input, isCurrent = () => true) {
+  try {validateParams(input,['image']);} catch {rejected('InvalidRequest');}
+  const selected = await resolvePreviewSource({image:input.image},isCurrent);
+  return {world_id:selected.world_id,user_id:selected.user_id,image:selected.image,
+    scope_status:selected.scope_status ?? 'complete',limitations:selected.limitations ?? []};
 }
 
 /** One private transfer, bound to an exact socket object plus world/GM.

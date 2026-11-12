@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from foundry_mcp_server.config import settings
 from foundry_mcp_server.build_info import SERVER_BUILD
+from foundry_mcp_server.auth.principal import stamp_principal
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
@@ -96,6 +97,8 @@ class MCPAccessControl:
             if peer not in {"127.0.0.1", "::1"} or not secrets.compare_digest(headers.get(b"authorization", b""), expected):
                 await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
                 return
+        if mcp_request:
+            scope = stamp_principal(scope, settings)
         await self.app(scope, receive, send)
 
 

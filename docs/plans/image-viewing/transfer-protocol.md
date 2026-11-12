@@ -23,6 +23,12 @@ omitting it. A known reservation permits release during a pending begin or after
 a lost/malformed begin result. Never reuse reservation IDs. These additions use
 public game world/user identity only and preserve socket/world/GM guards.
 
+Task04b adds byte-free `validateImagePreviewSource({image})` for fresh snapshot
+membership. It returns `world_id,user_id,image,scope_status,limitations` only.
+It uses the existing exact FilePicker resolver and socket guard, fetches no
+bytes and returns no fetch URL/credential policy. Snapshot leases use it before
+new previews; replacement bodies never overwrite a pinned original.
+
 The private result fields are:
 
 - `transfer_id`: fresh cryptographic UUIDv4; not a caller-bound source handle.

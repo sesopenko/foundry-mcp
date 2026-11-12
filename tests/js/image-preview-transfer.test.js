@@ -131,6 +131,9 @@ test('actual bridge dispatch transfers bytes privately with exact socket guard a
     body:new Blob([data]).stream()});
   t.after(()=>{previewTransfers.disconnect(owner);globalThis.fetch=oldFetch;});
   const request=(method,params,id=crypto.randomUUID(),guard=()=>true)=>handleRpcMessage({id,method,params},guard,owner);
+  const membership=await request('validateImagePreviewSource',{image:{source:'data',directory:'assets',src:'assets/a.png'}});
+  assert.deepEqual(membership.result,{world_id:'test',user_id:'gm',image:{source:'data',directory:'assets',src:'assets/a.png'},scope_status:'complete',limitations:[]});
+  assert.ok(!JSON.stringify(membership.result).includes('fetch_url'));
   const start=await request('beginImagePreviewTransfer',{image:{source:'data',directory:'assets',src:'assets/a.png'}});
   assert.ok(start.result,JSON.stringify(start.error));const begin=start.result,output=new Uint8Array(data.length);
   for(let index=0;index<begin.chunk_count;index++) {

@@ -131,7 +131,7 @@ def compact_bytes(value):
     return len(json.dumps(value, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8'))
 
 
-async def stage_original(manager, request, *, frame_bytes=65536, directory=None, bounds=TransferBounds()):
+async def stage_original(manager, request, *, frame_bytes=65536, directory=None, bounds=TransferBounds(), admit_size=None):
     """Own one complete verified file, or leave no partial file/pending RPC.
 
     Capture the exact GM socket, obtain ready-world/GM identity before begin,
@@ -140,6 +140,8 @@ async def stage_original(manager, request, *, frame_bytes=65536, directory=None,
     Out-of-order responses are validated against their originating request;
     each bounded batch is written/hashed in index order. The caller MUST close
     the returned StagedOriginal, or transfer its ownership to a snapshot cache.
+    admit_size, when supplied by that cache, reserves the validated byte count
+    before any Python original file is created. It is never a client callback.
     """
     try:
         request = ImageInfoRequest.model_validate(request)
@@ -191,6 +193,9 @@ async def stage_original(manager, request, *, frame_bytes=65536, directory=None,
                 raise ValueError('Invalid begin witness')
             if request.image is not None and begin.image != request.image:
                 raise ValueError('Canonical selector changed')
+            if admit_size is not None:
+                await admit_size(begin.size_bytes)
+                current()
             partial = Path(tempfile.mkdtemp(prefix='foundry-image-source-', dir=directory))
             path = partial / 'original'
             digest = hashlib.sha256()

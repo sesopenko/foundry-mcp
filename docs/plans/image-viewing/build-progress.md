@@ -1,41 +1,72 @@
 # Image viewing build progress
 
-- Current task: 04a, [Python transfer assembly](tasks/04a-python-transfer-assembly.md).
+- Current task: 04b, [private snapshots and caller isolation](tasks/04b-private-snapshots-and-caller-isolation.md).
 - Stage: commit.
-- Last completed task/commit: 03b, `647c42b`; 03a is `e4121a4`, 02 is `141ede6`, 01 is `b0cc01e`. Baseline checkout: `2cd3d88`.
-- Assignment preserved in [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Persistent goal: active; environment objective points to the attachment containing the complete persistent goal, read at kickoff.
-- Baseline checks outside sandbox: `.venv/bin/python -m unittest discover -s tests -p 'test_journal_images.py' -v` passed 4 tests; `node --test tests/js/journal-images.test.js` passed 6 tests.
-- Focused final commands: `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview*.py' -v` passed 13; journal-image Python command passed 4; browser command passed 8. All outside sandbox.
-- Full `./scripts/test.sh`: initial and final implementation runs passed both suites (717 JavaScript tests; Python retains its existing skip). Repeated full run was justified by the audit serializer/error-helper changes after the initial run started.
-- Audit diagnosis: first live audit stopped after discovery/runtime guard (2 calls), AttributeError before aggregation. Pinned FastMCP CallToolResult is a dataclass, not Pydantic. The actual-SDK-type regression failed (missing runtime version); correction serializes via the MCP protocol result model. Unchanged test passed. Unsuccessful fix count 0.
-- Live baseline: `.venv/bin/python -m foundry_mcp_server.image_preview_audit` passed, 25 calls including discovery/0.563s; 43 tools/262,218 bytes. Full [measurements](baseline.md). No game assets/documents changed; no fixture cleanup needed.
-- Decisions: retain the existing strict ImageSelector unchanged; add internal preview-only contracts and budgets without registering placeholder tools.
-- API evidence: Grounded Docs foundry-vtt@14 exists; FilePicker browse/sources/implementation searched and official page fetched. Index completed 2026-10-12T22:52:58Z, 1,978 URLs/17,801 chunks. Runtime compatibility still requires task-specific checks.
-- External gaps: target ChatGPT/public HTTPS acceptance pending tasks 14a/14b; no deployment/client acceptance claimed.
-- Commit hook: 709 Python tests passed (1 existing skip), 717 JavaScript passed.
-- Task 02 focused baseline: 39 JavaScript tests passed; dedicated browser ready core14.369/test/GM, console errors 0. Public getRoute official docs fetched, public unannotated function; sources/browse reuse task01 evidence.
-- Task02 live diagnosis: canonical succeeds, bare/absolute return BrowseFailed when data parent unavailable but public parent has exact match. Initial policy incorrectly required all source listings available. New unit test reproduces actual mixed-availability failure before correction. Revised policy requires exactly one positively verified readable match, always fresh-rechecked; unavailable other parents retained as private partial scope, never inferred absent. Zero matches plus unavailable remains BrowseFailed; multiple readable matches remain AmbiguousSource. Unsuccessful fix count 0; unchanged-test verification next.
-- Correction verification: unchanged mixed-availability test passed; all40 focused JavaScript tests passed. Live probe passed canonical/bare/absolute SVG references in one MCP call after refresh; ready GM14.369 and console errors0. One Python harness privacy test passed.
-- Task02 final full regression run passed710 Python (1existing skip)/728 JS; final ambiguity-recovery prose change passed all11 resolver tests and is rechecked by the commit hook.
-- Task02 hook passed710 Python (1existing skip)/728 JavaScript.
-- Task03a focused: `node --test tests/js/image-preview-fetch.test.js tests/js/journal-images.test.js` passed19; `.venv/bin/python -m unittest discover -s tests -p 'test_packaging.py' -v` passed3; probe-privacy Python test passed1. All outside sandbox.
-- Task03a diagnoses: ZIP regression failed before allowlist entry, unchanged test passed after entry. HTTP content-encoding regression failed before distinguishing encoded wire length from fetch-exposed file bytes, unchanged test passed after correction. First full run overlapped failing regression addition and reported1 JS failure; final full run pending. Unsuccessful correction counts0.
-- Task03a runtime: dedicated refresh/readiness/console check passed; one MCP development invocation passed real SVG streaming, returned-copy mutation isolation, release/empty slot. No fixture or mutation. Details/private lease contract in source-fetch.md.
-- Final03a `./scripts/test.sh` passed710 Python tests (1existing skip) and739 JavaScript tests.
-- Task03a hook passed710 Python (1existing skip)/739 JS.
-- Task03b implementation: private begin/read/release with exact socket owner, indexed offsets/lengths,32KiB raw ceiling,16 in-flight,5-minute lifetime, automatic full-coverage cleanup, immutable fetch lease and packaged module.
-- Task03b diagnoses: unchanged regression failed for late lease cleanup after early close, passed after cleanup correction. Another unchanged regression failed because malformed identified commands skipped cleanup, passed after moving them into owner-specific cleanup. Unsuccessful correction counts0. Details in transfer-protocol.md.
-- Task03b focused commands: listed transfer/fetch/bridge/authentication/main Node command passed37 tests; Python packaging passed3; probe-privacy passed1. All outside sandbox. First full run passed710 Python(1skip)/747 JS before final malformed-command regression; final full run pending.
-- Task03b runtime: after refresh, one MCP development call verified browser-only5-chunk reverse reconstruction, max534-byte envelope under1024 ceiling, digest equality and release. ReadyGM14.369/test, consoleerrors0 before/after, no fixtures/mutations. Actual Python socket assembly is still04a/integration work.
-- Final03b `./scripts/test.sh` passed710 Python tests(1existing skip)/748 JS. Final refreshed browser probe repeated5chunks/max534bytes, passed.
-- Task03b hook passed710 Python(1existing skip)/748 JS. User closed development browser afterwards; authorized reopening/restoring existing test-world GM via saved credential, no server restart or new instance.
-- Browser restoration verified readyGM14.369/test, consoleerrors0 and prior5-chunk image probe passed.
-- Task04a baseline: existing connection tests passed6 outside sandbox. Added private getImagePreviewContext and optional known transfer_id/expected_context on begin, because existing metadata exposes no world/GM and lost begin responses must remain cancellable. Added JS handshake test passed with all10 transfer tests.
-- Task04a implementation: strict typed private envelopes, <=16x32KiB batches, out-of-order verified assembly/hash, private700/600 directories/files and explicit StagedOriginal ownership.
-- Task04a diagnosis: unchanged cancellation-during-release test first failed (cancellation swallowed), passed after propagating cancellation and clearing unreturned files. Unsuccessful correction count0.
-- Harness-only diagnosis: raw model_dump included default bucket:null; corrected to established exclude_none serialization without changing expected selector. Fake response registry used asynchronously queued done callbacks; an attempted gather of already-finished tasks did not drain those callbacks (1 unsuccessful harness correction). Now move registry removal into the responder's finally, preserving the empty-registry assertion. Root is callback scheduling, not production correlation. Next focused run pending; stop at3 unsuccessful corrections if this same harness issue persists.
-- Task04a focused final:10 assembly Python tests passed,6 connection tests passed,10 JS private-transfer tests passed. Harness registry fix passed preserving empty-registry assertion; no active diagnosis, historical unsuccessful harness adjustment1.
-- Task04a final full run pending. Added protocol extension and ownership docs in python-assembly.md; browser probe now tests pre-begin context/known reservation. Actual Python assembly over running GM socket requires task10 tool entry point; do not expose a temporary public stub merely to claim runtime completion.
-- Final04a full `./scripts/test.sh` passed720 Python(1existing skip)/749 JS. Live context/reservation probe passed5chunks/max534bytes; readyGM14.369/test, consoleerrors0.
-- Next action: stage/commit04a, then04b authenticated source snapshots.
+- Last completed task: 04a, commit `fe47d21`.
+- Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
+- Next action: review/stage/commit04b, then start05a decoder probe/packaging. No active failure or diagnosis; no mandatory stop condition.
+
+## Completed checkpoints
+
+| Task | Local commit | Full/hook outcome |
+| --- | --- | --- |
+|01 contracts/baseline | b0cc01e |709 Python (1 existing skip),717 JS passed |
+|02 source resolution |141ede6 |710 Python (1 skip),728 JS passed |
+|03a browser fetch |e4121a4 |710 Python (1 skip),739 JS passed |
+|03b private RPC protocol |647c42b |710 Python (1 skip),748 JS passed |
+|04a Python assembly |fe47d21 |720 Python (1 skip),749 JS passed |
+
+Every task's tests/evidence are in its task file and linked detail page. Baseline
+checkout was `2cd3d88`; no push, tag, publication, release or version bump.
+
+## Current task04b evidence
+
+All tests ran outside sandbox. Exact focused commands/outcomes:
+
+- `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_sources.py' -v`:10 passed.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_identity.py' -v`:3 actual HTTP/FastMCP auth-isolation tests passed.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_transfer.py' -v`:10 passed.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_connection.py' -v`:6 passed.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_production_auth.py' -v`:13 passed.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_oauth*.py' -v`:19 passed.
+- `node --test tests/js/image-preview-transfer.test.js tests/js/authentication.test.js tests/js/bridge.test.js tests/js/main.test.js`:27 passed.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_sources_live.py' -v`:1 passed.
+- `./scripts/test.sh`:733 Python (1 existing skip),749 JavaScript passed.
+
+Restarted only the existing service and refreshed only the dedicated browser.
+`./scripts/actor-tools.sh browser` reports readyGM14.369/test, consoleerrors0.
+`.venv/bin/python scripts/image-preview-sources-live-check.py` passed canonical/
+bare/absolute selection, immutable fetch, context/reservation, byte-free
+membership and browser-only5-chunk reconstruction; max envelope534 bytes under
+1024 ceiling. Only summaries cross MCP. No fixtures/game mutations/cleanup remain.
+
+`.venv/bin/python -m foundry_mcp_server.image_preview_audit` passed23 calls/0.522s;
+catalog remains43 tools/262,218 bytes. All equal-content cases match the original
+[baseline](baseline.md). Two initial journal-navigation calls are omitted because
+the exact private selectors were reused from ignored `.local/` storage. No billed
+token measurement or new public tool is claimed.
+
+## Decisions, API evidence and remaining gates
+
+- [Source resolution](source-resolution.md): retain exact ImageSelector; a sole positively verified readable match may coexist with unavailable other parents, with private partial coverage. Zero matches plus unavailable remains BrowseFailed; multiple readable matches remain AmbiguousSource.
+- [Fetch](source-fetch.md) and [protocol](transfer-protocol.md): immutable originals,128-MiB compressed,32-KiB chunks,16 in flight,15s stalls/300s total; exact socket cleanup and known pre-begin reservations.
+- [Assembly](python-assembly.md): private700/600 directories/files, validated complete bytes/hash, explicit ownership, no replacement-socket cleanup.
+- [Snapshot cache](snapshot-cache.md):1800s TTL,512-MiB files plus staging reservations, active worker leases, no valid-handle eviction, verified principal identity and fresh byte-free membership. Basic/dev scope proofs and OAuth issuer/sub/client verified via public FastMCP4.1.4 APIs and actual offline-JWT HTTP tests. No real Auth0 login/refresh acceptance claim.
+- Grounded Docs foundry-vtt@14: completed2026-10-12T22:52:58Z,1,978 URLs/17,801 chunks. Official FilePicker/getRoute pages fetched and public status checked. FastMCP authorization/context docs fetched2026-11-11 and compared with pinned source.
+- Actual Python assembly/cache over the running GM socket awaits task10's production entry point and12a integration; do not add a temporary public stub for evidence. Snapshot prune/close runtime wiring also belongs to10.
+- Live S3 needs a configured readable bucket/CORS. Nonempty route-prefix live checks need an existing prefixed deployment; mocks cover both. External public HTTPS/target-ChatGPT visual acceptance remains14b. Real Auth0 login/refresh retains existing OAuth operator gates.
+- The user closed the development browser after03b; it was reopened and the existing test-world GM restored via saved local credential, then readiness/RPC/console verified. Never provision another instance or reset existing data.
+
+## Resolved failure history and attempt counts
+
+No active failure. Every production correction below had a failing unit test
+before correction and the same unchanged test passed afterward. Details live in
+the linked evidence pages; Git history retains prior milestone records.
+
+- 01 SDK-result dataclass serialization: corrected; unsuccessful corrections0.
+- 02 mixed source availability policy: corrected with explicit partial coverage; unsuccessful corrections0.
+- 03a packaging omission and HTTP wire/content encoding length distinction: corrected; unsuccessful corrections0 each. An initial full run overlapped the intentionally failing encoding test; final suites passed.
+- 03b late lease release and malformed identified-command cleanup: corrected; unsuccessful corrections0 each.
+- 04a cancellation during cleanup swallowed cancellation/unreturned-file ownership: corrected; unsuccessful corrections0.
+- 04a harness-only responder registry used queued done callbacks. Gathering already-finished tasks failed to drain callbacks (one unsuccessful harness adjustment); moving registry removal into responder finally preserved/passed the empty-registry assertion. Raw selector fixture comparison also switched to established exclude_none serialization without changing expected selector. Production correlation remained unchanged.
+- 04b: no unexpected behavior/fix attempts; all focused and full checks passed.

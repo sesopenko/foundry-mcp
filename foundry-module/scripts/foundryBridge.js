@@ -13,7 +13,7 @@ import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from '
 import {getJournalAuthoringOptions} from './journalAuthoringOptions.js';
 import {browseJournalImages} from './journalImages.js';
 import {prepareImageUpload, createImageDirectory, uploadImage} from './imageUploads.js';
-import {previewTransfers, getImagePreviewContext, beginImagePreviewTransfer, readImagePreviewChunk, releaseImagePreviewTransfer} from './imagePreviewTransfer.js';
+import {previewTransfers, getImagePreviewContext, validateImagePreviewSource, beginImagePreviewTransfer, readImagePreviewChunk, releaseImagePreviewTransfer} from './imagePreviewTransfer.js';
 import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
@@ -33,7 +33,7 @@ const RECONNECT_BACKOFF_FACTOR = 2;
 
 let currentSocket = null;
 const directPreviewOwner = Object.freeze({});
-const previewMethods = ['getImagePreviewContext','beginImagePreviewTransfer','readImagePreviewChunk','releaseImagePreviewTransfer'];
+const previewMethods = ['getImagePreviewContext','validateImagePreviewSource','beginImagePreviewTransfer','readImagePreviewChunk','releaseImagePreviewTransfer'];
 let clearCurrentAuthTimer = null;
 let reconnectAttempts = 0;
 let reconnectTimeoutId = null;
@@ -64,6 +64,7 @@ function reportStatus(state, message) {
  */
 const rpcHandlers = {
   getImagePreviewContext,
+  validateImagePreviewSource,
   beginImagePreviewTransfer,
   readImagePreviewChunk,
   releaseImagePreviewTransfer,
