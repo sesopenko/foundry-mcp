@@ -32,9 +32,8 @@ register_foundry_manager(foundry_manager)
 from foundry_mcp_server.pdf.runtime import library as pdf_library
 from foundry_mcp_server.pdf.uploads import Uploads
 pdf_uploads = Uploads(pdf_library, foundry_manager.send) if pdf_library else None
-from foundry_mcp_server.image_preview_runtime import PreviewRuntime
+from foundry_mcp_server.image_preview_runtime import preview_runtime
 from foundry_mcp_server.image_preview_store import StoreFailure
-preview_runtime = PreviewRuntime()
 from foundry_mcp_server.image_preview_source_runtime import source_runtime
 
 @asynccontextmanager

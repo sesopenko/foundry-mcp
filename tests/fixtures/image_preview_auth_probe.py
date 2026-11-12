@@ -48,7 +48,7 @@ async def probe(mode):
                 assert response.status_code==200 and response.content==stream.getvalue(),'AnonymousReadFailed'
                 assert 'set-cookie' not in response.headers and 'location' not in response.headers,'UnexpectedReaderHeaders'
             assert not main.foundry_manager.websockets,'UnexpectedGMFixture'
-            async def call(credential=None,*,name='get_bridge_versions',duplicate=False,method='tools/call'):
+            async def call(credential=None,*,name='get_bridge_versions',duplicate=False,method='tools/call',arguments=None):
                 nonlocal calls
                 calls += 1
                 headers = [('Accept','application/json, text/event-stream'),('MCP-Protocol-Version','2026-07-28'),
@@ -58,7 +58,7 @@ async def probe(mode):
                     headers.append(('Authorization',credential))
                     if duplicate:headers.append(('Authorization',credential))
                 return await client.post('/mcp/mcp',headers=headers,json={'jsonrpc':'2.0','id':1,'method':method,
-                    'params':{**({'name':name,'arguments':{}} if method=='tools/call' else {}),'_meta':{
+                    'params':{**({'name':name,'arguments':arguments or {}} if method=='tools/call' else {}),'_meta':{
                         'io.modelcontextprotocol/protocolVersion':'2026-07-28',
                         'io.modelcontextprotocol/clientCapabilities':{}}}})
             if good:
@@ -93,10 +93,13 @@ async def probe(mode):
             except PreviewFailure as failure:assert failure.code=='PreviewNotConfigured','DisabledIssuanceCategory'
             else:raise AssertionError('DisabledIssuanceAccepted')
             assert before=='https://previews.example.com','UntrustedOriginSelected'
+            disabled = await call(good,name='get_foundry_image_url',arguments={'request':{'src':'icons/svg/anchor.svg'}})
+            assert disabled.status_code==200 and disabled.json()['result'].get('isError'),'DisabledURLToolAccepted'
+            assert 'PreviewNotConfigured:' in disabled.text,'DisabledURLToolCategory'
             discovery = await call(good,method='tools/list')
             assert discovery.status_code==200,'DisabledIssuanceLostDiscovery'
             catalog = discovery.json()['result']['tools']
-            assert len(catalog)>=40 and not any(t['name']=='get_foundry_image_url' for t in catalog),'UnexpectedPreviewToolRegistration'
+            assert len(catalog)>=40 and any(t['name']=='get_foundry_image_url' for t in catalog),'MissingPreviewToolRegistration'
             catalog_bytes = len(json.dumps(catalog,ensure_ascii=False,separators=(',',':')).encode())
     return {'mode':mode,'calls':calls,'complete':True,'anonymous_read':True,'issuance':mode!='none',
         'catalog_tools':len(catalog),'catalog_bytes':catalog_bytes}

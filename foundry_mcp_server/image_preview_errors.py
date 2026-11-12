@@ -11,6 +11,8 @@ MESSAGES = {
     'UnsupportedImage': 'Use a supported self-contained image; browse_journal_images to choose another file. Executable or externally referenced SVG content is unsupported.',
     'ImageTooLarge': 'Original exceeds 128 MiB, 32768 pixels per edge or 128000000 pixels. Choose a smaller original through browse_journal_images.',
     'PreviewNotConfigured': 'Preview issuance requires an authenticated MCP endpoint and FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN set to its public HTTPS origin. get_foundry_image_info needs no public origin.',
+    'PreviewQuotaExceeded': 'Live previews exceed the1 GiB or4096-row quota after pruning. Existing issued links remain valid. Wait for expiry or ask the operator to inspect private-store capacity before retrying.',
+    'PreviewStorageUnavailable': 'Private preview storage is unavailable. Ask the operator to check the configured persistent data directory, then retry; no usable URL was returned.',
 }
 
 

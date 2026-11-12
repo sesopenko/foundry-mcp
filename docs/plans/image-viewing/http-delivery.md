@@ -1,10 +1,10 @@
 # Preview HTTP delivery and runtime configuration
 
 The production app now serves private-store derivatives through explicit GET/
-HEAD routes ahead of the final MCP mount. Issuance remains internal until
-task11's public tool integration; [capability privacy/auth checks](capability-privacy.md)
+HEAD routes ahead of the final MCP mount. [Typed URL issuance](image-url-tool.md)
+is integrated through MCP; [capability privacy/auth checks](capability-privacy.md)
 cover its preceding security boundary.
-This source checkpoint does not advertise a released preview MCP tool.
+This source checkpoint is not a released deployment or public-client acceptance.
 
 | Setting | Contract |
 | --- | --- |
@@ -48,7 +48,7 @@ paths or token values. No HTTP issuance/write endpoint is added.
 The app's MCP middleware still authenticates `/mcp` and `/mcp/*`; existing bridge
 and PDF authorization is retained. Capability-safe Uvicorn/evaluation logging
 and the full authentication matrix are verified in09b; final proxy examples
-remain task13. Issuance tools remain unregistered until11. Real-listener/curl/public-client acceptance
+remain task13. Issuance uses the authenticated MCP tool. Real-listener/curl/public-client acceptance
 remains the later runtime/client gates, distinct from these ASGI tests.
 
 `test_image_preview_http.py` uses the actual production app, real SQLite and an

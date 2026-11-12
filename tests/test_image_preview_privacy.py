@@ -11,6 +11,7 @@ import sys
 import unittest
 from unittest.mock import patch
 import uuid
+import httpx2 as httpx
 
 from fastmcp.server.middleware import MiddlewareContext
 from fastmcp.tools import ToolResult
@@ -25,6 +26,17 @@ from foundry_mcp_server.image_preview_store import StoreFailure
 
 
 class LogPrivacyTests(unittest.TestCase):
+    def test_http_client_url_objects_are_redacted_before_string_formatting(self):
+        nonce = str(uuid.uuid4())
+        output = StringIO()
+        handler = logging.StreamHandler(output)
+        logger = logging.getLogger('httpx2')
+        with patch.object(logger,'handlers',[handler]),patch.object(logger,'propagate',False),patch.object(logger,'level',logging.INFO):
+            logger.info('HTTP Request: %s %s status=%d','GET',
+                httpx.URL('https://previews.example.com/image-previews/'+nonce+'.png?probe=1'),200)
+        self.assertFalse(nonce in output.getvalue())
+        self.assertIn('status=200',output.getvalue())
+
     def test_encoded_paths_signed_urls_and_idempotent_installation(self):
         from foundry_mcp_server.image_preview_privacy import scrub_text,install_capability_filters,CapabilityFilter
         nonce = str(uuid.uuid4())

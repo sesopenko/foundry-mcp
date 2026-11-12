@@ -88,3 +88,6 @@ class PreviewRuntime:
         if self._closing is None:self._closing = asyncio.create_task(self._close())
         _,cancelled = await settle(self._closing)
         if cancelled:raise asyncio.CancelledError
+
+
+preview_runtime = PreviewRuntime()

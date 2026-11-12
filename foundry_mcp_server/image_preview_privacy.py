@@ -40,6 +40,12 @@ def scrub_log_value(value):
     if isinstance(value,tuple):return tuple(scrub_log_value(v) for v in value)
     if isinstance(value,list):return [scrub_log_value(v) for v in value]
     if isinstance(value,dict):return {scrub_log_value(k):scrub_log_value(v) for k,v in value.items()}
+    if value is not None and not isinstance(value,(int,float,bool)):
+        # HTTP clients pass URL objects to %s. Their bearer path only becomes
+        # text at formatting time, after a string-only filter has already run.
+        text = str(value)
+        cleaned = scrub_text(text)
+        if cleaned!=text:return cleaned
     return value
 
 

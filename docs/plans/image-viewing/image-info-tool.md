@@ -34,8 +34,8 @@ The source handle binds exact original bytes to the verified caller and browser
 world/GM identity for1800 seconds from staging, independently of file replacement
 or later seven-day derivatives. It exposes no source path, digest, original bytes
 or public URL. Next use `get_foundry_image_url` with that handle for overview or
-crop; that tool is the next implementation checkpoint and is not registered by
-this task. Scene-aware map selectors/annotations belong to M05.
+crop; [that tool is now integrated](image-url-tool.md) in task11.
+Scene-aware map selectors/annotations belong to M05.
 
 `SourceRuntime` starts/closes the private cache in app lifespan independently of
 public delivery configuration, prunes every60 seconds and protects cleanup from

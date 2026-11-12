@@ -53,6 +53,12 @@ the final capability-safe proxy examples and deployment guidance.
 
 ## Verified evidence
 
+The matrix/catalog measurements below are the09b checkpoint. Task11 registers
+the complete typed URL tool and adds actual disabled-tool calls in every mode.
+Its HTTP workflows also exposed URL-object interpolation in client logs; the
+filter now classifies those objects before formatting, with a failing-then-passing
+nonce regression. See [current URL integration evidence](image-url-tool.md).
+
 Captured access/application/evaluation tests initially found the fixture nonce
 in emitted output. The same unchanged tests pass after narrow redaction.
 Malformed encoded-URL and unpaired-surrogate JSON regressions also failed first,
@@ -79,7 +85,8 @@ whole-response representation. No equal-content savings claim is made.
 
 The development-only execution tool accounts for its additional catalog entry.
 OAuth adds2604 metadata bytes across42 tools. No preview issuance stub appears
-in discovery. Public image-tool registration remains task11. Tests keep fixture
+in discovery at that checkpoint. Public image-tool registration is implemented
+in task11. Tests keep fixture
 capabilities, signing keys and bytes out of transcripts/tracked evidence; only
 the bounded aggregates above are printed.
 

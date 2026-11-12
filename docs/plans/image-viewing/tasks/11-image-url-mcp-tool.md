@@ -84,8 +84,36 @@ expiry. Commit orchestration, tests, and public tool guidance together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, discovery/response bytes, transfer counts: not run.
-- Runtime/client evidence and exact outstanding prerequisites: pending.
+- Implementation: complete; [contract and evidence](../image-url-tool.md).
+- Dependency commit SHA(s):07b `b144211`,09b `4023ed2`,10 `85236ce`.
+- Commit: this commit.
+- Focused outside-sandbox checks: tools24, HTTP15, privacy9 and OAuth19 passed.
+  Actual URL calls verify all inputs, cropped/overview independent pixels,
+  repeated crops with no second transfer, three transfers for one info plus two
+  direct image/src requests, distinct links, replacement snapshots, context/
+  expiry/authority isolation, quota retention and atomic cancellation cleanup.
+  Wrong-region and URL-object logging regressions failed first and passed
+  unchanged after focused corrections. No unsuccessful fixes remain.
+- Full `./scripts/test.sh`:885 Python (1 existing skip),749 JavaScript passed.
+  URL discovery8516 compact bytes (by_alias unit representation), synthetic
+  complete URL results below800B by assertion. Final equal-content workflow
+  measurements remain12b; these are bytes, not measured billed tokens.
+- Packaging: Docker rebuild/native/supervised smokes passed asUID10001. The
+  task09b read-only/no-network/128MiB tmpfs/tests-only command substituting
+  `test_image_preview_tools.py` passed24/7.514s; privacy9 passed9.563s against
+  the same production privacy code. No source/game-volume mount or publication.
+- Auth matrix now invokes the real disabled URL tool in all four modes:
+  Basic10/OAuth14/development10/none5 calls;44 production tools/45 development.
+  Catalog compact bytes272552/275280/273040/272552 respectively. Normal auth
+  remains enforced; plain-none and disabled configuration cannot mint links.
+- Existing service restarted; actual fresh HTTP MCP checker
+  `.venv/bin/python -m foundry_mcp_server.image_preview_info_check --url-disabled`
+  passed2 calls,45-tool catalog,8523B live mode=json tool record. Current local
+  configuration has no public preview origin; no live bearer was minted.
+  Dedicated browser refresh confirms ready GM14.369/zero console errors.
+- Exact remaining gates: enable configured origin/private persistent storage in
+  authorized runtime acceptance14a for real-listener successful issuance/curl;
+  public reachable HTTPS and target-client visual acceptance14b; configured live
+  S3/CORS. Production ASGI Basic issuance and packaged pixels already pass.
+  No game fixtures/assets were created and no cleanup remains beyond normal
+  product-owned temporary/cache/store lifetimes in isolated tests.

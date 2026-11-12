@@ -5,6 +5,7 @@ aggregates only, never source handles, paths, credentials or native errors.
 Run after offline checks; original snapshots expire privately after30 minutes.
 """
 import asyncio
+import argparse
 import json
 from pathlib import Path
 
@@ -59,14 +60,36 @@ async def verify(client):
 
 
 async def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--url-disabled',action='store_true',help='Verify URL discovery and disabled issuance;2 MCP calls.')
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     token = next(line.partition('=')[2].strip() for line in (root/'.env.mcp').read_text().splitlines()
         if line.partition('=')[0].strip()=='FOUNDRY_MCP_CALLER_TOKEN')
     async with Client(StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp',
             headers={'Authorization':'Bearer '+token}),timeout=30,init_timeout=10) as client:
-        report = await verify(client)
+        report = await (verify_disabled_url(client) if args.url_disabled else verify(client))
     print(json.dumps(report,sort_keys=True))
     return 0 if report['passed'] else 1
+
+
+async def verify_disabled_url(client):
+    """Two calls, no valid source selector, never mint a runtime capability."""
+    calls = 0
+    try:
+        async with asyncio.timeout(60):
+            calls += 1
+            catalog = await client.list_tools(max_pages=1)
+            tool = next(t for t in catalog if t.name=='get_foundry_image_url')
+            calls += 1
+            result = await client.call_tool(tool.name,{'request':{'source_id':'unavailable-runtime-check'}},raise_on_error=False)
+            if not result.is_error or 'PreviewNotConfigured:' not in str(result.content):
+                raise RuntimeError('DisabledIssuanceNotEstablished')
+            return dict(passed=True,calls=calls,catalog_tools=len(catalog),
+                tool_bytes=len(json.dumps(tool.model_dump(mode='json'),ensure_ascii=False,separators=(',',':')).encode()),
+                disabled_issuance=True)
+    except Exception as error:
+        return dict(passed=False,calls=calls,error_type=type(error).__name__)
 
 
 if __name__=='__main__':

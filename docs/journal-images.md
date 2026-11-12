@@ -17,7 +17,10 @@ WISH-012 adds image embedding through the journal writer described below.
 Source development also provides authenticated `get_foundry_image_info`: pass
 the returned `image` under `request.image`, or a complete stored img reference
 under `request.src`, to obtain original dimensions and a private snapshot handle.
-See [image-information scope and lifetime](plans/image-viewing/image-info-tool.md).
+Pass that handle, an exact image or a stored src to `get_foundry_image_url` for
+an overview/crop link readable by anyone holding it for seven days. Issuance
+requires a configured public HTTPS origin. See [image information](plans/image-viewing/image-info-tool.md)
+and [preview coordinates, limits and privacy](plans/image-viewing/image-url-tool.md).
 
 ## Navigation and selectors
 

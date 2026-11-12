@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 10, [image info MCP tool](tasks/10-image-info-mcp-tool.md).
+- Current task: 11, [image URL MCP tool](tasks/11-image-url-mcp-tool.md).
 - Stage: commit.
-- Last completed task: 09b, commit `4023ed2`.
+- Last completed task: 10, commit `85236ce`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: stage/review/commit verified10, then read task11. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: review/stage/commit verified11, then read12a. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -25,6 +25,7 @@
 |08 persistent derivative store |089b14f |836 Python (1 skip),749 JS passed |
 |09a HTTP/config/lifecycle |37977ee |Both full suites/hook passed;749JS |
 |09b auth/privacy |4023ed2 |859 Python (1 existing skip)/749JS full passed; hook passed both |
+|10 image info |85236ce |871 Python (1 existing skip)/749JS full passed; hook passed both |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -489,3 +490,49 @@ the linked evidence pages; Git history retains prior milestone records.
   after service restarts. Refreshed only the dedicated development tab; ready GM
   14.369 with0 console errors and health gm restored. No continuing runtime error.
 - Final diff and whitespace reviewed; ready for task10 local commit.
+- Commit85236ce completed after both hook suites passed,exit0.
+
+## Current11 checkpoint
+
+- Task read fully; dependencies07b b144211,09b4023ed2,1085236ce committed.
+  16/30 tasks,97/200 points (48.5%) complete. Tool11 accepts base image/src/
+  source_id and crop only; map context/notes remain M05. Current info/HTTP/
+  store/render interfaces and structural references read; committed baseline
+  tools11/HTTP15/full871+749 passed. No new Foundry API dependency.
+- Plan: configuration check first, stage/probe selector inputs, lease originals,
+  render/validate exact artifact, recheck membership/authority around publication,
+  then return strict result and release lease. Atomically completed but canceled
+  publication may leave an unreturned immutable row until normal expiry; no
+  partial bytes or invented retry/idempotency contract. Tests must prove this.
+- Base URL composition implemented; initial actual tools20 pass in3.249s. Real
+  native crops match independent original-region pixels, handles reuse transfers,
+  distinct immutable links/query-independent HTTP reads, snapshot replacement,
+  quota retention, strict discovery/auth/expiry/context and canceled-render lease
+  cleanup pass. No live public capability or game mutation performed.
+- Actual HTTP client logging in these tests exposed URL-object arguments that
+  become strings only during formatter interpolation. New privacy URL-object
+  regression failed (nonce emitted) before correction. Filter now classifies
+  nonprimitive diagnostic objects' string forms before formatting while retaining
+  safe original values. Same unchanged test verification pending; attempts0.
+- URL-object regression passed unchanged; privacy9 and actual four-mode matrix
+  pass (10/14/10/5 calls, including disabled URL-tool invocation). HTTP15/OAuth19
+  pass. Added publication-cancellation and real Basic HTTP issuance; tools22 pass.
+- Forged valid render reply could substitute the overview for a requested crop.
+  Focused worker-region regression failed before correction; final publication
+  compares exact requested region with validated geometry, same test passes.
+  Final tools23 pass3.541s, URL discovery8516B, source-info4867B; no unsuccessful
+  fixes or active failure. Captured HTTP-client logs now contain no raw UUID paths.
+- Full and packaged tools/privacy verification running. Current branch runtime
+  still needs restart/discovery check; no new game assets or public links minted.
+- Final tools24 (including bounded disabled-runtime checker) passed; final full
+  `./scripts/test.sh > /tmp/foundry-image-preview-11-tests.log 2>&1` passed885
+  Python (1 existing skip)/749JS. Docker rebuild passed smokes; packaged tools24
+  passed7.514s, privacy9 passed9.563s,UID10001/read-only/no-network/tests-only.
+- Existing service restarted. Actual fresh HTTP disabled-URL checker passed2
+  calls/45 development tools/8523B live tool record. Local origin remains unset;
+  no live bearer issued. Auth fixture39 total calls across4 modes verifies real
+  disabled URL invocation, unchanged protection and discoverability.
+- One restart transport-error record at known reconnect handler; dedicated tab
+  refreshed for clean readiness/console check before commit. No JS/game changes.
+- Dedicated browser now readyGM14.369/console0; health gm connected. Final
+  diff/whitespace reviewed and task11 evidence ready for its local commit.
