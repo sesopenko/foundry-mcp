@@ -25,13 +25,15 @@ switching to UID10001. This creates/removes its own tiny PNG, loads the native
 runtime and probes real bytes. A local production-image build/run requires no
 Foundry instance, ports, game data volumes, publication or release.
 
-## Initial05a boundary
+## Raster admission
 
 `image_preview_process.probe_image(path)` is an internal async operation on a
-private staged regular file. The worker selects explicit jpegload/pngload/
-webpload operations from source signatures; it never asks libvips to guess a
+private staged regular file. The worker selects explicit JPEG/PNG/WebP/GIF/TIFF/
+AVIF operations from source signatures; it never asks libvips to guess a
 loader, executes delegates, accepts URL retrieval or uses filename options.
-Additional raster formats belong to07a and sanitized SVG to07b.
+[Raster compatibility adapters](plans/image-viewing/raster-codecs.md) cover BMP,
+APNG with a separate fallback image, and AVIF timed sequences inside the same
+supervised worker. Sanitized SVG belongs to07b.
 
 Metadata fields are `width,height,mime_type,size_bytes,frame_policy`. Width and
 height describe original display-oriented pixels; EXIF orientations5–8 swap

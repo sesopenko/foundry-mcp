@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 06b, [preview encoding and byte budget](tasks/06b-preview-encoding-and-byte-budget.md).
+- Current task: 07a, [raster codecs and frame policy](tasks/07a-raster-codecs-and-frame-policy.md).
 - Stage: commit.
-- Last completed task: 06a, commit `49e8aaf`.
+- Last completed task: 06b, commit `4740720`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified06b with its full hook, then read/baseline07a raster codecs/frame policy. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified07a, then read/start07b safe SVG. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -19,6 +19,7 @@
 |05a decoder probe/package |57123ce |741 Python (1 skip),749 JS passed |
 |05b resource components/refactor |cc7ba71 |770 Python (1 skip),749 JS passed |
 |06a geometry/resampling |49e8aaf |782 Python (1 skip),749 JS passed |
+|06b bounded encoding |4740720 |797 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -229,3 +230,38 @@ the linked evidence pages; Git history retains prior milestone records.
   mounted read-only; no source override/game volume/network/publication. Both
   real WebP sizes matched host measurements. No new external prerequisite.
 - Diff/whitespace reviewed; no MCP tool/discovery or Foundry browser changes.
+
+## Current07a checkpoint
+
+- Recovery reread all required assignment/design/index/research/current task and
+  repository reading. Goal active; healthy existing service lists GM. Previous
+  goal turn was progress (06b committed and verified). Probe9 baseline passes.
+- Added explicit GIF/TIFF/AVIF admission and expanded private typed MIME contract.
+  Native page0/n1 prevents frame stacks; TIFF retains shared EXIF orientation.
+  Narrow Pillow13 adapters handle BMP (no built-in libvips loader), APNG with
+  separate fallback, and AVIF timed sequences; final rendering remains libvips.
+  These adapters do not normalize pixels during info/header probing. Source,
+  scratch/RSS/deadline and final artifact limits remain enforced; uploads unchanged.
+- New real format tests first failed for absent format admission and APNG policy.
+  After native admission, timed AVIF test alone failed: native page count was1
+  while the fixture contains2 timed frames. Pinned Pillow13 sequence count/frame
+  selection corrected that boundary; same unchanged first-frame test passes.
+  No unsuccessful corrections; no active diagnosis. Upstream GitHub MCP fetched
+  Pillow13 AvifImagePlugin.py; decoder's public DEFAULT_MAX_THREADS is explicitly
+  set2 and restored, with a focused test. It reads compressed source to memory,
+  still bounded128MiB plus supervised RSS; no header-only pixel allocation claim.
+- Current focused formats10 pass: all still/animated/page pixel cases, APNG
+  fallback, TIFF/AVIF all8 orientations vs independent oracle, alpha, malformed
+  bodies, BMP exact/oversize bounds and no-normalization info checks. Next final
+  matrix includes loader/version inventory; full/package evidence pending.
+- Final formats matrix11 passed in production image asUID10001,9.787s with
+  pyvips3.2.0/libvips8.18.7/Pillow13.0.0 and all6 explicit native loaders present.
+  Exact read-only/no-network Docker command is in task07a. Build/smokes passed.
+  Only tests mounted read-only; no app override/game resource/publication.
+- Focused render15/upload13/geometry11 passed. `./scripts/test.sh` completed
+  exit0, both suites passed,749JS and1 existing Python skip. Initial verbose
+  command output truncated across polling chunks; no unsupported exact Python
+  count is claimed here. All new11 tests are covered by full runner discovery.
+- Documentation and whitespace reviewed. No new runtime/browser/public-tool
+  boundary changed; all temporary fixtures are unit-owned and cleaned.07a
+  completion commit is this commit; resolve SHA at next task checkpoint.

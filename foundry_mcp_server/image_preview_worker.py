@@ -1,7 +1,7 @@
 """Private libvips subprocess operations; no network or public path interface.
 
-Initial05a probes only explicit JPEG/PNG/WebP loaders.07a owns additional raster
-formats and07b safe SVG. Header probing does not fully validate raster bodies.
+Explicit JPEG/PNG/WebP/GIF/TIFF/AVIF loaders and narrow BMP/APNG/AVIF-sequence
+adapters.07b owns safe SVG. Header probing does not fully validate raster bodies.
 No native error text or source metadata beyond compact technical values leaves
 the worker. Resource supervision is completed in05b before any MCP exposure.
 """
@@ -43,13 +43,14 @@ def dimensions(width, height):
         raise PreviewFailure('ImageTooLarge', width, height)
 
 
-def open_original(path):
+def open_original(path, *, header_only=False):
     """File-backed demand-driven safe raster header boundary for later rendering.
 
     The caller supplies a private staged regular file, not a browser URL or host
     path from MCP. Returns native pipeline plus compact display-oriented metadata.
     JPEG autorotate is explicitly false; later extraction must orient the same
-    original. This initial boundary admits static PNG/JPEG and first-frame WebP.
+    original. Multiframe inputs select a single first frame/page. Compatibility
+    adapters never decode pixels when header_only is true (the info operation).
     """
     path = Path(path)
     if path.is_symlink() or not path.is_file():
@@ -67,6 +68,18 @@ def open_original(path):
         loader, mime = 'jpegload', 'image/jpeg'
     elif header.startswith(b'RIFF') and header[8:12] == b'WEBP':
         loader, mime = 'webpload', 'image/webp'
+    elif header.startswith((b'GIF87a',b'GIF89a')):
+        loader, mime = 'gifload', 'image/gif'
+    elif header.startswith((b'II*\0',b'MM\0*',b'II+\0',b'MM\0+')):
+        loader, mime = 'tiffload', 'image/tiff'
+    elif header.startswith(b'BM'):
+        from .image_preview_raster import bitmap
+        return bitmap(path,size,header_only=header_only)
+    elif header[4:8] == b'ftyp':
+        from .image_preview_raster import avif_brand
+        if not avif_brand(path,size):
+            raise PreviewFailure('UnsupportedImage')
+        loader, mime = 'heifload', 'image/avif'
     else:
         raise PreviewFailure('UnsupportedImage')
     pyvips = initialise()
@@ -76,8 +89,10 @@ def open_original(path):
     options = dict(access='random', fail_on='warning')
     if loader == 'jpegload':
         options['autorotate'] = False
-    if loader == 'webpload':
+    if loader in ('webpload','gifload','tiffload','heifload'):
         options.update(page=0, n=1)
+    if loader == 'tiffload':
+        options['autorotate'] = False
     try:
         image = pyvips.Operation.call(loader, str(path), **options)
         width, height = image.width, image.height
@@ -88,6 +103,13 @@ def open_original(path):
         if orientation >= 5:
             width, height = height, width
         dimensions(width, height)
+        if loader == 'pngload':
+            from .image_preview_raster import png_frame
+            image, pages = png_frame(path,image,header_only=header_only)
+        if loader == 'heifload':
+            from .image_preview_raster import avif_frames
+            image, sequence_pages = avif_frames(path,image,header_only=header_only)
+            pages = max(pages,sequence_pages)
         return image, dict(width=width, height=height, mime_type=mime, size_bytes=size,
             frame_policy='first_frame' if pages > 1 else 'still')
     except PreviewFailure:
@@ -97,7 +119,7 @@ def open_original(path):
 
 
 def probe(path):
-    _, metadata = open_original(path)
+    _, metadata = open_original(path,header_only=True)
     return metadata
 
 

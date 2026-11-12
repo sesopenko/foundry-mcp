@@ -21,7 +21,7 @@ from .mcp_server.image_preview_models import Crop
 class ProbeMetadata(Model):
     width: int = Field(ge=1,le=limits.SOURCE_MAX_EDGE)
     height: int = Field(ge=1,le=limits.SOURCE_MAX_EDGE)
-    mime_type: Literal['image/jpeg','image/png','image/webp']
+    mime_type: Literal['image/jpeg','image/png','image/webp','image/avif','image/bmp','image/gif','image/tiff']
     size_bytes: int = Field(ge=1,le=limits.SOURCE_MAX_BYTES)
     frame_policy: Literal['still','first_frame']
 

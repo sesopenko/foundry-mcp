@@ -59,8 +59,20 @@ loader admission, codecs/image updates, fixtures/tests, and format limitations.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and packaged codec matrix: not run.
-- Raster/frame evidence, tested versions, and gaps: pending.
+- Implementation: complete; [codec/frame contracts and evidence](../raster-codecs.md).
+- Dependency commit SHA: `4740720` (06b).
+- Commit: this commit.
+- Focused commands above: formats11,render15,uploads13 passed; geometry11 and
+  baseline probe9 also passed outside sandbox. `./scripts/test.sh` passed both
+  suites, exit0 (1 existing Python skip;749 JavaScript passed).
+- Packaged matrix: `docker build --pull=false -t foundry-mcp-image-preview-check:local .`
+  passed native/supervised UID10001 smokes. Then
+  `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --user 10001:10001 --volume /home/sean/src/github.com/sesopenko/foundry-mcp/tests:/checks:ro --entrypoint python foundry-mcp-image-preview-check:local -m unittest discover -s /checks -p test_image_preview_formats.py -v`
+  passed11/9.787s against shipped application/native code. No source override,
+  game volume, network, publication or Foundry instance used.
+- Versions: pyvips3.2.0/libvips8.18.7/Pillow13.0.0; native explicit JPEG/PNG/WebP/
+  GIF/TIFF/HEIF operations confirmed. Still and animated/multipage pixel/alpha/
+  orientation checks pass. Timed AVIF count regression failed before adapter,
+  then passed unchanged. No active defect or unavailable local codec check.
+- Native codec guards/AVIF brand-table bounds are documented; other platforms
+  remain unverified. SVG intentionally awaits07b. No new public MCP registration.
