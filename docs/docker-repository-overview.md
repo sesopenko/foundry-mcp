@@ -56,6 +56,10 @@ background/foreground references and a separate Tile inventory; it never
 activates or exports a composed Scene. See
 [selected map configuration](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-info.md)
 for file-availability limits and sensitive-reference handling.
+Its selected-level notes section provides stable compact aliases and a bounded,
+revision-bound Note/journal/page legend; linked-target permissions precede label
+fallback. See [note identities](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-note-identities.md).
+Coordinate mapping and pixel annotations remain separate implementation tasks.
 
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires

@@ -12,6 +12,7 @@ from pydantic import Field,model_validator
 from .map_models import SceneUUID,FolderUUID,FolderIdentity,MapNamed,Revision,Cursor
 from .selective_models import Model
 from .image_preview_models import ImageInfoRequest
+from .map_note_models import MapNoteEntry,NoteKeys
 
 LevelId=Annotated[str,Field(pattern=r'^[A-Za-z0-9_-]{1,128}$',description='Exact embedded Level ID returned by get_map_info for this Scene; never a name or UUID.')]
 LevelUUID=Annotated[str,Field(pattern=r'^Scene\.[A-Za-z0-9_-]{1,128}\.Level\.[A-Za-z0-9_-]{1,128}$')]
@@ -22,11 +23,21 @@ Number=Annotated[int|float,Field(description='Finite stored numeric value; null 
 class MapInfoRequest(Model):
     scene_uuid: SceneUUID
     level_id: LevelId|None=Field(default=None,description='Omitted/null means all permitted levels; choose an exact returned ID to filter. Never defaults to viewed/active level.')
-    section: Literal['assets','tiles']=Field(default='assets',description='Assets returns complete level records with separate image roles; tiles is a file/placement inventory, not a composite.')
+    section: Literal['assets','tiles','notes']=Field(default='assets',description='Assets returns level image roles; tiles inventories files/placement; notes requires exact level_id and returns bounded aliases/identities without bodies.')
+    note_keys: NoteKeys|None=None
     expected_revision: Revision|None=Field(default=None,description='Require the exact metadata revision from get_map_info; mismatch requires restarting all pages.')
     limit: int=Field(default=10,ge=1,le=100)
     max_bytes: int=Field(default=8000,ge=1024,le=48000,description='Maximum compact UTF8 JSON bytes including metadata/continuation; complete identities never clip.')
     cursor: Cursor|None=None
+
+    @model_validator(mode='after')
+    def note_scope(self):
+        if self.section=='notes' and self.level_id is None:raise ValueError('Notes require an exact level_id from get_map_info assets')
+        if 'note_keys' in self.model_fields_set and self.section!='notes':raise ValueError('note_keys is only valid for section=notes')
+        if self.note_keys is not None:
+            if len(set(self.note_keys))!=len(self.note_keys):raise ValueError('note_keys must be distinct')
+            if self.expected_revision is None:raise ValueError('note_keys requires expected_revision from this exact Scene/level')
+        return self
 
 
 class MapSelector(Model):
@@ -192,9 +203,9 @@ class MapInfoResult(Model):
     grid: MapGrid
     initial_level_id: LevelId|None=None
     level_id: LevelId|None
-    section: Literal['assets','tiles']
+    section: Literal['assets','tiles','notes']
     revision: Revision
-    entries: list[Annotated[MapLevelEntry|MapTileEntry,Field(discriminator='kind')]]=Field(max_length=100)
+    entries: list[Annotated[MapLevelEntry|MapTileEntry|MapNoteEntry,Field(discriminator='kind')]]=Field(max_length=100)
     total: int=Field(ge=0)
     complete: bool
     next_cursor: Cursor|None

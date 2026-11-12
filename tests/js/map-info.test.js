@@ -20,8 +20,8 @@ function fixture(){
   state.scene=(id='one',overrides={})=>{
     const scene=document('Scene',id,null,{name:'Same map',folder:null,width:5940,height:7920,padding:.25,shiftX:0,shiftY:0,
       grid:{type:1,size:180,distance:5,units:'ft',style:'solid',thickness:1,color:'#000000',alpha:.35},initialLevel:'floor',...overrides});
-    scene.levels=collection([]);scene.tiles=collection([]);
-    scene.getEmbeddedCollection=type=>type==='Level'?scene.levels:scene.tiles;
+    scene.levels=collection([]);scene.tiles=collection([]);scene.notes=collection([]);
+    scene.getEmbeddedCollection=type=>({Level:scene.levels,Tile:scene.tiles,Note:scene.notes})[type];
     scene.getDimensions=()=>({sceneX:1620,sceneY:2160,sceneWidth:5940,sceneHeight:7920});
     state.scenes.push(scene);return scene;
   };
@@ -58,7 +58,7 @@ test('all levels sort by declared sort/UUID without implicit viewed level and in
   assert.equal(all.entries[0].background.reference_status,'missing');assert.equal(all.entries[0].foreground.reference_status,'empty');
   assert.equal(all.entries[1].background.support_status,'unsupported_video');assert.equal(all.entries[1].background.info_next_call,null);
   const single=await f.call({level_id:'z'});assert.deepEqual(single.entries.map(e=>e.level_id),['z']);
-  assert.equal(single.revision,all.revision);await assert.rejects(f.call({level_id:'foreign'}),error('LevelNotFound'));
+  assert.notEqual(single.revision,all.revision);await assert.rejects(f.call({level_id:'foreign'}),error('LevelNotFound'));
 });
 
 test('gridless/hex and absent/null/zero configuration remain distinct',async()=>{
@@ -88,7 +88,7 @@ test('tiles retain placement and declared membership; unknown selected-level app
   assert.deepEqual(result.entries.map(e=>e.tile_uuid),['Scene.one.Tile.unknown','Scene.one.Tile.yes']);
   assert.equal(result.scope_status,'partial');assert.equal(result.entries[1].placement.scaleY,-1);
   assert.equal(result.entries[1].placement.rotation,15);assert.equal(result.artwork.tiles,3);
-  const assets=await f.call();assert.equal(assets.revision,result.revision);
+  const assets=await f.call({level_id:'floor'});assert.equal(assets.revision,result.revision);
 });
 
 test('denied embedded data never serializes and produces truthful partial scope',async()=>{

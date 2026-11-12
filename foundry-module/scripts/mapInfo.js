@@ -2,6 +2,7 @@
  * Detached source projections only, no PF2e, canvas activation or media fetch.
  */
 import {mapContext,mapHash,mapNamed,mapBytes,mapCursor,mapOffset} from './mapBrowse.js';
+import {projectMapNotes} from './mapNotes.js';
 
 const ID=/^[A-Za-z0-9_-]{1,128}$/;
 function fail(code,message){const error=new Error(message);error.rpcError={code,type:code,message};throw error;}
@@ -93,6 +94,7 @@ function snapshot(scene_uuid){
   const rect=pick(dimensions,['sceneX','sceneY','sceneWidth','sceneHeight']);
   if(Object.keys(rect).length!==4||Object.values(rect).some(v=>typeof v!=='number'||!Number.isFinite(v)))unavailable();
   const levels=embedded(scene,'Level'),tiles=embedded(scene,'Tile');
+  const notes=projectMapNotes(scene,levels.rows.map(r=>r.doc));
   const allLevelIds=new Set(scene.getEmbeddedCollection('Level').contents.map(d=>d.id));
   const assetRows=levels.rows.map(({doc,data:s})=>{
     if(typeof s.name!=='string')unavailable();
@@ -123,7 +125,7 @@ function snapshot(scene_uuid){
       tiles:tiles.rows.map(({doc,data:s})=>[doc.id,pick(s,['name','texture','levels'])])},
     geometry:{...pick(data,['width','height','padding','shiftX','shiftY']),scene_rect:rect},grid:pick(data.grid??{},['type','size','distance','units','style','thickness','color','alpha']),
     ...(Object.hasOwn(data,'initialLevel')?{initial_level_id:data.initialLevel}:{}),assets:assetRows,tiles:tileRows,
-    unavailable:[levels.unavailable,tiles.unavailable],unknownMembership,
+    unavailable:[levels.unavailable,tiles.unavailable],unknownMembership,notes,
     artwork:{levels:assetRows.length,tiles:tileRows.length,
       background_references:assetRows.filter(r=>!['missing','null','empty'].includes(r.background.reference_status)).length,
       foreground_references:assetRows.filter(r=>!['missing','null','empty'].includes(r.foreground.reference_status)).length}};
@@ -131,11 +133,14 @@ function snapshot(scene_uuid){
 
 /** Exact Scene/optional level metadata; caller_key is injected by authenticated Python. */
 export async function getMapInfo(params={},isCurrent=()=>true){
-  const allowed=['scene_uuid','level_id','section','expected_revision','limit','max_bytes','cursor','caller_key'];
+  const allowed=['scene_uuid','level_id','section','note_keys','expected_revision','limit','max_bytes','cursor','caller_key'];
   if(!params||typeof params!=='object'||Array.isArray(params)||Object.keys(params).some(k=>!allowed.includes(k)))fail('InvalidRequest','Use published get_map_info fields.');
-  const {scene_uuid,level_id=null,section='assets',expected_revision=null,limit=10,max_bytes=8000,cursor=null,caller_key}=params;
+  const {scene_uuid,level_id=null,section='assets',note_keys=null,expected_revision=null,limit=10,max_bytes=8000,cursor=null,caller_key}=params;
   if(typeof scene_uuid!=='string'||!/^Scene\.[A-Za-z0-9_-]{1,128}$/.test(scene_uuid)
-    ||(level_id!==null&&(typeof level_id!=='string'||!ID.test(level_id)))||!['assets','tiles'].includes(section)
+    ||(level_id!==null&&(typeof level_id!=='string'||!ID.test(level_id)))||!['assets','tiles','notes'].includes(section)
+    ||(section==='notes'&&level_id===null)||(Object.hasOwn(params,'note_keys')&&section!=='notes')
+    ||(note_keys!==null&&(!Array.isArray(note_keys)||!note_keys.length||note_keys.length>100||new Set(note_keys).size!==note_keys.length
+      ||note_keys.some(k=>typeof k!=='string'||!/^N[1-9][0-9]{0,14}$/.test(k))||expected_revision===null))
     ||!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(max_bytes)||max_bytes<1024||max_bytes>48000
     ||(cursor!==null&&(typeof cursor!=='string'||!cursor.length||cursor.length>4096))
     ||(expected_revision!==null&&(typeof expected_revision!=='string'||expected_revision.length>128))
@@ -145,13 +150,19 @@ export async function getMapInfo(params={},isCurrent=()=>true){
     if(data.unavailable[0].includes(level_id))fail('PermissionDenied','Selected level is unavailable; choose a readable level.');
     fail('LevelNotFound','Level does not belong to this Scene; use get_map_info assets without level_id.');
   }
-  const revision=await mapHash([owner,data]),scope=await mapHash([owner,caller_key,scene_uuid,level_id,section]);
+  const revision=await mapHash([owner,data,level_id]),scope=await mapHash([owner,caller_key,scene_uuid,level_id,section,note_keys===null?null:[...note_keys].sort()]);
   if(JSON.stringify(mapContext(isCurrent))!==JSON.stringify(owner)||JSON.stringify(snapshot(scene_uuid))!==JSON.stringify(data))fail('ContentChanged','Map metadata or permissions changed; restart get_map_info.');
   if(expected_revision!==null&&expected_revision!==revision)fail('ContentChanged','Expected map revision changed; discard prior pages and restart.');
-  const entries=section==='assets'?data.assets.filter(l=>level_id===null||l.level_id===level_id)
+  let entries=section==='assets'?data.assets.filter(l=>level_id===null||l.level_id===level_id)
+    :section==='notes'?data.notes.by_level.find(l=>l.level_id===level_id).entries
     :data.tiles.filter(t=>level_id===null||t.level_membership.status==='not_evaluated'||t.level_membership.declared_ids.includes(level_id));
+  if(note_keys!==null){
+    const available=new Set(entries.map(n=>n.key));
+    if(note_keys.some(k=>!available.has(k)))fail('InvalidNoteKeys','Keys do not belong to this Scene/level/revision; restart notes without note_keys.');
+    entries=entries.filter(n=>note_keys.includes(n.key));
+  }
   const offset=mapOffset(cursor,scope,revision,entries.length);
-  const partial=data.unavailable.some(ids=>ids.length>0)||(section==='tiles'&&level_id!==null&&data.unknownMembership);
+  const partial=data.unavailable.some(ids=>ids.length>0)||data.notes.partial||(section==='tiles'&&level_id!==null&&data.unknownMembership);
   const result={scene:data.scene,geometry:data.geometry,grid:data.grid,...(Object.hasOwn(data,'initial_level_id')?{initial_level_id:data.initial_level_id}:{}),
     level_id,section,revision,entries:[],total:entries.length,complete:offset===entries.length,next_cursor:offset===entries.length?null:mapCursor(scope,revision,offset),
     scope_status:partial?'partial':'complete',artwork:data.artwork,limitations:[

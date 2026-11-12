@@ -10,6 +10,12 @@ Tile file/placement inventory through public document APIs. Stored references
 remain separate from file availability and composed Scene rendering. See
 [selected map configuration](../../docs/plans/image-viewing/map-info.md).
 
+`mapNotes.js` projects authorized Note identities/labels and stable per-level
+aliases through public includedInLevel and linked-target permissions. The same
+selected-level revision governs assets, bounded legends and private candidates;
+no journal bodies or pixel overlays are produced. See
+[map note identities](../../docs/plans/image-viewing/map-note-identities.md).
+
 `imageUploads.js` implements User Data directory creation and image upload through
 public core14 FilePicker APIs. `journalImages.js` exposes directory capabilities.
 Python-validated bytes arrive over the authenticated bridge; socket/world/GM

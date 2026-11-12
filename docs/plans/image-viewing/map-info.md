@@ -7,10 +7,12 @@ and measured verification are recorded separately from those later features.
 
 `get_map_info` is authenticated, ready-GM, read-only core14, independent of PF2e
 and active canvas. Flat inputs: required `scene_uuid`, optional `level_id`,
-`section:assets|tiles` (default assets), `expected_revision`, `cursor`, `limit`
-(10,1–100) and `max_bytes` (8000,1024–48000). Reject unknown fields and notes
-arguments before reads. Scene names/paths/compendium UUIDs are not selectors.
-No implicit current/active/initial level selection: omitted level means all
+`section:assets|tiles|notes` (default assets), `expected_revision`, `cursor`, `limit`
+(10,1–100) and `max_bytes` (8000,1024–48000). Reject unknown fields and conflicting
+note-only arguments before reads. Scene names/paths/compendium UUIDs are not selectors.
+The [note legend extension](map-note-identities.md) requires exact level identity
+for notes and adds revision-bound `note_keys`. No implicit current/active/initial
+level selection: omitted level means all
 authorized levels, exact level ID means that embedded owner only.
 
 Common output: `scene` (scene_uuid,name,name_truncated,parent_uuid,ancestry),
@@ -59,8 +61,10 @@ levels and ancestry never clip. Fail ResponseTooLarge if minimum complete
 identity cannot fit. Empty levels and tile-only maps remain represented.
 
 Revision describes the selected Scene's authorized metadata/permissions,
-geometry, ancestry, levels and declared artwork, independent of section,
-pagination bounds and level filter. It does not detect changed bytes at an
+geometry, ancestry, levels, declared artwork and note witnesses. M03a binds the
+selected level as well, sharing its revision across sections/key filters while
+all-level assets have a separate revision. Pagination bounds are excluded.
+It does not detect changed bytes at an
 unchanged src. Cursors additionally bind section/filter and verified caller/
 world/GM. Changed metadata or expected_revision mismatch returns ContentChanged
 before offset checks; discard prior pages and restart. Recheck socket/context

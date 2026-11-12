@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M02, [grid and image files](tasks/m02-map-grid-and-image-files.md).
+- Current task: M03a, [note identities and legend](tasks/m03a-map-note-identities-and-legend.md).
 - Stage: commit.
-- Last completed task: M01, commit `e9ea43e`.
+- Last completed task: M02, commit `af58e0d`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified M02 with required hook, then read M03a and establish its note-identity baseline. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified M03a with required hook, then read M03b and establish independent mapping/context evidence. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -30,6 +30,7 @@
 |12a cross-layer workflows |d5fe0de |893 Python (1 existing skip)/750JS full passed; hook passed both |
 |12b large maps/payloads |5bae8bb |899 Python (1 existing skip)/750JS full passed; hook passed both |
 |M01 map browsing |e9ea43e |912 Python (1 existing skip)/761JS full passed; hook passed both |
+|M02 grid/image files |af58e0d |928 Python (1 existing skip)/777JS full passed; hook passed both after final declarations/test |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -781,3 +782,84 @@ the linked evidence pages; Git history retains prior milestone records.
   streams complete, metadata revisions agree, active Scene unchanged.
 - Public/operator/module architecture/task evidence updated; final diff review
   and required two-suite hook/local commit next. No active diagnosis/cleanup.
+- M02 af58e0d committed after both hook suites passed,777 JS. Working tree
+  clean before next-task checkpoints; no publication or game mutation.
+
+## CurrentM03a checkpoint
+
+- Dependency M02 af58e0d committed;21/30 tasks,137/200 points (68.5%) complete.
+  Read current task fully. Grounded Docs fresh NoteDocument/BaseNote pages
+  establish public label/entry/page getters, permissions/serialization and the
+  levels schema field. SceneLevelsSetField describes nullable specific-level
+  references but not empty/null applicability. No unsupported internal helper
+  will be adopted. Official Scene knowledge-base page is older than level
+  implementation; matching runtime major docs alone do not settle semantics.
+- Need bounded baseline and exact note projection/legend contract. Aliases
+  must use complete authorized applicable-level UUID order before filtering;
+  permissions must precede labels and linked body reads remain excluded.
+  No M03a production change yet; baseline/research is next.
+- Added unit-tested bounded note baseline helper; focused test_map_notes.py2
+  pass. Actual2-call/120s baseline passed:47 tools/309786B,483 authorized notes
+  across50 Scenes, all483 source levels empty, all finite coordinates and linked
+  readable entries,208 text overrides. No null/omitted/explicit membership, denied
+  or missing linked entries. Static public schema label/hint absent. Active Scene
+  unchanged; no raw labels/IDs/body content returned or game mutations.
+- Empty-set applicability is therefore a substantive normal-workflow gate,
+  not an edge case to dismiss. Investigate authoritative field semantics and
+  focused runtime evidence before choosing production behavior. No failed
+  diagnosis/fix attempt or M03a production edit; remaining index/progress docs
+  and baseline helper/tests are uncommitted M03a work.
+- Root public applicability API found: official CanvasDocumentMixin returns
+  foundry.CanvasDocument, whose public includedInLevel(level|string) is documented
+  without private/protected/internal annotations. NoteDocument generated page
+  incorrectly advertises only ClientDocumentMixin; installed note.mjs explicitly
+  extends CanvasDocumentMixin(BaseNote). Public API plus installed source reconcile
+  this documentation omission; do not call viewed/private canvas internals.
+- Read-only installed CanvasDocument source explains empty levels return true,
+  explicit levels use selected ID; no production dependency on its internals.
+  Added bounded1-call public-constructor/member verifier with3 unit tests total.
+  Actual14.369 check passes: unpersisted marked Note documents for empty/null/
+  explicit-own level all included, foreign level excluded. Supplied null cleans
+  to non-null source.10 existing empty-set notes in sampled owning Scene all
+  included. Collection size/active Scene unchanged;0 persisted fixtures.
+- Next: freeze exact legend DTO/label-target permission/revision contract, then
+  implement public includedInLevel admission and bounded candidates. Normal empty
+  membership is now supported by a documented public query, not inferred rules.
+- Froze DTO/key filters/selected-level revisions and internal candidate limits
+  in map-note-identities.md before implementation. Independent Note projection
+  JS6 passes, including denied getter traps, missing/unlinked/page identities,
+  clipped malicious labels and duplicate pins. Integrated notes into typed
+  selected-map boundary and shared metadata revisions; existing info17/JS33
+  regression checks pass. M02 tests intentionally update revision expectations
+  for exact-level identity binding documented in the new contract.
+- Actual MCP+production Node legend tests pass (initial17 included8 imported
+  helper tests already owned by M02; removed duplicate test discovery). New tests
+  exercise complete20-note pagination, filtered aliases, changed labels/levels,
+  denied targets, typed discovery and exact configured3000-byte candidate frames.
+  Normal candidate pages never exceed100/48000 and insufficient1024 frame fails
+  before RPC. No M03 runtime refresh/full suite/commit yet.
+- Added focused forged-alias ordinal regression for a one-entry unfiltered
+  page; observing expected failure before enforcing ordinal/offset consistency.
+  Current diagnosis stage, unsuccessful correction count0.
+- Forged unfiltered alias N999 at offset0 was accepted on a one-entry page;
+  focused unit failed before correction. Exact offset+row ordinal validation
+  now makes the unchanged test pass. Final focused notes13 pass3.885s, existing
+  info17 and JS33 pass. First full939 Python (1 existing skip)/783 JS passes;
+  later tests add internal missing-revision guard/model/privacy/legend checks.
+- Bounded unit-tested native legend harness follows actual notes pagination,
+  exact-key lookup and expanded equal-content reading without printing IDs or
+  labels; focused harness exercises the actual MCP/production Node reader.
+  Existing service restart/module packaging/native refresh verification next.
+- Final full942 Python (1 existing skip)/783 JS passes, notes13/info17/JS33
+  focused pass. Module packaging passes. Existing-service restart/dedicated
+  refresh readinessGM14.369/console0; actual native legend9 calls passes21 notes/
+  3 pages, exact2-key identity lookup and equal-content expanded page. Active
+  Scene unchanged and complete scope;47 tools/314317B catalog,27629B record.
+  All stream bytes/table and public applicability evidence in identity guide.
+- Installed package version14.369.0 confirms source/browser match despite older
+  container image label. Public method avoids guessing empty/null membership.
+  No persisted runtime fixtures or game assets/documents changed; no cleanup.
+- Code graph get_map_info impact/reference review confirms internal candidate
+  entry point and dynamic MCP registry; exact RPC searches and Node/mock usages
+  updated. Final diff/whitespace and commit hook next; no active failure or
+  unsuccessful correction attempt. Geometry/overlays remain separate tasks.

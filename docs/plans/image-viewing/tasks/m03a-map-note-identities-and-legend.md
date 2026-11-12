@@ -68,8 +68,20 @@ typed section, tests, and legend recovery documentation together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, legend calls/bytes/completion: not run.
-- Level-membership API evidence and exact verification gaps: pending.
+- Implementation: complete; [identity contract/API/measurements](../map-note-identities.md).
+- Dependency commit SHA(s): M02 `af58e0d`.
+- Commit: this commit.
+- Focused notes13, selected-map17 and combined JS33 pass outside sandbox.
+  Final `./scripts/test.sh`:942 Python (1 existing skip)/783 JS passed.
+  Actual local module ZIP packaging passes; no version bump/publication.
+- Baseline2 calls:483 notes, all empty membership sets,208 text overrides;
+  47 tools/309786B. Public-member/unpersisted-constructor1-call verification
+  proves normal membership via documented includedInLevel, unchanged collection
+  and active Scene,zero persisted fixtures. Runtime/source version14.369.
+- Native legend9 calls/120s budget:21 notes,3 default pages,2 exact-key identity
+  lookups and1 equal-content expanded page, complete scope/stream and unchanged
+  active Scene.47 tools/314317B,27629B live get_map_info record; detail table linked.
+  Refreshed dedicated browser readyGM14.369/test,console0.
+- No M03a local applicability prerequisite remains. Source-pixel mapping,
+  original-byte context binding and rendered keys remain M03b–M05 work; no
+  overlay or target-client acceptance is claimed here.

@@ -139,8 +139,8 @@ spawning agents or concurrent writes to this checkout.
 | [12a Workflow and failure integration](tasks/12a-workflow-and-failure-integration.md) | 8 | 11 | Complete | d5fe0de |
 | [12b Large-map and payload measurements](tasks/12b-large-map-and-payload-measurements.md) | 8 | 12a | Complete | 5bae8bb |
 | [M01 Map folder browsing](tasks/m01-map-folder-browsing.md) | 8 | 01 | Complete | e9ea43e |
-| [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Complete | this commit |
-| [M03a Note identities and legend](tasks/m03a-map-note-identities-and-legend.md) | 5 | M02 | Not started | — |
+| [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Complete | af58e0d |
+| [M03a Note identities and legend](tasks/m03a-map-note-identities-and-legend.md) | 5 | M02 | Complete | this commit |
 | [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Not started | — |
 | [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Not started | — |
 | [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Not started | — |

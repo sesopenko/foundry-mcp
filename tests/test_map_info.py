@@ -162,7 +162,8 @@ class MapInfoMCPTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(data.entries),2)
         self.assertEqual(data.entries[0].background.info_next_call.arguments.request.src,'maps/a.webp')
         self.assertNotIn('source_witness',json.dumps(result.structured_content))
-        tiles=await self.invoke(dict(scene_uuid='Scene.one',level_id='floor',section='tiles',expected_revision=data.revision))
+        selected=await self.invoke(dict(scene_uuid='Scene.one',level_id='floor'))
+        tiles=await self.invoke(dict(scene_uuid='Scene.one',level_id='floor',section='tiles',expected_revision=selected.structured_content['revision']))
         self.assertFalse(tiles.is_error);self.assertEqual(tiles.structured_content['scope_status'],'partial')
         self.assertEqual(tiles.structured_content['entries'][0]['tile_uuid'],'Scene.one.Tile.art')
 
@@ -171,7 +172,7 @@ class MapInfoMCPTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tool.input_schema['required'],['scene_uuid'])
         self.assertFalse(tool.input_schema['additionalProperties']);self.assertFalse(tool.output_schema['additionalProperties'])
         self.assertEqual(tool.input_schema['properties']['limit']['default'],10)
-        self.assertEqual(tool.input_schema['properties']['section']['enum'],['assets','tiles'])
+        self.assertEqual(tool.input_schema['properties']['section']['enum'],['assets','tiles','notes'])
         for word in ('reference_only','not_evaluated','partial','get_foundry_image_info','expected_revision','PF2e'):
             self.assertIn(word,tool.description)
         server=FastMCP('map-info-oauth');server.add_middleware(OAuthToolMetadata());server.add_tool(await mcp.get_tool('get_map_info'))

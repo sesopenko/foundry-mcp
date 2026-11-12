@@ -30,6 +30,7 @@ RUNTIME_SCRIPTS += ('imagePreviewFetch.js',)
 RUNTIME_SCRIPTS += ('imagePreviewTransfer.js',)
 RUNTIME_SCRIPTS += ('mapBrowse.js',)
 RUNTIME_SCRIPTS += ('mapInfo.js',)
+RUNTIME_SCRIPTS += ('mapNotes.js',)
 
 
 def manifest(root=ROOT, tag=None):
