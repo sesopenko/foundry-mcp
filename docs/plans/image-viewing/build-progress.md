@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 09a, [HTTP delivery and configuration](tasks/09a-http-delivery-and-configuration.md).
+- Current task: 09b, [authentication boundaries and capability privacy](tasks/09b-auth-boundaries-and-capability-privacy.md).
 - Stage: commit.
-- Last completed task: 08, commit `089b14f`.
+- Last completed task: 09a, commit `37977ee`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: finalize09a package/runtime verification and commit; then09b privacy/auth matrix before any public issuance registration. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified09b, then read task10 and wire the image-info tool. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -23,6 +23,7 @@
 |07a raster codecs |02d0d8f |808 Python (1 skip),749 JS passed |
 |07b guarded SVG |b144211 |821 Python (1 skip),749 JS passed |
 |08 persistent derivative store |089b14f |836 Python (1 skip),749 JS passed |
+|09a HTTP/config/lifecycle |37977ee |Both full suites/hook passed;749JS |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -386,3 +387,55 @@ the linked evidence pages; Git history retains prior milestone records.
   ./scripts/test.sh again passed both suites exit0,749JS/1 existing Python skip.
   Diff/whitespace reviewed. Ready to commit09a; no game fixture cleanup, valid
   public URL issuance or auth/proxy deployment change.09b is next.
+- Commit37977ee completed after hook passed both suites,exit0; clean working tree
+  afterward. Final HTTP15 and prior836-test baseline imply851 Python tests;
+  verbose hook summary was truncated, so no measured exact hook count is claimed.
+
+## Current09b checkpoint
+
+- Task read fully after09a commit.14/30 tasks complete,91/200 points (45.5%).
+  Actual reader auth matrix, emitted Uvicorn/application logs, evaluation traces
+  and capability-safe proxy guidance are required before task11 registration.
+  No09b implementation yet. Existing auth13/OAuth19/JS17 passed in09a; HTTP15
+  baseline is committed. No new Foundry API, tenant/login or fixture prerequisite.
+- Read pinned installed Uvicorn0.40.0 h11/logging implementation and current
+  evaluation/principal/provider code. Code graph/source audit covers shared
+  TraceRecorder.emit and MCPAccessControl. Initial captured access/application/
+  evaluation tests each failed by finding the fixture nonce in emitted output.
+  Narrow logging filter plus trace fingerprint redaction makes those unchanged
+  tests pass, preserving status/method/ordinary health logs and payload metrics.
+- Two redactor robustness regressions failed before correction and passed
+  unchanged: encoded malformed IPv6 URL classification raised ValueError;
+  unpaired-surrogate JSON string hashing raised UnicodeEncodeError. Fixed URL
+  classification boundary and surrogate-safe fingerprint encoding. No failed
+  production correction attempts; no active diagnosis.
+- Fresh actual-app fixture bounds4 processes/30s each/<=16 calls per mode.
+  Matrix initially failed development DuplicateCredentialsAccepted: previous
+  dictionary header collapse accepted duplicate Authorization. Explicit one-
+  header/8192-byte guard fixes it; same unchanged denial now passes. Exception
+  group diagnostics were flattened to fixed enum reasons only (no secrets).
+- Current privacy8 passed. Matrix results: Basic8calls,OAuth12,development8,
+  none3; all complete. Anonymous pixels work in all4 configured read stores;
+  only authenticated modes can issue, invalid/duplicate MCP and PDF access is
+  denied, valid offline JWTs pass, invalid key/subject/scope and Basic-in-OAuth
+  fail, and image capabilities cannot authenticate the actual GM WS route.
+- Real Uvicorn H11 protocol + production ASGI app + memory transport emitted
+  redacted200/query200/404/503 access records; health remains visible. No second
+  listening server or Foundry instance. Signed/encoded URL, idempotent install,
+  exception and evaluation aggregate tests pass; existing evaluation7 also pass.
+  Full focused regressions/package/full suites and final documentation next.
+- Final discovery-inclusive auth matrix adds1 call/mode: Basic9/42tools/259253B,
+  OAuth13/42/261857B,development9/43/259741B,none4/42/259253B. Compact raw
+  result.tools JSON, distinct from older whole-response baseline; no savings or
+  token-billing claim. No URL issuance stub registered. Privacy8 passed after
+  adding discovery assertions, and in production UID10001 image8/8.950s with
+  read-only/no-network/128MiB tmpfs/tests-only mount; no source override/game data.
+- Focused HTTP15/evaluation7/production-auth13/OAuth19 passed. Full
+  `./scripts/test.sh > /tmp/foundry-image-preview-09b-tests.log 2>&1` passed859
+  Python (1 existing skip)/749JS. Only test-log output was redirected; no code
+  edits or Git commands used command-driven writes. Hook repeats final staged
+  tests after the discovery-only fixture assertion addition.
+- Recovery confirmed stored runtime journal evidence: restart completed,
+  Application startup complete, one redacted preview-path record and zero raw
+  invalid-path/query probe records. Health is ready with GM connected. Final
+  diff/whitespace reviewed; no valid live capability, game fixture or cleanup.

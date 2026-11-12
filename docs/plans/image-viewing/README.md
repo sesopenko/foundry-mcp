@@ -132,8 +132,8 @@ spawning agents or concurrent writes to this checkout.
 | [07a Raster codecs and frame policy](tasks/07a-raster-codecs-and-frame-policy.md) | 5 | 06b | Complete | 02d0d8f |
 | [07b Safe SVG rasterization](tasks/07b-safe-svg-rasterization.md) | 8 | 07a | Complete | b144211 |
 | [08 Persistent preview store](tasks/08-persistent-preview-store.md) | 8 | 01 | Complete | 089b14f |
-| [09a HTTP delivery and configuration](tasks/09a-http-delivery-and-configuration.md) | 5 | 08 | Complete | this commit |
-| [09b Auth boundaries and capability privacy](tasks/09b-auth-boundaries-and-capability-privacy.md) | 5 | 09a | Not started | — |
+| [09a HTTP delivery and configuration](tasks/09a-http-delivery-and-configuration.md) | 5 | 08 | Complete | 37977ee |
+| [09b Auth boundaries and capability privacy](tasks/09b-auth-boundaries-and-capability-privacy.md) | 5 | 09a | Complete | this commit |
 | [10 Image info MCP tool](tasks/10-image-info-mcp-tool.md) | 1 | 04b, 05b | Not started | — |
 | [11 Image URL MCP tool](tasks/11-image-url-mcp-tool.md) | 8 | 07b, 09b, 10 | Not started | — |
 | [12a Workflow and failure integration](tasks/12a-workflow-and-failure-integration.md) | 8 | 11 | Not started | — |

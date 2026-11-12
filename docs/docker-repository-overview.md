@@ -40,7 +40,8 @@ Source development also includes opt-in preview HTTP delivery using
 `FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN` and `FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR`
 (default `/data/image-previews`, requiring durable private storage). Anonymous
 GET/HEAD can read an issued derivative for seven days; issuance-tool integration
-and public-host acceptance remain pending. See
+and public-host acceptance remain pending. Python access/evaluation logs redact
+capabilities; configure reverse-proxy logs to omit preview paths and queries. See
 [preview HTTP configuration and current scope](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/http-delivery.md).
 
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced

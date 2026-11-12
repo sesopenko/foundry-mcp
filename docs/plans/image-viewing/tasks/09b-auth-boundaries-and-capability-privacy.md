@@ -61,8 +61,23 @@ Commit policy/logging changes, focused tests, and privacy documentation together
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, auth matrix and log evidence: not run.
-- Exact pending deployment prerequisites: pending.
+- Implementation: complete; [policy and measured evidence](../capability-privacy.md).
+- Dependency commit SHA(s): 09a `37977ee`.
+- Commit: this commit.
+- Focused checks: privacy8, HTTP15, evaluation7, production-auth13 and OAuth19
+  passed with the commands above, outside the sandbox. The auth probe performs
+  35 total HTTP calls across four fresh production applications; discovery and
+  actual anonymous reads pass, invalid/duplicate credentials fail as required.
+  Real Uvicorn protocol/access formatting preserves statuses and health while
+  removing capability nonces, including failure diagnostics.
+- Full `./scripts/test.sh`:859 Python (1 existing skip),749 JavaScript passed.
+  The commit hook repeats the final staged discovery assertions.
+- Packaged verification: Docker build passed native/supervised UID10001 smokes;
+  `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --user 10001:10001 --volume /home/sean/src/github.com/sesopenko/foundry-mcp/tests:/checks:ro --entrypoint python foundry-mcp-image-preview-check:local -m unittest discover -s /checks -p test_image_preview_privacy.py -v`
+  passed8 in8.950s using shipped code. Only tests mounted; no game volumes.
+- Existing service restarted successfully. Its journal contains the redacted
+  preview route and no raw invalid-path/query probe; health reports ready GM.
+  No valid live capability or game fixture was created; no cleanup remains.
+- Pending deployment prerequisites: task13 proxy examples; existing Auth0
+  login/refresh operator gates; public HTTPS and target ChatGPT acceptance14b.
+  None is represented as passing by offline JWT or local logging evidence.

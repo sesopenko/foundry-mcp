@@ -22,6 +22,8 @@ from foundry_mcp_server.mcp_server.tools import register_foundry_manager
 
 logger = logging.getLogger("foundry_mcp")
 logging.basicConfig(level=logging.INFO)
+from foundry_mcp_server.image_preview_privacy import install_capability_filters
+install_capability_filters()
 
 # Instantiate global connection manager
 foundry_manager = FoundryConnectionManager()
@@ -36,6 +38,7 @@ preview_runtime = PreviewRuntime()
 
 @asynccontextmanager
 async def lifespan(app):
+    install_capability_filters()
     try:
         # Fail local persistence setup before entering the framework TaskGroup,
         # preserving its fixed actionable startup failure category.
@@ -100,10 +103,11 @@ class MCPAccessControl:
                     headers={'WWW-Authenticate': f'Bearer resource_metadata="{metadata}"'})(scope, receive, send)
                 return
         if settings.development and mcp_request:
-            headers = dict(scope.get("headers", []))
+            headers = [value for key,value in scope.get('headers',[]) if key.lower()==b'authorization']
             expected = ("Bearer " + settings.mcp_token).encode()
             peer = (scope.get("client") or ("",))[0]
-            if peer not in {"127.0.0.1", "::1"} or not secrets.compare_digest(headers.get(b"authorization", b""), expected):
+            if (peer not in {"127.0.0.1", "::1"} or len(headers)!=1 or len(headers[0])>8192
+                    or not secrets.compare_digest(headers[0], expected)):
                 await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
                 return
         if mcp_request:

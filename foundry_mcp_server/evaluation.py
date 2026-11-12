@@ -13,6 +13,7 @@ from uuid import uuid4
 from fastmcp.server.dependencies import get_http_headers
 from fastmcp.server.middleware import Middleware
 from mcp.types import CallToolResult
+from .image_preview_privacy import private_record
 
 logger = logging.getLogger("foundry_mcp.evaluation")
 SAFE_ARGUMENTS = {
@@ -109,7 +110,7 @@ class TraceRecorder:
         record = {"schema_version": 1, "instance_id": self.instance_id, "sequence": self.sequence,
                   "timestamp": datetime.now(timezone.utc).isoformat(), "write_failures": self.write_failures, **record}
         try:
-            self._append(encoded(record) + b"\n")
+            self._append(encoded(private_record(record)) + b"\n")
         except OSError:
             self.write_failures += 1
             logger.error("Evaluation trace write failed; records may be incomplete (failures=%d)", self.write_failures)
