@@ -81,12 +81,23 @@ No publication, release, push, tag, or changes to live game assets.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed; resolve SHA in final report).
-- Focused/full checks and actual MCP/live harness calls/time: not run.
-- curl exact/query/HEAD, expiry and restart evidence: pending.
-- Map resource peaks and final payload/discovery measurements: pending.
-- Fixture cleanup and console results: pending.
+- Implementation: complete; [runtime acceptance evidence](../runtime-acceptance.md).
+- Dependency commit SHA(s):12b `5bae8bb`,13 `a10d601`.
+- Commit: this commit.
+- Focused12 passed1.401s; full1032 Python (1 existing skip)/794JS passed135.075s
+  outside sandbox. Native script passed20 MCP calls within60/1200s guard; wall
+  time not independently captured. Actual discovery47 tools/323516B.
+- Native15 curl checks passed exact HTTPS/query GET and HEAD, no credentials,
+  redirects0, matching headers/hashes/decoded dimensions and empty HEAD. TLS is
+  loopback-only with an explicit fixture CA. Retained injected-clock exact-expiry
+  and13 same-volume packaged restart checks remain passing independent evidence.
+- Source snapshots reused for3 distinct previews; stored image tag reconstructed
+  across4 actual journal fragments; browse selector and core SVG pass. Resource
+  peaks from12b retained without redundant benchmarks; tables in linked evidence.
+- Exact marked journal/image cleanup and existing-document fingerprints passed;
+  private settings restored and temporary TLS/store removed. Dedicated-browser
+  refresh/readiness/console result recorded in build progress before commit.
 - Target-client handoff: delegated to 14b.
-- Exact unmet local prerequisites: pending.
+- Exact unmet external prerequisites: public trusted HTTPS/target ChatGPT client
+  remain14b; live S3 needs configured readable bucket/CORS; prefixed deployment
+  needs an existing endpoint. No unmet local prerequisite for the completed flow.
