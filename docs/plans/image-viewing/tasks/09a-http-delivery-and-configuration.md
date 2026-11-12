@@ -72,8 +72,25 @@ and route/configuration documentation together. No public deployment is needed.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, HTTP/config/lifecycle evidence: not run.
-- Pending deployment prerequisites: pending.
+- Implementation: complete; [HTTP/configuration/lifecycle contracts](../http-delivery.md).
+- Dependency commit SHA:08 `089b14f`.
+- Commit: this commit.
+- Focused HTTP15,production-auth13,OAuth19 and JS authentication/bridge/main17
+  passed outside sandbox. Final `./scripts/test.sh` passed both suites,exit0,
+ 749JS and1 existing Python skip. Hook repeats required full checks.
+- Production build and UID10001 smokes passed. Then
+  `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --user 10001:10001 --volume /home/sean/src/github.com/sesopenko/foundry-mcp/tests:/checks:ro --entrypoint python foundry-mcp-image-preview-check:local -m unittest discover -s /checks -p test_image_preview_http.py -v`
+  passed15/0.167s against shipped application. No app override/game volumes.
+- Restarted only existing service; health lists GM and no trace failures. Real
+  curl HEAD /image-previews/invalid returns404/no-store/nosniff/Content-Length0,
+  no redirect. No public capability or temporary public issuance tool was created.
+- Both raster MIME/GET/HEAD/query/404/expiry contracts, caller-independent reads,
+  origin validation, disabled/plain-none policy, startup/reopen/periodic prune,
+  failure cleanup and repeated-cancellation thread draining are covered.
+- Two production regressions failed before correction and passed unchanged:
+  startup storage category wrapped by framework task group, and root filename
+  query selecting bytes. No failed corrections or active defect. Test-only NUL
+  environment/read-only property mock fixes retained expected assertions.
+- Capability logging/auth matrix is09b; issuance remains unregistered until
+  that task passes. Real public HTTPS/client and full valid-link listener/curl
+  workflows remain later gates; no public deployment required for09a.

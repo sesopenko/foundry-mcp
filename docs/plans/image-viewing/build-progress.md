@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 08, [persistent preview store](tasks/08-persistent-preview-store.md).
+- Current task: 09a, [HTTP delivery and configuration](tasks/09a-http-delivery-and-configuration.md).
 - Stage: commit.
-- Last completed task: 07b, commit `b144211`.
+- Last completed task: 08, commit `089b14f`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: finish08 full/package verification, review/commit, then09a HTTP/configuration. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: finalize09a package/runtime verification and commit; then09b privacy/auth matrix before any public issuance registration. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -22,6 +22,7 @@
 |06b bounded encoding |4740720 |797 Python (1 skip),749 JS passed |
 |07a raster codecs |02d0d8f |808 Python (1 skip),749 JS passed |
 |07b guarded SVG |b144211 |821 Python (1 skip),749 JS passed |
+|08 persistent derivative store |089b14f |836 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -342,3 +343,46 @@ the linked evidence pages; Git history retains prior milestone records.
   Foundry resources or publication. Task08 records exact command.
 - Diff/whitespace and store invariants reviewed; no fixture cleanup or
   unavailable local evidence. Ready to commit08 and continue09a.
+- Commit089b14f completed after hook passed836 Python (1 existing skip)/749JS;
+  clean working tree afterward. No unfinished implementation remains in08.
+
+## Current09a checkpoint
+
+- Task read fully after08 commit. Current dependency is089b14f;13 of30 tasks
+  complete,86/200 points (43%). No09a implementation yet. Next read main.py,
+  config.py HTTPS origin helper, evaluation logging/auth tests and OAuth operations;
+  retain unregistered issuance until09b privacy/auth matrix is complete.
+- Resumed full assignment/design/index/research/task/repository reading. Previous
+  goal turn was progress:07a/07b/08 committed. Health confirms existing GM;
+  goal remains active. Only index/progress checkpoint docs initially modified.
+- Read current main/config/evaluation/auth tests and OAuth runbook/verification.
+  Baseline app6 and production-auth13 passed outside sandbox before edits.
+  Used code graph lifespan/settings impact and current source; no Foundry API
+  or module behavior change. Pinned Starlette1.10 public Response/lifespan docs
+  fetched via GitHub after old documentation-domain fetch returned502.
+- Added independent preview origin/data-dir settings, server issuance policy,
+  owned threaded store runtime/prune/drain, and exact GET/HEAD prefix handlers
+  before MCP mount. No public issuance tool. Plain-none issuance disabled;
+  configured read store remains independent of GM/authentication lifetime.
+- Unwritable-store test failed: local storage failure wrapped by MCP TaskGroup.
+  Moved store setup before framework context while retaining outer close;
+  same unchanged test now passes. No failed production correction attempts.
+  Two test setup mistakes: POSIX environ rejects NUL before Settings, and MCP's
+  lifespan property is read-only. Used controlled getenv/dependency seams;
+  expected configuration/cleanup assertions unchanged, no production workaround.
+- Focused HTTP14,production-auth13,OAuth19 and JS authentication/bridge/main17
+  passed. Full ./scripts/test.sh passed both suites exit0 (749JS, existing Python
+  skip); exact count to be captured from hook. Package HTTP matrix running.
+- Initial package HTTP14 passed asUID10001 against shipped application with
+  read-only/no-network/128MiB tmpfs and tests-only mount. Restarted existing
+  service after offline suites; healthy GM reconnects and real curl HEAD of
+  /image-previews/invalid returns404,zero body,no-store,nosniff,no redirect.
+- Final review found shared root handler's default filename was interpreted by
+  FastAPI as a query selector. Added root filename-query test, observed200 vs
+  required404; handler now reads only request.path_params. Same unchanged test
+  passes, final HTTP15 passes. No unsuccessful corrections. Repeated full/package
+  checks for that correction are running; no public capability/tool was issued.
+- Final HTTP15 passed in rebuilt UID10001 production image0.167s; full
+  ./scripts/test.sh again passed both suites exit0,749JS/1 existing Python skip.
+  Diff/whitespace reviewed. Ready to commit09a; no game fixture cleanup, valid
+  public URL issuance or auth/proxy deployment change.09b is next.
