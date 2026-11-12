@@ -67,8 +67,15 @@ helper, tests, and updated source-resolution documentation together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and public API evidence: not run.
-- Local browser/S3 evidence and exact pending prerequisites: pending.
+- Implementation: complete; private resolver only, no registered placeholder.
+- Dependency commit SHA(s): 01 `b0cc01e`.
+- Commit: this commit.
+- Focused checks: 40 JavaScript tests passed with the listed source/journal
+  command; one Python live-harness privacy test passed. Full `./scripts/test.sh`
+  passed710 Python tests (1 existing skip) and728 JavaScript tests.
+- API/runtime/diagnosis evidence: [source resolution](../source-resolution.md).
+  Dedicated refreshed test-world browser ready on14.369, zero console errors;
+  one read-only MCP invocation passed canonical/bare/absolute public SVG paths.
+- Pending prerequisites: configured browser-readable S3 bucket and an existing
+  deployment with nonempty route prefix for their respective live checks. Both
+  have focused mock coverage; no new instance/configuration was provisioned.

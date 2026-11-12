@@ -1,8 +1,8 @@
 # Image viewing build progress
 
-- Current task: 01, [contracts and baseline](tasks/01-contracts-and-baseline.md).
+- Current task: 02, [browser source resolution](tasks/02-browser-source-resolution.md).
 - Stage: commit.
-- Last completed task/commit: none. Baseline checkout: `2cd3d88`.
+- Last completed task/commit: 01, `b0cc01e`. Baseline checkout: `2cd3d88`.
 - Assignment preserved in [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
 - Persistent goal: active; environment objective points to the attachment containing the complete persistent goal, read at kickoff.
 - Baseline checks outside sandbox: `.venv/bin/python -m unittest discover -s tests -p 'test_journal_images.py' -v` passed 4 tests; `node --test tests/js/journal-images.test.js` passed 6 tests.
@@ -13,4 +13,9 @@
 - Decisions: retain the existing strict ImageSelector unchanged; add internal preview-only contracts and budgets without registering placeholder tools.
 - API evidence: Grounded Docs foundry-vtt@14 exists; FilePicker browse/sources/implementation searched and official page fetched. Index completed 2026-10-12T22:52:58Z, 1,978 URLs/17,801 chunks. Runtime compatibility still requires task-specific checks.
 - External gaps: target ChatGPT/public HTTPS acceptance pending tasks 14a/14b; no deployment/client acceptance claimed.
-- Next action: inspect/stage task 01 changes, commit, resolve SHA and start task 02.
+- Commit hook: 709 Python tests passed (1 existing skip), 717 JavaScript passed.
+- Task 02 focused baseline: 39 JavaScript tests passed; dedicated browser ready core14.369/test/GM, console errors 0. Public getRoute official docs fetched, public unannotated function; sources/browse reuse task01 evidence.
+- Task02 live diagnosis: canonical succeeds, bare/absolute return BrowseFailed when data parent unavailable but public parent has exact match. Initial policy incorrectly required all source listings available. New unit test reproduces actual mixed-availability failure before correction. Revised policy requires exactly one positively verified readable match, always fresh-rechecked; unavailable other parents retained as private partial scope, never inferred absent. Zero matches plus unavailable remains BrowseFailed; multiple readable matches remain AmbiguousSource. Unsuccessful fix count 0; unchanged-test verification next.
+- Correction verification: unchanged mixed-availability test passed; all40 focused JavaScript tests passed. Live probe passed canonical/bare/absolute SVG references in one MCP call after refresh; ready GM14.369 and console errors0. One Python harness privacy test passed.
+- Task02 final full regression run passed710 Python (1existing skip)/728 JS; final ambiguity-recovery prose change passed all11 resolver tests and is rechecked by the commit hook.
+- Next action: finish final full tests, inspect task02 diff/whitespace, stage and commit, then start03a. Final code/probe references and precise live S3/prefix gaps are in source-resolution.md.

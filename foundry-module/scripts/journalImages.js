@@ -90,6 +90,143 @@ export async function resolveJournalImage(image) {
   return match.image;
 }
 
+/** Strict segment comparison for preview hints, without decoding separators.
+ * Decode exactly once per segment; percent literals remain literal. Reject dot
+ * segments before URL normalization, which would otherwise erase traversal.
+ */
+function previewPath(path) {
+  if (typeof path !== 'string' || /[\\\x00-\x1f\x7f]/.test(path) || /%(?![0-9a-f]{2})/i.test(path)) fail('InvalidRequest', 'Invalid image reference; use an exact returned image selector.');
+  const parts = path.split('/');
+  try {
+    return parts.map(part => {
+      const decoded = decodeURIComponent(part);
+      if (decoded === '.' || decoded === '..' || /[/\\\x00-\x1f\x7f]/.test(decoded)) throw Error();
+      return decoded;
+    });
+  } catch {fail('InvalidRequest', 'Image reference contains traversal, encoded separators or malformed escaping.');}
+}
+
+/** Only harmless local cache hints are ignored; source credentials are not hints. */
+function localPreviewQuery(query) {
+  for (const [key, value] of new URLSearchParams(query)) {
+    if (!['v','version','t','cache','cb','cacheBust','_'].includes(key) || !/^[A-Za-z0-9_.~-]{0,128}$/.test(value)) {
+      fail('InvalidRequest', 'Local image references accept only harmless cache-busting suffixes.');
+    }
+  }
+}
+
+/** Browser-only preview selection through core14 public APIs, tested14.369.
+ * https://foundryvtt.com/api/v14/classes/foundry.applications.apps.FilePicker.html
+ * https://foundryvtt.com/api/v14/functions/foundry.utils.getRoute.html
+ * Uses configured sources, getRoute, and fresh browse/resolveJournalImage only.
+ * Input is exactly one image or src. Returns PRIVATE canonical image, fetch_url,
+ * credentials, world_id and user_id; never expose this record through MCP/logs.
+ * No fetch, crawling, game-system semantics or prepared UI state. Bare hints
+ * inspect only their parent in configured sources/buckets (<=100 buckets), then
+ * recheck exact membership. isCurrent binds the initiating socket across awaits.
+ */
+export async function resolvePreviewSource(params, isCurrent = () => true) {
+  validateParams(params, ['image', 'src']);
+  if (Object.keys(params).length !== 1 || (params.image === undefined && params.src === undefined)) fail('InvalidRequest', 'Provide exactly one image or src.');
+  ready();
+  const world = game.world.id, user = game.user;
+  const guard = () => {
+    ready();
+    if (!isCurrent() || world !== game.world.id || user !== game.user) fail('ContextChanged', 'GM, world or socket changed; resolve the image again.');
+  };
+  guard();
+  const cls = api();
+  const configured = new cls({type: 'image'}).sources;
+  if (!globalThis.location?.origin || typeof globalThis.foundry?.utils?.getRoute !== 'function') fail('UnsupportedCapability', 'Public route resolution is unavailable; check matching core14/module versions.');
+  const origin = location.origin;
+  const route = foundry.utils.getRoute('');
+  if (typeof route !== 'string' || !route.startsWith('/') || route.startsWith('//')) fail('UnsupportedCapability', 'Unsupported public route prefix.');
+  const prefix = route.replace(/\/$/, '');
+
+  const parse = value => {
+    if (!imagePath(value) || value.startsWith('//') || value.includes('#')) fail('InvalidRequest', 'Use a supported image reference in configured Foundry sources.');
+    // Inspect the raw spelling before the URL parser removes dot segments.
+    const absolute = /^[A-Za-z][\w+.-]*:/.test(value);
+    const rawPath = (absolute ? value.replace(/^https?:\/\/[^/]*(?=\/|$)/i, '') : value).split('?')[0];
+    previewPath(rawPath);
+    let url;
+    try {url = new URL(value, origin + prefix + '/');}
+    catch {fail('InvalidRequest', 'Invalid image reference; browse_journal_images for an exact selector.');}
+    if (url.username || url.password || !['http:','https:'].includes(url.protocol)) fail('InvalidRequest', 'Credential-bearing references are unsupported.');
+    const path = previewPath(url.pathname).join('/');
+    return {url, path};
+  };
+  const localPath = parsed => {
+    if (parsed.url.origin !== origin) return null;
+    localPreviewQuery(parsed.url.search);
+    if (prefix && !parsed.url.pathname.startsWith(prefix + '/')) return null;
+    return previewPath(parsed.url.pathname.slice(prefix.length + 1)).join('/');
+  };
+  const resolved = async image => {
+    const selected = await resolveJournalImage(image); guard();
+    const parsed = parse(selected.src);
+    if (selected.source !== 's3' && localPath(parsed) === null) fail('InvalidRequest', 'Local picker object must stay on the configured Foundry origin/route.');
+    return {image: selected, fetch_url: parsed.url.href, credentials: selected.source === 's3' ? 'omit' : 'same-origin', world_id: world, user_id: user.id};
+  };
+  if (params.image !== undefined) return resolved(params.image);
+  const hint = parse(params.src), local = localPath(hint);
+  const buckets = configured?.s3?.buckets ?? [];
+  if (!Array.isArray(buckets) || buckets.length > 100) fail('SourceTooLarge', 'Configured S3 metadata exceeds the supported100 buckets; select an exact image through browse_journal_images.');
+  const candidates = [];
+  if (local !== null) {
+    const directory = hint.url.pathname.slice(prefix.length + 1).split('/').slice(0,-1).join('/');
+    for (const source of ['data','public']) if (configured?.[source]) candidates.push({source, directory});
+  }
+  // An absolute S3 URL is a hint only. Picker membership, including its exact
+  // host and path, is authoritative. Path-style bucket prefixes are removed
+  // only when they exactly name the configured bucket.
+  if (hint.url.origin !== origin && /^https?:\/\//i.test(params.src)) {
+    for (const bucket of buckets) {
+      validateLocation('s3', '', bucket);
+      const parts = hint.url.pathname.slice(1).split('/');
+      if (parts[0] === bucket) parts.shift();
+      candidates.push({source: 's3', bucket, directory: parts.slice(0,-1).join('/')});
+    }
+  }
+  if (!candidates.length) fail('UnsupportedSource', 'Reference does not identify a configured Foundry source; use browse_journal_images.');
+  const matches = [];
+  let unavailable = false;
+  for (const location of candidates) {
+    validateLocation(location.source, location.directory, location.bucket);
+    let full;
+    try {full = await listing(cls, location.source, location.directory, location.bucket);}
+    catch (error) {
+      guard();
+      if (error.rpcError?.code !== 'BrowseFailed') throw error;
+      unavailable = true; continue;
+    }
+    guard();
+    for (const entry of full.entries) {
+      if (entry.kind !== 'image') continue;
+      const selected = parse(entry.image.src);
+      const same = location.source === 's3'
+        ? selected.url.origin === hint.url.origin && selected.path === hint.path
+        : localPath(selected) === local;
+      if (same) matches.push(entry.image);
+    }
+  }
+  // Match only positively authorized picker objects, never an arbitrary first
+  // match or an inferred file from a failed listing. Keep unavailable-source
+  // coverage distinct from an empty successful search.
+  if (!matches.length) {
+    if (unavailable) fail('BrowseFailed', 'Referenced parent is missing, denied or unavailable; no absence established. Use browse_journal_images and pass an exact image record.');
+    fail('ImageNotFound', 'No image in the referenced parent matches; browse_journal_images and select an exact image record.');
+  }
+  if (matches.length > 1) {
+    const {source, directory, bucket} = matches[0];
+    const recovery = JSON.stringify({tool: 'browse_journal_images', arguments: {source, directory, ...(bucket ? {bucket} : {}), limit: 10, max_bytes: 8000}});
+    fail('AmbiguousSource', 'Reference matches multiple sources. Select one exact image record via ' + recovery);
+  }
+  const result = await resolved(matches[0]);
+  if (unavailable) Object.assign(result, {scope_status: 'partial', limitations: ['Some configured source parents were unavailable. Selection identifies the sole verified readable match, not absence in unavailable sources.']});
+  return result;
+}
+
 /** Load one native directory, never recurse. Native API has no server paging;
  * reject >10000 returned paths or >2MiB listing JSON before projecting output.
  */

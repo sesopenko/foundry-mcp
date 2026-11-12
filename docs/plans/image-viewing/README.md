@@ -119,8 +119,8 @@ spawning agents or concurrent writes to this checkout.
 
 | ID and task | Points | Direct dependencies | Implementation status | Commit |
 | --- | --- | --- | --- | --- |
-| [01 Contracts and baseline](tasks/01-contracts-and-baseline.md) | 5 | None | Complete | this commit |
-| [02 Browser source resolution](tasks/02-browser-source-resolution.md) | 8 | 01 | Not started | — |
+| [01 Contracts and baseline](tasks/01-contracts-and-baseline.md) | 5 | None | Complete | b0cc01e |
+| [02 Browser source resolution](tasks/02-browser-source-resolution.md) | 8 | 01 | Complete | this commit |
 | [03a Browser source fetch](tasks/03a-browser-source-fetch.md) | 8 | 02 | Not started | — |
 | [03b Chunk protocol and lifecycle](tasks/03b-chunk-protocol-and-lifecycle.md) | 5 | 03a | Not started | — |
 | [04a Python transfer assembly](tasks/04a-python-transfer-assembly.md) | 8 | 03b | Not started | — |
