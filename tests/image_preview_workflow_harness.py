@@ -95,10 +95,10 @@ class Workflow:
         return {'tools':len(result['tools']),'json_bytes':compact(result['tools']),
             'names':{t['name'] for t in result['tools']}}
 
-    async def call(self,name,args,*,error=False):
+    async def call(self,name,args,*,error=False,label=None):
         result=await self.request('tools/call',{'name':name,'arguments':args})
         data=result.get('structuredContent')
-        row=self.rows.setdefault(name,dict(calls=0,json_bytes=0,mcp_bytes=0,errors=0,complete=False))
+        row=self.rows.setdefault(label or name,dict(calls=0,json_bytes=0,mcp_bytes=0,errors=0,complete=False))
         row['calls']+=1
         row['json_bytes']+=compact(data) if data is not None else 0
         row['mcp_bytes']+=compact(result)

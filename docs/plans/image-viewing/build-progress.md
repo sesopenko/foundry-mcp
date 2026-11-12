@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 12a, [workflow and failure integration](tasks/12a-workflow-and-failure-integration.md).
+- Current task: 12b, [large-map and payload measurements](tasks/12b-large-map-and-payload-measurements.md).
 - Stage: commit.
-- Last completed task: 11, commit `f5d04c3`.
+- Last completed task: 12a, commit `d5fe0de`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified12a, then read12b and implement bounded large-map measurements. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: review/stage/commit verified12b, then read ready taskM01. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -27,6 +27,7 @@
 |09b auth/privacy |4023ed2 |859 Python (1 existing skip)/749JS full passed; hook passed both |
 |10 image info |85236ce |871 Python (1 existing skip)/749JS full passed; hook passed both |
 |11 image URL |f5d04c3 |885 Python (1 existing skip)/749JS full passed; hook passed both |
+|12a cross-layer workflows |d5fe0de |893 Python (1 existing skip)/750JS full passed; hook passed both |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -583,3 +584,48 @@ the linked evidence pages; Git history retains prior milestone records.
 - Same unchanged EOF test passes; final workflows8 pass3.996s. Final full
   ./scripts/test.sh passed893 Python (1 existing skip)/750JS,exit0, after the
   fixture callback correction. Final whitespace/diff review passed; ready12a.
+- Commitd5fe0de completed with both hook suites passing,exit0.
+
+## Current12b checkpoint
+
+- Task read fully; dependency12a d5fe0de committed.18/30 tasks,113/200 points
+  (56.5%) complete. Current workflow harness, resource metrics and baseline audit
+  read. W3C PNG third-edition primary specification inspected for bounded row
+  streaming (IHDR/IDAT/zlib/CRC), avoiding a giant parent raster for generation.
+- Plan: streaming deterministic synthetic RGB maps with small distinct center/
+  far-edge marks, independent small-region oracle, real10000-square/wide workflows
+  through12a authenticated MCP/JS/RPC/native/store/HTTP harness. Capture private
+  WorkerMetrics aggregates at trusted render boundary. Bound combined integration
+  to80 MCP calls/1200s; live equal-content baseline replay stays separate from
+  synthetic data. Keep filenames/mark values/capabilities private.
+- Added bounded RGB PNG streaming writer (16 cached rows), center/far-edge marks,
+  independent scalar region oracle, resource evidence aggregation, actual MCP
+  measurement command and4 small tests. Small workflow first failed a privacy
+  assertion matching the substring url in the safe tool name get_foundry_image_url;
+  corrected the test to forbid actual URL values/private field keys. No production
+  change or hidden-data relaxation. Focused4 now pass; real large command running.
+- Separate expected InvalidCrop measurement label keeps intentional negative
+  calls distinct from complete successful URL streams. Shared workflow harness
+  gains trusted optional measurement labels; production tools unchanged.
+- Real full-size command passed twice (second adds independent HTTP decode and
+  per-map resource evidence),17 MCP calls each; final data:10000-square PNG
+  overview1536²/1638691B,351961088 RSS/301645824 scratch/0.44567s;10000x5000
+  overview2048x1024/921407B,200380416 RSS/150925312 scratch/0.29956s. Exact
+  detail/center/onepixel/wide1280x960 oracles pass, reduced3000² crops pass,
+  one transfer/map (361/181 chunks),11 successful measured renders. No limit raised.
+- Live read-only audit passed23 calls/0.947s. All comparable browse/journal rows
+  exactly match01 baseline structured/protocol bytes; catalog45/275617B versus
+  baseline43/262218B (+13399B for2 tools), no response savings/token claim.
+  Final large+live evaluation40 calls; including the earlier large verification,
+  57 calls total, within80/20min. No live source/game fixture mutation.
+- Added failure-accounting regression: failed info after discovery reported0
+  instead of2 actual calls. Test failed first, aggregator now includes active
+  workflow's dispatched calls/partial metrics, same unchanged test verifying.
+  This is measurement harness behavior only; production unchanged, failed fixes0.
+- Focused measurement6/workflow8/full regression checks now running. No need to
+  repeat successful full-size/native or equal-content replay for error-accounting
+  changes; small failure unit proves that branch and full hook will verify it.
+- Final focused measurements6 pass1.461s/workflows8 pass4.087s, unchanged counter
+  regression passes0.251s. Full ./scripts/test.sh passed899 Python (1 existing
+  skip)/750JS,exit0. Full-size/native and live evidence retained in linked tables.
+  No production change, game fixture or uncleaned temporary process/data remains.

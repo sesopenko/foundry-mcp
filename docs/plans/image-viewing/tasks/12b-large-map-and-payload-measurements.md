@@ -63,9 +63,31 @@ and aggregate evidence; preserve exact unmet environment prerequisites.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and large-map command/result: not run.
-- Worker peaks/time, baseline/final call/byte/completion/catalog table: pending.
-- Exact pending runtime prerequisites: pending.
+- Implementation: complete; [full-size and payload evidence](../large-map-measurements.md).
+- Dependency commit SHA(s):12a `d5fe0de`.
+- Commit: this commit.
+- Focused outside-sandbox checks: measurements6 passed1.461s, workflows8 passed
+  4.087s; unchanged failure-accounting regression separately passed0.251s after
+  reproducing0-versus2 dispatched calls. Full `./scripts/test.sh`:899 Python
+  (1 existing skip),750 JavaScript passed. No production code changed.
+- `.venv/bin/python scripts/image-preview-measurements.py` passed actual10000²
+  and10000x5000 maps:17 MCP calls,11 HTTP fetches,361/181 private chunks, one
+  transfer/map. All independent native crop pixels, overview/reduced dimensions,
+  decoded MIME/length/budgets and expected invalid-crop rejections passed.
+- Measured square overview:1536² PNG1638691B,351961088 peakRSS bytes,
+  301645824 scratch bytes,0.445672s/19 samples. Wide overview:2048x1024 PNG
+  921407B,200380416 RSS/150925312 scratch,0.299555s/13 samples. Defaults
+  remain1GiB/2GiB/90s; details distinguish render sampling from total client time.
+- Live `.venv/bin/python -m foundry_mcp_server.image_preview_audit` passed23
+  read-only calls/0.947s. Comparable defaults/filter/expanded/complete journal/
+  browse rows match baseline byte counts. Development discovery45/275617B,
+  versus43/262218B (+13399 for2 tools). Linked tables distinguish representations,
+  first pages/full workflows/synthetic data and bytes from unmeasured tokens.
+- All private maps/cache/store/processes cleaned. No game assets/documents or
+  live public capabilities changed. Final large+live evaluation40 calls; earlier
+  large verification adds17, remaining below80. Each large command enforces1200s;
+  the independent live audit enforces120s. No additional passing runs needed.
+- Exact remaining gates: map/font integration and final packaging13; existing
+  authorized local runtime14a; configured live S3/CORS and prefixed deployment;
+  public HTTPS and target-client14b. No fresh Foundry instance or operator action
+  is required to finish this independently verified test checkpoint.
