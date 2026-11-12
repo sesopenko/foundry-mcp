@@ -191,3 +191,4 @@ from . import journal_authoring  # noqa: E402,F401
 from . import journal_images  # noqa: E402,F401
 from . import image_uploads  # noqa: E402,F401
 from . import image_previews  # noqa: E402,F401
+from . import maps  # noqa: E402,F401

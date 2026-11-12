@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 12b, [large-map and payload measurements](tasks/12b-large-map-and-payload-measurements.md).
+- Current task: M01, [map folder browsing](tasks/m01-map-folder-browsing.md).
 - Stage: commit.
-- Last completed task: 12a, commit `d5fe0de`.
+- Last completed task: 12b, commit `5bae8bb`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: review/stage/commit verified12b, then read ready taskM01. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified M01, then read M02 and establish its baseline. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -28,6 +28,7 @@
 |10 image info |85236ce |871 Python (1 existing skip)/749JS full passed; hook passed both |
 |11 image URL |f5d04c3 |885 Python (1 existing skip)/749JS full passed; hook passed both |
 |12a cross-layer workflows |d5fe0de |893 Python (1 existing skip)/750JS full passed; hook passed both |
+|12b large maps/payloads |5bae8bb |899 Python (1 existing skip)/750JS full passed; hook passed both |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -629,3 +630,62 @@ the linked evidence pages; Git history retains prior milestone records.
   regression passes0.251s. Full ./scripts/test.sh passed899 Python (1 existing
   skip)/750JS,exit0. Full-size/native and live evidence retained in linked tables.
   No production change, game fixture or uncleaned temporary process/data remains.
+- Commit5bae8bb completed after both hook suites passed,exit0.
+
+## CurrentM01 checkpoint
+
+- Task read fully; dependency01 b0cc01e committed.19/30 tasks,121/200 points
+  (60.5%) complete. Map research and documentation workflow recovered; existing
+  public journal hierarchy patterns and code graph read. Grounded Docs libraries
+  foundry-vtt/pf2e-schema/pf2e-wiki available; find_version14 matches runtime14.369.
+- Version14 searches and fresh official Folder/Scene/SceneData pages confirm
+  public uuid, testUserPermission, toObject and schema folder/name/sort/sorting.
+  Collection docs establish game.scenes. Finish field/collection/API evidence
+  and bounded read-only pre-tool Scene baseline before changing production.
+- Proposed boundary: authenticated core-only folder browse, separate module and
+  strict models, public metadata relationships, no activation/canvas/PF2e logic.
+  Bind pagination to trusted caller/world/GM plus metadata/permission revisions;
+  budget10/8000B default,1–100/1024–48000B. Exact contract/tests next.
+- Bounded baseline helper2 tests passed; actual read-only baseline2 MCP calls
+  passed:50 Scenes/18 folders, root3 entries/367B, first-folder2/285B,45-tool/
+  275617B catalog. Source parent relationships match6 serialized samples;
+  active Scene unchanged. Doc index metadata refreshed by read-only CLI listing.
+- Contract frozen in map-browsing.md. Production uses documented authorized
+  toObject(true) metadata extraction to preserve unresolved stored parent IDs
+  for orphan detection, discarding other fields; no linked body/file hydration.
+  Added strict models, authenticated adapter, guarded browser RPC and initial
+  hierarchy/filter/order/cursor/budget/denial tests. No live module refresh yet.
+- Initial JS9:8 passed; shrinking catalog returned InvalidCursor instead of
+  required ContentChanged because offset range was checked before revision.
+  Move range check after unchanged-revision check; same regression now verifying.
+  No unsuccessful correction attempts. Added permission-change-during-hash case.
+- Public collection invalidDocumentIds was verified in fresh official docs.
+  New empty-world omission test failed scope complete vs required partial;
+  include invalid-record availability in revision/scope without exposing IDs.
+  Same test passes; JS11/Python10 actual MCP+Node tests pass. No failed fixes.
+- First full909 failed4 packaging checks: new mapBrowse.js import was absent
+  from the explicit module archive allowlist. Root is packaging configuration,
+  not Foundry behavior. Add focused archive assertion, observe failure, update
+  allowlist, then rerun unchanged tests/full suite before browser verification.
+- Focused archive test reproduced Unpackaged/external import failure; allowlist
+  now includes mapBrowse.js. Same unchanged test and packaging4 verifying;
+  required full suites repeated. No release/tag/push or new Foundry instance.
+- Packaging4 passed. Next full910 exposed2 release-fixture guard failures:
+  the new archive test added an unrelated hardcoded version tag outside the
+  release helper's deliberate fixed-pin count. Removed that unnecessary new
+  test argument (same archive assertions), preserving the release guard and all
+  existing release expectations. No release helper/versions changed. Focused
+  release/package and full tests verifying; this was test configuration, not a
+  production versioning change or speculative behavior correction.
+- Recovery reread all saved instructions/design/research/index/current task and
+  required repository files. Previous goal turn made progress; the brief user
+  strategy answer itself made no implementation progress. Existing full run is
+  terminal:912 Python (1 existing skip)/761 JS passed; no process was restarted.
+- Restarted existing Python service and refreshed dedicated development tab;
+  readyGM14.369/console0. Actual `map_browse_audit --browse` passed26 calls within
+  30/120s,46 tools/286687B catalog,50 Scenes/18 folders,4/12 duplicate names,
+  complete scope and active Scene unchanged. No game writes/fixtures/cleanup.
+- Actual `.venv/bin/python scripts/package-module.py` passed module3.3.1; no
+  version bump/tag/publication. Contract/task include response-byte table and
+  public API evidence. Final diff review and task commit next; no active defect
+  or unsuccessful correction attempts.

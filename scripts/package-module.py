@@ -28,6 +28,7 @@ RUNTIME_SCRIPTS += ('journalImageEmbedding.js',)
 RUNTIME_SCRIPTS += ('imageUploads.js',)
 RUNTIME_SCRIPTS += ('imagePreviewFetch.js',)
 RUNTIME_SCRIPTS += ('imagePreviewTransfer.js',)
+RUNTIME_SCRIPTS += ('mapBrowse.js',)
 
 
 def manifest(root=ROOT, tag=None):

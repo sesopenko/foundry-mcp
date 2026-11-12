@@ -12,6 +12,7 @@ import {getWritingGuidance} from './writingGuidance.js';
 import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from './journalAuthoring.js';
 import {getJournalAuthoringOptions} from './journalAuthoringOptions.js';
 import {browseJournalImages} from './journalImages.js';
+import {browseMaps} from './mapBrowse.js';
 import {prepareImageUpload, createImageDirectory, uploadImage} from './imageUploads.js';
 import {previewTransfers, getImagePreviewContext, validateImagePreviewSource, beginImagePreviewTransfer, readImagePreviewChunk, releaseImagePreviewTransfer} from './imagePreviewTransfer.js';
 import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
@@ -73,6 +74,7 @@ const rpcHandlers = {
   writeJournal,
   getJournalAuthoringOptions,
   browseJournalImages,
+  browseMaps,
   prepareImageUpload,
   createImageDirectory,
   uploadImage,
@@ -186,7 +188,7 @@ export async function handleRpcMessage(message, isCurrent = () => true, rpcOwner
   try {
     const result = previewMethods.includes(method)
       ? await handler(params ?? {}, isCurrent, {owner:rpcOwner,rpc_id:id})
-      : ['prepareImageUpload', 'createImageDirectory', 'uploadImage'].includes(method)
+      : ['prepareImageUpload', 'createImageDirectory', 'uploadImage','browseMaps'].includes(method)
       ? await handler(params ?? {}, isCurrent) : await handler(params ?? {});
     return { id, result };
   } catch (err) {

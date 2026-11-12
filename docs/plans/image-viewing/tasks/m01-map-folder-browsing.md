@@ -63,8 +63,20 @@ the module refresh/console workflow when the development browser is available.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, discovery and baseline call/byte/completion data: not run.
-- Public API evidence and exact pending runtime prerequisites: pending.
+- Implementation: complete; [contract, API and measurements](../map-browsing.md).
+- Dependency commit SHA(s): 01 `b0cc01e`.
+- Commit: this commit.
+- Focused checks: JS11, Python12, packaging4 passed outside sandbox. The full
+  `./scripts/test.sh` passed912 Python (1 existing skip)/761 JS. Local module
+  packaging passed with `.venv/bin/python scripts/package-module.py`;
+  no tag/release/publication.
+- Baseline:2 actual calls/120s budget,45 tools/275617 catalog bytes,50 Scenes/
+  18 folders, root3 entries/367B and first folder2/285B, both complete.
+- Actual implemented browse:26 calls within30/120s,46 tools/286687 catalog bytes,
+  all50 Scenes/18 folders, complete scope,4 duplicate folder names/12 duplicate
+  map names. Active Scene unchanged; refreshed dedicated browser14.369 readyGM,
+  zero console errors. See linked table for response/protocol byte measurements.
+- Public API evidence: version14 Grounded Docs and fresh official public
+  Folder/Scene/collections contracts, linked in the contract. No M01 runtime
+  prerequisite remains. M02 selected-map reading and later annotated/target
+  client workflows retain their own task gates.

@@ -2,6 +2,12 @@
 
 ## Overview
 
+The typed `browse_maps` interface reads immediate world Scene-folder children
+through a separate core14 browser handler. Python binds cursors to verified
+caller identity and validates compact hierarchy/next-call results; the browser
+checks permissions and metadata revisions without activating a Scene. See
+[map browsing](plans/image-viewing/map-browsing.md).
+
 The separate typed [compendium interface](compendium-tools.md) discovers packs,
 scans explicitly selected journal indexes/pages with work bounds and reads exact
 source through shared journal processors. Canonical pack selectors remain

@@ -47,6 +47,12 @@ The source image-info tool reads original display dimensions and stages a privat
 30-minute snapshot without requiring a public origin; see
 [image information](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/image-info-tool.md).
 
+Source development includes read-only `browse_maps` navigation of core14 world
+Scene folders and named maps, preserving duplicate identities and bounded
+continuations without activating a Scene. See the
+[map browsing contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-browsing.md)
+for scope and selected-map follow-up implementation status.
+
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires
 the connected GM browser and includes that world's instructions. See the

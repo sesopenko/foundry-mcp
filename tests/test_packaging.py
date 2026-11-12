@@ -40,6 +40,13 @@ class PackagingTests(unittest.TestCase):
         packager.package(output, root=self.root, tag='v' + version)
         self.assertEqual(first, (output / 'foundry-mcp.zip').read_bytes())
 
+    def test_map_browser_dependency_is_in_the_installable_archive(self):
+        output=self.root/'output'
+        packager.package(output,root=self.root)
+        with zipfile.ZipFile(output/'foundry-mcp.zip') as archive:
+            self.assertIn('scripts/mapBrowse.js',archive.namelist())
+            self.assertIn(b'./mapBrowse.js',archive.read('scripts/foundryBridge.js'))
+
     def test_mismatched_versions_mutable_urls_missing_imports_and_symlinks_fail(self):
         with self.assertRaisesRegex(ValueError, 'versions must agree'):
             packager.manifest(self.root, tag='v9.0.0')
