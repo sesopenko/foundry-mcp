@@ -1,7 +1,7 @@
-"""Internal bounded preview subprocess wrapper;05b adds RSS/scratch admission."""
+"""Internal validated preview subprocess operations with resource supervision."""
 import asyncio
+from dataclasses import asdict
 import json
-import os
 from pathlib import Path
 import sys
 import tempfile
@@ -11,10 +11,9 @@ from pydantic import Field, model_validator
 
 from . import image_preview_limits as limits
 from .image_preview_worker import PreviewFailure
+from .image_preview_supervisor import current_supervisor
+from .image_preview_resources import WorkerMetrics
 from .mcp_server.selective_models import Model
-
-MAX_OUTPUT_BYTES = 4096
-
 
 class ProbeMetadata(Model):
     width: int = Field(ge=1,le=limits.SOURCE_MAX_EDGE)
@@ -46,7 +45,7 @@ class FailureReply(Model):
         return self
 
 
-async def probe_image(path, *, timeout=limits.WORKER_TIMEOUT_SECONDS):
+async def probe_image(path, *, timeout=limits.WORKER_TIMEOUT_SECONDS, supervisor=None, metrics=None):
     """Return validated header metadata, or a fixed-category PreviewFailure.
 
     Private staged input only. Stdout is limited while reading, stderr discarded,
@@ -57,45 +56,33 @@ async def probe_image(path, *, timeout=limits.WORKER_TIMEOUT_SECONDS):
     payload = json.dumps({'operation':'probe','source':str(path)}).encode()
     if len(payload) > 8192 or path.is_symlink() or not path.is_file():
         raise PreviewFailure('UnsupportedImage')
-    with tempfile.TemporaryDirectory(prefix='foundry-preview-worker-') as scratch:
-        environment = {**{key:value for key,value in os.environ.items() if not key.startswith(('FOUNDRY_MCP_','AUTH0_','AWS_'))},
-            'VIPS_CONCURRENCY':'2','TMPDIR':scratch,'VIPS_TMPDIR':scratch,
-            'VIPS_DISC_THRESHOLD':str(16*1024*1024),'XDG_CACHE_HOME':scratch}
-        try:
-            process = await asyncio.create_subprocess_exec(sys.executable,'-m','foundry_mcp_server.image_preview_worker',
-                stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,env=environment)
-        except OSError:
-            raise PreviewFailure('ImageProcessingFailed') from None
-        try:
-            async with asyncio.timeout(timeout):
-                process.stdin.write(payload)
-                await process.stdin.drain()
-                process.stdin.close()
-                chunks, count = [], 0
-                while chunk := await process.stdout.read(min(1024,MAX_OUTPUT_BYTES+1-count)):
-                    count += len(chunk)
-                    if count > MAX_OUTPUT_BYTES:
-                        raise PreviewFailure('ImageProcessingFailed')
-                    chunks.append(chunk)
-                await process.wait()
-            if process.returncode != 0:
-                raise PreviewFailure('ImageProcessingFailed')
-            reply = json.loads(b''.join(chunks))
-            if isinstance(reply,dict) and 'error_code' in reply:
-                failure = FailureReply.model_validate(reply)
-                raise PreviewFailure(failure.error_code,failure.width,failure.height)
-            result = ProbeReply.model_validate(reply).metadata
-            if result.size_bytes != path.stat().st_size:
-                raise PreviewFailure('ImageProcessingFailed')
-            return result
-        except asyncio.TimeoutError:
-            raise PreviewFailure('ImageProcessingTimeout') from None
-        except (ValueError,TypeError,OSError):
-            raise PreviewFailure('ImageProcessingFailed') from None
-        finally:
-            if process.returncode is None:
-                try:
-                    process.kill()
-                except ProcessLookupError:
-                    pass
-            await process.wait()
+    try:
+        raw = await (supervisor or current_supervisor()).run(payload,timeout=timeout,metrics=metrics)
+        reply = json.loads(raw)
+        if isinstance(reply,dict) and 'error_code' in reply:
+            failure = FailureReply.model_validate(reply)
+            raise PreviewFailure(failure.error_code,failure.width,failure.height)
+        result = ProbeReply.model_validate(reply).metadata
+        if result.size_bytes != path.stat().st_size:
+            raise PreviewFailure('ImageProcessingFailed')
+        return result
+    except (ValueError,TypeError,OSError):
+        raise PreviewFailure('ImageProcessingFailed') from None
+
+
+async def smoke():
+    """Trusted package smoke: actual supervised probe and private measurements."""
+    import os
+    from PIL import Image
+    metrics = WorkerMetrics()
+    with tempfile.TemporaryDirectory(prefix='preview-supervisor-smoke-') as directory:
+        path = Path(directory)/'original'
+        Image.new('RGB',(16,12),(20,50,100)).save(path,format='PNG')
+        metadata = await probe_image(path,metrics=metrics)
+    return dict(uid=os.getuid(),probe=metadata.model_dump(),metrics=asdict(metrics))
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] != ['--smoke']:
+        raise SystemExit('Use --smoke for a private package verification')
+    print(json.dumps(asyncio.run(smoke()),separators=(',',':')))

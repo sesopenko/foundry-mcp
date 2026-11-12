@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 import zlib
 
 from PIL import Image
@@ -92,33 +92,6 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(PreviewFailure):await process.probe_image(link)
 
 
-class FakeProcess:
-    def __init__(self, output=None, stalled=False):
-        self.stdin=Mock(drain=AsyncMock())
-        self.returncode=None
-        self.killed=False
-        self.waited=0
-        self.entered=asyncio.Event()
-        if stalled:
-            async def read(_):
-                self.entered.set()
-                await asyncio.Event().wait()
-            self.stdout=Mock(read=read)
-        else:
-            self.stdout=asyncio.StreamReader()
-            self.stdout.feed_data(output)
-            self.stdout.feed_eof()
-
-    def kill(self):
-        self.killed=True
-        self.returncode=-9
-
-    async def wait(self):
-        self.waited+=1
-        if self.returncode is None:self.returncode=0
-        return self.returncode
-
-
 class ProcessBoundaryTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.temp=tempfile.TemporaryDirectory()
@@ -126,41 +99,37 @@ class ProcessBoundaryTests(unittest.IsolatedAsyncioTestCase):
         self.path=Path(self.temp.name)/'original'
         self.path.write_bytes(b'fixture')
 
-    async def test_parent_rejects_oversized_output_invalid_metadata_and_unknown_error_fields(self):
-        for output in [b'x'*4097,b'not-json',json.dumps({'metadata':dict(width=True,height=1,mime_type='image/png',size_bytes=7,frame_policy='still')}).encode(),
+    async def test_parent_rejects_invalid_metadata_mismatched_bytes_and_unknown_error_fields(self):
+        for output in [b'not-json',json.dumps({'metadata':dict(width=True,height=1,mime_type='image/png',size_bytes=7,frame_policy='still')}).encode(),
+                json.dumps({'metadata':dict(width=1,height=1,mime_type='image/png',size_bytes=6,frame_policy='still')}).encode(),
                 b'{"error_code":"private-url-secret"}',b'{"error_code":"UnsupportedImage","extra":"private"}']:
-            child=FakeProcess(output)
-            with patch.object(process.asyncio,'create_subprocess_exec',AsyncMock(return_value=child)):
-                with self.assertRaises(PreviewFailure) as caught:await process.probe_image(self.path)
+            supervisor=Mock(run=AsyncMock(return_value=output))
+            with self.assertRaises(PreviewFailure) as caught:await process.probe_image(self.path,supervisor=supervisor)
             self.assertEqual(caught.exception.code,'ImageProcessingFailed')
             self.assertNotIn('private',str(caught.exception))
-            self.assertGreaterEqual(child.waited,1)
-            if len(output)>4096:self.assertTrue(child.killed)
 
-    async def test_timeout_and_cancellation_kill_reap_and_remove_private_scratch(self):
-        for cancel in (False,True):
-            child=FakeProcess(stalled=True)
-            spawn=AsyncMock(return_value=child)
-            with patch.object(process.asyncio,'create_subprocess_exec',spawn):
-                task=asyncio.create_task(process.probe_image(self.path,timeout=1 if cancel else 0.02))
-                await child.entered.wait()
-                scratch=Path(spawn.await_args.kwargs['env']['TMPDIR'])
-                self.assertTrue(scratch.exists())
-                self.assertNotEqual(scratch,self.path.parent)
-                self.assertEqual(spawn.await_args.kwargs['stderr'],asyncio.subprocess.DEVNULL)
-                self.assertFalse(any(key.startswith(('FOUNDRY_MCP_','AUTH0_','AWS_')) for key in spawn.await_args.kwargs['env']))
-                if cancel:
-                    task.cancel()
-                    with self.assertRaises(asyncio.CancelledError):await task
-                else:
-                    with self.assertRaises(PreviewFailure) as caught:await task
-                    self.assertEqual(caught.exception.code,'ImageProcessingTimeout')
-            self.assertTrue(child.killed)
-            self.assertGreaterEqual(child.waited,1)
-            self.assertFalse(scratch.exists())
+    async def test_operation_delegates_bounds_metrics_and_preserves_cancellation(self):
+        entered=asyncio.Event()
+        async def run(payload,**options):
+            self.assertEqual(json.loads(payload),{'operation':'probe','source':str(self.path)})
+            entered.set()
+            await asyncio.Event().wait()
+        supervisor=Mock(run=AsyncMock(side_effect=run))
+        metrics=object()
+        task=asyncio.create_task(process.probe_image(self.path,timeout=2,supervisor=supervisor,metrics=metrics))
+        await entered.wait()
+        self.assertEqual(supervisor.run.await_args.kwargs,{'timeout':2,'metrics':metrics})
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):await task
+
+    async def test_supervisor_failure_categories_propagate_without_reinterpretation(self):
+        for code in ('ImageMemoryLimit','ImageScratchLimit','ImageProcessingTimeout','ImageProcessingBusy'):
+            supervisor=Mock(run=AsyncMock(side_effect=PreviewFailure(code)))
+            with self.assertRaises(PreviewFailure) as caught:await process.probe_image(self.path,supervisor=supervisor)
+            self.assertEqual(caught.exception.code,code)
 
     async def test_spawn_errors_are_fixed_categories_not_native_paths(self):
-        with patch.object(process.asyncio,'create_subprocess_exec',AsyncMock(side_effect=OSError('private-path-secret'))):
-            with self.assertRaises(PreviewFailure) as caught:await process.probe_image(self.path)
+        supervisor=Mock(run=AsyncMock(side_effect=OSError('private-path-secret')))
+        with self.assertRaises(PreviewFailure) as caught:await process.probe_image(self.path,supervisor=supervisor)
         self.assertEqual(caught.exception.code,'ImageProcessingFailed')
         self.assertNotIn('private',str(caught.exception))

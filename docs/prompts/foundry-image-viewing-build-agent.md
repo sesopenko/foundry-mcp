@@ -138,3 +138,11 @@ Provide a concise final report listing task commits, test results, material meas
 
 Continue until this goal is achieved or a genuine stop condition requires user input.
 ```
+
+## User execution amendment — supervisor refactor
+
+> Separate out the components, with tests for each component, then get the components working.  That will then let you isolate where the failure is happening and the smaller component will be simpler to reason about.  Update usage points accordingly (and their tests/mocks).  Produce a plan for this refactor so that it's not "invented as you go", then follow it.
+
+Follow [the saved refactor plan](../plans/image-viewing/worker-refactor-plan.md)
+within task05b before dependent image implementation. This instruction explicitly
+authorizes development resumption after the previous mandatory diagnosis stop.

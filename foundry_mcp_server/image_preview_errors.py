@@ -2,6 +2,10 @@
 from fastmcp.exceptions import ToolError
 
 MESSAGES = {
+    'ImageMemoryLimit': 'Preview decoder exceeded its resident-memory budget. Request a smaller source or crop through get_foundry_image_url.',
+    'ImageScratchLimit': 'Preview decoder exceeded its private scratch budget. Choose a smaller source through browse_journal_images.',
+    'ImageProcessingTimeout': 'Preview decoder exceeded its time budget. Choose a smaller source or a tighter crop through get_foundry_image_url.',
+    'ImageProcessingBusy': 'Preview processing queue is full or its wait deadline elapsed. Retry this request after the current preview completes.',
     'AmbiguousSource': 'Reference matches multiple configured sources. Use browse_journal_images on the referenced parent and pass one exact image record.',
     'InvalidCrop': 'Use integer x/y >=0 and positive integer width/height fully contained in the original dimensions from get_foundry_image_info; no clipping or padding.',
     'UnsupportedImage': 'Use a supported self-contained image; browse_journal_images to choose another file. Executable or externally referenced SVG content is unsupported.',

@@ -19,6 +19,9 @@ worker budget table. Do not change the independent Pillow upload policy.
 
 ## Implementation and interfaces
 
+The user-requested [component refactor plan](../worker-refactor-plan.md) defines
+the implementation boundaries and test migration; it was saved before refactoring.
+
 - Complete the preview worker supervisor with one render admitted at a time,
   independent of upload concurrency. Use the same safe supervisor for probing
   and rendering; define bounded queue/cancellation behavior without holding
@@ -60,8 +63,29 @@ Commit supervisor, resource tests, and enforcement/measurement documentation.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, resource peaks/cadence/tolerance: not run.
-- Exact pending packaged/runtime prerequisites: pending.
+- Implementation: complete; separate admission, workspace, child and resource
+  components, coordinated by PreviewSupervisor; probe adapter and mocks migrated.
+- Dependency commit SHA(s):05a `57123ce`.
+- Commit: this commit.
+- Focused checks outside sandbox: admission4,workspace3,child6,resources8,
+  coordinator7,probe9; aggregate `test_image_preview_*.py`74 passed. Unchanged
+  upload baseline13 passed. Full `./scripts/test.sh`:770 Python (1 existing skip),
+  749 JavaScript passed.
+- Real controlled children proved24MiB RSS/32KiB scratch limit failures,
+  open-unlinked scratch accounting, timeout/cancellation/pipe-flood kill/reap,
+  scratch cleanup and healthy replacement. Production stays1GiB/2GiB/90s/one
+  operation with25ms sampled checks plus scheduler/scan latency,8 queued/90s.
+- Deterministic real zombie test proved stateZ/root-owned procfd/errno13. The
+  coordinator regression failed before correction and passed unchanged after
+  requiring owned completion within one monitor interval; denied live workers
+  still fail closed. No observation retry or fabricated zero sample. Final named
+  scratch is checked after reap before accepting success. Historical three failed
+  diagnosis attempts remain recorded; first correction after authorized refactor
+  resolved this demonstrated defect.
+- Production Docker build passed both UID10001 native/supervised smokes.
+  Separate read-only/network-disabled run passed16x12 PNG80bytes/still with
+  sampledRSS14,987,264 bytes,0 scratch,0.07453s/4samples. No Foundry instance,
+  game volume, publication or existing-asset changes. No external prerequisite
+  blocks05b; large-map measurements/codecs/fonts remain their later tasks.
+- [Decoder contracts](../../../image-preview-decoder.md) and
+  [exact CPython/kernel source research](../python-lifecycle-research.md).
