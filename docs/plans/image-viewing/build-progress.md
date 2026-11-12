@@ -1,8 +1,8 @@
 # Image viewing build progress
 
-- Current task: 03b, [browser chunk protocol and lifecycle](tasks/03b-chunk-protocol-and-lifecycle.md).
+- Current task: 04a, [Python transfer assembly](tasks/04a-python-transfer-assembly.md).
 - Stage: commit.
-- Last completed task/commit: 03a, `e4121a4`; 02 is `141ede6`, 01 is `b0cc01e`. Baseline checkout: `2cd3d88`.
+- Last completed task/commit: 03b, `647c42b`; 03a is `e4121a4`, 02 is `141ede6`, 01 is `b0cc01e`. Baseline checkout: `2cd3d88`.
 - Assignment preserved in [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
 - Persistent goal: active; environment objective points to the attachment containing the complete persistent goal, read at kickoff.
 - Baseline checks outside sandbox: `.venv/bin/python -m unittest discover -s tests -p 'test_journal_images.py' -v` passed 4 tests; `node --test tests/js/journal-images.test.js` passed 6 tests.
@@ -29,4 +29,13 @@
 - Task03b focused commands: listed transfer/fetch/bridge/authentication/main Node command passed37 tests; Python packaging passed3; probe-privacy passed1. All outside sandbox. First full run passed710 Python(1skip)/747 JS before final malformed-command regression; final full run pending.
 - Task03b runtime: after refresh, one MCP development call verified browser-only5-chunk reverse reconstruction, max534-byte envelope under1024 ceiling, digest equality and release. ReadyGM14.369/test, consoleerrors0 before/after, no fixtures/mutations. Actual Python socket assembly is still04a/integration work.
 - Final03b `./scripts/test.sh` passed710 Python tests(1existing skip)/748 JS. Final refreshed browser probe repeated5chunks/max534bytes, passed.
-- Next action: review/stage/commit03b, then04a private Python assembly.
+- Task03b hook passed710 Python(1existing skip)/748 JS. User closed development browser afterwards; authorized reopening/restoring existing test-world GM via saved credential, no server restart or new instance.
+- Browser restoration verified readyGM14.369/test, consoleerrors0 and prior5-chunk image probe passed.
+- Task04a baseline: existing connection tests passed6 outside sandbox. Added private getImagePreviewContext and optional known transfer_id/expected_context on begin, because existing metadata exposes no world/GM and lost begin responses must remain cancellable. Added JS handshake test passed with all10 transfer tests.
+- Task04a implementation: strict typed private envelopes, <=16x32KiB batches, out-of-order verified assembly/hash, private700/600 directories/files and explicit StagedOriginal ownership.
+- Task04a diagnosis: unchanged cancellation-during-release test first failed (cancellation swallowed), passed after propagating cancellation and clearing unreturned files. Unsuccessful correction count0.
+- Harness-only diagnosis: raw model_dump included default bucket:null; corrected to established exclude_none serialization without changing expected selector. Fake response registry used asynchronously queued done callbacks; an attempted gather of already-finished tasks did not drain those callbacks (1 unsuccessful harness correction). Now move registry removal into the responder's finally, preserving the empty-registry assertion. Root is callback scheduling, not production correlation. Next focused run pending; stop at3 unsuccessful corrections if this same harness issue persists.
+- Task04a focused final:10 assembly Python tests passed,6 connection tests passed,10 JS private-transfer tests passed. Harness registry fix passed preserving empty-registry assertion; no active diagnosis, historical unsuccessful harness adjustment1.
+- Task04a final full run pending. Added protocol extension and ownership docs in python-assembly.md; browser probe now tests pre-begin context/known reservation. Actual Python assembly over running GM socket requires task10 tool entry point; do not expose a temporary public stub merely to claim runtime completion.
+- Final04a full `./scripts/test.sh` passed720 Python(1existing skip)/749 JS. Live context/reservation probe passed5chunks/max534bytes; readyGM14.369/test, consoleerrors0.
+- Next action: stage/commit04a, then04b authenticated source snapshots.

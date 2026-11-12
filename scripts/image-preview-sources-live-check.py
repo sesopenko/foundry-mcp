@@ -42,7 +42,9 @@ const rpc=async(method,params)=>{
   if(response.error)throw Error('Private dispatch failed');return response.result;
 };
 try{
-  transfer=await rpc('beginImagePreviewTransfer',{image,max_frame_bytes:1024});
+  const expected_context=await rpc('getImagePreviewContext',{}),transfer_id=crypto.randomUUID();
+  transfer=await rpc('beginImagePreviewTransfer',{image,max_frame_bytes:1024,expected_context,transfer_id});
+  if(transfer.transfer_id!==transfer_id||transfer.world_id!==expected_context.world_id||transfer.user_id!==expected_context.user_id)throw Error('Context changed');
   const output=new Uint8Array(transfer.size_bytes);
   for(let index=transfer.chunk_count-1;index>=0;index--){
     const offset=index*transfer.chunk_bytes,length=Math.min(transfer.chunk_bytes,transfer.size_bytes-offset);

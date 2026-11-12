@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
-import {createPreviewTransfers,previewTransfers} from '../../foundry-module/scripts/imagePreviewTransfer.js';
+import {createPreviewTransfers,previewTransfers,getImagePreviewContext} from '../../foundry-module/scripts/imagePreviewTransfer.js';
 import {handleRpcMessage,connectFoundryBridge,disconnectFoundryBridge,reconnectFoundryBridge} from '../../foundry-module/scripts/foundryBridge.js';
 
 globalThis.crypto ??= webcrypto;
@@ -38,6 +38,19 @@ test('negotiated indexed wire contract reconstructs exact multichunk bytes out o
   }
   assert.deepEqual(output,f.data);assert.equal(f.fetches,1);assert.equal(f.releases,1);assert.equal(f.service.busy,false);assert.equal(f.timers.size,0);
   assert.deepEqual(f.service.release({transfer_id:begin.transfer_id},()=>true,f.rpc),{released:false});
+});
+
+test('pre-begin identity and caller-known reservation permit cleanup even before begin returns',async t=>{
+  const f=fixture(t),context=getImagePreviewContext(),id=crypto.randomUUID();
+  assert.deepEqual(context,{world_id:'test',user_id:'gm'});
+  await assert.rejects(f.begin({expected_context:{...context,world_id:'wrong'}}),code('ContextChanged'));
+  assert.equal(f.fetches,0);
+  const gate=deferred();f.onBegin=()=>gate.promise;
+  const pending=f.begin({transfer_id:id,expected_context:context});await flush();
+  assert.deepEqual(f.service.release({transfer_id:id},()=>true,f.rpc),{released:true});
+  assert.ok(f.signals[0].aborted);gate.resolve();await assert.rejects(pending,code('TransferNotFound'));
+  assert.equal(f.service.busy,false);assert.equal(f.releases,1);
+  game.user.isGM=false;assert.throws(()=>getImagePreviewContext(),code('PermissionDenied'));
 });
 
 test('every frame includes exact JSON/base64/id overhead at configurable ceilings',async t=>{

@@ -122,8 +122,8 @@ spawning agents or concurrent writes to this checkout.
 | [01 Contracts and baseline](tasks/01-contracts-and-baseline.md) | 5 | None | Complete | b0cc01e |
 | [02 Browser source resolution](tasks/02-browser-source-resolution.md) | 8 | 01 | Complete | 141ede6 |
 | [03a Browser source fetch](tasks/03a-browser-source-fetch.md) | 8 | 02 | Complete | e4121a4 |
-| [03b Chunk protocol and lifecycle](tasks/03b-chunk-protocol-and-lifecycle.md) | 5 | 03a | Complete | this commit |
-| [04a Python transfer assembly](tasks/04a-python-transfer-assembly.md) | 8 | 03b | Not started | — |
+| [03b Chunk protocol and lifecycle](tasks/03b-chunk-protocol-and-lifecycle.md) | 5 | 03a | Complete | 647c42b |
+| [04a Python transfer assembly](tasks/04a-python-transfer-assembly.md) | 8 | 03b | Complete | this commit |
 | [04b Snapshots and caller isolation](tasks/04b-private-snapshots-and-caller-isolation.md) | 8 | 04a | Not started | — |
 | [05a Decoder probe and packaging](tasks/05a-decoder-probe-and-packaging.md) | 5 | 01 | Not started | — |
 | [05b Worker resource supervision](tasks/05b-worker-resource-supervision.md) | 8 | 05a | Not started | — |

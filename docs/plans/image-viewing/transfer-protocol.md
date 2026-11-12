@@ -14,6 +14,15 @@ standard browser APIs and the [private fetch lease](source-fetch.md).
 server response ceiling, not an arbitrary enlargement of the server's limit.
 RPC IDs must be nonempty strings of at most512 serialized JSON UTF-8 bytes.
 
+Task04a adds `getImagePreviewContext({})` (private, no MCP tool), returning
+`world_id,user_id` for the ready current GM before begin. Python always supplies
+these as begin `expected_context:{world_id,user_id}`, checked before fetch and
+against the resulting lease. It also supplies a fresh UUIDv4 `transfer_id`
+reservation; browser-generated IDs remain the default for internal callers
+omitting it. A known reservation permits release during a pending begin or after
+a lost/malformed begin result. Never reuse reservation IDs. These additions use
+public game world/user identity only and preserve socket/world/GM guards.
+
 The private result fields are:
 
 - `transfer_id`: fresh cryptographic UUIDv4; not a caller-bound source handle.

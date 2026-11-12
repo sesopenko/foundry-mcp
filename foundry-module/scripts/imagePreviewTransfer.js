@@ -17,6 +17,19 @@ function rejected(code) {fail(code, ({Busy:'Another image transfer is active; re
   ResponseTooLarge:'Private metadata or chunk exceeds the configured frame ceiling; increase the ceiling or select a shorter canonical source.',
   InvalidRequest:'Use only the private transfer protocol fields.'})[code] ?? 'Private transfer failed; begin again.');}
 
+/** Read-only core14 ready-GM identity handshake before Python begins staging.
+ * Public game.world.id/game.user.id only; no document sources or game-system
+ * semantics. Matching IDs are checked again by begin's expected_context.
+ */
+export function getImagePreviewContext(input = {}, isCurrent = () => true) {
+  try {validateParams(input,[]);} catch {rejected('InvalidRequest');}
+  if (!globalThis.game?.ready || !game.world?.id) fail('NotReady','Connect the existing ready GM world.');
+  if (!game.user?.isGM) fail('PermissionDenied','Private image sources require the connected GM.');
+  if (!String(game.version).startsWith('14.')) fail('UnsupportedVersion','Private image sources require Foundry14.');
+  if (!isCurrent()) rejected('ContextChanged');
+  return {world_id:game.world.id,user_id:game.user.id};
+}
+
 /** One private transfer, bound to an exact socket object plus world/GM.
  * begin(params,isCurrent,{owner,rpc_id}), read(...), release(...) return wire DTOs.
  * disconnect(owner) aborts only that owner's state; old events/releases never
@@ -66,20 +79,26 @@ export function createPreviewTransfers({source = previewSourceFetch, now = () =>
     return state;
   }
   async function begin(input, isCurrent, {owner, rpc_id}) {
-    params(input,['image','src','max_frame_bytes']); frame(rpc_id);
+    params(input,['image','src','max_frame_bytes','transfer_id','expected_context']); frame(rpc_id);
     if (active) {
       if (!active.isCurrent() || now() >= active.deadline || game.world?.id !== active.world || game.user !== active.user) close(active,'ContextChanged');
       else rejected('Busy');
     }
     const ceiling = input.max_frame_bytes ?? 65536;
     if (!Number.isSafeInteger(ceiling) || ceiling < 1024 || ceiling > 16777216) rejected('InvalidFrameLimit');
+    if (input.transfer_id !== undefined) token(input.transfer_id);
+    if (input.expected_context !== undefined) {
+      params(input.expected_context,['world_id','user_id']);
+      const current = getImagePreviewContext({},isCurrent);
+      if (input.expected_context.world_id !== current.world_id || input.expected_context.user_id !== current.user_id) rejected('ContextChanged');
+    }
     const state = {owner,isCurrent,world:globalThis.game?.world?.id,user:globalThis.game?.user,
       controller:new AbortController(),requested:new Set(),served:new Set(),inflight:0,
-      id:uuid(),deadline:now()+PREVIEW_FETCH_LIMITS.totalTimeout,ceiling,lease:null};
+      id:input.transfer_id ?? uuid(),deadline:now()+PREVIEW_FETCH_LIMITS.totalTimeout,ceiling,lease:null};
     active = state;
     state.timer = setTimer(() => close(state,'TransferTimeout'),PREVIEW_FETCH_LIMITS.totalTimeout);
     try {
-      const {max_frame_bytes, ...selection} = input;
+      const {max_frame_bytes,transfer_id,expected_context,...selection} = input;
       state.lease = await source.begin(selection,{isCurrent,signal:state.controller.signal});
       guard(state,isCurrent,owner);
       // Reserve worst-case negotiated indices, offsets, raw length and an RPC
@@ -89,6 +108,7 @@ export function createPreviewTransfers({source = previewSourceFetch, now = () =>
       if (state.chunkBytes < 1) rejected('InvalidFrameLimit');
       state.count = Math.ceil(state.lease.size_bytes/state.chunkBytes);
       const context = state.lease.context;
+      if (expected_context && (context.world_id !== expected_context.world_id || context.user_id !== expected_context.user_id)) rejected('ContextChanged');
       const result = {transfer_id:state.id,size_bytes:state.lease.size_bytes,chunk_bytes:state.chunkBytes,
         chunk_count:state.count,max_in_flight:WINDOW,world_id:context.world_id,user_id:context.user_id,image:context.image,
         scope_status:context.scope_status ?? 'complete',limitations:context.limitations ?? []};

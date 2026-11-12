@@ -59,8 +59,17 @@ Commit service, tests, and private transfer contract together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, frame/window/deadline results: not run.
-- Exact pending runtime prerequisites: pending.
+- Implementation: complete; strict private packet validation, bounded verified
+  file/hash assembly, explicit ownership and pre-begin identity/reservation.
+- Dependency commit SHA(s):03b `647c42b`.
+- Commit: this commit.
+- Focused outside sandbox:10 assembly Python tests,6 connection tests,10 JS
+  transfer tests and1 probe-privacy test passed. Full `./scripts/test.sh` passed
+ 720 Python tests (1existing skip) and749 JavaScript tests.
+- Contract/diagnosis evidence: [Python assembly](../python-assembly.md); cancelled
+  cleanup regression failed before correction, passed unchanged afterwards.
+- Runtime: refreshed ready14.369 test-world GM, consoleerrors0; browser context/
+  reservation and5-chunk reverse dispatch passed (max534 bytes under1024).
+  Actual Python assembly through the running GM socket awaits task10's production
+  entry point and12a integration; no test-only public endpoint was introduced.
+  Live S3 requires a configured readable bucket/CORS. No game mutations.
