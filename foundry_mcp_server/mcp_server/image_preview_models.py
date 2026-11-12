@@ -1,4 +1,4 @@
-"""Strict internal base preview contracts; map extensions have a separate task.
+"""Strict file/map preview contracts, with optional bounded annotation metadata.
 
 No tools are registered here. Coordinates always describe the display-oriented
 original. Public results contain neither source paths nor private transfer data.
@@ -15,6 +15,8 @@ from foundry_mcp_server import image_preview_limits as limits
 from foundry_mcp_server.image_preview_errors import preview_error
 from .journal_image_models import ImageSelector
 from .selective_models import Model
+from .map_models import MapSelector
+from .map_image_models import MapNotesResult
 
 SourceId = Annotated[str, Field(min_length=1, max_length=128, pattern=r'^[A-Za-z0-9_-]+$',
     description='Opaque caller-bound original snapshot handle returned by get_foundry_image_info or get_foundry_image_url; valid for 30 minutes from staging.')]
@@ -47,9 +49,10 @@ class Crop(Model):
 
 
 class ImageInfoRequest(Model):
-    image: ImageSelector | None = Field(default=None, description='Exact image record from browse_journal_images or upload_image; mutually exclusive with src.')
+    image: ImageSelector | None = Field(default=None, description='Exact image record from browse_journal_images or upload_image; mutually exclusive with src/map.')
     src: str | None = Field(default=None, min_length=1, max_length=4096,
         description='Stored journal img src or portrait reference. Selection hint only; fresh bounded parent listing must establish configured-source membership.')
+    map: MapSelector|None=Field(default=None,description='Exact Scene/level/role from get_map_info assets; pins file bytes plus map/note context. Never defaults to active Scene or viewed level.')
 
     @field_validator('src')
     @classmethod
@@ -60,7 +63,7 @@ class ImageInfoRequest(Model):
 
     @model_validator(mode='after')
     def exclusive_source(self):
-        names = ('image', 'src', 'source_id') if 'source_id' in type(self).model_fields else ('image', 'src')
+        names = ('image', 'src', 'map', 'source_id') if 'source_id' in type(self).model_fields else ('image', 'src', 'map')
         if any(name in self.model_fields_set and getattr(self, name) is None for name in names):
             raise ValueError('Omit unused input selectors rather than null')
         if sum(getattr(self, name) is not None for name in names) != 1:
@@ -71,6 +74,7 @@ class ImageInfoRequest(Model):
 class ImageUrlRequest(ImageInfoRequest):
     source_id: SourceId | None = None
     crop: Crop | None = Field(default=None, description='Optional exact rectangle in original display pixels; omit for the full image. InvalidCrop rejects malformed or out-of-bounds rectangles.')
+    map_notes: bool=Field(default=False,description='Opt-in compact readable note keys. Requires map or a map-bound source_id and verified background placement; false omits annotation metadata entirely.')
 
 
 def utc_timestamp(value: str):
@@ -112,6 +116,7 @@ class ImageUrlResult(SourceReceipt):
     height: OutputEdge = Field(description='Actual delivered raster height; never enlarged.')
     mime_type: Literal['image/png', 'image/webp']
     size_bytes: int = Field(ge=1, le=limits.OUTPUT_MAX_BYTES, description='Exact encoded public derivative byte length.')
+    map_notes: MapNotesResult|None=Field(default=None,exclude_if=lambda value:value is None,description='Present only for map_notes=true; bounded rendered keys/counts and exact legend next call, never a full legend.')
 
     _expiry = field_validator('expires_at')(utc_timestamp)
 

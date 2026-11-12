@@ -32,9 +32,12 @@ distinct `background`/`foreground` media records. Each media record has role,
 safe, sensitive, unsupported), `media_kind` (image,video,unknown,none),
 `support_status` (reference_only,missing,unsupported_video,unsupported_reference,
 map_context_required), a typed `map` selector (scene_uuid,level_id,role), and
-nullable info/preview next calls. A safe image uses currently supported nested
-`request:{src:...}` follow-ups. M05 changes these to nested map requests.
-Sensitive references expose no source text and no raw-file follow-up. Listing
+nullable info/preview next calls. Level images use exact nested
+`request:{map:{scene_uuid,level_id,role}}` follow-ups, including privately resolved
+sensitive references. Sensitive references expose no source text or raw-file
+follow-up; credential-bearing/unsupported sources still fail resolver checks.
+See [map-aware image tools](map-image-tools.md). Tile file followups use `src`.
+Listing
 never fetches media, lists FilePicker directories or claims a path exists.
 Image/video classification is a filename hint; only the image probe establishes
 actual type. Unknown extensions remain explicit unsupported references.

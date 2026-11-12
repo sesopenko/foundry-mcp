@@ -47,14 +47,14 @@ class MapInfoContractTests(unittest.TestCase):
     def test_media_followups_and_map_identity_are_consistent(self):
         media=dict(reference='maps/a.webp',reference_status='safe',media_kind='image',support_status='reference_only',
             role='background',map=dict(scene_uuid='Scene.one',level_id='floor',role='background'),
-            info_next_call=dict(tool='get_foundry_image_info',arguments=dict(request=dict(src='maps/a.webp'))),
-            preview_next_call=dict(tool='get_foundry_image_url',arguments=dict(request=dict(src='maps/a.webp'))))
+            info_next_call=dict(tool='get_foundry_image_info',arguments=dict(request=dict(map=dict(scene_uuid='Scene.one',level_id='floor',role='background')))),
+            preview_next_call=dict(tool='get_foundry_image_url',arguments=dict(request=dict(map=dict(scene_uuid='Scene.one',level_id='floor',role='background')))))
         self.assertEqual(LevelMedia.model_validate(media).map.level_id,'floor')
         for changes in ({'role':'foreground'},{'info_next_call':None},{'reference_status':'sensitive'},
                 {'preview_next_call':dict(tool='get_foundry_image_url',arguments=dict(request=dict(src='maps/other.webp')))}):
             with self.subTest(changes=changes),self.assertRaises(ValidationError):LevelMedia.model_validate({**media,**changes})
         private={**media,'reference':None,'reference_status':'sensitive','media_kind':'unknown',
-            'support_status':'map_context_required','info_next_call':None,'preview_next_call':None}
+            'support_status':'map_context_required'}
         self.assertIsNone(LevelMedia.model_validate(private).reference)
 
     def test_declared_tile_membership_does_not_invent_empty_or_null_semantics(self):
@@ -160,7 +160,7 @@ class MapInfoMCPTests(unittest.IsolatedAsyncioTestCase):
         data=MapInfoResult.model_validate(result.structured_content)
         self.assertEqual(data.grid.size,180);self.assertEqual(data.geometry.width,5940)
         self.assertEqual(len(data.entries),2)
-        self.assertEqual(data.entries[0].background.info_next_call.arguments.request.src,'maps/a.webp')
+        self.assertEqual(data.entries[0].background.info_next_call.arguments.request.map.model_dump(),dict(scene_uuid='Scene.one',level_id='floor',role='background'))
         self.assertNotIn('source_witness',json.dumps(result.structured_content))
         selected=await self.invoke(dict(scene_uuid='Scene.one',level_id='floor'))
         tiles=await self.invoke(dict(scene_uuid='Scene.one',level_id='floor',section='tiles',expected_revision=selected.structured_content['revision']))

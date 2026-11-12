@@ -2,9 +2,6 @@
 from dataclasses import dataclass,field
 import json
 from pathlib import Path
-from typing import Literal
-
-from pydantic import Field,model_validator
 
 from . import image_preview_limits as limits
 from .image_preview_artifact import inspect_artifact
@@ -14,28 +11,8 @@ from .image_preview_process import EncodedGeometry,worker_reply
 from .image_preview_supervisor import current_supervisor
 from .map_note_layout import validate_pins
 from .mcp_server.image_preview_models import Crop
-from .mcp_server.map_note_models import NoteKey
+from .mcp_server.map_image_models import NoteRenderSummary
 from .mcp_server.selective_models import Model
-
-
-class NoteRenderSummary(Model):
-    total_in_region: int=Field(ge=0,le=2**53-1)
-    rendered_count: int=Field(ge=0,le=100)
-    omitted_count: int=Field(ge=0,le=2**53-1)
-    complete: bool
-    keys: list[NoteKey]=Field(max_length=100)
-    omission_reasons: dict[Literal['limit','density','collision','edge','tiny_image'],int]
-
-    @model_validator(mode='after')
-    def consistency(self):
-        if (self.rendered_count!=len(self.keys) or len(set(self.keys))!=len(self.keys)
-                or self.keys!=sorted(self.keys,key=lambda key:int(key[1:]))
-                or self.total_in_region!=self.rendered_count+self.omitted_count
-                or self.complete!=(self.omitted_count==0)
-                or any(count<=0 for count in self.omission_reasons.values())
-                or sum(self.omission_reasons.values())!=self.omitted_count):
-            raise ValueError('Inconsistent annotation counts')
-        return self
 
 
 class AnnotatedGeometry(EncodedGeometry):

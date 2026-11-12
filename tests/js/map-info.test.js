@@ -47,7 +47,7 @@ test('screenshot geometry/grid and explicit level roles preserve raw reference v
   const row=result.entries[0];assert.equal(row.level_uuid,'Scene.one.Level.floor');
   assert.equal(row.background.reference,'maps/a.webp');assert.equal(row.foreground.reference,'maps/front.png');
   assert.deepEqual(row.background.map,{scene_uuid:'Scene.one',level_id:'floor',role:'background'});
-  assert.deepEqual(row.foreground.info_next_call,{tool:'get_foundry_image_info',arguments:{request:{src:'maps/front.png'}}});
+  assert.deepEqual(row.foreground.info_next_call,{tool:'get_foundry_image_info',arguments:{request:{map:row.foreground.map}}});
   assert.equal(result.level_id,null);assert.ok(result.complete);assert.equal(result.scope_status,'complete');
 });
 

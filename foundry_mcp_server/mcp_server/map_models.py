@@ -11,6 +11,13 @@ FolderUUID=Annotated[str,Field(pattern=r'^Folder\.[A-Za-z0-9_-]{1,128}$',descrip
 SceneUUID=Annotated[str,Field(pattern=r'^Scene\.[A-Za-z0-9_-]{1,128}$',description='Canonical world Scene UUID from browse_maps; excludes compendium UUIDs and names.')]
 Revision=Annotated[str,Field(max_length=128,pattern=r'^(?:[0-9a-f]{64}|http-[0-9]+-[0-9a-f]+-[0-9a-f]+)$')]
 Cursor=Annotated[str,Field(min_length=1,max_length=4096,description='Opaque returned next_cursor. Return unchanged with the same folder/filter; count/byte bounds may change.')]
+LevelId=Annotated[str,Field(pattern=r'^[A-Za-z0-9_-]{1,128}$',description='Exact embedded Level ID returned by get_map_info for this Scene; never a name or UUID.')]
+
+
+class MapSelector(Model):
+    scene_uuid: SceneUUID
+    level_id: LevelId
+    role: Literal['background','foreground']
 
 
 class BrowseMapsRequest(Model):

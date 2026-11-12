@@ -83,7 +83,7 @@ class ImageInfoToolsTests(unittest.IsolatedAsyncioTestCase):
             tool = next(t for t in await client.list_tools() if t.name=='get_foundry_image_info')
         request = tool.input_schema['$defs']['ImageInfoRequest']
         self.assertFalse(request['additionalProperties'])
-        self.assertEqual(set(request['properties']),{'image','src'})
+        self.assertEqual(set(request['properties']),{'image','src','map'})
         self.assertFalse(tool.output_schema['additionalProperties'])
         self.assertEqual(set(tool.output_schema['properties']),set(ImageInfoResult.model_fields))
         for term in ('next_cursor','get_foundry_image_url','30 minutes','128 MiB','frame_policy'):
@@ -317,7 +317,7 @@ class ImageUrlToolsTests(unittest.IsolatedAsyncioTestCase):
         async with Client(mcp) as client:
             tool = next(t for t in await client.list_tools() if t.name=='get_foundry_image_url')
         request = tool.input_schema['$defs']['ImageUrlRequest']
-        self.assertEqual(set(request['properties']),{'image','src','source_id','crop'})
+        self.assertEqual(set(request['properties']),{'image','src','map','source_id','crop','map_notes'})
         self.assertFalse(request['additionalProperties'])
         self.assertEqual(set(tool.output_schema['properties']),set(ImageUrlResult.model_fields))
         self.assertFalse(tool.output_schema['additionalProperties'])

@@ -143,8 +143,8 @@ spawning agents or concurrent writes to this checkout.
 | [M03a Note identities and legend](tasks/m03a-map-note-identities-and-legend.md) | 5 | M02 | Complete | 26bb4e6 |
 | [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Complete | 8155684 |
 | [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Complete | a07630f |
-| [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Complete | this commit |
-| [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Not started | — |
+| [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Complete | 722a120 |
+| [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Complete | this commit |
 | [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Not started | — |
 | [14a Local runtime acceptance](tasks/14a-local-runtime-acceptance.md) | 8 | 12b, 13 | Not started | — |
 | [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Not started | — |

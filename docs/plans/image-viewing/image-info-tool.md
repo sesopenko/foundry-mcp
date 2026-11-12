@@ -6,8 +6,9 @@ requires an authenticated caller and the connected ready Foundry14 GM. It needs
 no public preview origin, PF2e system or active Scene.
 
 Pass exactly one input under `request`: `image`, copied from an exact
-`browse_journal_images`/`upload_image` image record, or `src`, copied from a stored
-journal image/portrait reference. Follow `read_journal_page.next_cursor` until
+`browse_journal_images`/`upload_image` image record, `src`, copied from a stored
+journal image/portrait reference, or `map:{scene_uuid,level_id,role}` from
+`get_map_info` assets. Follow `read_journal_page.next_cursor` until
 the complete img tag is reconstructed when HTML is fragmented. Neither form
 requires a preceding browse call.
 
@@ -35,7 +36,8 @@ world/GM identity for1800 seconds from staging, independently of file replacemen
 or later seven-day derivatives. It exposes no source path, digest, original bytes
 or public URL. Next use `get_foundry_image_url` with that handle for overview or
 crop; [that tool is now integrated](image-url-tool.md) in task11.
-Scene-aware map selectors/annotations belong to M05.
+Scene-aware [map selectors and annotations](map-image-tools.md) bind exact level
+and role identity privately to that handle; they never infer a Scene from a path.
 
 `SourceRuntime` starts/closes the private cache in app lifespan independently of
 public delivery configuration, prunes every60 seconds and protects cleanup from

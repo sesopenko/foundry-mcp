@@ -73,10 +73,14 @@ async def get_map_info(request:MapInfoRequest):
     Media records expose reference,reference_status,media_kind,support_status,
     info_next_call,preview_next_call; level roles also carry role/map selector.
     Safe image references supply concrete get_foundry_image_info and
-    get_foundry_image_url next calls using currently supported request.src.
-    map selectors identify scene/level/role for future scene-aware image inputs;
-    use returned next calls with current image tools. Signed/credential-bearing
-    references are redacted, have null next calls and map_context_required.
+    get_foundry_image_url next calls using exact request.map Scene/level/role.
+    Signed level references stay redacted and have map_context_required with
+    private map-selector followups; unsupported credential-bearing references
+    still fail source validation. Tile files use bare request.src followups and
+    do not imply map context. Use returned next calls rather than guessing a
+    Scene from a shared file path. After info, get_foundry_image_url with that
+    source_id,map_notes=true adds supported default-background keys and an exact
+    revision-bound notes legend call. Ordinary previews omit map_notes entirely.
     Empty/missing/null media, videos and unsupported references are explicit.
     Classification is a filename hint; reference_only does not prove existence,
     type, readability or supported transforms. Fresh image selection/probing

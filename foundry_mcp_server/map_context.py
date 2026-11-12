@@ -157,14 +157,34 @@ class MapContextService:
         value,principal,socket=await self._rpc(manager,'getMapImageContext',args,MapContextReply)
         return self._resolved(value,principal,socket)
 
-    def _lease(self,manager,resolved,lease):
-        if not isinstance(lease,SourceLease) or self._identity()!=resolved.principal:raise unavailable()
-        original=lease.original;context=original.context
+    def _original(self,manager,resolved,original):
+        if self._identity()!=resolved.principal:raise unavailable()
+        context=original.context
         if (manager.websockets.get('gm') is not resolved.socket or context.socket is not resolved.socket
                 or context.world_id!=resolved.world_id or context.user_id!=resolved.user_id):raise context_lost()
         if tuple(sorted(context.image.model_dump(exclude_none=True).items()))!=resolved.image:raise changed()
+
+    def _lease(self,manager,resolved,lease):
+        if not isinstance(lease,SourceLease):raise unavailable()
+        self._original(manager,resolved,lease.original)
         expiry=datetime.fromisoformat(lease.receipt.source_expires_at).timestamp()
         if not self.clock()<expiry:raise unavailable()
+
+    async def prepare_binding(self,manager,resolved,original,metadata):
+        """Validate staged map state before atomic cache admission.
+
+        Returns a trusted synchronous receipt factory, never a public handle or
+        separately owned map cache. The cache still owns file/identity admission.
+        """
+        metadata=ProbeMetadata.model_validate(metadata)
+        self._original(manager,resolved,original)
+        if metadata.size_bytes!=original.size_bytes:raise invalid_response()
+        fresh=await self.resolve(manager,resolved.map_request(),expected_revision=resolved.revision,
+            expected_reference_digest=resolved.reference_digest)
+        if fresh!=resolved:raise changed()
+        self._original(manager,resolved,original)
+        return lambda receipt:BoundMapContext(resolved,receipt.source_id,receipt.source_expires_at,
+            original.sha256,metadata.width,metadata.height)
 
     async def bind(self,manager,resolved,lease,metadata):
         """Pin an admitted source lease/probe to the immutable metadata snapshot."""

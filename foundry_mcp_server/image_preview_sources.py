@@ -1,6 +1,6 @@
 """Ephemeral caller-bound original snapshots, separate from public derivatives."""
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 from datetime import datetime, timezone
 import asyncio
 from pathlib import Path
@@ -42,6 +42,7 @@ class _Snapshot:
     original: StagedOriginal
     leases: int = 0
     retired: bool = False
+    private_context: object = field(default=None,repr=False)
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class SourceLease:
     receipt: SourceReceipt
     original: StagedOriginal
     recheck: object
+    private_context: object = field(default=None,repr=False)
 
 
 class SourceSnapshots:
@@ -118,6 +120,9 @@ class SourceSnapshots:
         Validation runs while staging still owns the file/reservation, before
         any handle exists. Failure or cancellation cleans the original even if
         the caller's authorization changes while a decoder is running.
+        A trusted validator may return a synchronous factory(receipt) for opaque
+        immutable private context. It runs inside admission with the final
+        receipt, without awaiting or a separately managed context cache.
         """
         principal = self._principal()
         original = None
@@ -150,8 +155,9 @@ class SourceSnapshots:
                     or original.path.stat().st_size != original.size_bytes or reserved != original.size_bytes
                     or not re.fullmatch(r'[0-9a-f]{64}', original.sha256)):
                 raise ToolError('InvalidFoundryResponse: source transfer did not hand off a complete private file.')
-            if validate_original is not None:
-                await validate_original(original)
+            context_factory=await validate_original(original) if validate_original is not None else None
+            if context_factory is not None and not callable(context_factory):
+                raise ToolError('InvalidFoundryResponse: invalid private original context factory.')
             if manager.websockets.get('gm') is not original.context.socket:
                 raise context_lost()
             if self._principal() != principal:
@@ -165,6 +171,8 @@ class SourceSnapshots:
                     raise context_lost()
                 record = _Snapshot(str(uuid4()), self._clock()+limits.SNAPSHOT_TTL_SECONDS, principal, original)
                 receipt = self._receipt(record)
+                if context_factory is not None:
+                    record.private_context=context_factory(receipt)
                 self._entries[record.source_id] = record
                 self._reserved -= reserved
                 reserved = 0
@@ -214,7 +222,7 @@ class SourceSnapshots:
 
         try:
             await recheck()
-            yield SourceLease(self._receipt(record), record.original, recheck)
+            yield SourceLease(self._receipt(record), record.original, recheck,record.private_context)
             if manager.websockets.get('gm') is not socket:
                 raise context_lost()
             if self._principal() != principal:

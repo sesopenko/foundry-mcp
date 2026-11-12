@@ -5,14 +5,21 @@ export function contextWorld(input={}){
     notes:[{id:'n01',x:1900,y:2500,text:'Note',levels:[],entryId:null,pageId:null}]};
   const collection=list=>({contents:list,invalidDocumentIds:new Set(),get:id=>list.find(d=>d.id===id)});
   const doc=(kind,s,parent=null)=>({id:s.id,uuid:(parent?parent.uuid+'.':'')+kind+'.'+s.id,parent,type:s.type??'Scene',
+    get name(){if(s.allowed===false)throw Error('Denied name');return s.name;},
     testUserPermission:()=>s.allowed!==false,
-    toObject(original){if(original!==true||s.allowed===false)throw Error('Denied/invalid source read');const {id,allowed,levels,notes,...v}=s;
+    toObject(original){if(original!==true||s.allowed===false||kind.startsWith('JournalEntry'))throw Error('Denied/invalid source read');const {id,allowed,levels,notes,...v}=s;
       return structuredClone(kind==='Note'?{...v,levels:s.levels??[]}:v);}});
   const scene=doc('Scene',source);
+  const journals=collection((input.journals??[]).map(s=>{
+    const entry=doc('JournalEntry',s);entry.pages=collection((s.pages??[]).map(p=>doc('JournalEntryPage',p,entry)));return entry;
+  }));
   scene.levels=collection((source.levels??[]).map(s=>doc('Level',s,scene)));
   scene.notes=collection((source.notes??[]).map(s=>{
     const d=doc('Note',s,scene);d.includedInLevel=l=>!s.levels?.length||s.levels.includes(l.id);
-    Object.defineProperties(d,{entry:{get:()=>null},page:{get:()=>null},label:{get:()=>s.text??''}});return d;
+    Object.defineProperties(d,{entry:{get:()=>journals.get(s.entryId)},page:{get:()=>d.entry?.pages.get(s.pageId)},label:{get:()=>{
+      if(d.entry?.testUserPermission()===false||d.page?.testUserPermission()===false)throw Error('Denied label');
+      return s.text||d.page?.name||d.entry?.name||'';
+    }}});return d;
   }));
   scene.tiles=collection([]);
   scene.getEmbeddedCollection=kind=>({Level:scene.levels,Tile:scene.tiles,Note:scene.notes})[kind];
@@ -22,7 +29,7 @@ export function contextWorld(input={}){
   globalThis.location={origin:'http://localhost:30000'};
   const state={source,scene,files:input.files??['assets/a.png'],listings:0,browse_hook:null};
   class Picker{
-    constructor(){this.sources={data:{}};}
+    constructor(){this.sources=input.sources??{data:{}};}
     static async browse(source,target){state.listings++;if(state.browse_hook)await state.browse_hook();
       return{target,dirs:[],files:state.files};}
   }

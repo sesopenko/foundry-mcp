@@ -2,9 +2,10 @@
 
 `get_foundry_image_url` is registered through the typed FastMCP boundary with
 OAuth discovery metadata. Provide exactly one selector under `request`: canonical
-`image`, bare stored `src`, or a caller-bound `source_id` from image info/a prior
+`image`, bare stored `src`, exact level/role `map` from `get_map_info`, or a caller-bound `source_id` from image info/a prior
 URL call. Optional `crop` uses original display-oriented integer pixels, with
-exclusive right/bottom edges and no clipping. Maps/notes selectors are M05 scope.
+exclusive right/bottom edges and no clipping. Opt-in `map_notes:true` requires
+explicit or source-bound map context; see [map image tools](map-image-tools.md).
 
 ```json
 {"request":{"source_id":"<handle returned by get_foundry_image_info>","crop":{"x":7200,"y":3100,"width":1280,"height":960}}}
@@ -16,7 +17,7 @@ configured trusted HTTPS origin, authenticated Basic/OAuth/development identity
 and the ready authorized GM. Plain-none cannot issue; discovery and authenticated
 info remain available independently of the public origin.
 
-Image/src requests stage/probe a new original; source handles lease their pinned
+Image/src/map requests stage/probe a new original; source handles lease their pinned
 bytes without another transfer. Current caller, socket, world, GM and exact file
 membership are rechecked around rendering/publication. Same-path byte replacement
 does not change an existing original snapshot. Deleted/denied paths, expired
@@ -31,7 +32,10 @@ Original limits, first-frame/page behavior and SVG restrictions remain unchanged
 
 The result contains exactly `url`, `expires_at`, `source_id`, `source_expires_at`,
 `source_width`, `source_height`, `region`, `width`, `height`, `mime_type` and
-`size_bytes`. Original receipt expires1800s from staging; the immutable derivative
+`size_bytes` when `map_notes` is false (the default). True adds a bounded typed
+`map_notes` section with rendered aliases/counts, exact map/revision identity,
+scope/omission information and a paginated legend next call; never a full legend.
+Original receipt expires1800s from staging; the immutable derivative
 expires604800s from publication. Delivered dimensions describe actual fetched
 pixels, independently of original region coordinates. Use floor for mapping a
 preview's left/top to original coordinates and ceil for exclusive right/bottom.

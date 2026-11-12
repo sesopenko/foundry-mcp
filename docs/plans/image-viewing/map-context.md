@@ -1,8 +1,8 @@
 # Private map context and source geometry
 
-M03b contract fixed before production implementation. M05 attaches this private
-state to caller-bound originals and extends public image-tool inputs. This task
-does not change those public signatures or produce annotated pixels.
+M03b established this private context contract. The
+[map image tools](map-image-tools.md) attach this state atomically to caller-bound
+originals and use it for explicit map selectors and annotated previews.
 
 ## Supported subset and evidence
 

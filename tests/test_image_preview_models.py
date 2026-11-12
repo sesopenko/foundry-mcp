@@ -32,20 +32,22 @@ class PreviewModelsTests(unittest.TestCase):
         self.assertNotIn('width=', str(preview_error('InvalidCrop', width=True, height=5000)))
 
     def test_every_input_combination(self):
-        values = dict(image=IMAGE, src='worlds/test/α image.png?cache=1', source_id='opaque_handle')
-        for model, names in [(ImageInfoRequest, ['image', 'src']), (ImageUrlRequest, list(values))]:
+        values = dict(image=IMAGE, src='worlds/test/α image.png?cache=1', map=dict(scene_uuid='Scene.one',level_id='floor',role='background'),source_id='opaque_handle')
+        for model, names in [(ImageInfoRequest, ['image', 'src','map']), (ImageUrlRequest, list(values))]:
             for enabled in itertools.product([False, True], repeat=len(names)):
                 args = {name: values[name] for name, yes in zip(names, enabled) if yes}
                 with self.subTest(model=model.__name__, selectors=list(args)):
                     if sum(enabled) == 1:
-                        self.assertEqual(model.model_validate(args).model_dump(exclude_none=True), args)
+                        expected={**args,**({'map_notes':False} if model is ImageUrlRequest else {})}
+                        self.assertEqual(model.model_validate(args).model_dump(exclude_none=True), expected)
                     else:
                         with self.assertRaises(ValidationError):
                             model.model_validate(args)
 
     def test_extras_nulls_and_wrong_tool_fields(self):
         for model in (ImageInfoRequest, ImageUrlRequest):
-            for bad in [dict(extra=True), dict(map={}), dict(map_notes=False), dict(src=None), dict(image=None)]:
+            flag=dict(map_notes=False) if model is ImageInfoRequest else dict(map_notes=None)
+            for bad in [dict(extra=True), dict(map={}), flag, dict(src=None), dict(image=None)]:
                 with self.subTest(model=model.__name__, bad=bad), self.assertRaises(ValidationError):
                     model.model_validate(dict(src='icons/svg/anchor.svg', **bad) if 'src' not in bad else bad)
         for bad in [dict(crop=URL['region']), dict(source_id='handle')]:

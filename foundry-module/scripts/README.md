@@ -17,7 +17,9 @@ no journal bodies or pixel overlays are produced. See
 [map note identities](../../docs/plans/image-viewing/map-note-identities.md).
 `mapContext.js` and pure `mapGeometry.js` provide private default-background
 context/crop candidates with verified rectangle conversion and immutable Python
-source binding. Public image-tool integration is a separate step; see
+source binding. Image tools consume these readers for explicit map selectors,
+optional annotated crops and revision-bound legends; see
+[map image tools](../../docs/plans/image-viewing/map-image-tools.md) and
 [map context support](../../docs/plans/image-viewing/map-context.md).
 
 `imageUploads.js` implements User Data directory creation and image upload through

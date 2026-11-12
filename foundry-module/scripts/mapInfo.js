@@ -34,7 +34,7 @@ function ancestry(parent,witness){
 }
 
 /** Safe source hint only. Never reveals signed queries or user-info credentials. */
-export function mapMedia(value,present=true){
+export function mapMedia(value,present=true,map=null){
   let reference=null,reference_status='missing',media_kind='none';
   if(present&&value!==undefined){
     if(value===null)reference_status='null';
@@ -44,7 +44,10 @@ export function mapMedia(value,present=true){
       reference_status='unsupported';media_kind='unknown';
       try{
         const url=new URL(value,'https://map-reference.invalid/');
-        if(url.username||url.password||url.search){reference_status='sensitive';}
+        const extension=url.pathname.split('/').at(-1).split('.').at(-1).toLowerCase();
+        const kind=['jpg','jpeg','png','apng','webp','avif','bmp','gif','tif','tiff','svg'].includes(extension)?'image'
+          :['webm','mp4','m4v','ogv','ogg'].includes(extension)?'video':'unknown';
+        if(url.username||url.password||url.search){reference_status='sensitive';media_kind=kind;}
         else if(value.length<=4096&&!/[\\\x00-\x1f\x7f]/.test(value)&&!value.startsWith('//')
             &&!url.hash&&['http:','https:'].includes(url.protocol)){
           const rawPath=value.replace(/^https?:\/\/[^/]*(?=\/|$)/i,'').split(/[?#]/)[0];
@@ -62,13 +65,14 @@ export function mapMedia(value,present=true){
     }
   }
   const supported=reference_status==='safe'&&media_kind==='image';
-  const args={request:{src:reference}};
+  const selectable=supported||!!map&&reference_status==='sensitive'&&media_kind!=='video';
+  const args={request:map?{map}:{src:reference}};
   return{reference,reference_status,media_kind,support_status:supported?'reference_only':reference_status==='sensitive'?'map_context_required'
     :['missing','null','empty'].includes(reference_status)?'missing':media_kind==='video'?'unsupported_video':'unsupported_reference',
-    info_next_call:supported?{tool:'get_foundry_image_info',arguments:args}:null,
-    preview_next_call:supported?{tool:'get_foundry_image_url',arguments:args}:null};
+    info_next_call:selectable?{tool:'get_foundry_image_info',arguments:args}:null,
+    preview_next_call:selectable?{tool:'get_foundry_image_url',arguments:args}:null};
 }
-function media(data){return mapMedia(data?.src,!!data&&Object.hasOwn(data,'src'));}
+function media(data,map=null){return mapMedia(data?.src,!!data&&Object.hasOwn(data,'src'),map);}
 function embedded(scene,name){
   if(typeof scene.getEmbeddedCollection!=='function')fail('UnsupportedCapability','Public embedded document collections are unavailable.');
   const collection=scene.getEmbeddedCollection(name);
@@ -98,7 +102,7 @@ function snapshot(scene_uuid){
   const allLevelIds=new Set(scene.getEmbeddedCollection('Level').contents.map(d=>d.id));
   const assetRows=levels.rows.map(({doc,data:s})=>{
     if(typeof s.name!=='string')unavailable();
-    const role=r=>({...media(s[r]),role:r,map:{scene_uuid,level_id:doc.id,role:r}});
+    const role=r=>{const map={scene_uuid,level_id:doc.id,role:r};return{...media(s[r],map),role:r,map};};
     return{kind:'level',level_id:doc.id,level_uuid:doc.uuid,...mapNamed(s.name),sort:s.sort??null,
       ...(Object.hasOwn(s,'elevation')?{elevation:s.elevation===null?null:pick(s.elevation,['bottom','top'])}:{}),
       background:role('background'),foreground:role('foreground')};

@@ -13,6 +13,12 @@ metadata revisions while public responses redact sensitive references. Typed
 Python validation rejects wrong owners, roles, continuations and source hints;
 see [map configuration](plans/image-viewing/map-info.md).
 
+The [map image tools](plans/image-viewing/map-image-tools.md) attach immutable
+map context atomically to private original snapshots. Separate context readers,
+native annotation workers and derivative storage own authorization/geometry,
+pixel composition and seven-day delivery respectively. Repeated crops reuse
+one transfer; bounded rendered-key metadata supplies exact legend follow-ups.
+
 The separate typed [compendium interface](compendium-tools.md) discovers packs,
 scans explicitly selected journal indexes/pages with work bounds and reads exact
 source through shared journal processors. Canonical pack selectors remain

@@ -59,7 +59,10 @@ for file-availability limits and sensitive-reference handling.
 Its selected-level notes section provides stable compact aliases and a bounded,
 revision-bound Note/journal/page legend; linked-target permissions precede label
 fallback. See [note identities](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-note-identities.md).
-Coordinate mapping and pixel annotations remain separate implementation tasks.
+Source image tools also accept exact Scene/level/role selectors. Opt-in
+`map_notes:true` renders compact keys on verified default backgrounds and returns
+a bounded legend follow-up; foreground/Tile composition is excluded. See
+[map image workflows and limits](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-image-tools.md).
 
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires

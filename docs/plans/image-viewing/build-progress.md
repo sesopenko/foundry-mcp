@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M04b, [layout and annotated encoding](tasks/m04b-note-layout-and-annotated-encoding.md).
+- Current task: M05, [map-aware image tools](tasks/m05-map-aware-image-tool-integration.md).
 - Stage: commit.
-- Last completed task: M04a, commit `a07630f`.
+- Last completed task: M04b, commit `722a120`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: finish final M04b package/diff review and required hook/local commit, then read M05 integration task. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: finish M05 final source/documentation review and focused regressions, then stage and commit with the full regression hook. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -34,6 +34,7 @@
 |M03a note identities |26bb4e6 |942 Python (1 existing skip)/783JS full and hook passed |
 |M03b geometry/context |8155684 |963 Python (1 existing skip)/794JS hook passed |
 |M04a fixed glyphs |a07630f |975 Python (1 existing skip)/794JS full/hook passed |
+|M04b layout/encoding |722a120 |990 Python (1 existing skip)/794JS hook passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -1056,3 +1057,149 @@ the linked evidence pages; Git history retains prior milestone records.
   Final staged/source review complete; required hook will run both full suites
   with15 final layout cases. No active failure, failed corrections or local
   fixture cleanup prerequisite. M05 integration is the next ready task.
+
+## CurrentM05 implementation plan
+
+- M04b722a120 committed after hook990 Python (1 existing skip)/794JS passed;
+  clean worktree afterward.25/30 tasks,163/200 points (81.5%) committed. Read
+  complete M05 task, current image tools/models, source cache/runtime, map-info
+  followup models and real context/tool fixtures. Code-graph SourceSnapshots
+  impact and exact stage/lease/mocks searches inspected. No new Foundry API is
+  needed beyond already verified module readers/resolver.
+- Existing image-tool baseline command runs in/tmp/foundry-map-m05-baseline.log.
+  Freeze integration before editing: keep ownership separate, without a parallel
+  map cache or long-lived handle dictionary. SourceSnapshots validator may return
+  a trusted synchronous private-context factory; construct it with the new
+  receipt inside atomic admission and store on that snapshot. Existing validators
+  returnNone and existing SourceLease positional arguments remain compatible.
+  Private immutable context is never serialized/repr; expiry/retirement/close
+  releases it with its original. Factory failure admits no handle, cleans owned
+  file/reservation; no awaiting map bind after admission or dangling handle.
+- Factor M03b original/owner validation so prepare_binding(manager,resolved,
+  original,metadata) rechecks actual original membership/metadata and selected
+  revision before returning a factory for BoundMapContext(receipt). Keep existing
+  lease-based bind/revalidate tests and behavior. Admission checks principal/
+  socket again with no await after map validation. Snapshot TTL starts at atomic
+  admission as before. This replaces post-admission attachment/rollback designs.
+- Move MapSelector/LevelId into standalone core map_models to avoid circular
+  imports (map_info_models currently imports ImageInfoRequest). Re-export at
+  existing import location. Strict info selectors image/src/map; URL selectors
+  image/src/map/source_id and bool map_notes=false. Keep info output seven fields.
+  Optional typed URL map_notes omits entirely when false via existing FastMCP
+  serialization conventions; no null/default bloat. Freeze rendered-map DTO and
+  exact revision-bound legend arguments before registration changes.
+- Info map flow: private resolve -> existing canonical-image transfer/probe ->
+  validator prepares immutable context -> atomic cache attachment. URL disabled
+  policy still first. Raw/image/src unbound annotation fails MapContextRequired
+  before transfer where possible. Bound handles validate map context even for
+  ordinary reads (note-only changes still allowed without annotation). For true,
+  require supported mapping, get bounded crop candidates, render via M04b,
+  revalidate before and after publication, validate artifact/counts and build
+  compact identity/revision/legend result. Reuse exactly one original transfer.
+- Level-media followups become exact map selectors, including sensitive source
+  references resolved privately. Tile file followups remain bare-src inventories
+  with no implied map composition. Update typed followup validators/Node fixtures,
+  discovery prose/OAuth metadata and existing schema tests/mocks accordingly.
+- Actual FastMCP/production HTTP tests use production Node map reader plus real
+  cache/decoder/store: input exclusivity/flag defaults, signed refs, owning level/
+  role, bound/unbound, foreground fallback, partial/zero/dense summaries, complete
+  exact-key legend, snapshot replacement, identity/stale revisions, one transfer,
+  cancellation/quota/cleanup. Bounded discovery/payload baseline+after and native
+  browser refresh/readiness/console/discovery checks before full/package/commit.
+  External HTTPS/target-client/S3 gates remain explicit later acceptance work.
+- Baselines tools24 pass3.568s (actual discovery info4867B/URL8516B), sources10
+  pass0.019s. Added two source-cache tests first failing against absent private
+  context behavior, then implemented atomic factory construction and hidden
+  SourceLease context. Sources12 now pass0.022s, proving exact admission-time TTL,
+  receipt binding, factory-failure staging cleanup, expiry and unchanged raw
+  behavior. Existing image-tools24 regression running/recorded in
+  /tmp/foundry-map-m05-cache-regression.log. No public schema changed yet.
+- Added two real map-context integration tests for prepared binding and changed
+  note state during staging. First fails on absent prepare_binding (new behavior);
+  implemented shared original-owner validation and pre-admission revision/source
+  recheck returning synchronous BoundMapContext receipt factory. Existing lease
+  bind/revalidate path retained. Focused full context23 running in
+  /tmp/foundry-map-m05-context.log; inspect terminal outcome before extending
+  public models. No active unexpected defect or failed correction attempts.
+- Context runner23350 terminal:23 tests pass12.969s, preserving all21 prior
+  geometry/context tests. Cache image-tools regression19725 terminal:24 pass
+  3.571s; published discovery remains4867B/8516B. git diff --check passes.
+  Next concrete action: move MapSelector/LevelId to independent map_models
+  (retain existing re-exports), freeze typed optional overlay/legend models and
+  extend info/URL selectors, then implement tool orchestration using the tested
+  private-context factory. M05 is unfinished/uncommitted; no public map image
+  selector or annotation flag has been advertised or registered yet.
+- Resumed saved context/repository reading in full; prior goal turn was progress
+  (M03b/M04a/M04b commits and passing atomic-context tests). Health readyGM.
+  Moved/re-exported MapSelector/LevelId to independent map_models; introduced
+  standalone typed summary/legend DTOs to avoid native/public import cycles.
+  New contract3 passes strict input exclusivity/flags and default field omission.
+  Pydantic2.12.5 installed Field.exclude_if supports omitting None in both JSON
+  and Python dumps; actual FastMCP default result also excludes map_notes.
+- Implemented map resolution/probe/pre-admission binding, private-context reuse,
+  bounded candidates/annotations, revalidation before/after publication and exact
+  legend summary. Existing file/crop publication flow remains covered by24
+  passing image-tool regressions. Added small separate map_image_service result
+  assembler; cache/render/map/publication ownership stays separate.
+- Level-media next calls now carry exact map selectors, including sensitive
+  references resolved privately; Tile file calls retain bare-src semantics.
+  Updated validators/discovery usage tests and public Foundry mock shapes.
+  JS info/geometry/notes33 pass; map-info17 pass2.679s. An updated expectation
+  initially mistyped fixture Scene.a vs actualScene.one; corrected that usage
+  fixture typo, no production correction or weakened behavior.
+- Initial map7 tests exposed an invalid S3 test setup: local reference with a
+  signature query is deliberately rejected by existing harmless-query policy.
+  Replaced that fixture with an actual configured S3 picker mock and exact
+  signed canonical object, preserving the required successful private-S3
+  assertion. No production URL policy was weakened. Map7 then passes9.629s.
+- Expanded actual MCP/production Node readers + real Python multichunk assembly/
+  cache/native encoder/SQLite/anonymous HTTP:13 tests pass26.536s. Covers
+  returned map-next-call to info/crop/legend/full journal-page identities, one
+  transfer/repeated crops, signed source privacy, foreground fallback, zero and
+  partial denied scope, dense omissions and complete paginated rendered-key
+  legend, replacement pinned bytes, caller/expiry/socket isolation, mutations
+  during render/publication, quota/cancellation and actual Basic HTTP auth.
+  No journal bodies or original asset writes; fixed generated fixture metadata
+  forces >32KiB original transfer. Existing image tools24 pass3.683s.
+- First full runner77369 active with output in/tmp/foundry-map-m05-tests.log.
+  Need inspect its terminal result rather than restart. Tool docs now publish
+  map selectors, supported14.369 mapping/16px/5% limits, honest counts/scope and
+  exact revision/Scene/level/key legend followups. Final discovery/payload/native
+  browser/package verification and documentation remain; no active defect or
+  unsuccessful production corrections.
+
+### M05 final verification checkpoint
+
+- Recovery reread the assignment, design, task graph/research/current task,
+  complete progress and required repository reading. Previous strategy-answer
+  turn made no implementation progress; resumed from authoritative worktree.
+  Goal active, service healthyGM, dedicated browser ready14.369/test/console0.
+- Latest focused `.venv/bin/python -m unittest discover -s tests -p
+  'test_map_image_tools.py' -v` terminal:17 passed26.716s in
+  /tmp/foundry-map-m05-reviewed-tools.log. Added actual discovery/typed schema,
+  invalid-before-read and disabled-before-map-resolution cases. Complete fixture
+  workflow7 calls/1transfer/3chunks; per-call bytes are in map-image-tools.md.
+- Full `./scripts/test.sh > /tmp/foundry-map-m05-final-tests.log 2>&1`
+  terminal:1007 Python (1 existing skip)/794JS passed132.033s before four final
+  discovery/verifier cases. First full run's four failures were old assertions
+  for pre-map input properties/defaults; updated those usage points to the new
+  authorized contract without weakening strict validation. Hook verifies final.
+- Docker rebuild/native/supervised/glyph smokes passedUID10001; packaged map
+  contract3 and real native layout15 passed6.926s read-only/no-network/tests-only
+  mount. `.venv/bin/python scripts/package-module.py` passed3.3.1, no release.
+- Existing-service restart/dedicated refresh completed after offline pass.
+  Native `.venv/bin/python -m foundry_mcp_server.map_image_audit` passed7 calls
+  under8/600s:6800x9000/4405816B original, map-bound info and matching initial
+  2-row legend, active Scene unchanged. Catalog47/323516B (+9199B), info6219B/
+  URL15834B records. Initial legend is partial, not a complete legend claim.
+- Native URL returns PreviewNotConfigured because origin is unset. Exact next
+  prerequisite:14a configure trusted HTTPS origin/private store, then verify
+  issuance/real-listener anonymous delivery. Target-client/public-host14b and
+  live configured-S3/CORS remain separate gaps; offline S3 mock passed. No game
+  documents/assets changed, persisted fixtures or extra Foundry instances.
+- No active failure; unsuccessful production corrections0 for M05. Final diff,
+  focused source/context/tool regressions and task commit are next.
+- Final focused raw image-tool24 passes3.722s (info6212B/URL15827B discovery
+  under test catalog convention); context23 passes13.017s. Source/docs/diff
+  reviewed and git diff --check passed. Task evidence complete; stage explicit
+  M05 files and run plain local commit with both required hook suites next.

@@ -1,7 +1,7 @@
 """Core14 selected Scene configuration; missing source fields remain omitted.
 
 Public schema/API evidence and intended contracts: docs/plans/image-viewing/map-info.md.
-MapSelector is internal until M05 extends the image-tool request boundary.
+MapSelector is shared with scene-aware image-tool requests.
 """
 from typing import Annotated,Literal
 import re
@@ -9,12 +9,11 @@ from urllib.parse import urlsplit,unquote
 
 from pydantic import Field,model_validator
 
-from .map_models import SceneUUID,FolderUUID,FolderIdentity,MapNamed,Revision,Cursor
+from .map_models import SceneUUID,FolderUUID,FolderIdentity,MapNamed,Revision,Cursor,MapSelector,LevelId
 from .selective_models import Model
 from .image_preview_models import ImageInfoRequest
 from .map_note_models import MapNoteEntry,NoteKeys
 
-LevelId=Annotated[str,Field(pattern=r'^[A-Za-z0-9_-]{1,128}$',description='Exact embedded Level ID returned by get_map_info for this Scene; never a name or UUID.')]
 LevelUUID=Annotated[str,Field(pattern=r'^Scene\.[A-Za-z0-9_-]{1,128}\.Level\.[A-Za-z0-9_-]{1,128}$')]
 TileUUID=Annotated[str,Field(pattern=r'^Scene\.[A-Za-z0-9_-]{1,128}\.Tile\.[A-Za-z0-9_-]{1,128}$')]
 Number=Annotated[int|float,Field(description='Finite stored numeric value; null and absence remain distinct.')]
@@ -38,12 +37,6 @@ class MapInfoRequest(Model):
             if len(set(self.note_keys))!=len(self.note_keys):raise ValueError('note_keys must be distinct')
             if self.expected_revision is None:raise ValueError('note_keys requires expected_revision from this exact Scene/level')
         return self
-
-
-class MapSelector(Model):
-    scene_uuid: SceneUUID
-    level_id: LevelId
-    role: Literal['background','foreground']
 
 
 class MapSceneIdentity(MapNamed):
@@ -116,13 +109,16 @@ class MapMedia(Model):
             for segment in parsed.path.split('/'):
                 decoded=unquote(segment,errors='strict')
                 if decoded in ('.','..') or re.search(r'[/\\\x00-\x1f\x7f]',decoded):raise ValueError('Invalid source path')
-        eligible=self.reference_status=='safe' and self.media_kind=='image'
+        map_selector=getattr(self,'map',None)
+        supported=self.reference_status=='safe' and self.media_kind=='image'
+        eligible=supported or map_selector is not None and self.reference_status=='sensitive' and self.media_kind!='video'
         if eligible!=(self.info_next_call is not None) or eligible!=(self.preview_next_call is not None):
             raise ValueError('Inconsistent image followups')
         for call in (self.info_next_call,self.preview_next_call):
-            if call and call.arguments.request.model_dump(exclude_none=True)!={'src':self.reference}:
+            expected_args={'map':map_selector.model_dump()} if map_selector is not None else {'src':self.reference}
+            if call and call.arguments.request.model_dump(exclude_none=True)!=expected_args:
                 raise ValueError('Wrong image source followup')
-        expected=('reference_only' if eligible else 'map_context_required' if self.reference_status=='sensitive'
+        expected=('reference_only' if supported else 'map_context_required' if self.reference_status=='sensitive'
             else 'missing' if self.reference_status in ('missing','empty','null') else 'unsupported_video'
             if self.media_kind=='video' else 'unsupported_reference')
         if self.support_status!=expected:raise ValueError('Inconsistent media support')

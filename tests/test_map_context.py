@@ -163,6 +163,30 @@ class BoundContextTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(outside.total_in_region,0)
         self.assertEqual(self.backend.transfers,1)
 
+    async def test_prepared_context_factory_attaches_exact_admission_receipt(self):
+        resolved=await self.service.resolve(self.backend,self.selector)
+        async def validate(original):
+            metadata=ProbeMetadata(width=68,height=90,mime_type='image/png',size_bytes=original.size_bytes,frame_policy='still')
+            return await self.service.prepare_binding(self.backend,resolved,original,metadata)
+        receipt=await self.cache.stage(self.backend,{'image':dict(resolved.image)},validate_original=validate)
+        async with self.cache.lease(self.backend,receipt.source_id) as lease:
+            bound=lease.private_context
+            self.assertEqual((bound.source_id,bound.source_expires_at),(receipt.source_id,receipt.source_expires_at))
+            self.assertEqual((bound.source_width,bound.source_height),(68,90))
+            await self.service.revalidate(self.backend,bound,lease)
+        self.assertEqual(self.backend.transfers,1)
+
+    async def test_changed_map_during_staging_admits_no_bound_handle_or_files(self):
+        resolved=await self.service.resolve(self.backend,self.selector)
+        async def validate(original):
+            self.backend.scene['notes'][0]['text']='Changed during probe'
+            metadata=ProbeMetadata(width=68,height=90,mime_type='image/png',size_bytes=original.size_bytes,frame_policy='still')
+            return await self.service.prepare_binding(self.backend,resolved,original,metadata)
+        with self.assertRaisesRegex(ToolError,'MapContextChanged'):
+            await self.cache.stage(self.backend,{'image':dict(resolved.image)},validate_original=validate)
+        self.assertEqual(self.cache.used_bytes,0)
+        self.assertEqual(list(self.cache.directory.iterdir()),[])
+
     async def test_note_mutation_rejects_annotation_but_preserves_ordinary_pinned_preview(self):
         record=await self.bound();self.backend.scene['notes'][0]['text']='Changed note'
         async with self.cache.lease(self.backend,record.source_id) as lease:

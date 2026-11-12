@@ -70,8 +70,21 @@ model/tool changes, integration tests, and discoverable map workflow together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, schema/result sizes and transfer counts: not run.
-- Runtime support matrix and exact pending prerequisites: pending.
+- Implementation: complete; see [contracts and verification](../map-image-tools.md).
+- Dependency commit SHA(s): M04b `722a120`,11 `f5d04c3`.
+- Commit: this commit.
+- Focused checks: map-image17/26.716s, existing image-tool24/3.722s,
+  context23/13.017s, source12, model9, map-info17 and JS33 passed outside sandbox.
+  Full1007 Python (1 existing skip)/794JS passed before four final verifier/schema
+  tests; required commit hook checks the final staged revision.
+- Measurements: fixture7 MCP calls/1 transfer/3 chunks, exact rendered-key legends
+  complete; info193B, annotated overview937B, crop941B, legend1121B structured
+  JSON. Native catalog47 tools/323516B, info6219B/URL15834B discovery records.
+- Packaged UID10001 build/smokes, map-contract3/native-layout15 and module ZIP
+  checks passed. Native7-call audit passed map-bound6800x9000/4405816B info and
+  matching initial legend; active Scene unchanged, browser console0, no fixtures.
+- Runtime support: Foundry14.369 default background placement; unsupported
+  transforms/foreground annotations fail explicitly, raw previews remain available.
+  Native URL correctly returns PreviewNotConfigured while origin is unset;
+  configured trusted HTTPS/store and real delivery belong to14a, target-client
+  acceptance to14b. Configured S3 mock passed; live bucket/CORS remains unavailable.

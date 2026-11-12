@@ -1,5 +1,6 @@
 """Caller-bound original lifetime/quota/leases; no game assets or decoder."""
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime
 import hashlib
 import os
@@ -247,3 +248,36 @@ class SourceTests(unittest.IsolatedAsyncioTestCase):
         task.cancel()
         with self.assertRaises(asyncio.CancelledError):await task
         self.assertFalse(self.cache.directory.exists())
+
+    async def test_private_context_factory_uses_admission_receipt_and_lifetime(self):
+        @dataclass(frozen=True,repr=False)
+        class Context:
+            source_id: str
+            expiry: str
+            sentinel: str
+        async def validate(original):
+            self.assertTrue(original.path.exists())
+            self.time=1100
+            return lambda receipt:Context(receipt.source_id,receipt.source_expires_at,'private-map-sentinel')
+        receipt=await self.cache.stage(self.backend,{'image':IMAGE.model_dump(exclude_none=True)},validate_original=validate)
+        self.assertEqual(datetime.fromisoformat(receipt.source_expires_at).timestamp(),2900)
+        self.assertEqual(set(receipt.model_dump()),{'source_id','source_expires_at'})
+        async with self.cache.lease(self.backend,receipt.source_id) as lease:
+            context=lease.private_context
+            self.assertEqual((context.source_id,context.expiry),(receipt.source_id,receipt.source_expires_at))
+            self.assertNotIn('private-map-sentinel',repr(lease))
+            with self.assertRaises(AttributeError):context.source_id='other'
+        self.time=2900;await self.cache.prune()
+        self.assertEqual(self.cache.used_bytes,0)
+        self.assertEqual(list(self.cache.directory.iterdir()),[])
+
+    async def test_private_context_factory_failure_admits_nothing_and_cleans_staging(self):
+        def fail(receipt):raise RuntimeError('deliberate private factory failure')
+        async def validate(original):return fail
+        with self.assertRaisesRegex(RuntimeError,'deliberate private factory failure'):
+            await self.cache.stage(self.backend,{'image':IMAGE.model_dump(exclude_none=True)},validate_original=validate)
+        self.assertEqual(self.cache.used_bytes,0)
+        self.assertEqual(list(self.cache.directory.iterdir()),[])
+        receipt=await self.stage()
+        async with self.cache.lease(self.backend,receipt.source_id) as lease:
+            self.assertIsNone(lease.private_context)
