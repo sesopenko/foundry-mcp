@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 04b, [private snapshots and caller isolation](tasks/04b-private-snapshots-and-caller-isolation.md).
+- Current task: 05a, [decoder probe and packaging](tasks/05a-decoder-probe-and-packaging.md).
 - Stage: commit.
-- Last completed task: 04a, commit `fe47d21`.
+- Last completed task: 04b, commit `a045d08`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: review/stage/commit04b, then start05a decoder probe/packaging. No active failure or diagnosis; no mandatory stop condition.
+- Next action: commit05a, then read/baseline05b worker resource supervision. No active failure or mandatory stop condition.
 
 ## Completed checkpoints
 
@@ -15,6 +15,7 @@
 |03a browser fetch |e4121a4 |710 Python (1 skip),739 JS passed |
 |03b private RPC protocol |647c42b |710 Python (1 skip),748 JS passed |
 |04a Python assembly |fe47d21 |720 Python (1 skip),749 JS passed |
+|04b snapshots/identity |a045d08 |733 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -70,3 +71,13 @@ the linked evidence pages; Git history retains prior milestone records.
 - 04a cancellation during cleanup swallowed cancellation/unreturned-file ownership: corrected; unsuccessful corrections0.
 - 04a harness-only responder registry used queued done callbacks. Gathering already-finished tasks failed to drain callbacks (one unsuccessful harness adjustment); moving registry removal into responder finally preserved/passed the empty-registry assertion. Raw selector fixture comparison also switched to established exclude_none serialization without changing expected selector. Production correlation remained unchanged.
 - 04b: no unexpected behavior/fix attempts; all focused and full checks passed.
+
+## Current05a checkpoint
+
+- Selected official binary distribution: pyvips[binary]3.2.0 plus pyvips-binary8.18.7. `uv lock` added only those packages; `uv sync --locked` installed them. Native runtime8.18.7/API mode verified. No host libvips was installed; passwordless sudo is unavailable, but the supported self-contained wheel avoids that prerequisite.
+- Internal worker uses explicit JPEG/PNG/WebP loaders, header-only display dimensions/all8 orientations,128MiB/32768-edge/128m-pixel bounds, fixed errors. Parent bounds4096-byte stdout during reads, suppresses stderr, private scratch, deadline/kill/reap. Still unexposed pending05b resource supervision.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_probe.py' -v` passed8. Real subprocess tests passed exact128MiB sparse source, exact32768 edge/128m area, oversize known dimensions,8 JPEG orientations and malformed/unsupported sources. Upload baseline `test_image_uploads.py` passed13.
+- Spawn-error regression first failed (raw OSError escaped before try), then passed unchanged after fixed-category handling. Unsuccessful corrections0. No active diagnosis.
+- Local `docker build --pull=false -t foundry-mcp-image-preview-check:local .` passed. Dockerfile native PNG smoke after USER10001 passed. Separate `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m --user 10001:10001 --entrypoint python foundry-mcp-image-preview-check:local -m foundry_mcp_server.image_preview_worker --smoke` passed: UID10001,pyvips3.2.0/libvips8.18.7,16x12 PNG80bytes/still. No Foundry instance/volumes/publication.
+- Full `./scripts/test.sh` passed741 Python (1 existing skip),749 JS; exit0. Documentation/prerequisites in docs/image-preview-decoder.md; README dependency paragraph links there.
+- Latest browser request: dedicated browser reopened/reused; already logged in at /game, so join helper correctly refused a non-login page. Inspection and `./scripts/actor-tools.sh browser` confirmed ready GM14.369/test,zero console errors; health lists gm. No code defect or failed fix attempt.

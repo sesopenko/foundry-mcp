@@ -142,6 +142,8 @@ FastAPI 0.162.0 and FastMCP 4.1.4 with MCP SDK 2 and Starlette 1.x.
 the old Fakeredis constraint is removed. HTTP client helpers use httpx2.
 Commit all three files.
 `uv sync` creates and manages `.venv`; manual activation is unnecessary.
+The locked environment includes native binaries for
+[preview decoder development](docs/image-preview-decoder.md).
 
 ### Run the server
 

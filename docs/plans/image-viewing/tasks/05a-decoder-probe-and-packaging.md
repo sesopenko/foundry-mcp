@@ -71,8 +71,20 @@ initial image changes, tests, and metadata docs; record tested library versions.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and UID-10001 image probe: not run.
-- pyvips/libvips versions, metadata results, and gaps: pending.
+- Implementation: complete; internal only until05b supervision.
+- Dependency commit SHA(s):01 `b0cc01e`.
+- Commit: this commit.
+- Focused checks: `test_image_preview_probe.py`8 passed; unchanged upload
+  baseline `test_image_uploads.py`13 passed. Full `./scripts/test.sh`:741 Python
+  (1 existing skip),749 JavaScript passed, all outside sandbox.
+- Production build `docker build --pull=false -t foundry-mcp-image-preview-check:local .`
+  passed, including the Dockerfile smoke after USER10001. Separate read-only,
+  network-disabled run as UID10001 passed: pyvips3.2.0/libvips8.18.7,16x12 PNG,
+  80 bytes, still. No Foundry provisioning, volumes, ports or publication.
+- Exact source byte/edge/area limits, all8 EXIF dimensions and malformed loaders
+  passed real subprocess tests. Bounded parent output, fixed errors, timeout/
+  cancellation kill/reap and scratch cleanup passed. Spawn OSError first failed
+  its regression test; fixed handling passed the same test unchanged.
+- [Decoder contracts/prerequisites](../../../image-preview-decoder.md).
+  Full RSS/scratch/concurrency enforcement belongs to05b; other codecs/SVG to
+  07a/07b. No external prerequisite blocks this task.

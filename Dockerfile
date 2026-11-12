@@ -24,6 +24,9 @@ RUN .venv/bin/python -m foundry_mcp_server.build_info --version "$VERSION" --rel
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     FOUNDRY_MCP_HOST=0.0.0.0 FOUNDRY_MCP_PORT=8000 FOUNDRY_MCP_DEV_EXECUTION=false
 USER 10001:10001
+# Exact pyvips/pyvips-binary pins in the copied venv ship native codecs too.
+# Verify loading and a real header probe as the actual service user.
+RUN python -m foundry_mcp_server.image_preview_worker --smoke
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
     CMD ["python", "-m", "foundry_mcp_server.healthcheck"]
