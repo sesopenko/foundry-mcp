@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 07a, [raster codecs and frame policy](tasks/07a-raster-codecs-and-frame-policy.md).
+- Current task: 07b, [safe SVG rasterization](tasks/07b-safe-svg-rasterization.md).
 - Stage: commit.
-- Last completed task: 06b, commit `4740720`.
+- Last completed task: 07a, commit `02d0d8f`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified07a, then read/start07b safe SVG. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: finish07b review/evidence and commit after full/package checks; then task08 persistent preview store. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -20,6 +20,7 @@
 |05b resource components/refactor |cc7ba71 |770 Python (1 skip),749 JS passed |
 |06a geometry/resampling |49e8aaf |782 Python (1 skip),749 JS passed |
 |06b bounded encoding |4740720 |797 Python (1 skip),749 JS passed |
+|07a raster codecs |02d0d8f |808 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -265,3 +266,50 @@ the linked evidence pages; Git history retains prior milestone records.
 - Documentation and whitespace reviewed. No new runtime/browser/public-tool
   boundary changed; all temporary fixtures are unit-owned and cleaned.07a
   completion commit is this commit; resolve SHA at next task checkpoint.
+- Commit02d0d8f completed; pre-commit hook provided exact count808 Python
+  (1 existing skip)/749JS, both passed. Working tree clean afterward.
+
+## Current07b checkpoint
+
+- Task read fully; dependency07a committed. Official libvips8.18 svgload docs
+  establish explicit dpi (native default72, set96), lazy header loading, native
+  10MB security guard and librsvg dependency. Official librsvg security guide
+  fetched; raw source must never reach loader before a bounded subset admission.
+- Planned boundary: UTF8 XML with DTD/entities/PIs rejected; bounded node/depth/
+  attribute counts, explicit SVG elements/presentation attributes, local fragment
+  refs only with cycle/expansion checks, conservative inline style declarations.
+  Reconstruct admitted document at fixed96-DPI dimensions, then explicit native
+  svgload. No external image/font/CSS/script/foreign constructs. Test private
+  sentinel/local listener and native-loader noninvocation on rejected input.
+  No07b implementation yet; existing raster matrix is baseline.
+- Implemented bounded UTF8 XML guard/reconstruction, exact local references,
+  structure/expansion bounds,96-DPI/viewBox sizing and explicit native loader.
+  Added private MIME admission. No public tool or Foundry API change.
+- Two defects proved with failing tests before correction, same tests unchanged
+  afterward: (1) dpi96 globally enlarged SVG through libvips dpi/72 scaling;
+  pinned GitHub native source confirms cause, explicit scale72/96 compensates;
+  (2) uint32-only error DTO rejected safely known SVG width10billion; exact-JSON
+  integer error bound now2^53-1, admitted source limits unchanged. Unsuccessful
+  corrections0; no active diagnosis. Parser rejects extreme numeric magnitudes.
+- Focused SVG12, raster11,upload13 pass outside sandbox. File sentinel IN_OPEN
+  and local HTTP listener positive controls pass, then no native file open or
+  resource HTTP request for rejected source. Timeout cleans owned scratch and
+  retains original. Full ./scripts/test.sh passed both suites exit0,749JS;
+  exact Python count will also be captured from commit hook.
+- Production Docker build passed native/supervised UID10001 smokes; SVG12 passed
+  asUID10001/3.585s with --network none, read-only app/test mount and128MiB tmpfs.
+  Exact command matches07a with test_image_preview_svg.py. No game assets,
+  other Foundry instance, source override or publication. Upstream pinned build
+  manifest specifies rsvg2.63.2/Cairo1.18.6; runtime exposes libvips8.18.7 and
+  actual SVG decode, but rsvg version symbols are hidden (documented distinction).
+- Final review found a conservative paint check mistaking the letters `url` in
+  named colour `burlywood` for a URL function. New pixel test failed before the
+  correction; matching the actual url(...) function keeps external references
+  rejected and the unchanged named-colour test passes. Unsuccessful corrections0.
+- Final focused SVG13 passes; rebuilt production image and reran SVG13 asUID10001,
+  passed3.755s including both external-resource positive/negative controls.
+  Full suite repeated for this demonstrated correction; awaiting final result
+  before commit. No unrelated code changes or active failure.
+- Final ./scripts/test.sh passed821 Python (1 existing skip),749JS,exit0.
+  Diff/whitespace and subset documentation reviewed. Ready for task07b local
+  commit; no remaining fixture cleanup or external prerequisite for this task.

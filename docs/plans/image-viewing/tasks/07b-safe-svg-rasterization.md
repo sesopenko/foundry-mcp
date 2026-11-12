@@ -58,8 +58,23 @@ Commit loader admission, package updates, tests, and exact SVG limitations.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and packaged SVG safety cases: not run.
-- Loader versions and exact pending prerequisites: pending.
+- Implementation: complete; [guarded subset, limits and evidence](../safe-svg.md).
+- Dependency commit SHA:07a `02d0d8f`.
+- Commit: this commit.
+- Focused commands above: SVG13,raster11,uploads13 passed outside sandbox.
+  Final `./scripts/test.sh`:821 Python (1 existing skip),749 JavaScript passed.
+- `docker build --pull=false -t foundry-mcp-image-preview-check:local .` passed
+  native/supervised UID10001 smokes. Final
+  `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --user 10001:10001 --volume /home/sean/src/github.com/sesopenko/foundry-mcp/tests:/checks:ro --entrypoint python foundry-mcp-image-preview-check:local -m unittest discover -s /checks -p test_image_preview_svg.py -v`
+  passed13/3.755s. No source override, game volume or publication.
+- Native runtime libvips8.18.7/pyvips3.2.0; pinned upstream binary build manifest
+  specifies librsvg2.63.2/Cairo1.18.6. Hidden rsvg version symbols are not presented
+  as independently measured; actual shipped rendering/rejection is tested.
+- Physical/viewBox/pixel sizing, local gradient/use, alpha/native crops,
+  malformed/unsafe/escaped/namespaced inputs, parser/expansion bounds and
+  deadline cleanup pass. Positively tested HTTP listener sees no external
+  requests; positively tested private-file inotify watch sees no native opens.
+- dpi global enlargement, safely known large error dimensions and named-colour
+  false-positive regressions each failed before correction, then passed unchanged.
+  No active defect, unavailable local safety check or failed correction attempt.
+  Other SVG constructs/platforms are explicit unsupported/unverified scope.

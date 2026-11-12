@@ -33,7 +33,8 @@ AVIF operations from source signatures; it never asks libvips to guess a
 loader, executes delegates, accepts URL retrieval or uses filename options.
 [Raster compatibility adapters](plans/image-viewing/raster-codecs.md) cover BMP,
 APNG with a separate fallback image, and AVIF timed sequences inside the same
-supervised worker. Sanitized SVG belongs to07b.
+supervised worker. [Guarded static SVG](plans/image-viewing/safe-svg.md) uses a
+bounded explicit subset with local fragments and96-DPI sizing before librsvg.
 
 Metadata fields are `width,height,mime_type,size_bytes,frame_policy`. Width and
 height describe original display-oriented pixels; EXIF orientations5–8 swap

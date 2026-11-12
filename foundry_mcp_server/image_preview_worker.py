@@ -1,7 +1,7 @@
 """Private libvips subprocess operations; no network or public path interface.
 
 Explicit JPEG/PNG/WebP/GIF/TIFF/AVIF loaders and narrow BMP/APNG/AVIF-sequence
-adapters.07b owns safe SVG. Header probing does not fully validate raster bodies.
+adapters, plus guarded static SVG. Header probing does not fully validate raster bodies.
 No native error text or source metadata beyond compact technical values leaves
 the worker. Resource supervision is completed in05b before any MCP exposure.
 """
@@ -81,7 +81,8 @@ def open_original(path, *, header_only=False):
             raise PreviewFailure('UnsupportedImage')
         loader, mime = 'heifload', 'image/avif'
     else:
-        raise PreviewFailure('UnsupportedImage')
+        from .image_preview_svg import open_svg
+        return open_svg(path,size)
     pyvips = initialise()
     # A region must support multiple independent encoding/resampling attempts.
     # Sequential-only decoders cannot rewind after evaluating the first one.

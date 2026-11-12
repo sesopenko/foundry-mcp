@@ -21,7 +21,7 @@ from .mcp_server.image_preview_models import Crop
 class ProbeMetadata(Model):
     width: int = Field(ge=1,le=limits.SOURCE_MAX_EDGE)
     height: int = Field(ge=1,le=limits.SOURCE_MAX_EDGE)
-    mime_type: Literal['image/jpeg','image/png','image/webp','image/avif','image/bmp','image/gif','image/tiff']
+    mime_type: Literal['image/jpeg','image/png','image/webp','image/avif','image/bmp','image/gif','image/tiff','image/svg+xml']
     size_bytes: int = Field(ge=1,le=limits.SOURCE_MAX_BYTES)
     frame_policy: Literal['still','first_frame']
 
@@ -38,8 +38,10 @@ class ProbeReply(Model):
 
 class FailureReply(Model):
     error_code: Literal['UnsupportedImage','ImageTooLarge','ImageProcessingFailed','InvalidOperation','InvalidCrop']
-    width: int | None = Field(default=None,ge=1,le=2**32-1)
-    height: int | None = Field(default=None,ge=1,le=2**32-1)
+    # SVG lengths can exceed raster-header uint32 while remaining exact JSON
+    # integers. These are error metadata, never admitted image dimensions.
+    width: int | None = Field(default=None,ge=1,le=2**53-1)
+    height: int | None = Field(default=None,ge=1,le=2**53-1)
 
     @model_validator(mode='after')
     def known_dimensions(self):
