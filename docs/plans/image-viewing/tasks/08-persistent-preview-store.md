@@ -66,8 +66,22 @@ Commit store, tests, and persistence/expiry documentation together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and persistence/quota results: not run.
-- Pending environment evidence: none assessed yet.
+- Implementation: complete; [store/lifetime contracts](../preview-store.md).
+- Dependency commit SHA:01 `b0cc01e`.
+- Commit: this commit.
+- Focused command above:15 passed outside sandbox. `./scripts/test.sh` passed
+  both suites, exit0;749JS and1 existing Python skip. Hook repeats required checks.
+- Production image build passed UID10001 native/supervised smokes. Additional
+  `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --user 10001:10001 --volume /home/sean/src/github.com/sesopenko/foundry-mcp/tests:/checks:ro --entrypoint python foundry-mcp-image-preview-check:local -m unittest discover -s /checks -p test_image_preview_store.py -v`
+  passed15/0.071s against shipped application/SQLite. No app-source override,
+  game volume, capability URL, network, release or publication.
+- Eight competing requests across four store instances admit exactly2 under
+  2-row/two-artifact-byte quotas;6 receive fixed quota failures. Existing bytes
+  remain readable after rejection/SQL abort. Exact seven-day boundary holds with
+  pruning paused; reopen retains valid records and prunes expired records.
+- Database/active journal600 and directory700 verified. Digest-only persisted
+  tokens, immutable PNG/WebP, format/UUID binding, invalid artifacts, corruption/
+  symlink/closed-state failures and production limits covered. No unexpected
+  defect or unsuccessful correction attempt; no unavailable store-local check.
+- HTTP/runtime periodic cleanup and deployed-volume persistence belong to09a/13;
+  no route or MCP tool is exposed by this task.

@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 07b, [safe SVG rasterization](tasks/07b-safe-svg-rasterization.md).
+- Current task: 08, [persistent preview store](tasks/08-persistent-preview-store.md).
 - Stage: commit.
-- Last completed task: 07a, commit `02d0d8f`.
+- Last completed task: 07b, commit `b144211`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: finish07b review/evidence and commit after full/package checks; then task08 persistent preview store. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: finish08 full/package verification, review/commit, then09a HTTP/configuration. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -21,6 +21,7 @@
 |06a geometry/resampling |49e8aaf |782 Python (1 skip),749 JS passed |
 |06b bounded encoding |4740720 |797 Python (1 skip),749 JS passed |
 |07a raster codecs |02d0d8f |808 Python (1 skip),749 JS passed |
+|07b guarded SVG |b144211 |821 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -313,3 +314,31 @@ the linked evidence pages; Git history retains prior milestone records.
 - Final ./scripts/test.sh passed821 Python (1 existing skip),749JS,exit0.
   Diff/whitespace and subset documentation reviewed. Ready for task07b local
   commit; no remaining fixture cleanup or external prerequisite for this task.
+- Commitb144211 completed after required hook passed both suites; clean working
+  tree afterward. Exact full pre-commit run821 Python/749JS already recorded.
+
+## Current08 checkpoint
+
+- Task read fully after07b commit; dependency01 is b0cc01e. Publication design
+  requires private SQLite BLOB transactions, UUID4 digest-only storage,
+ 604800-second expiry enforced on every lookup,1GiB/4096 live quotas, atomic
+  prune/admit and restart persistence. No browser/public route needed yet.
+- Baseline next action: inspect existing private SQLite lifecycle conventions
+  and test store-independent behavior; no task08 source implementation yet.
+- Read current pdf/library.py connection/setup/private-path/BEGIN IMMEDIATE
+  patterns, pdf/runtime.py and Docker UID/storage conventions; no PDF changes.
+  New store owns only complete derivative BLOBs and digest lookup, with per-call
+  SQLite connections, explicit writer transaction, FULL/DELETE durability and
+  fixed failures. Clock/quota injection never enters MCP inputs.
+- Focused `.venv/bin/python -m unittest discover -s tests -p 'test_image_preview_store.py' -v`
+  passed15 outside sandbox: realPNG/WebP, UUID4/digest/repr privacy, exact expiry
+  without prune, restart, quotas/bounded concurrent writers, SQL rollback,
+  invalid artifacts, active600 journal, symlinks/corruption/closed state.
+  No unexpected behavior, diagnosis or unsuccessful attempts. Full suite running.
+- Full ./scripts/test.sh passed both suites exit0,749JS and1 existing Python
+  skip; exact Python count to be captured from hook. Docker rebuild passed,
+  then store15 passed0.071s asUID10001/read-only/no-network/128MiB tmpfs using
+  shipped application and SQLite. Only tests mounted read-only; no app override,
+  Foundry resources or publication. Task08 records exact command.
+- Diff/whitespace and store invariants reviewed; no fixture cleanup or
+  unavailable local evidence. Ready to commit08 and continue09a.
