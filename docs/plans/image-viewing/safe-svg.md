@@ -21,6 +21,13 @@ No file, HTTP, data, signed, or other external reference reaches the decoder.
 UTF8 (optional BOM) is required; UTF16/NUL input is rejected. Harmless comments
 and title/description text are removed during reconstruction.
 
+Core icons' inert `class` attributes and exact `touch-action: none` inline
+declarations are removed as well; neither reaches the raster document. Style
+sheets remain forbidden, presentation declarations retain the existing
+validation, and other unknown or unsafe interaction values are rejected.
+Task10's real anchor-icon check exposed this admission gap. Its regression
+asserts unchanged crop pixels and removal of both hints before native decoding.
+
 Limits apply during parsing:10,000,000 XML bytes (the native SVG loader's existing
 10MB guard remains enabled),10,000 elements,64 nesting levels,64 attributes per
 element and100,000 expanded containment/reference nodes. Numeric tokens are

@@ -35,6 +35,7 @@ pdf_uploads = Uploads(pdf_library, foundry_manager.send) if pdf_library else Non
 from foundry_mcp_server.image_preview_runtime import PreviewRuntime
 from foundry_mcp_server.image_preview_store import StoreFailure
 preview_runtime = PreviewRuntime()
+from foundry_mcp_server.image_preview_source_runtime import source_runtime
 
 @asynccontextmanager
 async def lifespan(app):
@@ -43,6 +44,7 @@ async def lifespan(app):
         # Fail local persistence setup before entering the framework TaskGroup,
         # preserving its fixed actionable startup failure category.
         await preview_runtime.start(settings)
+        await source_runtime.start()
         async with mcp_app.lifespan(app):
             if pdf_library:
                 await pdf_library.start()
@@ -54,7 +56,10 @@ async def lifespan(app):
                     await pdf_uploads.close()
                     await pdf_library.close()
     finally:
-        await preview_runtime.close()
+        try:
+            await source_runtime.close()
+        finally:
+            await preview_runtime.close()
 
 # Create FastAPI app
 app = FastAPI(

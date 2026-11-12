@@ -140,6 +140,12 @@ def admit_svg(data):
             element.text = element.tail = None
             links = []
             for name,value in list(element.attrib.items()):
+                # Core Foundry icons carry editor interaction hints. Classes
+                # cannot affect this subset (stylesheets are forbidden), and
+                # must not be forwarded to the native raster document.
+                if name=='class':
+                    del element.attrib[name]
+                    continue
                 if name==f'{{{XLINK}}}href':
                     # Normalize xlink to the same supported local href contract.
                     if 'href' in element.attrib:reject()
@@ -154,11 +160,17 @@ def admit_svg(data):
                     if tag not in ('use','linearGradient','radialGradient') or not value.startswith('#') or not IDENTIFIER.fullmatch(value[1:]):reject()
                     links.append(value[1:])
                 elif name=='style':
+                    declarations = []
                     for declaration in value.split(';'):
                         if not declaration.strip():continue
                         pair = declaration.split(':',1)
+                        if len(pair)==2 and pair[0].strip()=='touch-action' and pair[1].strip()=='none':
+                            continue
                         if len(pair)!=2 or pair[0].strip() not in PRESENTATION:reject()
                         links.extend(value_references(pair[1].strip()))
+                        declarations.append(declaration)
+                    if declarations:element.set('style',';'.join(declarations))
+                    else:del element.attrib['style']
                 elif name in PRESENTATION:
                     links.extend(value_references(value))
                 else:

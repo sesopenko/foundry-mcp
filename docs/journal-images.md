@@ -14,6 +14,11 @@ These directories are separate from journal folders. It does not upload,
 delete, generate, download or visually inspect images, and never scans recursively.
 WISH-012 adds image embedding through the journal writer described below.
 
+Source development also provides authenticated `get_foundry_image_info`: pass
+the returned `image` under `request.image`, or a complete stored img reference
+under `request.src`, to obtain original dimensions and a private snapshot handle.
+See [image-information scope and lifetime](plans/image-viewing/image-info-tool.md).
+
 ## Navigation and selectors
 
 Start with `browse_journal_images({})`: source `data`, directory `""` (root).

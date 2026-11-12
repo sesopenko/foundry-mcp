@@ -77,8 +77,27 @@ registration, tests, discovery prose, and metadata guidance together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, discovery record bytes and response bytes: not run.
-- Current-client/runtime evidence and exact prerequisites: pending.
+- Implementation: complete; [contract and evidence](../image-info-tool.md).
+- Dependency commit SHA(s):04b `a045d08`,05b `cc7ba71`.
+- Commit: this commit.
+- Focused: tools11, source10, probe9, OAuth19, container-smoke1 and SVG14 passed
+  outside sandbox. Repeated-cancellation close and actual core-icon SVG admission
+  regressions failed first, then passed unchanged after demonstrated corrections.
+  Full `./scripts/test.sh`:871 Python (1 existing skip),749 JavaScript passed.
+- Packaged: Docker build/native and supervised smokes passed asUID10001.
+  The task09b read-only/no-network/128MiB tmpfs/tests-only Docker command,
+  substituting `test_image_preview_tools.py` and `test_image_preview_svg.py`,
+  passed11/1.697s and14/4.280s respectively against shipped code.
+- Actual localhost checker `.venv/bin/python -m foundry_mcp_server.image_preview_info_check`
+  passed4 MCP calls, existing14.369/test GM,44-tool development catalog. Canonical
+  and bare core SVG each report512x512,1136 original bytes,still,196 compact JSON
+  result bytes. Distinct private handles are verified without printing them.
+  Discovery tool record4874B (live mode=json representation; unit4867B uses
+  by_alias representation); no billed-token or equal-content savings claim.
+- Existing service restarted for Python changes; new discovery/invocation was
+  verified with a fresh actual HTTP MCP client. No game fixture or asset write.
+  Dedicated tab refresh confirmed ready GM14.369 and zero console errors.
+  Only product-owned private original snapshots remain subject to1800s expiry/
+  periodic pruning; no public capability was issued. Later URL integration11,
+  map selectorsM05, configured live S3, public HTTPS and target-client14b remain
+  distinct pending scope/gates. No additional prerequisite blocks this task.

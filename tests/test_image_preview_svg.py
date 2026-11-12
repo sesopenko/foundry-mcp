@@ -39,6 +39,17 @@ class SvgTests(unittest.IsolatedAsyncioTestCase):
         with Image.open(BytesIO(result.data)) as output:
             self.assertEqual(output.convert('RGBA').getpixel((0,0))[3],0)
 
+    async def test_core_icon_inert_class_and_touch_action_preserve_static_pixels(self):
+        from foundry_mcp_server.image_preview_svg import admit_svg
+        for hints in ('class=""','style="touch-action: none;"','class="core-icon" style="touch-action: none;fill:#d22846"'):
+            self.path.write_bytes(svg(f'<g {hints}><path fill="#d22846" d="M2 3h12v8H2z"/></g>'))
+            clean,_,_ = admit_svg(self.path.read_bytes())
+            self.assertNotIn(b'class=',clean)
+            self.assertNotIn(b'touch-action',clean)
+            result = await process.render_preview(self.path,dict(x=2,y=3,width=10,height=6))
+            with Image.open(BytesIO(result.data)) as output:
+                self.assertTrue(all(pixel==(210,40,70,255) for pixel in output.convert('RGBA').get_flattened_data()))
+
     async def test_viewbox_and_physical_units_use_96_css_pixels_per_inch(self):
         for attributes,expected in [('viewBox="0 0 32 18"',(32,18)),
                 ('width="1in" height="0.5in"',(96,48)),
@@ -98,6 +109,7 @@ class SvgTests(unittest.IsolatedAsyncioTestCase):
             svg('<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="file:///private"/>'),
             svg('<path fill="url(https://example.invalid/image)"/>'),
             svg('<path style="fill:u\\72l(https://example.invalid/image)"/>'),
+            svg('<g class="core-icon" style="touch-action:url(https://example.invalid/image)"/>'),
             svg('<style>@import url(https://example.invalid/style);</style>'),
             svg('<g xmlns="http://www.w3.org/1999/xhtml"><script/></g>'),
             svg('<g xml:base="file:///private"/>'),svg('<animate attributeName="href"/>'),

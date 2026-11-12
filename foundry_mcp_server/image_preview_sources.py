@@ -112,7 +112,13 @@ class SourceSnapshots:
     def used_bytes(self):
         return self._reserved + sum(record.original.size_bytes for record in self._entries.values())
 
-    async def stage(self, manager, request, *, frame_bytes=65536):
+    async def stage(self, manager, request, *, frame_bytes=65536, validate_original=None):
+        """Admit only a complete original accepted by an optional trusted validator.
+
+        Validation runs while staging still owns the file/reservation, before
+        any handle exists. Failure or cancellation cleans the original even if
+        the caller's authorization changes while a decoder is running.
+        """
         principal = self._principal()
         original = None
         admitted = False
@@ -144,6 +150,8 @@ class SourceSnapshots:
                     or original.path.stat().st_size != original.size_bytes or reserved != original.size_bytes
                     or not re.fullmatch(r'[0-9a-f]{64}', original.sha256)):
                 raise ToolError('InvalidFoundryResponse: source transfer did not hand off a complete private file.')
+            if validate_original is not None:
+                await validate_original(original)
             if manager.websockets.get('gm') is not original.context.socket:
                 raise context_lost()
             if self._principal() != principal:

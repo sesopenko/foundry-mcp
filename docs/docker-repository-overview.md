@@ -43,6 +43,9 @@ GET/HEAD can read an issued derivative for seven days; issuance-tool integration
 and public-host acceptance remain pending. Python access/evaluation logs redact
 capabilities; configure reverse-proxy logs to omit preview paths and queries. See
 [preview HTTP configuration and current scope](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/http-delivery.md).
+The source image-info tool reads original display dimensions and stages a private
+30-minute snapshot without requiring a public origin; see
+[image information](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/image-info-tool.md).
 
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires

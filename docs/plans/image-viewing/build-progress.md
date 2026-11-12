@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 09b, [authentication boundaries and capability privacy](tasks/09b-auth-boundaries-and-capability-privacy.md).
+- Current task: 10, [image info MCP tool](tasks/10-image-info-mcp-tool.md).
 - Stage: commit.
-- Last completed task: 09a, commit `37977ee`.
+- Last completed task: 09b, commit `4023ed2`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified09b, then read task10 and wire the image-info tool. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: stage/review/commit verified10, then read task11. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -24,6 +24,7 @@
 |07b guarded SVG |b144211 |821 Python (1 skip),749 JS passed |
 |08 persistent derivative store |089b14f |836 Python (1 skip),749 JS passed |
 |09a HTTP/config/lifecycle |37977ee |Both full suites/hook passed;749JS |
+|09b auth/privacy |4023ed2 |859 Python (1 existing skip)/749JS full passed; hook passed both |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -439,3 +440,52 @@ the linked evidence pages; Git history retains prior milestone records.
   Application startup complete, one redacted preview-path record and zero raw
   invalid-path/query probe records. Health is ready with GM connected. Final
   diff/whitespace reviewed; no valid live capability, game fixture or cleanup.
+- Commit4023ed2 completed with both required hook suites passing,exit0.
+
+## Current10 checkpoint
+
+- Task read fully; dependencies04b a045d08 and05b cc7ba71 committed.15/30
+  tasks complete,96/200 points (48%). Source/probe/registration/auth current
+  source and code graph inspected; no new Foundry API dependency is required.
+- Planned composition: lifecycle-owned snapshot cache independent of public
+  origin, stage/probe validation before admitting a handle, strict response
+  boundary and existing OAuth metadata. Invalid/probe-canceled originals must
+  be cleaned without publishing a handle. Baseline and implementation next.
+- Baseline source10/probe9 passed outside sandbox. Added lifecycle-owned cache
+  and strict image/src info registration. Trusted validation callback probes and
+  rechecks membership before cache admission; invalid/canceled work creates no
+  handle. No public origin or new Foundry API is needed.
+- Initial9 actual MCP tests passed. Added repeated-cancellation close regression
+  failed because cancellation interrupted cache cleanup; owned close task using
+  existing settle fixes it, same unchanged test passes. No unsuccessful fixes.
+- Current focused tools11/source10/OAuth19 passed. Discovery record4867 compact
+  UTF8 bytes, synthetic results below512B. Unit-tested live checker bounds4 calls/
+  60s, prints only technical aggregates and rejects private extra output fields.
+  Full regression and actual localhost evidence pending.
+- Full first run870 tests: only container-smoke catalog equality failed because
+  its fixed expected tool set lacked the newly registered image-info tool.
+  Updated that verification usage point; equality assertion remains unchanged.
+  No production behavioral correction or unsuccessful diagnosis attempt.
+- After full870 Python (1 skip)/749JS passed and packaged tools11 passed1.708s,
+  actual localhost info returned UnsupportedImage for the core anchor SVG.
+  Read-only stock-icon inspection found inert class and touch-action:none hints
+  rejected by the conservative guard. New independent-pixel SVG regression failed
+  before correction; sanitizer now removes class and only that exact interaction
+  declaration before native loading. Same test passes, unsafe touch-action URL
+  remains rejected. This is a real decoder-admission defect, not a test change;
+  no unsuccessful production corrections. SVG14/tools11 pass; repeating full/
+  packaged verification for the demonstrated correction.
+- Checker error reporting now exposes only fixed allowlisted failure categories
+  so live diagnosis does not print native/browser messages or private selectors.
+- Final full `./scripts/test.sh > /tmp/foundry-image-preview-10-tests.log 2>&1`
+  passed871 Python (1 existing skip)/749JS. Rebuilt image passed smokes and tools11/
+  1.697s,SVG14/4.280s asUID10001, read-only/no-network/tests-only mount.
+- Existing service restart and actual fresh HTTP checker pass4 MCP calls:
+  canonical and bare core SVG512x512/1136 source bytes/still,196B result each,
+  distinct private handles,44 development tools and4874B tool record. No public
+  URLs or game fixture/assets were created. Product cache owns staged originals
+  for1800s; normal expiry/pruning applies. External gates unchanged.
+- Browser inspection found4 transport-error records at the reconnect handler
+  after service restarts. Refreshed only the dedicated development tab; ready GM
+  14.369 with0 console errors and health gm restored. No continuing runtime error.
+- Final diff and whitespace reviewed; ready for task10 local commit.
