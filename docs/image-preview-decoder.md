@@ -20,6 +20,11 @@ tracks the libvips version. Research/installation on2026-11-11 verified pyvips
 gif/tiff/heif/svg and text operations; Magick is absent. Operation presence is
 not acceptance of unimplemented formats or proof of later font/render behavior.
 
+Fixed [map-note glyph typography](plans/image-viewing/note-glyphs.md) bundles
+DejaVu Sans and its notices inside the application. The Dockerfile also runs a
+supervised glyph smoke as UID10001 without host fonts. Layout and public
+annotation integration have their own subsequent task gates.
+
 Dockerfile runs `python -m foundry_mcp_server.image_preview_worker --smoke` after
 switching to UID10001. This creates/removes its own tiny PNG, loads the native
 runtime and probes real bytes. A local production-image build/run requires no

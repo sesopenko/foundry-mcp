@@ -17,6 +17,7 @@ class PreviewWorkspace:
                if not key.startswith(('FOUNDRY_MCP_','AUTH0_','AWS_'))},
             'VIPS_CONCURRENCY':'2','TMPDIR':str(self.path),'VIPS_TMPDIR':str(self.path),
             'VIPS_DISC_THRESHOLD':str(16*1024*1024),'XDG_CACHE_HOME':str(self.path),
+            'FONTCONFIG_FILE':str(Path(__file__).resolve().parent/'fonts'/'fonts.conf'),
         }
 
     def __exit__(self, *exception):

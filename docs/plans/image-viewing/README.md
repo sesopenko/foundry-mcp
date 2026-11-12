@@ -141,8 +141,8 @@ spawning agents or concurrent writes to this checkout.
 | [M01 Map folder browsing](tasks/m01-map-folder-browsing.md) | 8 | 01 | Complete | e9ea43e |
 | [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Complete | af58e0d |
 | [M03a Note identities and legend](tasks/m03a-map-note-identities-and-legend.md) | 5 | M02 | Complete | 26bb4e6 |
-| [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Complete | this commit |
-| [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Not started | — |
+| [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Complete | 8155684 |
+| [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Complete | this commit |
 | [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Not started | — |
 | [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Not started | — |
 | [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Not started | — |

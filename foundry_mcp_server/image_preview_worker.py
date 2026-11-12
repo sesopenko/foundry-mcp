@@ -161,11 +161,15 @@ def main():
         else:
             raw = sys.stdin.buffer.read(MAX_REQUEST_BYTES+1)
             request = json.loads(raw) if len(raw) <= MAX_REQUEST_BYTES else None
-            if (not isinstance(request,dict) or request.get('operation') not in ('probe','region','render')
+            if isinstance(request,dict) and request.get('operation')=='glyphs':
+                if set(request)!={'operation','keys'}:raise PreviewFailure('InvalidOperation')
+                from .map_note_glyphs import glyph_atlas
+                result={'glyphs':glyph_atlas(request['keys'],Path(os.environ['TMPDIR']))}
+            elif (not isinstance(request,dict) or request.get('operation') not in ('probe','region','render')
                     or set(request) != ({'operation','source'} if request.get('operation')=='probe' else {'operation','source','crop'})
                     or not isinstance(request['source'],str) or not 1 <= len(request['source']) <= 4096):
                 raise PreviewFailure('InvalidOperation')
-            if request['operation']=='probe':
+            elif request['operation']=='probe':
                 result = {'metadata':probe(request['source'])}
             elif request['operation']=='region':
                 result = {'geometry':region_pixels(request['source'],request['crop'])}

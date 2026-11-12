@@ -28,6 +28,7 @@ USER 10001:10001
 # Verify loading and a real header probe as the actual service user.
 RUN python -m foundry_mcp_server.image_preview_worker --smoke
 RUN python -m foundry_mcp_server.image_preview_process --smoke
+RUN python -m foundry_mcp_server.map_note_glyph_probe --smoke
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
     CMD ["python", "-m", "foundry_mcp_server.healthcheck"]

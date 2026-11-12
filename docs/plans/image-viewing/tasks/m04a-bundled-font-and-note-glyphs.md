@@ -53,8 +53,21 @@ focused tests, and typography metrics together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, glyph metrics and packaged font smoke: not run.
-- Font/license versions and exact pending prerequisites: pending.
+- Implementation: complete; [typography contract and evidence](../note-glyphs.md).
+- Dependency commit SHA(s): 06b `4740720`.
+- Commit: this commit.
+- Focused glyph12, worker8, upload13 and baseline encoding15 pass. Full
+  `./scripts/test.sh > /tmp/foundry-map-m04a-tests.log 2>&1` passes975 Python
+  (1 existing skip)/794 JavaScript. Commit hook verifies final staged revision.
+- Bundled unmodified DejaVu Sans2.37, Debian2.37-8 binary with fixed SHA256 and
+  Bitstream/Arev notices. Isolated Fontconfig excludes host/user font discovery;
+  missing/corrupt/symlink font fails before Pango instead of native fallback.
+- Actual12pt/96DPI (16px em) outlined boxes: N1=22×14,N12=32×14,N100=43×14,
+  maximum-length sample163×14. No shrink/clipping, no arbitrary text or markup.
+  Independent scalar outline/alpha oracle and real antialias/contrast pass.
+- Docker build plus12 packaged tests pass asUID10001 (0.960s). Standalone
+  read-only/no-network smoke matches host2374B PNG SHA256 exactly, sampled
+  RSS37384192B/scratch4096B/0.13532s. Runtime has no/usr/share/fonts and mounts
+  no host fonts. Tests-only read-only mount; no app override/game data/fixtures.
+- No local prerequisite or cleanup remains. Placement/retry composition and
+  actual annotated map workflows retain M04b/M05/M06 and external14b gates.

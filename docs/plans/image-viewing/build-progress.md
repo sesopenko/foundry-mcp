@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M03b, [coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md).
+- Current task: M04a, [bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md).
 - Stage: commit.
-- Last completed task: M03a, commit `26bb4e6`.
+- Last completed task: M03b, commit `8155684`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified M03b with required hook, then read M04a and establish bundled-font/text baselines. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified M04a with required hook, then read M04b and freeze placement/recomposition interfaces before implementation. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -32,6 +32,7 @@
 |M01 map browsing |e9ea43e |912 Python (1 existing skip)/761JS full passed; hook passed both |
 |M02 grid/image files |af58e0d |928 Python (1 existing skip)/777JS full passed; hook passed both after final declarations/test |
 |M03a note identities |26bb4e6 |942 Python (1 existing skip)/783JS full and hook passed |
+|M03b geometry/context |8155684 |963 Python (1 existing skip)/794JS hook passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -948,3 +949,50 @@ the linked evidence pages; Git history retains prior milestone records.
   map-source attachment; no foundation stub/tool signature change here. Final
   support matrix and evidence in map-context.md; diff/commit next, no active
   failure or unsuccessful correction attempts.
+
+## CurrentM04a checkpoint and implementation plan
+
+- Recovery read all saved prompts/design/research/index/progress/current task and
+  repository required files. Previous goal turn made implementation progress;
+  the user-facing strategy answer itself made no implementation progress. Health
+  lists GM. M03b committed after final hook963 Python/794JS passed. Now23/30
+  tasks and150/200 points (75%) committed; dependency06b is4740720.
+- Read current worker/encoding/process/child/workspace/supervisor sources and
+  code-graph overview/worker-main impact. Encoding baseline15 passes5.849s.
+- Official libvips8.18 text/rank/composite docs and pinned8.18.7 text.c read.
+  fontfile load failure warns and can fall back; therefore verify the bundled
+  font bytes before native calls and isolate Fontconfig discovery to the package.
+  DejaVu2.37 license permits redistribution with notices. Installed Debian
+  fonts-dejavu-core2.37-8 supplies an unmodified TTF with SHA256
+  57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e.
+- Frozen sequence: (1) vendor that binary plus upstream license/provenance and
+  isolated Fontconfig configuration; (2) worker-only strict ASCII N1..N(15 digits)
+  rasterizer,16px em via12pt/96DPI, white fill/one-pixel dark dilation outline,
+  measured <=20px ink height and bounded RGBA boxes; (3) bounded private glyph
+  atlas operation and supervised package probe, reusing existing worker ownership
+  and limits, never an MCP tool; (4) tests for exact mask geometry/alpha, malicious
+  inputs, deterministic bytes, font absence/corruption, bounds and real supervised
+  cleanup/resource rejection; (5) full regressions, Docker UID10001 with no host
+  fonts/test-only mount, metrics/license docs and separate commit. M04b alone owns
+  placement and retry composition; no annotation/public input is exposed here.
+- Implemented packaged fixed font/license/config, strict worker-only glyphs,
+  bounded private atlas and supervised verification entry point. Initial native
+  tests pass; supervised atlas exposed strict tuple-vs-JSON-array rejection.
+  A focused JSON metadata unit failed with tuple_type; strict bounded array
+  model fixes it and the same unit passes. A separate exact pHYs regression
+  failed1000 vs3780 pixels/metre; reuse existing encoder writer to fix generated
+  resolution. Same unchanged test passes. No unsuccessful corrections or active
+  failure; neither supervisor nor artifact validator was relaxed.
+- Focused glyph12 passes0.522s, worker8 passes1.473s, upload13 passes0.712s.
+  Docker build passes native/supervised/glyph UID10001 smokes. Packaged glyph12
+  passes0.960s read-only/no-network/tests-only mount. Standalone UID10001 smoke
+  matches host PNG SHA256 exactly:2374B, boxes22x14/32x14/43x14/163x14,
+  sampledRSS37384192B/scratch4096B/0.13532s. Runtime has no/usr/share/fonts;
+  no host fonts/game data mounted. Full runner41892 still running in
+  /tmp/foundry-map-m04a-tests.log. Next inspect its outcome, review diff and
+  finish task evidence/commit. No game fixture or cleanup remains.
+- Full runner41892 terminal exit0:975 Python (1 existing skip)/794JS passed,
+  Python99.549s. Final diff/whitespace/source/interface review completed; only
+  unused imports removed afterward. Documentation records license, support and
+  measured glyphs. Hook will verify final staged files before M04a commit; no
+  publication, new instance or live game changes.
