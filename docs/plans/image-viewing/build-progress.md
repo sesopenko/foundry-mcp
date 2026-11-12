@@ -1,8 +1,8 @@
 # Image viewing build progress
 
-- Current task: 02, [browser source resolution](tasks/02-browser-source-resolution.md).
+- Current task: 03a, [bounded browser source fetch](tasks/03a-browser-source-fetch.md).
 - Stage: commit.
-- Last completed task/commit: 01, `b0cc01e`. Baseline checkout: `2cd3d88`.
+- Last completed task/commit: 02, `141ede6`; 01 is `b0cc01e`. Baseline checkout: `2cd3d88`.
 - Assignment preserved in [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
 - Persistent goal: active; environment objective points to the attachment containing the complete persistent goal, read at kickoff.
 - Baseline checks outside sandbox: `.venv/bin/python -m unittest discover -s tests -p 'test_journal_images.py' -v` passed 4 tests; `node --test tests/js/journal-images.test.js` passed 6 tests.
@@ -18,4 +18,9 @@
 - Task02 live diagnosis: canonical succeeds, bare/absolute return BrowseFailed when data parent unavailable but public parent has exact match. Initial policy incorrectly required all source listings available. New unit test reproduces actual mixed-availability failure before correction. Revised policy requires exactly one positively verified readable match, always fresh-rechecked; unavailable other parents retained as private partial scope, never inferred absent. Zero matches plus unavailable remains BrowseFailed; multiple readable matches remain AmbiguousSource. Unsuccessful fix count 0; unchanged-test verification next.
 - Correction verification: unchanged mixed-availability test passed; all40 focused JavaScript tests passed. Live probe passed canonical/bare/absolute SVG references in one MCP call after refresh; ready GM14.369 and console errors0. One Python harness privacy test passed.
 - Task02 final full regression run passed710 Python (1existing skip)/728 JS; final ambiguity-recovery prose change passed all11 resolver tests and is rechecked by the commit hook.
-- Next action: finish final full tests, inspect task02 diff/whitespace, stage and commit, then start03a. Final code/probe references and precise live S3/prefix gaps are in source-resolution.md.
+- Task02 hook passed710 Python (1existing skip)/728 JavaScript.
+- Task03a focused: `node --test tests/js/image-preview-fetch.test.js tests/js/journal-images.test.js` passed19; `.venv/bin/python -m unittest discover -s tests -p 'test_packaging.py' -v` passed3; probe-privacy Python test passed1. All outside sandbox.
+- Task03a diagnoses: ZIP regression failed before allowlist entry, unchanged test passed after entry. HTTP content-encoding regression failed before distinguishing encoded wire length from fetch-exposed file bytes, unchanged test passed after correction. First full run overlapped failing regression addition and reported1 JS failure; final full run pending. Unsuccessful correction counts0.
+- Task03a runtime: dedicated refresh/readiness/console check passed; one MCP development invocation passed real SVG streaming, returned-copy mutation isolation, release/empty slot. No fixture or mutation. Details/private lease contract in source-fetch.md.
+- Final03a `./scripts/test.sh` passed710 Python tests (1existing skip) and739 JavaScript tests.
+- Next action: inspect/stage/commit03a, then start03b wire protocol. No transfer RPC registration until03b.

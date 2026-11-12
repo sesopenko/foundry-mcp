@@ -63,8 +63,14 @@ using the development-loop skill when the dedicated browser is available.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, streamed byte/deadline results: not run.
-- Browser evidence and exact pending prerequisites: pending.
+- Implementation: complete; internal private lease service only, no transfer RPCs.
+- Dependency commit SHA(s): 02 `141ede6`.
+- Commit: this commit.
+- Focused checks:19 JavaScript fetch/journal tests,3 Python packaging tests and1
+  Python probe-privacy test passed outside sandbox. Full final `./scripts/test.sh`
+  passed710 Python tests (1existing skip) and739 JavaScript tests.
+- Interface/stream/deadline/diagnosis evidence: [source fetch](../source-fetch.md).
+- Browser evidence: refreshed dedicated ready GM14.369/test, console errors0;
+  actual SVG stream/copy-isolation/release passed in one MCP development call.
+  No fixtures/mutations/cleanup. Live S3 needs a configured readable bucket/CORS;
+  exact credential policy has mock coverage. No external visual claim.

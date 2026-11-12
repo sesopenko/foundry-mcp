@@ -17,7 +17,7 @@ class SourceProbeTests(unittest.IsolatedAsyncioTestCase):
         data = {'version': '14.369', 'secret': 'signed URL', 'rows': {
             'canonical': {'passed': True, 'secret': 'native path'},
             'bare': {'passed': False, 'error_code': 'BrowseFailed'},
-            'absolute': {'passed': True}}}
+            'absolute': {'passed': True}, 'fetch': {'passed': True}}}
         client.call_tool.return_value = SimpleNamespace(structured_content={'value': json.dumps(data)})
         report = await probe.verify(client)
         self.assertFalse(report['passed'])
