@@ -127,8 +127,8 @@ spawning agents or concurrent writes to this checkout.
 | [04b Snapshots and caller isolation](tasks/04b-private-snapshots-and-caller-isolation.md) | 8 | 04a | Complete | a045d08 |
 | [05a Decoder probe and packaging](tasks/05a-decoder-probe-and-packaging.md) | 5 | 01 | Complete | 57123ce |
 | [05b Worker resource supervision](tasks/05b-worker-resource-supervision.md) | 8 | 05a | Complete | cc7ba71 |
-| [06a Crop geometry and resampling](tasks/06a-crop-geometry-and-resampling.md) | 5 | 05b | Complete | this commit |
-| [06b Encoding and byte budget](tasks/06b-preview-encoding-and-byte-budget.md) | 5 | 06a | Not started | — |
+| [06a Crop geometry and resampling](tasks/06a-crop-geometry-and-resampling.md) | 5 | 05b | Complete | 49e8aaf |
+| [06b Encoding and byte budget](tasks/06b-preview-encoding-and-byte-budget.md) | 5 | 06a | Complete | this commit |
 | [07a Raster codecs and frame policy](tasks/07a-raster-codecs-and-frame-policy.md) | 5 | 06b | Not started | — |
 | [07b Safe SVG rasterization](tasks/07b-safe-svg-rasterization.md) | 8 | 07a | Not started | — |
 | [08 Persistent preview store](tasks/08-persistent-preview-store.md) | 8 | 01 | Not started | — |

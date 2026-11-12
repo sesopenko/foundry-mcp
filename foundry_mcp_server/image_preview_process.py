@@ -14,6 +14,7 @@ from . import image_preview_limits as limits
 from .image_preview_failure import PreviewFailure
 from .image_preview_supervisor import current_supervisor
 from .image_preview_resources import WorkerMetrics
+from .image_preview_artifact import inspect_artifact
 from .mcp_server.selective_models import Model
 from .mcp_server.image_preview_models import Crop
 
@@ -65,6 +66,21 @@ class RegionGeometry(Model):
 
 class RegionReply(Model):
     geometry: RegionGeometry
+
+
+class EncodedGeometry(RegionGeometry):
+    mime_type: Literal['image/png','image/webp']
+    size_bytes: int = Field(ge=1,le=limits.OUTPUT_MAX_BYTES)
+
+
+class EncodedReply(Model):
+    artifact: EncodedGeometry
+
+
+@dataclass
+class RenderedPreview:
+    geometry: EncodedGeometry
+    data: bytes = field(repr=False)
 
 
 @dataclass
@@ -132,6 +148,36 @@ async def render_region(path, crop=None, *, supervisor=None,metrics=None,timeout
                 or data[12:16]!=b'IHDR' or struct.unpack('>II',data[16:24])!=(geometry.width,geometry.height)):
             raise PreviewFailure('ImageProcessingFailed')
         return RegionPixels(geometry,data)
+    try:
+        return await (supervisor or current_supervisor()).run(payload,metrics=metrics,timeout=timeout,collect=collect)
+    except (ValueError,TypeError,OSError):
+        raise PreviewFailure('ImageProcessingFailed') from None
+
+
+async def render_preview(path, crop=None, *, supervisor=None,metrics=None,timeout=limits.WORKER_TIMEOUT_SECONDS):
+    """Return a fully bounded private PNG/WebP artifact; publication is separate.
+
+    Worker forces pixel decoding and verifies format/geometry/size. Parent repeats
+    strict metadata and bounded container checks without loading a raster.
+    """
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise PreviewFailure('UnsupportedImage')
+    if isinstance(crop,Crop):crop = crop.model_dump()
+    payload = json.dumps(dict(operation='render',source=str(path),crop=crop)).encode()
+    def collect(workspace,raw):
+        geometry = EncodedReply.model_validate(worker_reply(raw)).artifact
+        if geometry.source.size_bytes!=path.stat().st_size:
+            raise PreviewFailure('ImageProcessingFailed')
+        artifact = workspace.path/'preview.bin'
+        if artifact.is_symlink() or not artifact.is_file():
+            raise PreviewFailure('ImageProcessingFailed')
+        with artifact.open('rb') as stream:
+            data = stream.read(limits.OUTPUT_MAX_BYTES+1)
+        actual = inspect_artifact(data)
+        if actual!={key:getattr(geometry,key) for key in ('width','height','mime_type','size_bytes')}:
+            raise PreviewFailure('ImageProcessingFailed')
+        return RenderedPreview(geometry,data)
     try:
         return await (supervisor or current_supervisor()).run(payload,metrics=metrics,timeout=timeout,collect=collect)
     except (ValueError,TypeError,OSError):

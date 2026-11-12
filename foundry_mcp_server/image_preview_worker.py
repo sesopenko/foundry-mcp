@@ -115,6 +115,11 @@ def region_pixels(path, crop):
     return dict(source=metadata,region=region.bounds,width=width,height=height)
 
 
+def encoded_pixels(path, crop):
+    from .image_preview_encode import render_preview
+    return render_preview(path,crop,Path(os.environ['TMPDIR']))
+
+
 def smoke():
     """Small deterministic packaged-image probe, including actual effective UID."""
     from PIL import Image
@@ -133,12 +138,16 @@ def main():
         else:
             raw = sys.stdin.buffer.read(MAX_REQUEST_BYTES+1)
             request = json.loads(raw) if len(raw) <= MAX_REQUEST_BYTES else None
-            if (not isinstance(request,dict) or request.get('operation') not in ('probe','region')
+            if (not isinstance(request,dict) or request.get('operation') not in ('probe','region','render')
                     or set(request) != ({'operation','source'} if request.get('operation')=='probe' else {'operation','source','crop'})
                     or not isinstance(request['source'],str) or not 1 <= len(request['source']) <= 4096):
                 raise PreviewFailure('InvalidOperation')
-            result = ({'metadata':probe(request['source'])} if request['operation']=='probe'
-                else {'geometry':region_pixels(request['source'],request['crop'])})
+            if request['operation']=='probe':
+                result = {'metadata':probe(request['source'])}
+            elif request['operation']=='region':
+                result = {'geometry':region_pixels(request['source'],request['crop'])}
+            else:
+                result = {'artifact':encoded_pixels(request['source'],request['crop'])}
     except PreviewFailure as failure:
         result = {'error_code':failure.code}
         if failure.width is not None and failure.height is not None:

@@ -54,8 +54,24 @@ Commit encoding/validation, tests, and delivered-image metadata documentation.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, candidate formats/dimensions/bytes: not run.
-- Exact pending codec/runtime prerequisites: pending.
+- Implementation: complete; native encoder policy, full isolated decode
+  verification, bounded parent container validation and typed private artifacts.
+- Dependency commit SHA(s):06a `49e8aaf`.
+- Commit: this commit.
+- Focused checks outside sandbox: render15,geometry11,worker8 passed. Full
+  `./scripts/test.sh`:797 Python (1 existing skip),749 JavaScript passed.
+- Production image built successfully; render15 also passed as UID10001 with
+  read-only filesystem/test mount, no network and128MiB temporary scratch. No
+  Foundry/game volumes, publication or existing-asset changes.
+- Exact ordering, both WebP qualities, first-compliant stop, repeated15%
+  reductions from original, onepixel progress, deadlines, partial cleanup and
+  forged metadata/container rejection pass. Real independent Pillow decoding
+  passed lossless pixels, lossy mean error<7, alpha mean error<2, metadata removal.
+- Synthetic artifacts: PNG22x18/127bytes; WebP1536²/1,664,334bytes;
+  WebP1109²/1,968,390bytes reduced from random-alpha1536²; PNG19x11/107bytes.
+  The two WebP measurements match inside the production service-user image.
+- Empty-file and corrupt-generated-artifact regressions each failed before
+  correction and passed unchanged after correction; unsuccessful corrections0.
+  [Encoding contracts/evidence](../preview-encoding.md). More input codecs/SVG,
+  complete font/package/runtime workflows and MCP issuance remain later tasks;
+  no external prerequisite blocks06b and no public tools are registered here.

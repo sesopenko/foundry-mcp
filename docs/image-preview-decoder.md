@@ -65,7 +65,9 @@ Full format/large-map/font/crop acceptance remains later work.
 
 Private [crop geometry](plans/image-viewing/crop-geometry.md) now supports
 display orientation, exact native regions and alpha-safe bounded resampling.
-Public encoding/byte limits and tool registration remain later tasks.
+[Bounded encoding](plans/image-viewing/preview-encoding.md) now enforces PNG/
+WebP ordering and delivered byte limits on private artifacts. Tool registration
+and public delivery remain later tasks.
 
 ## Resource supervision
 

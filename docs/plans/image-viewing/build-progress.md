@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 06a, [crop geometry and resampling](tasks/06a-crop-geometry-and-resampling.md).
+- Current task: 06b, [preview encoding and byte budget](tasks/06b-preview-encoding-and-byte-budget.md).
 - Stage: commit.
-- Last completed task: 05b, commit `cc7ba71`.
+- Last completed task: 06a, commit `49e8aaf`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified06a, then read/baseline06b encoding and byte budget. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified06b with its full hook, then read/baseline07a raster codecs/frame policy. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -18,6 +18,7 @@
 |04b snapshots/identity |a045d08 |733 Python (1 skip),749 JS passed |
 |05a decoder probe/package |57123ce |741 Python (1 skip),749 JS passed |
 |05b resource components/refactor |cc7ba71 |770 Python (1 skip),749 JS passed |
+|06a geometry/resampling |49e8aaf |782 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -195,3 +196,36 @@ the linked evidence pages; Git history retains prior milestone records.
 - `./scripts/test.sh` passed782 Python (1 existing skip),749 JS,exit0.
   `git diff --check` passed. Details/API evidence in crop-geometry.md. No new
   MCP registration, runtime game mutations or external prerequisites for06a.
+
+## Current06b checkpoint
+
+- Added separate native encoding policy and lightweight container-validation
+  modules; worker render operation and typed parent collector reuse06a geometry.
+  PNG first, WebP90/82,15% dimension reduction from original, one supervised
+  deadline, fixed private candidate/preview files with partial cleanup.
+- Official libvips8.18 pngsave/webpsave and Google WebP RIFF/lossless specs read.
+  Native verification forces full pixel decode; parent verifies bounded actual
+  PNG/WebP chunks/MIME/dimensions/size without raster allocation. Source metadata
+  removed, generated resolution96DPI, alpha preserved.
+- Initial render11 tests passed real high-entropy WebP and random-alpha reduction,
+  lossless crops, independent lossy/alpha tolerance and metadata removal. Added
+  empty-output regression failed (fallback wrongly accepted later file), then
+  passed unchanged after rejecting zero-byte candidates. Corrupt-generated-file
+  regression failed with UnsupportedImage, passed unchanged after verification
+  maps generated failures to ImageProcessingFailed. Unsuccessful corrections0.
+- Final focused render15,geometry11,worker8 passed outside sandbox. Partial
+  writer failure and hard worker deadline cleanup preserve original files.
+  Added synthetic technical byte/dimension output for final measurement record;
+  no game images, pixel answers or capability information are printed.
+- Next: final focused/full suites, record artifact measurements/docs, commit06b.
+- Final focused render15 passed with bounded synthetic evidence: PNG22x18/127B,
+  WebP1536²/1,664,334B, WebP1109²/1,968,390B, metadata-freePNG19x11/107B.
+  Native/policy/container docs in preview-encoding.md.
+- Full `./scripts/test.sh` passed797 Python (1 existing skip),749 JS,exit0.
+- `docker build --pull=false -t foundry-mcp-image-preview-check:local .` passed,
+  including UID10001 native/supervised smokes. Then
+  `docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --user 10001:10001 --volume /home/sean/src/github.com/sesopenko/foundry-mcp/tests:/checks:ro --entrypoint python foundry-mcp-image-preview-check:local -m unittest discover -s /checks -p test_image_preview_render.py -v`
+  passed15 as UID10001 against shipped application/native code. Only tests were
+  mounted read-only; no source override/game volume/network/publication. Both
+  real WebP sizes matched host measurements. No new external prerequisite.
+- Diff/whitespace reviewed; no MCP tool/discovery or Foundry browser changes.
