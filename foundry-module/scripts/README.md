@@ -4,6 +4,8 @@
 using public document metadata and permissions, with named ancestry and bounded,
 revision-bound continuations. It needs no PF2e or active canvas and never
 activates a Scene. See the [map browsing contract](../../docs/plans/image-viewing/map-browsing.md).
+The module manifest does not restrict these core tools to PF2e; Actor/Item
+handlers retain their explicit PF2e admission checks.
 
 `mapInfo.js` reads exact Scene grid/dimensions and embedded level image roles or
 Tile file/placement inventory through public document APIs. Stored references

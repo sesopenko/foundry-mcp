@@ -66,9 +66,26 @@ gaps and refreshed task statuses. Pass this evidence to 14b for final handoff.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and map-mode calls/time: not run.
-- Pixel/legend/layout/resource and payload/completion tables: pending.
-- Fixture cleanup, console errors and exact live/client gaps: pending.
+- Implementation: complete; [workflow/pixel/payload evidence](../map-workflows.md).
+- Dependency commit SHA(s):14a `2d24dd6`.
+- Commit: this commit.
+- Focused map-workflow10/13.749s, original map-image17/26.881s, helper12/1.340s,
+  JS map33 plus new workflow1 and archive5/1.294s passed outside sandbox.
+  Final full1043 Python (1 existing skip)/795JS passed148.561s after the proven
+  module-manifest correction; same failing ZIP test passes unchanged.
+- Native `scripts/image-preview-live-check.py --map`:35 MCP calls under60/900s,
+  all18 folders/50 maps/16 duplicate names, selected levels/3Tiles, complete
+  25-key overview and2-key detail, four legend pages/27 identities independently
+  matched. Actual wall time not separately captured. Catalog47/323516B.
+- Large `scripts/map-preview-measurements.py` passes actual10000-square annotated
+  overview/native-detail independent pixels and unchanged1GiB/2GiB/90s budgets;
+  sampled peakRSS394256384B/scratch301494272B/.505164s. Native overview1335x1767
+  WebP633428B/detail800x600 PNG508560B; ink14px and box coverage.427903%/.160417%.
+- Agent inspected both private derivatives, then exact cleanup removed2 review
+  files/marker; no game documents/assets created or changed. Private settings
+  restored, TLS/store removed; browser refresh readyGM14.369/test/console0.
+- Non-PF2e mocks and unrestricted packaged core-tool manifest pass; existing
+  PF2e Actor/Item guards remain intact. No other-system world provisioned.
+  Public HTTPS/actual target ChatGPT hidden-pixel and key-followup acceptance
+  remain14b; configured S3/CORS, prefixed deployment and real OAuth login/refresh
+  retain explicit external prerequisites. Local image inspection is separate.

@@ -146,8 +146,8 @@ spawning agents or concurrent writes to this checkout.
 | [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Complete | 722a120 |
 | [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Complete | 823cb3b |
 | [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Complete | a10d601 |
-| [14a Local runtime acceptance](tasks/14a-local-runtime-acceptance.md) | 8 | 12b, 13 | Complete | this commit |
-| [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Not started | — |
+| [14a Local runtime acceptance](tasks/14a-local-runtime-acceptance.md) | 8 | 12b, 13 | Complete | 2d24dd6 |
+| [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Complete | this commit |
 | [14b Target-client visual handoff](tasks/14b-target-client-visual-handoff.md) | 5 | M06 | Not started | — |
 
 Task files name intended local commit subjects. Each task's implementation,

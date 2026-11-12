@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Existing localhost test-world acceptance:<=60 MCP calls/20min, owned cleanup."""
 import asyncio
+import argparse
 import importlib.util
 import json
 from pathlib import Path
@@ -17,7 +18,8 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from mcp.types import CallToolResult as ProtocolResult
 from foundry_mcp_server.image_preview_live_support import (
-    AssetFixture,Budget,PreviewTLS,compact,curl_delivery,preview_settings,require)
+    AssetFixture,Budget,PreviewTLS,cleanup_map_review,compact,curl_delivery,preview_settings,require)
+from foundry_mcp_server.map_workflow_acceptance import verify_map
 
 SPEC=importlib.util.spec_from_file_location('preview_journal_fixture',ROOT/'scripts/journal-authoring-live-check.py')
 fixture=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(fixture)
@@ -112,22 +114,45 @@ def service_restart():
 
 
 async def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--map',action='store_true',help='Read-only complete map/annotation/legend acceptance, <=60 calls/900s.')
+    parser.add_argument('--cleanup-map-review',action='store_true',help='Remove only the exact marked private derivative-review files.')
+    args=parser.parse_args()
+    if args.cleanup_map_review:
+        try:report=cleanup_map_review(ROOT/'.local/image-preview-map-review')
+        except Exception as error:report=dict(cleanup_complete=False,error_type=type(error).__name__)
+        print(json.dumps(report));return 0 if report['cleanup_complete'] else 1
     marker=uuid4().hex;report=dict(passed=False)
     try:
         with tempfile.TemporaryDirectory(prefix='foundry-preview-live-') as private:
             private=Path(private)
-            with PreviewTLS(private) as tls,AssetFixture(ROOT/'foundry-data/Data',marker) as asset:
+            import contextlib
+            assets=contextlib.nullcontext(None) if args.map else AssetFixture(ROOT/'foundry-data/Data',marker)
+            with PreviewTLS(private) as tls,assets as asset:
                 try:
                     with preview_settings(ROOT/'.env.mcp',tls.origin,private/'store'):
                         service_restart()
                         token=next(line.partition('=')[2].strip() for line in (ROOT/'.env.mcp').read_text().splitlines()
                             if line.partition('=')[0].strip()=='FOUNDRY_MCP_CALLER_TOKEN')
                         def reader(value):return curl_delivery(value['url'],value,tls.origin,tls.certificate,private)
+                        def map_reader(value,label,pin):
+                            from PIL import Image
+                            result=reader(value)
+                            path=private/'body-0'
+                            if pin:
+                                with Image.open(path) as decoded:require(decoded.convert('RGB').getpixel(pin)==(255,255,255))
+                                result['independent_pin_verified']=True
+                            output=ROOT/'.local/image-preview-map-review'
+                            if not output.exists():output.mkdir(mode=0o700);(output/'.owner').write_text(marker)
+                            require(not output.is_symlink() and (output/'.owner').read_text()==marker)
+                            destination=output/(label+('.png' if value['mime_type']=='image/png' else '.webp'));require(not destination.exists())
+                            destination.write_bytes(path.read_bytes())
+                            return result
                         async with Client(StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp',headers={'Authorization':'Bearer '+token}),
                             timeout=100,init_timeout=10) as client:
-                            report=await verify(client,asset,reader)
+                            report=await verify_map(client,map_reader) if args.map else await verify(client,asset,reader)
                 finally:service_restart()
-            report.update(asset_cleanup=not asset.path.exists(),settings_restored=True,local_tls_only=True)
+            report.update(asset_cleanup=asset is None or not asset.path.exists(),settings_restored=True,local_tls_only=True)
     except Exception as error:report.update(passed=False,error_type=type(error).__name__)
     print(json.dumps(report,sort_keys=True));return 0 if report['passed'] else 1
 

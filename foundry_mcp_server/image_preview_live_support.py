@@ -173,3 +173,18 @@ def curl_delivery(url,expected,origin,certificate,directory,*,execute=subprocess
     require(hashes[0]==hashes[1])
     return dict(passed=True,requests=3,status=200,redirects=0,mime_type=expected['mime_type'],
         size_bytes=expected['size_bytes'],sha256=hashes[0],head_empty=True)
+
+
+def cleanup_map_review(directory):
+    """Remove only bounded newly marked derivative review files, never game data."""
+    directory=Path(directory)
+    require(not directory.is_symlink() and directory.is_dir())
+    owner=directory/'.owner';require(owner.is_file() and not owner.is_symlink())
+    require(MARKER.fullmatch(owner.read_text()) is not None)
+    allowed={'.owner','overview.png','overview.webp','detail.png','detail.webp'}
+    files=list(directory.iterdir())
+    require(len(files)<=3 and {p.name for p in files}<=allowed)
+    require(all(p.is_file() and not p.is_symlink() and p.stat().st_size<=2097152 for p in files))
+    for path in files:path.unlink()
+    directory.rmdir()
+    return dict(cleanup_complete=True,files=len(files)-1)

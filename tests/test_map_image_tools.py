@@ -91,6 +91,7 @@ class MapToolBackend(transfer_helpers.Browser):
         source.save(stream,format='PNG',pnginfo=metadata)
         super().__init__(stream.getvalue())
         self.image=copy.deepcopy(IMAGE);self.sources={'data':{}}
+        self.folders=[]
         self.scene=dict(id='scene',name='Map',folder=None,width=500,height=500,grid=dict(size=100),
             rectangle=dict(sceneX=20,sceneY=40,sceneWidth=500,sceneHeight=500),
             levels=[dict(id='floor',name='Floor',sort=0,textures=dict(default_placement=True),background=dict(src=IMAGE['src']),foreground=dict(src=IMAGE['src']))],
@@ -106,7 +107,7 @@ class MapToolBackend(transfer_helpers.Browser):
         process=await asyncio.create_subprocess_exec('node',str(Path(__file__).parent/'js/fixtures/map-context-rpc.js'),
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
         try:
-            output,_=await asyncio.wait_for(process.communicate(json.dumps(dict(method=method,params=params,scene=self.scene,journals=self.journals,
+            output,_=await asyncio.wait_for(process.communicate(json.dumps(dict(method=method,params=params,scene=self.scene,folders=self.folders,journals=self.journals,
                 files=[self.image['src']],sources=self.sources)).encode()),5)
         except BaseException:
             if process.returncode is None:process.kill()
@@ -119,9 +120,11 @@ class MapToolBackend(transfer_helpers.Browser):
         return value
 
 
-class MapImageToolsTests(unittest.IsolatedAsyncioTestCase):
+class MapToolFixture:
+    backend_factory=MapToolBackend
+
     async def asyncSetUp(self):
-        self.browser=MapToolBackend();self.now=1000;self.public_now=2000
+        self.browser=self.backend_factory();self.now=1000;self.public_now=2000
         self.measurements=[]
         self.identity=Principal('basic','','gm','configured-account')
         self.runtime=SourceRuntime(factory=lambda:SourceSnapshots(principal=lambda:self.identity,clock=lambda:self.now))
@@ -139,7 +142,7 @@ class MapImageToolsTests(unittest.IsolatedAsyncioTestCase):
 
     async def call(self,name,request):
         async with Client(mcp) as client:
-            result=await client.call_tool(name,request if name=='get_map_info' else {'request':request},raise_on_error=False)
+            result=await client.call_tool(name,request if name in ('get_map_info','browse_maps') else {'request':request},raise_on_error=False)
         if not result.is_error:
             raw=result.structured_content
             protocol=ProtocolResult(content=result.content,structured_content=raw,is_error=False,meta=result.meta).model_dump(mode='json',by_alias=True,exclude_none=True)
@@ -168,6 +171,8 @@ class MapImageToolsTests(unittest.IsolatedAsyncioTestCase):
 
     def transfers(self):return sum(method=='beginImagePreviewTransfer' for _,method,*_ in self.browser.calls)
 
+
+class MapImageToolsTests(MapToolFixture,unittest.IsolatedAsyncioTestCase):
     async def test_actual_discovery_map_flag_typed_summary_and_invalid_calls_precede_reads(self):
         async with Client(mcp) as client:
             catalog={tool.name:tool for tool in await client.list_tools()}

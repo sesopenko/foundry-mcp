@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task:14a, [local runtime acceptance](tasks/14a-local-runtime-acceptance.md).
+- Current task:M06, [complete map workflow verification](tasks/m06-map-workflow-verification.md).
 - Stage: commit.
-- Last completed task:13, commit `a10d601`.
+- Last completed task:14a, commit `2d24dd6`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: implement/test the frozen bounded local runtime/fixture/curl harness, run offline suites, then execute against the existing test world. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: implement/test the frozen complete map workflow using existing runtime support, then verify native map annotations/legends and commit M06. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -37,6 +37,7 @@
 |M04b layout/encoding |722a120 |990 Python (1 existing skip)/794JS hook passed |
 |M05 map-aware image tools |823cb3b |1011 Python (1 existing skip)/794JS hook passed |
 |13 packaged deployment |a10d601 |1020 Python (1 existing skip)/794JS hook passed |
+|14a local runtime |2d24dd6 |1032 Python (1 existing skip)/794JS full passed; both hook suites passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -1345,3 +1346,108 @@ the linked evidence pages; Git history retains prior milestone records.
   with required two-suite hook, then continue directly to M06 map workflow.
   No active defect; unsuccessful corrections0, earlier helperTLS fix proven by
   the same real-curl test before/after correction.
+
+## CurrentM06 implementation plan
+
+-14a2d24dd6 committed with both hook suites passing;28/30 tasks,187/200
+  points (93.5%) complete. Read complete M06/14b requirements, current browser
+  metadata/legend fixtures, geometry and visual audits, prior task evidence and
+  reusable14a support. Grounded Docs fresh Scene/Document confirms public create,
+  createEmbeddedDocuments/delete, but prefer read-only existing native maps;
+  synthetic worlds provide duplicate-source/denial/mutation fixtures offline.
+- Freeze boundaries: extract only reusable setup/helpers from M05 test case
+  into a non-TestCase fixture mixin (preserve all17 original tests), extend the
+  external public-world mock with optional folders/Tiles, then add complete
+  Python MCP and JS RPC workflow tests. Cover returned folder/map/level selectors,
+  screenshot grid fields, shared-source Scene identity, paginated aliases,
+  byte budgets, stale metadata, unsupported placement and honest omissions.
+  Retain focused existing per-component regression ownership rather than
+  duplicating every lower-level unit in a new integration file.
+- Add one separately bounded large10000-square annotated case using12b's
+  streaming generator and real production worker/metrics; verify independent
+  far-edge native pixels/alias placement and output/resource budgets. Keep this
+  explicit large integration out of ordinary fast suite; add small generator/
+  aggregation tests alongside normal complete MCP workflows.
+- Extend the existing live script with --map, reusing exactly14a's local TLS,
+  temporary private settings and service lifecycle. Native mode is read-only:
+  independently sample public Scene/Level/Note metadata, follow actual complete
+  folder catalog and map next calls, read all selected assets/Tiles, stage map,
+  fetch annotated overview/crop, paginate exact rendered-key legends and compare
+  journal/page identities/coordinates. Cap60 MCP calls/900s, reserve cleanup and
+  keep active Scene unchanged. No new Foundry instance or existing-game writes.
+- Persist only overview/detail derivatives for immediate private visual review
+  in a new ignored marked directory, no URLs/legends/raw originals. Inspect
+  key size/dark/light placement/obstruction, then remove exact owned artifacts.
+  Record full catalog/assets/legend calls/bytes/completion, baseline delta,
+  actual omission/resource metrics and precise external gaps. Public target
+  hidden-answer/key-followup handoff remains14b, not a native visual-pass claim.
+- Baseline M05 tests17 and JS map suites next, then implement focused tests/
+  harness, full offline suites, separate large/native checks and M06 commit.
+  No active failure; unsuccessful corrections0.
+- Baseline map17 passes26.986s; JS33 passes0.214s. Initial JS baseline command
+  named nonexistent map-context.test.js; corrected to existing map-geometry.test.js,
+  no tests or production assertions changed. Extracted non-TestCase fixture mixin;
+  all17 original map tests pass26.881s after extraction. Extended only external
+  world mocks for folders/Tiles and flat browse calls.
+- Complete new actual-MCP integration4 initially passes11.040s: root/folder/map
+  returned calls, all3 level pages/screenshot grid, scene-vs-file dimensions,
+  annotated native crop,2-page exact legend, Tile inventory and1 original transfer.
+  Duplicate names/shared source retain owning Scene; stale legends/map revisions
+  reject joins while raw snapshots remain fetchable. JS complete non-PF2e RPC
+  workflow1 passes0.201s, without canvas or journal-body access.
+- `.venv/bin/python scripts/map-preview-measurements.py` passes real10000-square
+  annotated overview/detail:1536-square PNG1487372B with2keys,
+  sampledRSS394256384B/scratch301494272B/.505164s;150-square native detail1546B
+  withN2, independent far-edge pixels and pin position pass. Two worker operations,
+  peak budgets unchanged, private source/workspaces cleaned. No broad rerun needed.
+- Added bounded read-only native map acceptance module and --map mode to existing
+  live script, reusing14a TLS/config/service support. Native catalog follows every
+  returned folder/map call, selected assets/Tiles, annotated overview/detail and
+  complete exact-key legends; public docs independently check coordinates and
+  journal/page identities. Review derivatives only go to new marked ignored
+  .local/image-preview-map-review, with tested exact cleanup mode afterward.
+- Added native positive/failure/budget/cleanup harness cases. Final focused map
+  workflow8, live helper12 and full runner59620 are running in corresponding
+  /tmp/foundry-map-m06-*.log files. Inspect terminal results before native --map.
+  No active unexpected defect or unsuccessful correction attempts.
+- Final map-workflow8 passes11.246s, helper12 passes1.340s; added independent
+  one-pixel annotated MCP omission/detail-recovery case passes2.660s. Full
+  runner59620 terminal exit0:1040 Python (1 existing skip)/795JS passed146.311s
+  before the last one-pixel case; required hook will cover final9 workflow tests.
+- Native `.venv/bin/python scripts/image-preview-live-check.py --map` started
+  after offline pass with output in/tmp/foundry-map-m06-native.log. Inspect
+  terminal result before retries/acceptance claims. It reuses existing14.369/test
+  read-only maps and14a TLS/settings restoration; no game fixture is created.
+- Native session5690 terminal exit0:35 MCP calls, all18 folders/50 maps and16
+  duplicate names, all selected levels/3Tiles; overview1335x1767 WebP633428B
+  renders25/25, detail800x600 PNG508560B renders2/2. Four exact-key legend pages
+  return27 matching Note/journal/page identities across both outputs. Independent
+  public-document comparison and native detail pin pixel pass; active Scene
+  unchanged,0 game fixtures. Actual catalog47/323516B; full navigation21 calls/
+  46260JSON/101532MCP bytes exactly matches M01's complete navigation sizes.
+- Agent inspected private overview/detail: compact readable keys across dark/
+  light/grid/edge positions; nearby features can still be covered. Fixed native
+  glyph coverage probe passes:14px ink, overview10094 label-box pixels/.427903%,
+  detail770px/.160417%, below5%. Digit ink widths vary22/23/32/33px; no inferred
+  constant-width assumption. Test of measured area/small-canvas rejection passes.
+- Final focused map workflow10 passes13.749s. Tested cleanup mode removed exactly
+  2 owned review files and marker. Existing settings restored/TLS-store removed;
+  dedicated refresh/browser readyGM14.369/test/console0. No public-host/client
+  visual acceptance claim. Native data files/capabilities were never tracked.
+- Final architecture audit found the old packaged module manifest's PF2e-only
+  systems relationship contradicts core map tools' system-independent boundary.
+  Added actual ZIP-manifest unit; it failed before correction with that exact
+  restriction. Grounded Docs fresh official module-development/relationships
+  docs establish declared system support. Removed only this manifest restriction;
+  PF2e Actor/Item guards remain unchanged, and non-PF2e core RPC tests pass.
+  Same ZIP unit now passes; package5/moduleZIP3.3.1 pass, no version bump/release.
+  Other-system live world is unavailable; no additional world/instance created.
+- Full runner9548 now verifies this demonstrated packaging correction and final
+  tests in/tmp/foundry-map-m06-final-full.log. No failed production corrections;
+  final source/doc review and M06 commit follow terminal full pass.
+- Final full runner9548 terminal exit0:1043 Python (1 existing skip)/795JS
+  passed148.561s, including final workflow10/archive5. Same unchanged packaged
+  manifest regression passes after restriction removal. Native/large evidence
+  remains valid; manifest admission did not alter PF2e runtime handler behavior.
+  Diff/whitespace/source reviewed, no active failure/cleanup. Stage M06 and
+  commit with both hook suites, then proceed directly to14b visual handoff.

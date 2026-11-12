@@ -74,7 +74,7 @@ Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 the connected GM browser and includes that world's instructions. See the
 [migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md#migration).
 
-The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
+The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. Actor/Item tools require **Pathfinder Second Edition (`pf2e`)**; source builds also expose core journal/map/image tools independently of the game system. The module declares Foundry13 minimum; map annotations are verified specifically on14.369. See the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDFs and preview links require persistent private volumes.
 
 ## Selective reads in v3.3.1
 

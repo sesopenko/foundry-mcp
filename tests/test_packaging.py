@@ -47,6 +47,14 @@ class PackagingTests(unittest.TestCase):
             self.assertIn('scripts/mapBrowse.js',archive.namelist())
             self.assertIn(b'./mapBrowse.js',archive.read('scripts/foundryBridge.js'))
 
+    def test_core_map_tools_are_not_blocked_by_a_pf2e_only_module_manifest(self):
+        output=self.root/'output'
+        packager.package(output,root=self.root)
+        with zipfile.ZipFile(output/'foundry-mcp.zip') as archive:
+            manifest=json.loads(archive.read('module.json'))
+        self.assertFalse(manifest.get('relationships',{}).get('systems'),
+            'Core map/journal/image tools must load independently of PF2e; PF2e tools enforce their own system boundary.')
+
     def test_mismatched_versions_mutable_urls_missing_imports_and_symlinks_fail(self):
         with self.assertRaisesRegex(ValueError, 'versions must agree'):
             packager.manifest(self.root, tag='v9.0.0')

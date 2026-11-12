@@ -7,8 +7,8 @@ export function contextWorld(input={}){
   const doc=(kind,s,parent=null)=>({id:s.id,uuid:(parent?parent.uuid+'.':'')+kind+'.'+s.id,parent,type:s.type??'Scene',
     get name(){if(s.allowed===false)throw Error('Denied name');return s.name;},
     testUserPermission:()=>s.allowed!==false,
-    toObject(original){if(original!==true||s.allowed===false||kind.startsWith('JournalEntry'))throw Error('Denied/invalid source read');const {id,allowed,levels,notes,...v}=s;
-      return structuredClone(kind==='Note'?{...v,levels:s.levels??[]}:v);}});
+    toObject(original){if(original!==true||s.allowed===false||kind.startsWith('JournalEntry'))throw Error('Denied/invalid source read');const {id,allowed,levels,notes,tiles,...v}=s;
+      return structuredClone(kind==='Note'?{...v,levels:s.levels??[]}:kind==='Tile'&&Object.hasOwn(s,'levels')?{...v,levels:s.levels}:v);}});
   const scene=doc('Scene',source);
   const journals=collection((input.journals??[]).map(s=>{
     const entry=doc('JournalEntry',s);entry.pages=collection((s.pages??[]).map(p=>doc('JournalEntryPage',p,entry)));return entry;
@@ -21,11 +21,11 @@ export function contextWorld(input={}){
       return s.text||d.page?.name||d.entry?.name||'';
     }}});return d;
   }));
-  scene.tiles=collection([]);
+  scene.tiles=collection((source.tiles??[]).map(s=>doc('Tile',s,scene)));
   scene.getEmbeddedCollection=kind=>({Level:scene.levels,Tile:scene.tiles,Note:scene.notes})[kind];
   scene.getDimensions=()=>source.rectangle??{sceneX:1800,sceneY:2400,sceneWidth:source.width,sceneHeight:source.height};
   globalThis.game={ready:true,version:input.version??'14.369',user:{id:'gm',isGM:true},world:{id:'test'},system:{id:'other'},
-    scenes:collection([scene]),folders:collection([])};
+    scenes:collection([scene]),folders:collection((input.folders??[]).map(s=>doc('Folder',s)))};
   globalThis.location={origin:'http://localhost:30000'};
   const state={source,scene,files:input.files??['assets/a.png'],listings:0,browse_hook:null};
   class Picker{
