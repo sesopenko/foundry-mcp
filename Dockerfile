@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.title="Foundry MCP" \
       org.opencontainers.image.version=$VERSION \
       org.opencontainers.image.revision=$REVISION
 RUN groupadd --gid 10001 bridge && useradd --uid 10001 --gid bridge --no-create-home bridge
-RUN mkdir -p /data/pdf-library /data/pdf-state && chown -R 10001:10001 /data && chmod 700 /data/pdf-library /data/pdf-state
+RUN mkdir -p /data/pdf-library /data/pdf-state /data/image-previews && chown -R 10001:10001 /data && chmod 700 /data/pdf-library /data/pdf-state /data/image-previews
 WORKDIR /app
 COPY --from=dependencies /app/.venv /app/.venv
 COPY foundry_mcp_server/ ./foundry_mcp_server/

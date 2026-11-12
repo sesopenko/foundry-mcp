@@ -18,6 +18,10 @@ map context atomically to private original snapshots. Separate context readers,
 native annotation workers and derivative storage own authorization/geometry,
 pixel composition and seven-day delivery respectively. Repeated crops reuse
 one transfer; bounded rendered-key metadata supplies exact legend follow-ups.
+The isolated worker and short-lived source cache remain separate from the
+SQLite derivative store. A private named volume preserves immutable previews
+across container recreation; anonymous delivery does not query the GM browser.
+See [image-viewing deployment](image-viewing.md).
 
 The separate typed [compendium interface](compendium-tools.md) discovers packs,
 scans explicitly selected journal indexes/pages with work bounds and reads exact

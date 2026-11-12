@@ -11,6 +11,8 @@ services:
       FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
       FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
+      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
+      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
       FOUNDRY_MCP_PDF_ENABLED: ${FOUNDRY_MCP_PDF_ENABLED:-false}
       FOUNDRY_MCP_PDF_TRUSTED_GM_MCP: ${FOUNDRY_MCP_PDF_TRUSTED_GM_MCP:-false}
       FOUNDRY_MCP_PDF_LIBRARY_DIR: /data/pdf-library
@@ -21,6 +23,7 @@ services:
       FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES: ${FOUNDRY_MCP_PDF_MAX_UPLOAD_BYTES:-134217728}
       FOUNDRY_MCP_PDF_QUOTA_BYTES: ${FOUNDRY_MCP_PDF_QUOTA_BYTES:-2147483648}
     volumes:
+      - image-previews:/data/image-previews
       - pdf-library:/data/pdf-library
       - pdf-state:/data/pdf-state
     ports:
@@ -28,5 +31,6 @@ services:
     stop_grace_period: 15s
 
 volumes:
+  image-previews:
   pdf-library:
   pdf-state:

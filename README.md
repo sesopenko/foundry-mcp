@@ -35,6 +35,10 @@ Journal tools navigate and read [world journals](docs/journal-tools.md) and
 [image selection and embedding](docs/journal-images.md). Compendium content
 remains read-only.
 
+Source development adds [image previews and map crops](docs/image-viewing.md),
+map-folder browsing and optional readable note keys. Seven-day links require
+HTTPS and persistent private storage; target-client visual acceptance is pending.
+
 Chat tools provide bounded reading and HTML sending with explicit
 audiences and character speakers. See [chat tools and compatibility](docs/chat-tools.md).
 
@@ -66,7 +70,8 @@ credentials; development execution stays disabled. See the authentication and
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
-MCP server. It requires no Foundry container, source mounts, or data volumes:
+MCP server. It requires no Foundry container or source mounts; the private
+preview volume preserves optional seven-day links:
 
 ```yaml
 services:
@@ -82,9 +87,16 @@ services:
       FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
       FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
+      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
+      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
+    volumes:
+      - image-previews:/data/image-previews
     ports:
       - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
     stop_grace_period: 15s
+
+volumes:
+  image-previews:
 ```
 
 Create a private `.env` alongside it, setting your LAN address. Fill in nonempty credentials of your choosing; empty values deliberately

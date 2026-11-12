@@ -87,9 +87,23 @@ Commit packaging/deployment changes, tests, and operator/public docs together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and Compose example validation: not run.
-- Image identity, UID, codec matrix, restart/persistence results: pending.
-- Pending deployment/client prerequisites: pending.
+- Implementation: complete; [operator guide and package evidence](../../../image-viewing.md).
+- Dependency commit SHA(s): M05 `823cb3b`.
+- Commit: this commit.
+- Focused: package9/1.259s, upload13/0.667s and archive4/1.213s passed outside
+  sandbox. Full1018 Python (1 existing skip)/794JS passed134.139s before two
+  final cleanup/Compose tests; required hook verifies the final staged revision.
+- Exact commands: `docker build --pull=false -t foundry-mcp-image-preview-check:local .`,
+  `.venv/bin/python scripts/image-preview-package-check.py` and
+  `.venv/bin/python scripts/image-preview-compose-check.py` passed. Module ZIP
+  packaging passed at unchanged3.3.1. Ten synthetic-only Compose configurations
+  validated (Basic/OAuth files and README/Docker overview, disabled/enabled).
+- Image identity:`sha256:c41bca108db260560aa74fc3115541bec9f7a7b0bb2a5db43e021b621fd5d566`.
+  UID10001,pyvips3.2.0/libvips8.18.7/Pillow13.0.0; all9 format families,
+  unsafe SVG rejection, deterministic font/annotation output,0700/0600 storage
+  and real anonymous GET/query/HEAD passed. Same-volume container recreation
+  retained identical2760B derivative; exact owned resources cleaned.
+- No Foundry instance/setup/source mount/host decoder dependency, existing game
+  mutations, host port publication, version bump, release or push. Local native
+  browser/MCP/curl acceptance remains14a/M06; public HTTPS/target-client14b and
+  real Auth0/live S3 retain their explicit prerequisites.

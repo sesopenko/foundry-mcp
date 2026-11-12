@@ -110,6 +110,8 @@ left exposed through an internet-facing proxy.
 | `FOUNDRY_MCP_BROWSER_TOKEN` | empty | Nonempty development browser credential. |
 | `FOUNDRY_MCP_EXECUTION_TIMEOUT` | `15` | Development execution timeout, finite and greater than zero, at most 120 seconds. |
 | `FOUNDRY_MCP_TRACE_PATH` | unset | Optional private evaluation log; leave unset for ordinary production operation. |
+| `FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN` | unset | Opt-in canonical public HTTPS origin for seven-day image links; independent of OAuth PUBLIC_URL. |
+| `FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR` | `/data/image-previews` | Private UID10001 derivative store; deployment templates mount a persistent named volume. |
 
 Bind variables configure `python -m foundry_mcp_server.main` (including the
 foreground launcher and container). The managed development user service keeps
@@ -170,8 +172,9 @@ compatibility. A browser GET error on `/mcp/mcp` is not an MCP protocol test.
 The image runs as UID/GID 10001, installs Python 3.12 locked dependencies with
 uv, and has a standard-library Python healthcheck. Dockerfile pins base image
 and uv digests. Review and deliberately update those pins for maintenance.
-No repository mount, source tree, systemd process, or persistent volume is
-needed by the production image. Inspect the [verification record](operationalization-verification.md)
+No repository mount, source tree or systemd process is needed by the production
+image. Preview links and optional PDFs require their private persistent volumes.
+Inspect the [verification record](operationalization-verification.md)
 for actual tests and remaining gates.
 
 ## GitHub Actions setup and Docker Hub publication
@@ -274,7 +277,9 @@ server restart.
 
 The example publishes only on the selected LAN address, runs with
 `restart: unless-stopped`, allows a 15-second graceful stop, and uses private named volumes for optional
-PDF source and index state, without source-code mounts. There are no Traefik labels or automatic updates.
+PDF source/index state and image previews, without source-code mounts. Preserve
+the image-previews volume across container recreation to retain issued links.
+There are no Traefik labels or automatic updates.
 Confirm the LAN address belongs to the host and container clients can route to it.
 
 ## Install and configure the module — human operated
@@ -408,6 +413,16 @@ Official references: [module development](https://foundryvtt.com/article/module-
 [package management](https://foundryvtt.com/article/package-management/),
 [v13 settings](https://foundryvtt.com/api/v13/classes/foundry.helpers.ClientSettings.html),
 and [v13 notifications](https://foundryvtt.com/api/v13/classes/foundry.applications.ui.Notifications.html).
+
+## Image previews and map files
+
+The source build stages original images privately for30 minutes and issues
+bounded immutable crops for exactly seven days. Enable the independent preview
+origin in either Basic or OAuth template, retain the named volume and route the
+anonymous preview prefix directly through trusted HTTPS with caching and
+capability logging disabled. See [image-viewing operations](image-viewing.md)
+for proxy examples, resource limits, folder/map/level/note workflows, recovery
+and the isolated UID10001 codec/annotation/container-recreation check.
 
 ## Private PDF references
 

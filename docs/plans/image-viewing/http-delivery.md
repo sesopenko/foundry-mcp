@@ -15,8 +15,10 @@ An absent origin disables store setup and issuance without removing discovery
 or the later image-info capability. With an origin, startup opens/prunes the
 store and fails clearly if private persistence is unavailable. The directory
 must be writable by the service user (UID10001 in the image); deployments need
-durable volume backing to preserve links across container replacement. Task13
-owns final deployment templates. Source snapshots/decoder scratch remain separate.
+durable volume backing to preserve links across container replacement. Both
+[deployment templates](../../../deploy/compose.yaml) now mount the private
+image-previews named volume; see [operations](../../image-viewing.md).
+Source snapshots/decoder scratch remain separate.
 
 Server issuance policy requires an origin plus Basic, OAuth or authenticated
 development mode. Plain none cannot issue. A configured store can still serve

@@ -144,8 +144,8 @@ spawning agents or concurrent writes to this checkout.
 | [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Complete | 8155684 |
 | [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Complete | a07630f |
 | [M04b Label layout and encoding](tasks/m04b-note-layout-and-annotated-encoding.md) | 8 | M04a, M03b | Complete | 722a120 |
-| [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Complete | this commit |
-| [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Not started | — |
+| [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Complete | 823cb3b |
+| [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Complete | this commit |
 | [14a Local runtime acceptance](tasks/14a-local-runtime-acceptance.md) | 8 | 12b, 13 | Not started | — |
 | [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Not started | — |
 | [14b Target-client visual handoff](tasks/14b-target-client-visual-handoff.md) | 5 | M06 | Not started | — |

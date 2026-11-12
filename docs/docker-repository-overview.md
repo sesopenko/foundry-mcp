@@ -63,6 +63,11 @@ Source image tools also accept exact Scene/level/role selectors. Opt-in
 `map_notes:true` renders compact keys on verified default backgrounds and returns
 a bounded legend follow-up; foreground/Tile composition is excluded. See
 [map image workflows and limits](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-image-tools.md).
+Both Basic and OAuth deployment examples below mount a private named preview
+volume. Configure the independent preview HTTPS origin to enable links; preserve
+the volume when updating the container. Complete limits, proxy logging/routing,
+crop recovery and UID10001 package verification are in the
+[image-viewing operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/image-viewing.md).
 
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires
@@ -97,8 +102,15 @@ services:
       FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS: ${FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS:?set approved client}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
       FOUNDRY_MCP_DEV_EXECUTION: "false"
+      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
+      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
+    volumes:
+      - image-previews:/data/image-previews
     ports:
       - "127.0.0.1:8000:8000"
+
+volumes:
+  image-previews:
 ```
 
 Its private `.env` contains:
@@ -106,6 +118,8 @@ Its private `.env` contains:
 ```dotenv
 FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.3.1
 FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
+# Optional preview origin; independent of OAuth resource/audience configuration.
+FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN=
 FOUNDRY_MCP_OAUTH_ISSUER=https://YOUR_TENANT.REGION.auth0.com/
 FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS=auth0|REPLACE_WITH_USER_ID
 FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS=REPLACE_WITH_CLIENT_ID
@@ -341,6 +355,8 @@ services:
       FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
       FOUNDRY_MCP_PDF_ENABLED: ${FOUNDRY_MCP_PDF_ENABLED:-false}
+      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
+      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
       FOUNDRY_MCP_PDF_TRUSTED_GM_MCP: ${FOUNDRY_MCP_PDF_TRUSTED_GM_MCP:-false}
       FOUNDRY_MCP_PDF_LIBRARY_DIR: /data/pdf-library
       FOUNDRY_MCP_PDF_INDEX_DIR: /data/pdf-state
@@ -348,11 +364,15 @@ services:
       FOUNDRY_MCP_PDF_UPLOAD_TOKEN: ${FOUNDRY_MCP_PDF_UPLOAD_TOKEN:-}
       FOUNDRY_MCP_PDF_TRUST_TLS_PROXY: ${FOUNDRY_MCP_PDF_TRUST_TLS_PROXY:-false}
     volumes:
+      - image-previews:/data/image-previews
       - ./pdf-library:/data/pdf-library
       - ./pdf-state:/data/pdf-state
     ports:
       - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
     stop_grace_period: 15s
+
+volumes:
+  image-previews:
 ```
 
 ### `.env`
@@ -364,6 +384,8 @@ FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD='replace-with-your-mcp-password'
 FOUNDRY_MCP_BRIDGE_TOKEN='replace-with-your-browser-credential'
+# Set to your canonical externally reachable HTTPS origin to enable previews.
+FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN=
 # Optional PDF library; see the access and HTTPS/WSS requirements below.
 FOUNDRY_MCP_PDF_ENABLED=false
 FOUNDRY_MCP_PDF_TRUSTED_GM_MCP=false
@@ -379,6 +401,8 @@ alongside `compose.yaml`. They preserve uploaded PDFs, completed uploads awaitin
 indexing, and the SQLite index when the container is restarted or replaced.
 Keep and back up **both folders**. Do not delete them when refreshing the stack.
 Create them for the container's UID/GID 10001 before the first start.
+The separate image-previews named volume is initialized privately by the image;
+retain it for seven-day links across recreation and avoid `down --volumes`.
 
 Keep `.env` private and out of version control:
 
@@ -401,6 +425,7 @@ To use another host port, change only the published port in the mapping, for exa
 | `/mcp/mcp` | Streamable HTTP MCP endpoint; requires HTTP Basic Auth. |
 | `/ws/foundry` | GM browser bridge; requires the bridge credential in its first message. |
 | `/health` | Public liveness endpoint; does not require credentials. |
+| `/image-previews/{uuid4}.{png\|webp}` | Anonymous immutable derivative GET/HEAD for seven days when configured; never original files or an issuance endpoint. |
 
 Using your chosen host address and port:
 

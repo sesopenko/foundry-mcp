@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M05, [map-aware image tools](tasks/m05-map-aware-image-tool-integration.md).
+- Current task:13, [deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md).
 - Stage: commit.
-- Last completed task: M04b, commit `722a120`.
+- Last completed task: M05, commit `823cb3b`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: finish M05 final source/documentation review and focused regressions, then stage and commit with the full regression hook. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: establish packaging/config baseline, implement the frozen package probe/container lifecycle harness and deployment examples, then verify and commit13. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -35,6 +35,7 @@
 |M03b geometry/context |8155684 |963 Python (1 existing skip)/794JS hook passed |
 |M04a fixed glyphs |a07630f |975 Python (1 existing skip)/794JS full/hook passed |
 |M04b layout/encoding |722a120 |990 Python (1 existing skip)/794JS hook passed |
+|M05 map-aware image tools |823cb3b |1011 Python (1 existing skip)/794JS hook passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -1203,3 +1204,63 @@ the linked evidence pages; Git history retains prior milestone records.
   under test catalog convention); context23 passes13.017s. Source/docs/diff
   reviewed and git diff --check passed. Task evidence complete; stage explicit
   M05 files and run plain local commit with both required hook suites next.
+
+## Current13 implementation plan
+
+- M05 committed823cb3b after1011 Python (1 existing skip)/794JS hook passed;
+  26/30 tasks,171/200 points (85.5%) complete. Read current task, Dockerfile,
+  Basic/OAuth/local Compose and example environments, operations, Docker overview,
+  packaging/smoke tests and store/runtime/native interfaces. Code-graph store
+  overview/dependencies checked. No Foundry API/module behavior change planned.
+- Freeze responsibilities before code: packaged Python probe generates bounded
+  raster/SVG fixtures, exercises real supervised codecs and annotations/font,
+  validates private UID10001 store and writes one private receipt in a dedicated
+  verification volume. A second fixed probe action fetches that receipt through
+  the real local HTTP listener without credentials and prints aggregates only.
+- Host harness owns only a newly generated, labeled container and named volume:
+  start Basic-auth MCP with trusted synthetic HTTPS origin, wait bounded health,
+  seed/fetch, remove/recreate same container with same volume, fetch again and
+  compare aggregate hashes. Bounded command deadlines/output, exact cleanup in
+  finally; no existing volume/Foundry instance/source mount/network fixture.
+  Build is a separate explicit local command. Unit-test assertion failures,
+  redaction/cleanup ownership and configuration/examples alongside implementation.
+- Wire optional origin and fixed private data directory/named volume into Basic/
+  OAuth templates; create UID10001 directory in image. Public README stays concise;
+  complete contracts/limits/map flows/proxy routing and logging in dedicated docs,
+  operations and self-contained Docker overview. Origin remains opt-in and
+  independent of OAuth PUBLIC_URL; no version bump/publication/client claim.
+- Baseline packaging/upload tests next, then focused package tests, full suites,
+  rebuilt shipped-image codec/annotation/recreation checks and placeholder-only
+  Compose validation before separate13 commit. Native full map workflow remains
+  M06; target-client acceptance remains14b. Current unsuccessful corrections0.
+- Baseline packaging4/1.213s and upload13/0.667s pass. Added package probe,
+  separate owned-container/volume harness and synthetic-only Compose verifier.
+  Initial package7 had one expected new-contract failure for missing template
+  origin; after wiring examples/Docker directory the same test passes. Final
+  package9 passes1.184s before repeated deterministic-render assertion.
+- Docker build passedUID10001 native/supervised/glyph smokes, image
+  sha256:6e85ce763bfe5b17946594e02b0460bd3ff72560b8238ac8c3d8883800705186.
+  `.venv/bin/python scripts/image-preview-package-check.py` passed actual shipped
+  JPEG/PNG/WebP/AVIF/BMP/GIF/TIFF/APNG/SVG, unsafe SVG rejection,14px glyph ink,
+  500-square annotated PNG2760B and private0700/0600 store. Anonymous listener
+  GET/query/HEAD passed before/after container recreation using same new volume;
+  no host ports/source/native mounts/Foundry instance. Exact cleanup complete.
+- `.venv/bin/python scripts/image-preview-compose-check.py` passes10 configs
+  (Basic/OAuth files, README and Docker overview examples, each disabled/enabled
+  origin) with only synthetic interpolation and /dev/null env-file. Added tests
+  cover structural validation, isolation, exact cleanup and explicit cleanup
+  failure. Updated concise README, operator/map guide, architecture and overview.
+- Full runner52645 remains live in/tmp/foundry-image-13-full.log; inspect it,
+  do not restart for observation loss. Final deterministic annotation equality
+  was added after first package run; rerun focused and rebuilt packaged check
+  for that assertion. No active defect or unsuccessful correction attempt.
+- Final focused package9 passes1.259s. Full runner52645 terminal exit0:1018
+  Python (1 existing skip)/794JS passed134.139s before two final cleanup/Compose
+  tests. Hook verifies final staged revision. Final rebuilt image
+  sha256:c41bca108db260560aa74fc3115541bec9f7a7b0bb2a5db43e021b621fd5d566
+  passed native/supervised/glyph smokes and the complete package harness again,
+  now including repeated annotation-byte equality. Same2760B derivative/hash
+  survived container recreation; exact cleanup complete. Compose10 and module
+  packaging3.3.1 pass. No new game fixtures, host ports, release or publication.
+- Documentation/source review and git diff --check pass. Ready to stage13 and
+  commit with required two-suite hook; next ready task14a runtime acceptance.
