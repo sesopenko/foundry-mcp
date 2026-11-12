@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task:M06, [complete map workflow verification](tasks/m06-map-workflow-verification.md).
+- Current task:14b, [target-client visual handoff](tasks/14b-target-client-visual-handoff.md).
 - Stage: commit.
-- Last completed task:14a, commit `2d24dd6`.
+- Last completed task:M06, commit `9ad2e1a`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: implement/test the frozen complete map workflow using existing runtime support, then verify native map annotations/legends and commit M06. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: implement/test the frozen private-answer handoff/report and preparation/cleanup modes, audit complete design evidence and commit14b. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -38,6 +38,7 @@
 |M05 map-aware image tools |823cb3b |1011 Python (1 existing skip)/794JS hook passed |
 |13 packaged deployment |a10d601 |1020 Python (1 existing skip)/794JS hook passed |
 |14a local runtime |2d24dd6 |1032 Python (1 existing skip)/794JS full passed; both hook suites passed |
+|M06 complete map workflows |9ad2e1a |1043 Python (1 existing skip)/795JS full passed; both hook suites passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -1451,3 +1452,73 @@ the linked evidence pages; Git history retains prior milestone records.
   remains valid; manifest admission did not alter PF2e runtime handler behavior.
   Diff/whitespace/source reviewed, no active failure/cleanup. Stage M06 and
   commit with both hook suites, then proceed directly to14b visual handoff.
+
+## Current14b implementation plan
+
+- M069ad2e1a committed with both hook suites passing;29/30 tasks,195/200 points
+  (97.5%) complete. Read complete14b task and source-design external gate;
+ 14a/M06 native/package/cleanup evidence is available. No target ChatGPT client
+  control or externally reachable trusted preview origin is available. These
+  exact external prerequisites remain pending; local TLS/image viewing is not
+  substituted for target acceptance and no deployment/Auth0 mutation is allowed.
+- Freeze a separate private challenge/prompt/report component: generate a small
+  opaque-named raster with randomized label/symbol/color pair only in a selected
+  rectangle, using the bundled font. Save expected answers only in ignored private
+ 0700/0600 files, never in prompts/captions/alt/filenames/metadata/public reports.
+  Build distinct journal hidden-pixel, controlled exact/query fresh-context and
+  folder/map/level/annotated-key/legend prompts. Target passes require reviewed
+  actual-client observations; default and absent evidence remain pending.
+- Extend the existing live script, not another service: --visual-handoff creates
+  a private local bundle without game writes; --prepare-visual-fixture copies its
+  pixels to a new AssetFixture and creates an exactly marked journal/page through
+  existing authenticated writing tools, then stores concrete prompts privately.
+  --cleanup-visual-fixture reuses the same journal flag and AssetFixture ownership
+  checks, clears ready state and preserves the private handoff bundle. No public
+  URL is minted merely to prepare a fixture. Preparation/cleanup are bounded and
+  native-tested locally after offline pass, then immediately cleaned since the
+  actual external client is absent. Future operator can prepare again once ready.
+- Unit tests own answer isolation, actual generated crop pixels, strict observed
+  statuses, exact/query same-path and fresh-context equivalence, map omissions/
+  key-follow-up evidence, private bundle permissions and delegated cleanup.
+  Run focused/full suites, create/prepare/clean one marked local bundle fixture,
+  refresh/console check, then reconcile all30 tasks/design gates and final Git
+  state before14b commit and final goal audit. No active failure/failed corrections.
+- Implemented separate private challenge/report and native preparation/cleanup
+  components plus shared-script modes. Focused9 passed. Full runner48022 terminal
+ 1052 Python (1 existing skip)/795JS passed148.413s; helper12 passed1.387s.
+  Created only an ignored0700/0600 private handoff bundle; answers never printed.
+- First native preparation5 calls and exact cleanup1 passed,0 public URLs issued.
+  Testing documented reuse of that bundle after cleanup then failed. Source
+  journalAuthoring.js retains completed write promises by operation ID even after
+  target deletion; helper had reused IDs for a new fixture lifecycle. New focused
+  retained-receipt client unit reproduced the same deleted-parent-context failure
+  against fixture.prepare. This is a harness defect, not a journal retry defect.
+- Corrected only helper operation IDs: fresh8-hex preparation generation within
+  existing exact cleanup-marker prefix and64-char request bound. Same unchanged
+  unit/full focused10 now verifying. Failed corrections0. Native fixtures are
+  already cleaned; do not rerun until final focused/full checks pass.
+- Final full runner29601 writes/tmp/foundry-image-14b-final-full.log; inspect
+  authoritative completion. Next:
+  verify unchanged regression/full pass, then repeat prepare/cleanup with fresh
+  lifecycle IDs, record public pending status, audit all requirements and commit.
+- Final runner29601 terminal exit0:1053 Python (1 existing skip)/795JS pass
+  148.844s; focused10 pass0.157s, helper12 pass1.387s. Same unchanged retained-
+  receipt regression passes. Native fixed repeated preparation5 calls and
+  cleanup1 pass with0 public URLs; game fixtures removed and bundle ready=false.
+  No further repeated native trials are needed. Actual four ChatGPT scenarios
+  remain pending; no observations file or synthetic client pass was recorded.
+- Private handoff bundle remains ignored0700/0600; expected answers never
+  printed or tracked. Dedicated refresh/browser readyGM14.369/test/console0,
+  service healthyGM/trace write_failures0. Previous native review/TLS/game
+  fixtures are all cleaned; original service config retained.
+- Rebuilt final production artifact includes all current source helpers and
+  passes native/supervised/glyph smokes. Complete existing package harness passes
+  UID10001 all9 codecs/unsafe-SVG/font/annotation/private permissions/anonymous
+  GET-query-HEAD/same-volume recreation, cleanup_complete=true, image
+  sha256:0809b39f1da3dab32fb33ee33839d59ce825504c5f0ad84af2160cdff70054ad.
+  Compose10 and moduleZIP3.3.1 pass; versions/locked dependencies unchanged.
+- Whole-design acceptance audit saved in completion-audit.md. Machine-checked
+  current index:30 tasks/200 points/max8, all29 predecessor commits present and
+  ordered after their dependencies; original execution prompt is in first task
+  b0cc01e. Only14b's final local commit remains. No current defect/failed fixes.
+  Review/stage14b files, required two-suite hook/commit, then final Git/goal audit.

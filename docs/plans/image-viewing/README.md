@@ -147,8 +147,8 @@ spawning agents or concurrent writes to this checkout.
 | [M05 Map-aware image tools](tasks/m05-map-aware-image-tool-integration.md) | 8 | M04b, 11 | Complete | 823cb3b |
 | [13 Deployment and packaged verification](tasks/13-deployment-and-packaged-verification.md) | 8 | M05 | Complete | a10d601 |
 | [14a Local runtime acceptance](tasks/14a-local-runtime-acceptance.md) | 8 | 12b, 13 | Complete | 2d24dd6 |
-| [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Complete | this commit |
-| [14b Target-client visual handoff](tasks/14b-target-client-visual-handoff.md) | 5 | M06 | Not started | — |
+| [M06 Complete map workflow verification](tasks/m06-map-workflow-verification.md) | 8 | 14a | Complete | 9ad2e1a |
+| [14b Target-client visual handoff](tasks/14b-target-client-visual-handoff.md) | 5 | M06 | Complete | this commit |
 
 Task files name intended local commit subjects. Each task's implementation,
 unit tests, relevant documentation, and evidence must be committed together;
@@ -320,6 +320,10 @@ checks passing, and available local/package evidence recorded. Keep three facts
 separate: implementation completion, local verification, and target ChatGPT
 visual acceptance. A missing live prerequisite leaves that evidence pending;
 it does not turn an unverified implementation into verified support.
+
+The completed source implementation and available local verification are
+reconciled in the [completion audit](completion-audit.md). Actual target-client
+visual acceptance remains explicitly pending in the [private-answer handoff](visual-handoff.md).
 
 For visual acceptance, a public HTTPS deployment and the target ChatGPT client
 must be available. The client must identify information present only in a crop,

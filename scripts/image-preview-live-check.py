@@ -20,6 +20,8 @@ from mcp.types import CallToolResult as ProtocolResult
 from foundry_mcp_server.image_preview_live_support import (
     AssetFixture,Budget,PreviewTLS,cleanup_map_review,compact,curl_delivery,preview_settings,require)
 from foundry_mcp_server.map_workflow_acceptance import verify_map
+from foundry_mcp_server.image_preview_visual_handoff import create_bundle,public_report
+from foundry_mcp_server.image_preview_visual_fixture import prepare as prepare_visual,cleanup as cleanup_visual
 
 SPEC=importlib.util.spec_from_file_location('preview_journal_fixture',ROOT/'scripts/journal-authoring-live-check.py')
 fixture=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(fixture)
@@ -115,9 +117,33 @@ def service_restart():
 
 async def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--map',action='store_true',help='Read-only complete map/annotation/legend acceptance, <=60 calls/900s.')
-    parser.add_argument('--cleanup-map-review',action='store_true',help='Remove only the exact marked private derivative-review files.')
+    modes=parser.add_mutually_exclusive_group()
+    modes.add_argument('--map',action='store_true',help='Read-only complete map/annotation/legend acceptance, <=60 calls/900s.')
+    modes.add_argument('--cleanup-map-review',action='store_true',help='Remove only the exact marked private derivative-review files.')
+    modes.add_argument('--visual-handoff',action='store_true',help='Create a private pending visual challenge/prompts bundle, no game writes.')
+    modes.add_argument('--prepare-visual-fixture',action='store_true',help='Prepare exactly marked image/journal from private bundle; retain until explicit cleanup.')
+    modes.add_argument('--cleanup-visual-fixture',action='store_true',help='Delete only the private bundle marker-owned game fixture; retain the handoff bundle.')
+    modes.add_argument('--visual-handoff-status',action='store_true',help='Report pending/pass/fail from private operator-reviewed client observations, without answers.')
     args=parser.parse_args()
+    bundle=ROOT/'.local/image-preview-visual-handoff'
+    if args.visual_handoff or args.visual_handoff_status:
+        try:
+            if args.visual_handoff:report=create_bundle(bundle)
+            else:
+                observation=bundle/'observations.json'
+                if observation.exists():require(observation.is_file() and not observation.is_symlink() and observation.stat().st_size<=32768)
+                report=public_report(bundle,json.loads(observation.read_text()) if observation.exists() else None)
+        except Exception as error:report=dict(passed=False,error_type=type(error).__name__)
+        print(json.dumps(report,sort_keys=True));return 1 if report.get('passed') is False or report.get('visual_acceptance')=='failed' else 0
+    if args.prepare_visual_fixture or args.cleanup_visual_fixture:
+        try:
+            token=next(line.partition('=')[2].strip() for line in (ROOT/'.env.mcp').read_text().splitlines()
+                if line.partition('=')[0].strip()=='FOUNDRY_MCP_CALLER_TOKEN')
+            async with Client(StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp',headers={'Authorization':'Bearer '+token}),timeout=60,init_timeout=10) as client:
+                action=prepare_visual if args.prepare_visual_fixture else cleanup_visual
+                report=await action(client,bundle,ROOT/'foundry-data/Data',fixture)
+        except Exception as error:report=dict(passed=False,error_type=type(error).__name__)
+        print(json.dumps(report,sort_keys=True));return 1 if report.get('passed') is False else 0
     if args.cleanup_map_review:
         try:report=cleanup_map_review(ROOT/'.local/image-preview-map-review')
         except Exception as error:report=dict(cleanup_complete=False,error_type=type(error).__name__)
