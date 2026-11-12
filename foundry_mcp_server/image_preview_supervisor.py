@@ -10,7 +10,7 @@ from .image_preview_admission import MAX_QUEUED,PreviewAdmission
 from .image_preview_child import PreviewChild,MAX_REQUEST_BYTES
 from .image_preview_resources import MONITOR_INTERVAL,ResourceMonitor,WorkerMetrics
 from .image_preview_workspace import PreviewWorkspace
-from .image_preview_worker import PreviewFailure
+from .image_preview_failure import PreviewFailure
 
 
 class PreviewSupervisor:
@@ -57,12 +57,14 @@ class PreviewSupervisor:
             if succeeded:
                 self.monitor.final_scratch(workspace.path,metrics)
 
-    async def run(self, payload, *, metrics=None, timeout=None):
+    async def run(self, payload, *, metrics=None, timeout=None, collect=None):
         """Return bounded worker bytes only after child close and final scratch check.
 
         Components exclusively own permits, paths, processes and measurements.
         The coordinator owns processing deadline/error policy. Original snapshots
         and decoded image metadata belong to its caller, not these components.
+        Optional trusted synchronous collect(workspace,reply) runs after child
+        close/final-scratch checks and before workspace cleanup. No MCP callback.
         """
         if not isinstance(payload,bytes) or len(payload)>MAX_REQUEST_BYTES:
             raise PreviewFailure('InvalidOperation')
@@ -73,8 +75,9 @@ class PreviewSupervisor:
             started = time.monotonic()
             try:
                 with self.workspace_factory() as workspace:
-                    return await self._run(payload,workspace,metrics,
+                    reply = await self._run(payload,workspace,metrics,
                         self.timeout if timeout is None else timeout)
+                    return collect(workspace,reply) if collect is not None else reply
             except TimeoutError:
                 raise PreviewFailure('ImageProcessingTimeout') from None
             except (OSError,ValueError,TypeError):

@@ -72,8 +72,25 @@ own geometry on smaller diagnostic images.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks, geometry/dimension/area results: not run.
-- Outstanding codec/runtime evidence: pending.
+- Implementation: complete; native RegionPipeline owns display orientation,
+  exact crop, alpha/color conversion and reusable Lanczos3 candidates. Private
+  worker/typed collector expose lossless intermediates only; no public tool/URL.
+- Dependency commit SHA(s):05b `cc7ba71`.
+- Commit: this commit.
+- Focused checks outside sandbox: geometry11,worker8,probe9 passed. Full
+  `./scripts/test.sh`:782 Python (1 existing skip),749 JavaScript passed.
+- Independent decoded pixels pass RGB/RGBA native/border/onepixel crops and all8
+  orientations. Real wide/square/thin resizes fit edge/area budgets, preserve
+  uniform colors and avoid transparent-RGB bleed. Grayscale16/embedded sRGB,
+  repeated original-region resampling, invalid crops with dimensions, malformed
+  parent replies and cancellation/collector cleanup pass.
+- Exact10000² dimension test failed1535² before equivalent integer arithmetic
+  corrected floating underflow; unchanged test passed. Native repeat test failed
+  with out-of-order sequential read, then passed unchanged with lazy random
+  access. Exact compressed/header-limit probe regressions still pass, proving
+  header probing does not decode claimed large raster bodies. Corrections0
+  unsuccessful; fixture import setup was separately diagnosed/corrected.
+- [Geometry contracts/API evidence](../crop-geometry.md). Encoding/2MiB public
+  budget06b, additional formats07a/07b, full100MP/resource measurements12b and
+  complete shipped-image acceptance13 remain separate work. No external
+  prerequisite blocks this task; no game assets/documents were modified.

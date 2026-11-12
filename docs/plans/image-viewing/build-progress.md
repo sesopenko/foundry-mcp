@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: 05b, [worker resource supervision](tasks/05b-worker-resource-supervision.md).
+- Current task: 06a, [crop geometry and resampling](tasks/06a-crop-geometry-and-resampling.md).
 - Stage: commit.
-- Last completed task: 05a, commit `57123ce`.
+- Last completed task: 05b, commit `cc7ba71`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified05b with its hook, then resume06a geometry from its complete task file. No active failure; historical failed-attempt count3 is preserved. No unsuccessful production correction since user authorized resumption.
+- Next action: commit verified06a, then read/baseline06b encoding and byte budget. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -17,6 +17,7 @@
 |04a Python assembly |fe47d21 |720 Python (1 skip),749 JS passed |
 |04b snapshots/identity |a045d08 |733 Python (1 skip),749 JS passed |
 |05a decoder probe/package |57123ce |741 Python (1 skip),749 JS passed |
+|05b resource components/refactor |cc7ba71 |770 Python (1 skip),749 JS passed |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -161,3 +162,36 @@ the linked evidence pages; Git history retains prior milestone records.
 - `git diff --check` passed; exact usage search finds no supervisor subclass,
   supervisor-private gate/queue mock or unrelated process.asyncio patch. No
   additional broad benchmarks or automatic retries were run.
+
+## Current06a checkpoint
+
+- Baseline worker7 passed. Official libvips8.18 autorot/extract_area/resize/
+  premultiply/unpremultiply/colourspace/ICC docs and pinned8.18.7 resize source
+  read; random-access file opening docs confirm headers stay lazy and native
+  full decompression spills under configured threshold/scratch settings.
+- Geometry module owns exact crop, display orientation, source-region pipeline,
+  integer output sizes, alpha-safe Lanczos3 and ICC/declared-space sRGB conversion.
+  Worker region operation writes fixed private region.png; trusted operation
+  collector reads it only after close/final scratch and before cleanup. No new
+  public tool or public2MiB promise until06b. Shared lightweight PreviewFailure
+  avoids duplicate exception identities when the worker runs as __main__.
+- First geometry10 run:8 passed, exact10000-square sizing failed1535 vs1536,
+  and repeat-evaluation fixture failed. Integer arithmetic equivalent to the
+  specified scale corrected floating underflow; same exact-output test passed.
+- Repeat fixture first had a missing repository import path (proved by direct
+  fixture invocation); fixed trusted test PYTHONPATH without changing production.
+  Then focused assertion failed with classified native out-of-order sequential
+  read. Random native access corrected reusable-pipeline evaluation; identical
+  test passed. No unsuccessful production corrections for either issue.
+- Real supervised tests already pass native RGB/RGBA crops/edges/onepixel, all8
+  PNG orientations vs independent Pillow oracle, invalid rectangles with known
+  dimensions, alpha edge colors, grayscale16 and embedded-sRGB conversion.
+- Exact focused commands: `.venv/bin/python -m unittest discover -s tests -p
+  'test_image_preview_geometry.py' -v`; `-k exact_output` and `-k repeated` used
+  for demonstrated corrections, expected assertions unchanged. Probe regression
+  session65380 passed9. Geometry final11/worker8 passed; collector order/failure
+  and malformed parent result checks included. New tests use current Pillow13
+  get_flattened_data; official API/deprecation reference checked.
+- `./scripts/test.sh` passed782 Python (1 existing skip),749 JS,exit0.
+  `git diff --check` passed. Details/API evidence in crop-geometry.md. No new
+  MCP registration, runtime game mutations or external prerequisites for06a.

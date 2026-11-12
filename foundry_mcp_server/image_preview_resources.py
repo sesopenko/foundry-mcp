@@ -10,7 +10,7 @@ from pathlib import Path
 import stat
 
 from . import image_preview_limits as limits
-from .image_preview_worker import PreviewFailure
+from .image_preview_failure import PreviewFailure
 
 MONITOR_INTERVAL = 0.025
 MAX_SCRATCH_ENTRIES = 4096

@@ -63,6 +63,10 @@ Auth0 and AWS credential environment variables are not forwarded.
 The shared supervisor below now supplies independent resource enforcement.
 Full format/large-map/font/crop acceptance remains later work.
 
+Private [crop geometry](plans/image-viewing/crop-geometry.md) now supports
+display orientation, exact native regions and alpha-safe bounded resampling.
+Public encoding/byte limits and tool registration remain later tasks.
+
 ## Resource supervision
 
 `image_preview_supervisor.PreviewSupervisor` coordinates dedicated components:

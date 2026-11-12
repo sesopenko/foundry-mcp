@@ -3,7 +3,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from . import image_preview_limits as limits
-from .image_preview_worker import PreviewFailure
+from .image_preview_failure import PreviewFailure
 
 MAX_QUEUED = 8
 

@@ -188,3 +188,20 @@ class SupervisorTests(unittest.IsolatedAsyncioTestCase):
         async with image_uploads._operation_lock:
             self.assertEqual(await supervisor.run(b'{}'),b'{}')
         self.assertEqual(events,['admit','workspace','reap','final','remove','release'])
+
+    async def test_collector_runs_after_reap_before_removal_and_its_error_unwinds(self):
+        fixture=FixtureChildren('good')
+        supervisor=self.supervisor(fixture)
+        def collect(workspace,reply):
+            self.assertEqual(fixture.children[-1].returncode,0)
+            self.assertTrue(workspace.path.exists())
+            self.assertEqual(json.loads(reply),{'ok':True})
+            return 'owned-result'
+        self.assertEqual(await supervisor.run(b'{}',collect=collect),'owned-result')
+        self.assert_clean(fixture)
+        def fail(workspace,reply):
+            self.assertTrue(workspace.path.exists())
+            raise RuntimeError('collector failure')
+        with self.assertRaisesRegex(RuntimeError,'collector failure'):
+            await supervisor.run(b'{}',collect=fail)
+        self.assert_clean(fixture)

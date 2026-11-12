@@ -2,7 +2,7 @@
 import asyncio
 import sys
 
-from .image_preview_worker import PreviewFailure
+from .image_preview_failure import PreviewFailure
 
 MAX_OUTPUT_BYTES = 4096
 MAX_REQUEST_BYTES = 8192

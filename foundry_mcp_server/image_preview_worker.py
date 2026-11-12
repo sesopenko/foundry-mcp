@@ -13,14 +13,9 @@ import sys
 import tempfile
 
 from . import image_preview_limits as limits
+from .image_preview_failure import PreviewFailure
 
 MAX_REQUEST_BYTES = 8192
-
-
-class PreviewFailure(Exception):
-    def __init__(self, code, width=None, height=None):
-        self.code, self.width, self.height = code, width, height
-        super().__init__(code)
 
 
 def initialise():
@@ -75,7 +70,10 @@ def open_original(path):
     else:
         raise PreviewFailure('UnsupportedImage')
     pyvips = initialise()
-    options = dict(access='sequential', fail_on='warning')
+    # A region must support multiple independent encoding/resampling attempts.
+    # Sequential-only decoders cannot rewind after evaluating the first one.
+    # Random access stays lazy at header probe; native spill uses owned scratch.
+    options = dict(access='random', fail_on='warning')
     if loader == 'jpegload':
         options['autorotate'] = False
     if loader == 'webpload':
@@ -103,6 +101,20 @@ def probe(path):
     return metadata
 
 
+def region_pixels(path, crop):
+    """Private lossless geometry intermediate;06b owns public encoding budgets."""
+    from .image_preview_geometry import prepare_region,output_dimensions
+    image,metadata = open_original(path)
+    region = prepare_region(image,metadata,crop)
+    width,height = output_dimensions(region.width,region.height)
+    output = region.resample(width,height)
+    target = Path(os.environ['TMPDIR'])/'region.png'
+    descriptor = os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+    os.close(descriptor)
+    output.pngsave(str(target),strip=True)
+    return dict(source=metadata,region=region.bounds,width=width,height=height)
+
+
 def smoke():
     """Small deterministic packaged-image probe, including actual effective UID."""
     from PIL import Image
@@ -121,10 +133,12 @@ def main():
         else:
             raw = sys.stdin.buffer.read(MAX_REQUEST_BYTES+1)
             request = json.loads(raw) if len(raw) <= MAX_REQUEST_BYTES else None
-            if (not isinstance(request,dict) or set(request) != {'operation','source'} or request['operation'] != 'probe'
+            if (not isinstance(request,dict) or request.get('operation') not in ('probe','region')
+                    or set(request) != ({'operation','source'} if request.get('operation')=='probe' else {'operation','source','crop'})
                     or not isinstance(request['source'],str) or not 1 <= len(request['source']) <= 4096):
                 raise PreviewFailure('InvalidOperation')
-            result = {'metadata':probe(request['source'])}
+            result = ({'metadata':probe(request['source'])} if request['operation']=='probe'
+                else {'geometry':region_pixels(request['source'],request['crop'])})
     except PreviewFailure as failure:
         result = {'error_code':failure.code}
         if failure.width is not None and failure.height is not None:
