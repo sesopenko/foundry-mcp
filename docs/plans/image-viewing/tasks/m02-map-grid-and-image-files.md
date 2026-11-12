@@ -69,8 +69,18 @@ reader, typed contracts, tests, and file/grid guidance together.
 
 ## Completion record
 
-- Implementation: not started.
-- Dependency commit SHA(s): pending.
-- Commit: pending (`this commit` when completed).
-- Focused/full checks and complete asset/Tile workflows: not run.
-- Public API evidence and exact pending runtime prerequisites: pending.
+- Implementation: complete; [configuration contract and measurements](../map-info.md).
+- Dependency commit SHA(s): M01 `e9ea43e`,02 `141ede6`.
+- Commit: this commit.
+- Focused: Python17/JS16 pass (combined with unchanged browsing:27 JS).
+  Full `./scripts/test.sh` passed928 Python (1 existing skip)/777 JS before
+  final schema narrowing and one diagnostic privacy test; the required commit
+  hook verifies the final staged revision with both suites.
+- Actual read-only native workflow:7 calls under30/120s,2 representative Scenes,
+  both assets/Tile streams complete, shared revisions and active Scene unchanged.
+  Catalog47/309786 compact bytes; live tool record23098B. Dedicated browser
+  readyGM14.369/test,zero console errors. Local module package3.3.1 passes.
+- Grounded Docs/public-schema evidence and response table are linked above.
+  No M02 runtime prerequisite or fixture cleanup remains. Empty/null Tile level
+  applicability stays explicitly not_evaluated; M03 owns semantics/mapping.
+  Public-host and target-client workflows retain later task gates.

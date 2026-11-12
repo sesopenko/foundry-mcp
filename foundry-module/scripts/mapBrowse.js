@@ -98,6 +98,10 @@ function startAt(cursor,scope,revision,total){
   return value.offset;
 }
 
+// Shared core-map primitives; selected-map readers own their narrower snapshots.
+export {context as mapContext,hash as mapHash,named as mapNamed,bytes as mapBytes,
+  encodeCursor as mapCursor,startAt as mapOffset};
+
 /** Browse one authorized immediate-child stream. Caller key is server-injected. */
 export async function browseMaps(params={},isCurrent=()=>true){
   if(!params||typeof params!=='object'||Array.isArray(params)||Object.keys(params).some(k=>!KEYS.includes(k)))invalid();

@@ -7,6 +7,11 @@ through a separate core14 browser handler. Python binds cursors to verified
 caller identity and validates compact hierarchy/next-call results; the browser
 checks permissions and metadata revisions without activating a Scene. See
 [map browsing](plans/image-viewing/map-browsing.md).
+The separate `get_map_info` handler projects selected Scene geometry/grid and
+embedded level/Tile configuration. Private source witnesses participate in
+metadata revisions while public responses redact sensitive references. Typed
+Python validation rejects wrong owners, roles, continuations and source hints;
+see [map configuration](plans/image-viewing/map-info.md).
 
 The separate typed [compendium interface](compendium-tools.md) discovers packs,
 scans explicitly selected journal indexes/pages with work bounds and reads exact

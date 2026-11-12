@@ -51,7 +51,11 @@ Source development includes read-only `browse_maps` navigation of core14 world
 Scene folders and named maps, preserving duplicate identities and bounded
 continuations without activating a Scene. See the
 [map browsing contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-browsing.md)
-for scope and selected-map follow-up implementation status.
+for scope. `get_map_info` reads selected Scene dimensions, grid, explicit level
+background/foreground references and a separate Tile inventory; it never
+activates or exports a composed Scene. See
+[selected map configuration](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-info.md)
+for file-availability limits and sensitive-reference handling.
 
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires

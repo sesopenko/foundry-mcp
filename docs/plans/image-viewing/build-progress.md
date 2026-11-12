@@ -1,10 +1,10 @@
 # Image viewing build progress
 
-- Current task: M01, [map folder browsing](tasks/m01-map-folder-browsing.md).
+- Current task: M02, [grid and image files](tasks/m02-map-grid-and-image-files.md).
 - Stage: commit.
-- Last completed task: 12b, commit `5bae8bb`.
+- Last completed task: M01, commit `e9ea43e`.
 - Persistent goal remains active. Its environment objective points to the attachment containing the full goal, read at kickoff; the complete assignment is preserved in the [execution prompt](../../prompts/foundry-image-viewing-build-agent.md).
-- Next action: commit verified M01, then read M02 and establish its baseline. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
+- Next action: commit verified M02 with required hook, then read M03a and establish its note-identity baseline. No active failure; historical failed-attempt count3 is preserved, resolved by the authorized refactor.
 
 ## Completed checkpoints
 
@@ -29,6 +29,7 @@
 |11 image URL |f5d04c3 |885 Python (1 existing skip)/749JS full passed; hook passed both |
 |12a cross-layer workflows |d5fe0de |893 Python (1 existing skip)/750JS full passed; hook passed both |
 |12b large maps/payloads |5bae8bb |899 Python (1 existing skip)/750JS full passed; hook passed both |
+|M01 map browsing |e9ea43e |912 Python (1 existing skip)/761JS full passed; hook passed both |
 
 Every task's tests/evidence are in its task file and linked detail page. Baseline
 checkout was `2cd3d88`; no push, tag, publication, release or version bump.
@@ -689,3 +690,94 @@ the linked evidence pages; Git history retains prior milestone records.
   version bump/tag/publication. Contract/task include response-byte table and
   public API evidence. Final diff review and task commit next; no active defect
   or unsuccessful correction attempts.
+
+## CurrentM02 checkpoint
+
+- M01 e9ea43e and02 141ede6 dependencies committed;20/30 tasks,129/200 points
+  (64.5%) complete. M01 hook passed both suites and the worktree was clean.
+- Read complete M02 requirements. Grounded Docs list/find version14 and search
+  plus fresh official Scene/Level/Grid/Tile/Dimensions and Base schema pages
+  confirm adopted public serialization, getDimensions, embedded collections,
+  Level background/foreground and Tile levels. No private transform helper or
+  legacy Scene background is authorized as a substitute for explicit levels.
+- Code graph module overviews read; CLI executable is absent but MCP works.
+  Next bounded baseline will corroborate metadata shapes in14.369/test without
+  exposing paths or altering active Scene. No M02 production implementation yet.
+- Baseline helper `map_info_audit` tests2 passed; existing JS browse11 passed.
+  Actual bounded baseline2 calls/120s passed:50 Scenes/50 levels/78 Tiles,
+  48 backgrounds/14 foregrounds/2 empty levels; public source/embedded identities
+  and finite scene rectangles agree; all8 grid/texture keys and Tile levels
+  observed, active Scene unchanged,46 tools/286687B. No writes/raw identities.
+- Frozen selected-map contract/API evidence saved in map-info.md before reader
+  implementation. Tile null/empty membership stays explicitly unevaluated until
+  M03 semantics are verified; no silent selected-level omissions/composition.
+  Next action implement typed contracts and detached browser reader with tests.
+- Added internal strict selected-map models and initial detached browser reader;
+  no public registration yet. Python baseline/contracts6 pass. JS initial10:
+  9 passed; signed-reference replacement expected ContentChanged but succeeded.
+  Root: redacted public projection erased distinct authorized source metadata
+  before hashing. Added private selected-source revision witnesses, never public
+  response/log content; rerunning the same unchanged regression plus browse tests.
+  Unsuccessful correction count0. Next adapter/actual MCP tests, packaging and
+  full/runtime verification before M02 commit; task is not complete.
+- Same signed-reference revision regression passes unchanged; JS21 combined.
+  Added authenticated adapter/actual RPC registration and fixed packaging/smoke
+  usage points; actual MCP+Node tests12 pass1.887s (discovery23489B).
+  Initial fixture setup lacked main's manager registration and an edit misplaced
+  baseline tests under MCP class; corrected fixture organization/import, leaving
+  expectations unchanged. No production workaround or unsuccessful fix attempt.
+- Two further focused failures demonstrated: encoded dot segments normalized
+  away before source-hint checks; forged browser safe status admitted signed/
+  credential-bearing source hints in Python. Correct raw-segment checks before
+  normalization and independent typed-response path/privacy validation, then
+  rerun unchanged tests. No raw references should enter public diagnostics.
+- Those unchanged regressions pass; Python13/JS22 passed. First full925 Python
+  (1 existing skip)/772 JS passed; two new runtime-verifier tests later pass,
+  Python15. Existing service restart/refresh readinessGM14.369/console0.
+- Actual selected-map verifier failed at first read (call3), public MapReadFailed.
+  Diagnostic allowlist first lacked that category (one unsuccessful diagnostic
+  adjustment); fixed categorization identifies browser layer. Deeper fixed
+  handler diagnostic initially had JS newline escaping error, corrected and
+  unit-tested parser/privacy before invocation. It then captured TypeError at
+  mapInfo.js110/mapBrowse.js13, exactly reproduced by own undefined optional
+  Tile name. Same focused test fails Array.from(undefined), matching live stack.
+- Correct Tile name omission and optional primitive pick for own undefined;
+  unchanged regression and JS25 now verifying. Production correction first
+  attempt; no swallowed errors, guessed defaults or changed assertions. Refresh
+  dedicated tab and retry bounded read to verify this demonstrated cause.
+- Live retry passed7 calls/2 representative maps: assets1/tiles2 and assets1/
+  tiles1, every stream complete, same revision across sections, active Scene
+  unchanged. Catalog47/310184B, tool23496B. No game writes. Final review also
+  proved merged texture.rotation overwrote Tile rotation: new unchanged test
+  failed90 vs15; separate texture_rotation projection/model corrects it.
+  JS26 combined passes, Python16/full suites verifying. No unsuccessful fix.
+- Public TextureData page documents SchemaField/fields/keys rather than named
+  transform semantics. A bounded public-schema diagnostic checks exact declared
+  Tile texture keys without adopting a transform algorithm; M03 mapping gates
+  remain separate. Final refresh/live/package/diff/commit still outstanding.
+- Optional own-undefined media src shared the absence distinction: focused test
+  failed unsupported vs missing and inflated reference count; skip undefined
+  before classification, same unchanged test passes in JS27 combined. Final
+  full/hook will include this correction. Python16 passes, concrete recovery
+  now correctly names get_map_info rather than sibling browse_maps.
+- Final native read7 calls passes after restart/readyGM/console0:47 tools/
+  310520B catalog and23832B tool record (before narrowing unsupported Tile fields).
+  Diagnostic full-result JSON initially hit the existing exploration1000-char
+  per-string clip, identified in exploration.js; compact success summary now
+  passes its unit/privacy/parser checks and actual1-call handler/schema probe.
+- Public TileDocument.schema.getField('texture').keys() confirms only anchors,
+  scale,fit,src among proposed fields; Tile texture rotation/offsets are NOT
+  declared. Removed those public fields rather than depend on unsupported data.
+  Placement rotation remains15 in the proven collision regression; expected
+  texture output changed explicitly due to newly verified public schema contract,
+  not to make a failing correction pass. M03 Level transforms remain gated.
+- Final full runner passed928 Python (1 existing skip)/777 JS before schema
+  narrowing; final focused/hook will verify final declarations. No game fixtures
+  or asset writes; existing browse/selected-map native workflows passed.
+- Final Python17/JS27 focused passes; module packaging3.3.1 passes. Existing
+  service restarted, dedicated tab refreshed and readiness/console0 confirmed.
+  Final actual selected-map read7 calls passes,47/309786B catalog,23098B tool
+  record. Assets/Tile result bytes unchanged by schema narrowing. All native
+  streams complete, metadata revisions agree, active Scene unchanged.
+- Public/operator/module architecture/task evidence updated; final diff review
+  and required two-suite hook/local commit next. No active diagnosis/cleanup.

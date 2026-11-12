@@ -138,8 +138,8 @@ spawning agents or concurrent writes to this checkout.
 | [11 Image URL MCP tool](tasks/11-image-url-mcp-tool.md) | 8 | 07b, 09b, 10 | Complete | f5d04c3 |
 | [12a Workflow and failure integration](tasks/12a-workflow-and-failure-integration.md) | 8 | 11 | Complete | d5fe0de |
 | [12b Large-map and payload measurements](tasks/12b-large-map-and-payload-measurements.md) | 8 | 12a | Complete | 5bae8bb |
-| [M01 Map folder browsing](tasks/m01-map-folder-browsing.md) | 8 | 01 | Complete | this commit |
-| [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Not started | — |
+| [M01 Map folder browsing](tasks/m01-map-folder-browsing.md) | 8 | 01 | Complete | e9ea43e |
+| [M02 Grid and image files](tasks/m02-map-grid-and-image-files.md) | 8 | M01, 02 | Complete | this commit |
 | [M03a Note identities and legend](tasks/m03a-map-note-identities-and-legend.md) | 5 | M02 | Not started | — |
 | [M03b Coordinates and revision binding](tasks/m03b-map-coordinate-and-revision-binding.md) | 8 | M03a, 06a | Not started | — |
 | [M04a Bundled font and glyphs](tasks/m04a-bundled-font-and-note-glyphs.md) | 5 | 06b | Not started | — |

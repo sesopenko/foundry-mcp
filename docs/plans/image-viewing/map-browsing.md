@@ -2,7 +2,8 @@
 
 M01 implementation contract, fixed before production edits. Status/evidence are
 in [taskM01](tasks/m01-map-folder-browsing.md). M02 owns selected-map grid/assets;
-M03 owns notes. This page does not claim those later tools are implemented yet.
+M03 owns notes. See the separate [selected-map contract](map-info.md) and task
+records for their implementation/verification status.
 
 `browse_maps` is authenticated, ready-GM, core Foundry14 read-only navigation.
 It does not require PF2e or activate/render a Scene. Scope is loaded world

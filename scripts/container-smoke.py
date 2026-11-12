@@ -16,7 +16,7 @@ from fastmcp.client.transports import StreamableHttpTransport
 import websockets
 
 TOOLS = {
-    'create_image_directory', 'upload_image', 'get_foundry_image_info', 'get_foundry_image_url', 'browse_maps',
+    'create_image_directory', 'upload_image', 'get_foundry_image_info', 'get_foundry_image_url', 'browse_maps', 'get_map_info',
     'list_compendiums', 'search_compendium_journals', 'get_compendium_journal_contents',
     'read_compendium_journal_page', 'resolve_compendium_journal_reference',
     'create_pf2e_inline_roll', 'create_pf2e_inline_check', 'create_pf2e_inline_embed',
