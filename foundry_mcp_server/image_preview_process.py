@@ -71,7 +71,7 @@ class RegionReply(Model):
 
 
 class EncodedGeometry(RegionGeometry):
-    mime_type: Literal['image/png','image/webp']
+    mime_type: Literal['image/jpeg','image/png','image/webp']
     size_bytes: int = Field(ge=1,le=limits.OUTPUT_MAX_BYTES)
 
 
@@ -156,19 +156,23 @@ async def render_region(path, crop=None, *, supervisor=None,metrics=None,timeout
         raise PreviewFailure('ImageProcessingFailed') from None
 
 
-async def render_preview(path, crop=None, *, supervisor=None,metrics=None,timeout=limits.WORKER_TIMEOUT_SECONDS):
-    """Return a fully bounded private PNG/WebP artifact; publication is separate.
+async def render_preview(path, crop=None, *, supervisor=None,metrics=None,timeout=limits.WORKER_TIMEOUT_SECONDS,jpeg=False):
+    """Return bounded JPEG80 or legacy PNG/WebP; publication is separate.
 
+    jpeg is a trusted server policy, never a public request or inherited env var.
     Worker forces pixel decoding and verifies format/geometry/size. Parent repeats
     strict metadata and bounded container checks without loading a raster.
     """
+    if type(jpeg) is not bool:raise PreviewFailure('InvalidOperation')
     path = Path(path)
     if path.is_symlink() or not path.is_file():
         raise PreviewFailure('UnsupportedImage')
     if isinstance(crop,Crop):crop = crop.model_dump()
-    payload = json.dumps(dict(operation='render',source=str(path),crop=crop)).encode()
+    payload = json.dumps(dict(operation='render',source=str(path),crop=crop,jpeg=jpeg)).encode()
     def collect(workspace,raw):
         geometry = EncodedReply.model_validate(worker_reply(raw)).artifact
+        if (geometry.mime_type=='image/jpeg')!=jpeg:
+            raise PreviewFailure('ImageProcessingFailed')
         if geometry.source.size_bytes!=path.stat().st_size:
             raise PreviewFailure('ImageProcessingFailed')
         artifact = workspace.path/'preview.bin'

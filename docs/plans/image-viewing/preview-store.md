@@ -1,7 +1,7 @@
 # Immutable derivative store
 
 `image_preview_store.PreviewStore` is a private SQLite store for already decoded,
-validated PNG/WebP derivatives. It stores no Foundry selectors, original files,
+validated JPEG/PNG/WebP derivatives. It stores no Foundry selectors, original files,
 crop coordinates, caller credentials or source handles. Browser/HTTP/runtime
 wiring is owned by later tasks; this module registers no MCP tool or route.
 
@@ -35,6 +35,13 @@ Cleanup can be paused without extending a link. `prune()` removes expired rows;
 construction runs it at startup, and09a owns the periodic runtime call. Closing
 the store prevents new database operations;09a drains active runtime work first.
 Reopening the same private directory preserves valid links.
+
+Version4.0.0 uses schema2, admitting `image/jpeg` alongside PNG/WebP. Startup
+migrates schema1 in one IMMEDIATE transaction by copying existing rows unchanged
+into the expanded constraint, restoring the expiry index and advancing the
+schema version atomically. Failure rolls back both DDL and rows. JPEG uses the
+canonical `.jpg` suffix; `.jpeg` is not an alias. Migration neither re-encodes
+stored pixels nor resets expiry. See [configuration and rollback](../../image-viewing.md#jpeg-output-and-store-migration).
 
 The private directory is700; the database is precreated600 before SQLite opens
 it. Known SQLite sidecars must also be regular600 files, and directory/database/

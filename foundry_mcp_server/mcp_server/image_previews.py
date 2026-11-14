@@ -134,10 +134,12 @@ async def get_foundry_image_url(request: ImageUrlRequest) -> ImageUrlResult:
     Without annotations returns exactly url,expires_at,source_id,source_expires_at,source_width,
     source_height,region:{x,y,width,height},width,height,mime_type,size_bytes.
     Expiries are absolute UTC; original and public lifetimes are independent.
-    Final dimensions/bytes describe the actual PNG/WebP fetch: at most2048 per
-    edge,2359296 pixels,2MiB, no enlargement, aspect preserved. Original limits
-    are128MiB,32768 per edge,128000000 pixels. PNG preferred, then WebP90/82 and
-    smaller output as necessary. JPEG/PNG/APNG/WebP/AVIF/BMP/GIF/TIFF/safe SVG;
+    Final dimensions/bytes describe the actual JPEG/PNG/WebP fetch: at most2048 per
+    edge,2359296 pixels,2MiB, no enlargement, aspect preserved. Default output
+    is JPEG quality80 (.jpg), transparency flattened onto white. Server setting
+    FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=false restores PNG then WebP90/82; oversized
+    outputs reduce dimensions. Existing issued bytes never change. Original limits
+    are128MiB,32768 per edge,128000000 pixels. JPEG/PNG/APNG/WebP/AVIF/BMP/GIF/TIFF/safe SVG;
     animations/multipage sources use first displayable frame/page only. This is
     a file preview, not a composed Scene (no fog/lights/tokens/walls/tiles).
 
@@ -201,11 +203,11 @@ async def get_foundry_image_url(request: ImageUrlRequest) -> ImageUrlResult:
             notes=None
             if request.map_notes:
                 candidates=await maps.region_pins(manager,record,lease,request.crop)
-                rendered=await render_annotated(lease.original.path,request.crop,candidates.worker_pins(),candidates.total_in_region)
+                rendered=await render_annotated(lease.original.path,request.crop,candidates.worker_pins(),candidates.total_in_region,jpeg=settings.image_preview_jpeg)
                 if not isinstance(rendered,RenderedNotes):raise PreviewFailure('ImageProcessingFailed')
                 notes=annotation_result(record,candidates,rendered.notes)
             else:
-                rendered = await render_preview(lease.original.path,request.crop)
+                rendered = await render_preview(lease.original.path,request.crop,jpeg=settings.image_preview_jpeg)
                 if not isinstance(rendered,RenderedPreview):raise PreviewFailure('ImageProcessingFailed')
             geometry = EncodedGeometry.model_validate(rendered.geometry.model_dump())
             if record is not None and (geometry.source.width,geometry.source.height)!=(record.source_width,record.source_height):

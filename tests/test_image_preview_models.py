@@ -87,6 +87,10 @@ class PreviewModelsTests(unittest.TestCase):
         self.assertEqual(ImageInfoResult(**{**INFO, 'frame_policy': 'first_frame'}).frame_policy, 'first_frame')
         full = {**URL, 'region': dict(x=0, y=0, width=10000, height=5000), 'width': 2048, 'height': 1024}
         self.assertEqual(ImageUrlResult(**full).source_width, 10000)
+        jpeg={**URL,'mime_type':'image/jpeg','url':URL['url'].removesuffix('.png')+'.jpg'}
+        self.assertEqual(ImageUrlResult(**jpeg).model_dump(),jpeg)
+        with self.assertRaises(ValidationError):
+            ImageUrlResult(**{**jpeg,'url':jpeg['url'].removesuffix('.jpg')+'.jpeg'})
 
     def test_results_reject_malformed_metadata(self):
         for model, good, changes in [

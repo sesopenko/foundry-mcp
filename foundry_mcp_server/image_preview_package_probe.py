@@ -34,7 +34,8 @@ async def seed(directory):
             options=dict(quality=100,max_threads=2) if fmt=='AVIF' else {}
             Image.new('RGB',(80,60),(40,80,120)).save(original,format=fmt,**options)
             metadata=await probe_image(original)
-            rendered=await render_preview(original,dict(x=10,y=10,width=40,height=30))
+            rendered=await render_preview(original,dict(x=10,y=10,width=40,height=30),jpeg=True)
+            check(rendered.geometry.mime_type=='image/jpeg')
             check((metadata.width,metadata.height,metadata.mime_type)==(80,60,mime))
             with Image.open(io.BytesIO(rendered.data)) as decoded:
                 check(decoded.size==(40,30))
@@ -57,12 +58,12 @@ async def seed(directory):
         first.resize((500,500)).save(original,format='PNG')
         atlas=await probe_glyphs(['N1','N12','N100'])
         check(atlas.sizes==((22,14),(32,14),(43,14)))
-        annotated=await render_annotated(original,None,[('N1',250,250)],1)
-        repeated=await render_annotated(original,None,[('N1',250,250)],1)
+        annotated=await render_annotated(original,None,[('N1',250,250)],1,jpeg=True)
+        repeated=await render_annotated(original,None,[('N1',250,250)],1,jpeg=True)
         check(repeated.data==annotated.data and repeated.notes==annotated.notes)
         check(annotated.notes.keys==['N1'] and annotated.notes.complete)
         with Image.open(io.BytesIO(annotated.data)) as decoded:
-            check(decoded.convert('RGB').getpixel((250,250))==(255,255,255))
+            check(min(decoded.convert('RGB').getpixel((250,250)))>230)
         store=PreviewStore(directory)
         try:receipt=store.publish(annotated.data,annotated.geometry.mime_type)
         finally:store.close()

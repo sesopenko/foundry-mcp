@@ -59,7 +59,9 @@ These development checks and their scoped fixture setup/cleanup are authorized
 for this build. Run offline regression checks before any fixture verifier.
 Review and test new fixed runner cases before adding them; never accept an
 arbitrary command, Python code, URL, world or script path through the runner.
-Keep rules limited to this runner, rather than arbitrary Python/shell execution.
+Keep live/fixture rules limited to this runner, rather than arbitrary
+Python/shell execution. Offline focused tests have separate narrowly scoped
+command-prefix rules in `.codex/rules/local-tests.rules` below.
 Rules are loaded at Codex startup; keep the current user approval mode and
 sandbox protections. This authorization excludes publication, releases,
 production/game-session mutations and changes to existing game documents.
@@ -367,9 +369,26 @@ non-Markdown and mixed commits still require tests; Git inspection failures
 block commits. The pre-commit hook enforces this rule and prints a short skip
 message. GitHub Actions continues running tests for Markdown changes.
 This offline runner uses the existing `.venv` and Node directly.
-For focused Python checks use
-`.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`;
-for focused JavaScript checks use `node --test tests/js/<area>.test.js`.
+Focused tests MUST use these plain command forms so the trusted project's
+`.codex/rules/local-tests.rules` matches all test filenames without per-file
+approval prompts:
+
+- Python: `.venv/bin/python -m unittest discover -s tests -p 'test_<area>.py' -v`.
+  Keep this argument order and the `tests` discovery root. A quoted glob such as
+  `'test_image_preview*.py'` selects related files; append `-k <name>` to select
+  an individual test when needed. Do not add another discovery root or top-level
+  directory override.
+- JavaScript: `node --test tests/js/<area>.test.js`; multiple repository test
+  paths can follow `--test` in the same command.
+
+Do not wrap focused tests in `bash`/`sh`, change interpreter spelling, prepend
+environment assignments, pipe output, or redirect it. Use the command tool's
+returned output directly, and set its working directory to the repository root
+instead of prepending `cd`. Continue requesting outside-sandbox execution with
+`sandbox_permissions: "require_escalated"`; the loaded allow rules handle these
+test commands automatically under the current approval policy. These rules
+authorize offline tests, not arbitrary scripts, live fixtures or production
+mutations. Rules load at Codex startup; restart Codex after changing them.
 Provision dependencies separately with `uv sync --locked` when needed.
 Browser mocks verify bridge behavior; use a live Foundry session separately
 when a change depends on Foundry runtime APIs.

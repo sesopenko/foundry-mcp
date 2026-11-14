@@ -33,16 +33,19 @@ def verify(*,root=ROOT,execute=subprocess.run):
             for name,body in examples(root):
                 path.write_text(body)
                 for origin in ('','https://previews.example.com'):
-                    result=execute(['docker','compose','--env-file','/dev/null','-f',str(path),'config','--format','json'],
-                        env={**base,**VALUES,'FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN':origin},
-                        capture_output=True,text=True,timeout=20)
-                    if result.returncode or len(result.stdout)>65536:raise ValueError('Invalid compose example')
-                    value=json.loads(result.stdout);service=value['services']['foundry-mcp'];environment=service['environment']
-                    if environment['FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN']!=origin:raise ValueError('Wrong preview origin')
-                    if environment['FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR']!='/data/image-previews':raise ValueError('Wrong private store')
-                    if not any(v.get('type')=='volume' and v.get('source')=='image-previews' and v.get('target')=='/data/image-previews' for v in service['volumes']):raise ValueError('Missing persistent preview volume')
-                    if environment['FOUNDRY_MCP_AUTH_MODE']=='oauth' and any(key.startswith('FOUNDRY_MCP_BASIC_') for key in environment):raise ValueError('Mixed authentication')
-                    checked+=1
+                    for jpeg in (None,'true','false',''):
+                        env={**base,**VALUES,'FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN':origin}
+                        if jpeg is not None:env['FOUNDRY_MCP_IMAGE_PREVIEW_JPEG']=jpeg
+                        result=execute(['docker','compose','--env-file','/dev/null','-f',str(path),'config','--format','json'],
+                            env=env,capture_output=True,text=True,timeout=20)
+                        if result.returncode or len(result.stdout)>65536:raise ValueError('Invalid compose example')
+                        value=json.loads(result.stdout);service=value['services']['foundry-mcp'];environment=service['environment']
+                        if environment['FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN']!=origin:raise ValueError('Wrong preview origin')
+                        if environment['FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR']!='/data/image-previews':raise ValueError('Wrong private store')
+                        if environment['FOUNDRY_MCP_IMAGE_PREVIEW_JPEG']!=('true' if jpeg is None else jpeg):raise ValueError('Wrong JPEG policy')
+                        if not any(v.get('type')=='volume' and v.get('source')=='image-previews' and v.get('target')=='/data/image-previews' for v in service['volumes']):raise ValueError('Missing persistent preview volume')
+                        if environment['FOUNDRY_MCP_AUTH_MODE']=='oauth' and any(key.startswith('FOUNDRY_MCP_BASIC_') for key in environment):raise ValueError('Mixed authentication')
+                        checked+=1
         return dict(passed=True,configurations=checked)
     except Exception as error:return dict(passed=False,configurations=checked,error_type=type(error).__name__)
 

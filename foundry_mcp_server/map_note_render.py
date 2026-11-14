@@ -30,17 +30,19 @@ class RenderedNotes:
     data: bytes=field(repr=False)
 
 
-async def render_annotated(path,crop,pins,total,*,supervisor=None,metrics=None,timeout=limits.WORKER_TIMEOUT_SECONDS):
-    """Generated aliases/positions only; same budgets, scratch and child lifecycle."""
+async def render_annotated(path,crop,pins,total,*,supervisor=None,metrics=None,timeout=limits.WORKER_TIMEOUT_SECONDS,jpeg=False):
+    """Generated aliases/positions; explicit trusted JPEG policy, same budgets."""
+    if type(jpeg) is not bool:raise PreviewFailure('InvalidOperation')
     path=Path(path)
     if path.is_symlink() or not path.is_file():raise PreviewFailure('UnsupportedImage')
     if isinstance(crop,Crop):crop=crop.model_dump()
     pins=validate_pins(pins,total,dict(x=0,y=0,width=limits.SOURCE_MAX_EDGE,height=limits.SOURCE_MAX_EDGE))
     try:
-        payload=json.dumps(dict(operation='annotated',source=str(path),crop=crop,pins=pins,total=total),allow_nan=False,separators=(',',':')).encode()
+        payload=json.dumps(dict(operation='annotated',source=str(path),crop=crop,pins=pins,total=total,jpeg=jpeg),allow_nan=False,separators=(',',':')).encode()
     except (ValueError,TypeError):raise PreviewFailure('InvalidOperation') from None
     def collect(workspace,raw):
         artifact=AnnotatedReply.model_validate(worker_reply(raw)).artifact
+        if (artifact.mime_type=='image/jpeg')!=jpeg:raise PreviewFailure('ImageProcessingFailed')
         notes=artifact.map_notes
         if (artifact.source.size_bytes!=path.stat().st_size or notes.total_in_region!=total
                 or not set(notes.keys)<={p[0] for p in pins}

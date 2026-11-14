@@ -114,7 +114,7 @@ class ImageUrlResult(SourceReceipt):
     region: Crop = Field(description='Exact rectangle covered in original display-oriented pixels; independent of delivered dimensions.')
     width: OutputEdge = Field(description='Actual delivered raster width; never enlarged.')
     height: OutputEdge = Field(description='Actual delivered raster height; never enlarged.')
-    mime_type: Literal['image/png', 'image/webp']
+    mime_type: Literal['image/jpeg', 'image/png', 'image/webp'] = Field(description='Actual derivative MIME. Default JPEG at quality80 on white; server may disable JPEG for legacy PNG/WebP.')
     size_bytes: int = Field(ge=1, le=limits.OUTPUT_MAX_BYTES, description='Exact encoded public derivative byte length.')
     map_notes: MapNotesResult|None=Field(default=None,exclude_if=lambda value:value is None,description='Present only for map_notes=true; bounded rendered keys/counts and exact legend next call, never a full legend.')
 
@@ -123,7 +123,7 @@ class ImageUrlResult(SourceReceipt):
     @model_validator(mode='after')
     def derivative_valid(self):
         parsed = urlsplit(self.url)
-        extension = 'png' if self.mime_type == 'image/png' else 'webp'
+        extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[self.mime_type]
         if (parsed.scheme != 'https' or not parsed.hostname or parsed.username is not None or parsed.password is not None
                 or parsed.query or parsed.fragment or '?' in self.url or '#' in self.url
                 or re.search(r'[\s\\\x00-\x1f\x7f]', self.url)

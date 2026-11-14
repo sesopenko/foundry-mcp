@@ -23,7 +23,7 @@ async def main():
     rows=[]
     # Native report/visual review established these exact rendered aliases.
     for name,keys in [('overview',[f'N{i}' for i in range(1,26)]),('detail',['N1','N10'])]:
-        paths=[p for p in (root/(name+'.png'),root/(name+'.webp')) if p.is_file()]
+        paths=[p for p in (root/(name+'.jpg'),root/(name+'.png'),root/(name+'.webp')) if p.is_file()]
         require(len(paths)==1)
         with Image.open(paths[0]) as decoded:width,height=decoded.size
         rows.append(dict(case=name,width=width,height=height,**await measure(keys,width,height)))

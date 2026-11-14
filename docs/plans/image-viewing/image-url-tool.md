@@ -27,7 +27,9 @@ The supervised worker extracts/orients/resizes/encodes the selected region. The
 publication boundary independently checks strict geometry, exact requested region,
 bounded container dimensions/MIME/size and original byte length before atomic
 SQLite publication. Output budgets remain2048/edge,2359296 pixels,2MiB, no
-enlargement. PNG is preferred, then WebP90/82 and15% dimension reductions.
+enlargement. Version4.0.0 defaults to JPEG80 on white, with15% dimension
+reductions if oversized. `FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=false` restores PNG
+then WebP90/82 and alpha preservation. No request-level format override exists.
 Original limits, first-frame/page behavior and SVG restrictions remain unchanged.
 
 The result contains exactly `url`, `expires_at`, `source_id`, `source_expires_at`,
@@ -40,13 +42,17 @@ expires604800s from publication. Delivered dimensions describe actual fetched
 pixels, independently of original region coordinates. Use floor for mapping a
 preview's left/top to original coordinates and ceil for exclusive right/bottom.
 
-Each issuance receives a fresh UUID4 PNG/WebP path under trusted configuration;
+Each issuance receives a fresh UUID4 JPEG/PNG/WebP path under trusted configuration;
 the URL encodes no source/crop/credential/expiry. Anyone holding it can read those
 pixels for seven days, including after GM disconnect, without a login/cookie or
 redirect. GET/HEAD query values cannot select a different rectangle or original.
 Keep bearer links private. Python logs/evaluation traces redact capabilities,
 including HTTP-client URL objects interpolated by logging formatters; external
 proxy/client logs require their own policy.
+
+JPEG paths end in `.jpg`, with `mime_type` and HTTP `Content-Type` equal to
+`image/jpeg`. Previously issued PNG/WebP/JPEG bytes and expiry remain unchanged
+when the setting changes. See [store migration and rollback](../../image-viewing.md#jpeg-output-and-store-migration).
 
 Quota/storage failures return fixed actionable `PreviewQuotaExceeded` or
 `PreviewStorageUnavailable`; existing links remain usable. Cancellation drains

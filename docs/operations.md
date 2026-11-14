@@ -37,7 +37,7 @@ and a GM browser. The operator decides host addressing and LAN access policy.
 
 ## Production authentication and migration from 1.1
 
-Deploy server and module 3.4.0 together. Source execution defaults to
+Deploy server and module 4.0.0 together. Source execution defaults to
 `FOUNDRY_MCP_AUTH_MODE=none` for backward compatibility; production Compose
 explicitly selects `basic`. Supplying production credentials with mode `none`
 fails startup rather than silently exposing the service. Production Basic Auth
@@ -112,6 +112,7 @@ left exposed through an internet-facing proxy.
 | `FOUNDRY_MCP_TRACE_PATH` | unset | Optional private evaluation log; leave unset for ordinary production operation. |
 | `FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN` | unset | Opt-in canonical public HTTPS origin for seven-day image links; independent of OAuth PUBLIC_URL. |
 | `FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR` | `/data/image-previews` | Private UID10001 derivative store; deployment templates mount a persistent named volume. |
+| `FOUNDRY_MCP_IMAGE_PREVIEW_JPEG` | `true` | New previews use JPEG quality80 on white; `false` retains PNG/WebP. Only literal `true`/`false`; empty is invalid. Restart/recreate to apply. See [preview migration](image-viewing.md#jpeg-output-and-store-migration). |
 
 Bind variables configure `python -m foundry_mcp_server.main` (including the
 foreground launcher and container). The managed development user service keeps
@@ -198,7 +199,7 @@ CI runs tests, packages module assets, builds the image, exercises an isolated
 container, and checks graceful shutdown. Trusted main/tag pushes may then publish:
 
 - `sesopenko/foundry-mcp:sha-<full-commit>`.
-- `sesopenko/foundry-mcp:v3.4.0` for matching release tags.
+- `sesopenko/foundry-mcp:v4.0.0` for matching release tags.
 - `sesopenko/foundry-mcp:latest` updated alongside each published version tag; main-branch pushes publish only commit tags.
 
 Pull requests do not publish. Docker Hub login must succeed before publication.
@@ -218,12 +219,12 @@ publication workflow by pushing the reviewed commit/tag.
 ## Module versioning and releases
 
 The Python package, runtime application metadata, and module share version
-`3.4.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
+`4.0.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
 `uv.lock`, both source build identities, module `download`, and the local Compose build-version argument
 consistently. Run tests and package:
 
 ```bash
-.venv/bin/python scripts/package-module.py --tag v3.4.0
+.venv/bin/python scripts/package-module.py --tag v4.0.0
 ```
 
 Outputs under ignored `dist/module/` are `module.json` and `foundry-mcp.zip`.
@@ -241,7 +242,7 @@ https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
 The manifest's `download` points to the matching version-specific ZIP:
 
 ```text
-https://github.com/sesopenko/foundry-mcp/releases/download/v3.4.0/foundry-mcp.zip
+https://github.com/sesopenko/foundry-mcp/releases/download/v4.0.0/foundry-mcp.zip
 ```
 
 The operator must make the repository/releases publicly accessible before

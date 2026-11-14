@@ -166,12 +166,15 @@ async def main():
                             result=reader(value)
                             path=private/'body-0'
                             if pin:
-                                with Image.open(path) as decoded:require(decoded.convert('RGB').getpixel(pin)==(255,255,255))
+                                with Image.open(path) as decoded:
+                                    pixel=decoded.convert('RGB').getpixel(pin)
+                                    require(min(pixel)>230 if value['mime_type']=='image/jpeg' else pixel==(255,255,255))
                                 result['independent_pin_verified']=True
                             output=ROOT/'.local/image-preview-map-review'
                             if not output.exists():output.mkdir(mode=0o700);(output/'.owner').write_text(marker)
                             require(not output.is_symlink() and (output/'.owner').read_text()==marker)
-                            destination=output/(label+('.png' if value['mime_type']=='image/png' else '.webp'));require(not destination.exists())
+                            extension={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp'}[value['mime_type']]
+                            destination=output/(label+extension);require(not destination.exists())
                             destination.write_bytes(path.read_bytes())
                             return result
                         async with Client(StreamableHttpTransport('http://127.0.0.1:8000/mcp/mcp',headers={'Authorization':'Bearer '+token}),

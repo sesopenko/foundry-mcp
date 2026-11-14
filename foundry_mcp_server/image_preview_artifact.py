@@ -1,4 +1,4 @@
-"""Bounded PNG/WebP container validation without decoding in the server parent.
+"""Bounded JPEG/PNG/WebP validation without decoding in the server parent.
 
 Only generated still8bit raster artifacts are accepted. Actual pixel decoding is
 also verified in the isolated worker. WebP fields follow Google's RIFF/container
@@ -19,6 +19,9 @@ def inspect_artifact(data):
             mime,width,height = _png(data)
         elif data[:4]==b'RIFF' and data[8:12]==b'WEBP':
             mime,width,height = _webp(data)
+        elif data.startswith(b'\xff\xd8'):
+            from .image_preview_jpeg import inspect_jpeg
+            mime,width,height = inspect_jpeg(data)
         else:
             raise ValueError
         if min(width,height)<1 or max(width,height)>limits.OUTPUT_MAX_EDGE or width*height>limits.OUTPUT_MAX_PIXELS:

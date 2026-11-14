@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 from PIL import Image,PngImagePlugin
 
-PREVIEW_PATH=re.compile(r'^/image-previews/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.(png|webp)$')
+PREVIEW_PATH=re.compile(r'^/image-previews/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.(jpg|png|webp)$')
 MARKER=re.compile(r'^[a-f0-9]{32}$')
 
 
@@ -181,7 +181,7 @@ def cleanup_map_review(directory):
     require(not directory.is_symlink() and directory.is_dir())
     owner=directory/'.owner';require(owner.is_file() and not owner.is_symlink())
     require(MARKER.fullmatch(owner.read_text()) is not None)
-    allowed={'.owner','overview.png','overview.webp','detail.png','detail.webp'}
+    allowed={'.owner','overview.jpg','overview.png','overview.webp','detail.jpg','detail.png','detail.webp'}
     files=list(directory.iterdir())
     require(len(files)<=3 and {p.name for p in files}<=allowed)
     require(all(p.is_file() and not p.is_symlink() and p.stat().st_size<=2097152 for p in files))

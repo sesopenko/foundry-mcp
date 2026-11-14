@@ -23,6 +23,7 @@ class PackagingContractTests(unittest.TestCase):
             source=(ROOT/'deploy'/filename).read_text()
             self.assertIn('FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}',source)
             self.assertIn('FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews',source)
+            self.assertIn('FOUNDRY_MCP_IMAGE_PREVIEW_JPEG: ${FOUNDRY_MCP_IMAGE_PREVIEW_JPEG-true}',source)
             self.assertIn('- image-previews:/data/image-previews',source)
             self.assertIn('\n  image-previews:',source)
         for filename in ('.env.example','.env.oauth.example'):
@@ -88,10 +89,11 @@ class PackagingContractTests(unittest.TestCase):
             self.assertIn('/dev/null',args)
             configuration=dict(services={'foundry-mcp':dict(environment=dict(FOUNDRY_MCP_AUTH_MODE='basic',
                 FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN=env['FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN'],
+                FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=env.get('FOUNDRY_MCP_IMAGE_PREVIEW_JPEG','true'),
                 FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR='/data/image-previews'),volumes=[dict(type='volume',source='image-previews',target='/data/image-previews')])})
             return type('Result',(),dict(returncode=0,stdout=json.dumps(configuration)))()
         report=compose.verify(execute=execute)
-        self.assertTrue(report['passed']);self.assertEqual(report['configurations'],count);self.assertEqual(count,10)
+        self.assertTrue(report['passed']);self.assertEqual(report['configurations'],count);self.assertEqual(count,40)
         with patch.object(compose,'examples',return_value=[('fixture','services:\n')]):
             report=compose.verify(execute=lambda *args,**kwargs:type('Result',(),dict(returncode=0,stdout='{}'))())
         self.assertFalse(report['passed'])

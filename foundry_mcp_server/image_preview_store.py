@@ -76,17 +76,28 @@ class PreviewStore:
                 descriptor = os.open(self.path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
                 os.close(descriptor)
             with self.connection() as db:
-                if db.execute('PRAGMA user_version').fetchone()[0] not in (0,1):raise StoreFailure()
+                version=db.execute('PRAGMA user_version').fetchone()[0]
+                if version not in (0,1,2):raise StoreFailure()
                 db.execute('PRAGMA journal_mode=DELETE')
+                db.execute('BEGIN IMMEDIATE')
+                # Recheck after acquiring the writer lock: concurrent startup
+                # may already have migrated this store. Never re-encode rows.
+                version=db.execute('PRAGMA user_version').fetchone()[0]
+                if version not in (0,1,2):raise StoreFailure()
+                if version==1:
+                    db.execute('ALTER TABLE previews RENAME TO previews_v1')
                 db.execute('''CREATE TABLE IF NOT EXISTS previews(
                     digest BLOB PRIMARY KEY CHECK(length(digest)=32),
-                    mime_type TEXT NOT NULL CHECK(mime_type IN ('image/png','image/webp')),
+                    mime_type TEXT NOT NULL CHECK(mime_type IN ('image/jpeg','image/png','image/webp')),
                     size_bytes INTEGER NOT NULL CHECK(size_bytes>0 AND size_bytes<=2097152),
                     pixels BLOB NOT NULL CHECK(length(pixels)=size_bytes),
                     published_at REAL NOT NULL, expires_at REAL NOT NULL,
                     CHECK(expires_at=published_at+604800))''')
+                if version==1:
+                    db.execute('INSERT INTO previews SELECT * FROM previews_v1')
+                    db.execute('DROP TABLE previews_v1')
                 db.execute('CREATE INDEX IF NOT EXISTS preview_expiry ON previews(expires_at)')
-                db.execute('PRAGMA user_version=1')
+                db.execute('PRAGMA user_version=2')
             self.prune()
         except (OSError,sqlite3.Error):
             raise StoreFailure() from None
@@ -137,13 +148,14 @@ class PreviewStore:
                     (digest,mime_type,size,data,now,expiry))
                 admitted = True
         if not admitted:raise StoreFailure('PreviewQuotaExceeded')
-        return PublishedPreview(token,'png' if mime_type=='image/png' else 'webp',mime_type,size,expiry)
+        extension={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[mime_type]
+        return PublishedPreview(token,extension,mime_type,size,expiry)
 
     def lookup(self,token,extension):
         """Return only this immutable live derivative, never original/region data."""
         digest = token_digest(token)
-        if digest is None or extension not in ('png','webp'):return None
-        mime = 'image/'+extension
+        if digest is None or extension not in ('jpg','png','webp'):return None
+        mime = 'image/jpeg' if extension=='jpg' else 'image/'+extension
         with self.connection() as db:
             row = db.execute('SELECT pixels,mime_type,size_bytes,expires_at FROM previews WHERE digest=? AND mime_type=? AND expires_at>?',
                 (digest,mime,self.now())).fetchone()

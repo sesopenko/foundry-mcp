@@ -238,7 +238,7 @@ async def image_preview(request: Request) -> Response:
     # Read only actual route parameters: a shared default argument on the root
     # handler would otherwise become a selectable query field in FastAPI.
     filename = request.path_params.get('filename','')
-    match = re.fullmatch(r'([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.(png|webp)',filename)
+    match = re.fullmatch(r'([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.(jpg|png|webp)',filename)
     headers = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
     if match is None:return Response(status_code=404,headers=headers)
     try:stored = await preview_runtime.lookup(match[1],match[2])

@@ -1,5 +1,6 @@
 """Map-aware image contracts and actual MCP/cache/native/HTTP workflows."""
 import copy
+from dataclasses import replace
 import asyncio
 import base64
 import io
@@ -125,6 +126,8 @@ class MapToolFixture:
 
     async def asyncSetUp(self):
         self.browser=self.backend_factory();self.now=1000;self.public_now=2000
+        # Exact legacy annotation pixels remain a separate regression contract.
+        self.enterContext(patch.object(tools,'settings',replace(tools.settings,image_preview_jpeg=False)))
         self.measurements=[]
         self.identity=Principal('basic','','gm','configured-account')
         self.runtime=SourceRuntime(factory=lambda:SourceSnapshots(principal=lambda:self.identity,clock=lambda:self.now))
@@ -173,6 +176,30 @@ class MapToolFixture:
 
 
 class MapImageToolsTests(MapToolFixture,unittest.IsolatedAsyncioTestCase):
+    async def test_jpeg_map_overview_crop_and_annotations_through_actual_mcp(self):
+        info=await self.info()
+        self.assertEqual(info.mime_type,'image/png')
+        for enabled in (False,True):
+            with patch.object(tools,'settings',replace(tools.settings,image_preview_jpeg=enabled)):
+                for crop,annotated in ((None,False),(None,True),(dict(x=200,y=200,width=200,height=200),True)):
+                    request=dict(source_id=info.source_id,map_notes=annotated)
+                    if crop:request['crop']=crop
+                    value=await self.url(request)
+                    self.assertEqual(value.mime_type,'image/jpeg' if enabled else 'image/png')
+                    data=await self.fetch(value)
+                    self.measurements[-1].update(jpeg=enabled,image_bytes=len(data))
+                    with Image.open(io.BytesIO(data)) as image:
+                        image.load()
+                        self.assertEqual(image.format,'JPEG' if enabled else 'PNG')
+                    if annotated:
+                        self.assertEqual(value.map_notes.keys,['N1'])
+                        self.assertTrue(value.map_notes.complete)
+                        follow=value.map_notes.legend_next_call
+                        legend=await self.call(follow.tool,follow.arguments.model_dump())
+                        self.assertFalse(legend.is_error)
+        self.assertEqual(self.transfers(),1)
+        print('JPEG_MAP_BUDGET',json.dumps(dict(calls=len(self.measurements),transfers=self.transfers(),rows=self.measurements),separators=(',',':')))
+
     async def test_actual_discovery_map_flag_typed_summary_and_invalid_calls_precede_reads(self):
         async with Client(mcp) as client:
             catalog={tool.name:tool for tool in await client.list_tools()}
@@ -335,7 +362,9 @@ class MapImageToolsTests(MapToolFixture,unittest.IsolatedAsyncioTestCase):
         response=await self.call('get_foundry_image_url',dict(source_id=info.source_id,map_notes=True))
         self.assertIn('PreviewQuotaExceeded',str(response.content));self.assertEqual(await self.fetch(first),pixels)
         started=asyncio.Event()
-        async def wait(*_):started.set();await asyncio.Event().wait()
+        async def wait(*_,jpeg):
+            self.assertIs(jpeg,False)
+            started.set();await asyncio.Event().wait()
         with patch.object(tools,'render_annotated',side_effect=wait):
             task=asyncio.create_task(tools.get_foundry_image_url(ImageUrlRequest(source_id=info.source_id,map_notes=True)))
             await asyncio.wait_for(started.wait(),5);task.cancel()

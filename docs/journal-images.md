@@ -21,6 +21,9 @@ Pass that handle, an exact image or a stored src to `get_foundry_image_url` for
 an overview/crop link readable by anyone holding it for seven days. Issuance
 requires a configured public HTTPS origin. See [image information](plans/image-viewing/image-info-tool.md)
 and [preview coordinates, limits and privacy](plans/image-viewing/image-url-tool.md).
+Version 4.0.0 defaults newly issued previews to JPEG quality80 on white;
+`FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=false` restores PNG/WebP with transparency.
+See [configuration and migration](image-viewing.md#jpeg-output-and-store-migration).
 For map-specific notes, start with `browse_maps` and follow `get_map_info`'s
 exact level/role `map` selector into image info. A bound handle plus
 `map_notes:true` renders compact keys and returns a revision-bound legend call;

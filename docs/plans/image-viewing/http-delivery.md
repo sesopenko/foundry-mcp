@@ -33,7 +33,7 @@ store. Cancelled startup closes a successfully constructed store. Failure to
 start the MCP framework also closes the owned store. Failed periodic cleanup
 emits only a fixed storage category; per-lookup expiry remains authoritative.
 
-GET `/image-previews/{uuid4}.{png|webp}` returns raw immutable bytes, exact MIME
+GET `/image-previews/{uuid4}.{jpg|png|webp}` returns raw immutable bytes, exact MIME
 and Content-Length, `Cache-Control: private, no-store`, and
 `X-Content-Type-Options: nosniff`. HEAD returns identical headers with no body.
 Neither requires reader Authorization, a cookie, GM connectivity or a login

@@ -1,0 +1,31 @@
+# Trusted-project offline tests. The shared prefix covers any unittest -p
+# pattern/test filename; no per-file approvals or shell wildcard are needed.
+# Keep commands plain and keep Python discovery rooted at this repo's tests/.
+prefix_rule(
+    pattern = [".venv/bin/python", "-m", "unittest", "discover", "-s", "tests", "-p"],
+    decision = "allow",
+    justification = "Run focused offline unittest discovery in the trusted project's tests directory outside the sandbox, for any test filename pattern.",
+    match = [
+        ".venv/bin/python -m unittest discover -s tests -p test_image_preview_jpeg.py -v",
+        ".venv/bin/python -m unittest discover -s tests -p 'test_oauth*.py' -v",
+        ".venv/bin/python -m unittest discover -s tests -p 'test_future_area.py' -v -k test_example",
+    ],
+    not_match = [
+        ".venv/bin/python -c 'print(1)'",
+        ".venv/bin/python arbitrary.py",
+        ".venv/bin/python -m unittest discover -s /tmp -p test_example.py -v",
+        "python3 -m unittest discover -s tests -p test_example.py -v",
+    ],
+)
+
+prefix_rule(
+    pattern = ["node", "--test"],
+    decision = "allow",
+    justification = "Run focused Node.js offline tests from the trusted project's tests/js directory outside the sandbox.",
+    match = [
+        "node --test tests/js/image-preview-fetch.test.js",
+        "node --test tests/js/authentication.test.js tests/js/bridge.test.js",
+        "node --test tests/js/future-area.test.js",
+    ],
+    not_match = ["node arbitrary.js", "node -e 'console.log(1)'", "git push"],
+)

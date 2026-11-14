@@ -1,7 +1,7 @@
 # Image information, map crops and seven-day previews
 
-Version 3.4.0 can read portraits and map files through the connected GM
-browser, stage an original privately, and issue bounded PNG/WebP previews or
+Version 4.0.0 can read portraits and map files through the connected GM
+browser, stage an original privately, and issue bounded image previews or
 exact crops. It also browses world Scene folders, reads grid/level file metadata
 and optionally draws compact map-note keys. Public-host and target-ChatGPT
 visual acceptance remain separate verification gates.
@@ -16,6 +16,35 @@ credentials are accepted. This variable is independent of OAuth's
 `FOUNDRY_MCP_PUBLIC_URL`; Basic never requires OAuth configuration. Empty origin
 disables URL issuance before source work, while authenticated image info remains
 available. Plain unauthenticated mode cannot issue links.
+
+## JPEG output and store migration
+
+Version 4.0.0 defaults `FOUNDRY_MCP_IMAGE_PREVIEW_JPEG` to `true` when unset.
+All new previews, crops and annotated maps use baseline JPEG at fixed quality80
+with 4:4:4 chroma sampling. Transparency is composited onto white. URLs end in
+`.jpg`; both MCP `mime_type` and HTTP `Content-Type` are `image/jpeg`.
+Original-image info still reports the original MIME and dimensions.
+
+Set `FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=false` to restore the PNG-first, then
+WebP90/82 policy and alpha preservation. Only literal `true`/`false` are valid;
+empty values fail startup. Compose templates pass this variable explicitly;
+adding it to `.env` alone does not change an older Compose file. Recreate the
+container after changing it, or restart the native server. Refresh client
+discovery for the expanded response MIME enum. JPEG does not establish that
+ChatGPT can fetch the URL or receive its pixels; target-client acceptance is
+still separate.
+
+On startup, the private derivative database migrates transactionally from schema1
+to schema2 to admit JPEG. Existing PNG/WebP rows, bytes, capability digests and
+expiry timestamps are preserved; previously issued URLs never change format.
+Setting the option to false affects only new issuance and does not disable
+existing JPEG links. Before upgrading a populated store, stop the server and
+back up its SQLite state. An older schema1-only binary cannot reopen schema2;
+rollback requires the pre-upgrade consistent backup (newer links then disappear).
+No originals or game assets are modified or reparsed.
+
+See [JPEG contracts and measured payloads](plans/image-viewing/jpeg-output.md)
+for focused verification evidence and the PNG/JPEG size tradeoff.
 
 Both templates mount the private named `image-previews` volume at
 `/data/image-previews`. The image creates that directory for UID/GID10001 with
@@ -92,10 +121,11 @@ Use returned `region` and actual output dimensions when selecting a tighter
 crop from a preview: floor the mapped left/top, ceil the exclusive right/bottom.
 
 Source limits are128MiB compressed,32768 pixels per edge and128 million pixels.
-Delivered PNG/WebP is at most2048 per edge,2359296 pixels and2MiB, preserving
+Delivered JPEG/PNG/WebP is at most2048 per edge,2359296 pixels and2MiB, preserving
 aspect and skipping enlargement. The isolated worker permits one operation,
-1GiB sampled resident memory,2GiB scratch and90 seconds. PNG is preferred;
-WebP90/82 and15% size reductions apply only when needed. Source EXIF/GPS/comments
+1GiB sampled resident memory,2GiB scratch and90 seconds. JPEG80 is the default;
+disabled JPEG mode prefers PNG then WebP90/82. Oversized candidates trigger15%
+dimension reductions, without reducing JPEG quality. Source EXIF/GPS/comments
 are removed. JPEG,PNG/APNG,WebP,AVIF,BMP,GIF,TIFF and bounded self-contained SVG
 are supported; animation/multipage content uses the first displayable frame/page.
 The store admits at most1GiB/4096 live derivatives after expiry pruning.

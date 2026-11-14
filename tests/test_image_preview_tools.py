@@ -1,5 +1,6 @@
 """Actual MCP metadata calls compose real private transfer/cache/native probe."""
 import asyncio
+from dataclasses import replace
 from contextlib import asynccontextmanager
 from datetime import datetime
 from io import BytesIO
@@ -274,6 +275,8 @@ class ImageUrlToolsTests(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         await ImageInfoToolsTests.asyncSetUp(self)
+        # Existing exact-pixel regressions explicitly exercise legacy mode.
+        self.enterContext(patch.object(tools,'settings',replace(tools.settings,image_preview_jpeg=False)))
         self.storage = tempfile.TemporaryDirectory()
         self.addCleanup(self.storage.cleanup)
         self.public_now = 2000
@@ -321,6 +324,8 @@ class ImageUrlToolsTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(request['additionalProperties'])
         self.assertEqual(set(tool.output_schema['properties']),set(ImageUrlResult.model_fields))
         self.assertFalse(tool.output_schema['additionalProperties'])
+        self.assertIn('image/jpeg',tool.output_schema['properties']['mime_type']['enum'])
+        self.assertIn('FOUNDRY_MCP_IMAGE_PREVIEW_JPEG',tool.description)
         for term in ('seven days','604800','anyone','floor','ceil','PreviewNotConfigured','first displayable'):
             self.assertIn(term,tool.description)
         oauth = FastMCP('url-discovery')
@@ -329,6 +334,41 @@ class ImageUrlToolsTests(unittest.IsolatedAsyncioTestCase):
         async with Client(oauth) as client:
             self.assertEqual((await client.list_tools())[0].meta['securitySchemes'][0]['scopes'],['foundry:gm'])
         print('IMAGE_URL_DISCOVERY_BYTES',len(json.dumps(tool.model_dump(by_alias=True),ensure_ascii=False,separators=(',',':')).encode()))
+
+    async def test_default_jpeg_and_disabled_policy_actual_mcp_and_anonymous_headers(self):
+        self.assertTrue(Settings().image_preview_jpeg)
+        rows=[]
+        async with Client(mcp) as client:
+            catalog=await client.list_tools()
+            catalog_bytes=len(json.dumps([t.model_dump(by_alias=True) for t in catalog],ensure_ascii=False,separators=(',',':')).encode())
+            result=await client.call_tool('get_foundry_image_info',{'request':{'image':IMAGE}})
+            info=ImageInfoResult.model_validate(result.structured_content)
+        calls=1
+        for enabled,mime,suffix in ((False,'image/png','.png'),(True,'image/jpeg','.jpg')):
+            with patch.object(tools,'settings',replace(tools.settings,image_preview_jpeg=enabled)):
+                for name,request in [('default',{'image':IMAGE}),('crop',{'source_id':info.source_id,'crop':dict(x=7,y=4,width=11,height=9)})]:
+                    result=await self.invoke(request)
+                    calls+=1
+                    self.assertFalse(result.is_error,str(result.content))
+                    value=ImageUrlResult.model_validate(result.structured_content)
+                    self.assertEqual(value.mime_type,mime)
+                    self.assertTrue(value.url.endswith(suffix))
+                    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app),base_url='https://previews.example.com') as client:
+                        get=await client.get(value.url);head=await client.head(value.url)
+                        wrong=await client.get(value.url[:-len(suffix)]+('.png' if enabled else '.jpg'))
+                    self.assertEqual((get.status_code,head.status_code,wrong.status_code),(200,200,404))
+                    self.assertEqual(get.headers['content-type'],mime)
+                    self.assertEqual(get.headers,head.headers)
+                    self.assertEqual(head.content,b'')
+                    with Image.open(BytesIO(get.content)) as actual:
+                        actual.load()
+                        self.assertEqual(actual.format,'JPEG' if enabled else 'PNG')
+                        self.assertEqual(actual.size,(value.width,value.height))
+                    rows.append(dict(jpeg=enabled,scenario=name,json_bytes=len(json.dumps(result.structured_content,separators=(',',':')).encode()),
+                        image_bytes=len(get.content),complete=True))
+        self.assertEqual(self.published_rows(),4)
+        self.assertEqual(calls,5)
+        print('JPEG_MCP_BUDGET',json.dumps(dict(calls=calls,discovery_calls=1,catalog_count=len(catalog),catalog_bytes=catalog_bytes,rows=rows),separators=(',',':')))
 
     async def test_all_inputs_reuse_native_crop_pixels_distinct_links_and_capability_scope(self):
         info = await self.info()
@@ -488,12 +528,13 @@ class ImageUrlToolsTests(unittest.IsolatedAsyncioTestCase):
     async def test_cancelled_render_releases_lease_and_retains_valid_original(self):
         info=await self.info()
         started=asyncio.Event()
-        async def wait(*_):
+        async def wait(*_,jpeg):
+            self.assertIs(jpeg,False)
             started.set()
             await asyncio.Event().wait()
         with patch.object(tools,'render_preview',side_effect=wait):
             task=asyncio.create_task(tools.get_foundry_image_url(tools.ImageUrlRequest(source_id=info.source_id)))
-            await started.wait()
+            await asyncio.wait_for(started.wait(),5)
             task.cancel()
             with self.assertRaises(asyncio.CancelledError):await task
         async with self.runtime.cache.lease(self.browser,info.source_id) as lease:
@@ -534,7 +575,7 @@ class ImageUrlToolsTests(unittest.IsolatedAsyncioTestCase):
         delivery=PreviewRuntime()
         with patch.object(main,'settings',config),patch.object(main,'source_runtime',source), \
                 patch.object(main,'preview_runtime',delivery),patch.object(tools,'preview_runtime',delivery), \
-                patch.object(tools,'source_runtime',source):
+                patch.object(tools,'source_runtime',source),patch.object(tools,'settings',config):
             async with main.app.router.lifespan_context(main.app),httpx.AsyncClient(
                     transport=httpx.ASGITransport(app=main.app,client=('127.0.0.1',1234)),base_url='https://previews.example.com') as client:
                 response=await call(client,'get_foundry_image_url',{'request':{'image':IMAGE}},'Basic Z206cGFzc3dvcmQ=')

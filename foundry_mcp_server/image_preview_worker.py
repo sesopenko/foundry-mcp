@@ -138,9 +138,9 @@ def region_pixels(path, crop):
     return dict(source=metadata,region=region.bounds,width=width,height=height)
 
 
-def encoded_pixels(path, crop):
+def encoded_pixels(path, crop, *, jpeg):
     from .image_preview_encode import render_preview
-    return render_preview(path,crop,Path(os.environ['TMPDIR']))
+    return render_preview(path,crop,Path(os.environ['TMPDIR']),jpeg=jpeg)
 
 
 def smoke():
@@ -166,12 +166,14 @@ def main():
                 from .map_note_glyphs import glyph_atlas
                 result={'glyphs':glyph_atlas(request['keys'],Path(os.environ['TMPDIR']))}
             elif isinstance(request,dict) and request.get('operation')=='annotated':
-                if (set(request)!={'operation','source','crop','pins','total'} or not isinstance(request['source'],str)
+                if (set(request)!={'operation','source','crop','pins','total','jpeg'} or type(request['jpeg']) is not bool or not isinstance(request['source'],str)
                         or not 1<=len(request['source'])<=4096):raise PreviewFailure('InvalidOperation')
                 from .map_note_composition import render_annotated
-                result={'artifact':render_annotated(request['source'],request['crop'],request['pins'],request['total'],Path(os.environ['TMPDIR']))}
+                result={'artifact':render_annotated(request['source'],request['crop'],request['pins'],request['total'],Path(os.environ['TMPDIR']),jpeg=request['jpeg'])}
             elif (not isinstance(request,dict) or request.get('operation') not in ('probe','region','render')
-                    or set(request) != ({'operation','source'} if request.get('operation')=='probe' else {'operation','source','crop'})
+                    or set(request) != ({'operation','source'} if request.get('operation')=='probe' else
+                        {'operation','source','crop','jpeg'} if request.get('operation')=='render' else {'operation','source','crop'})
+                    or (request.get('operation')=='render' and type(request['jpeg']) is not bool)
                     or not isinstance(request['source'],str) or not 1 <= len(request['source']) <= 4096):
                 raise PreviewFailure('InvalidOperation')
             elif request['operation']=='probe':
@@ -179,7 +181,7 @@ def main():
             elif request['operation']=='region':
                 result = {'geometry':region_pixels(request['source'],request['crop'])}
             else:
-                result = {'artifact':encoded_pixels(request['source'],request['crop'])}
+                result = {'artifact':encoded_pixels(request['source'],request['crop'],jpeg=request['jpeg'])}
     except PreviewFailure as failure:
         result = {'error_code':failure.code}
         if failure.width is not None and failure.height is not None:

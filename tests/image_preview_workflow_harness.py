@@ -148,12 +148,12 @@ async def workflow(data,*,image=None,prefix='',clock=None):
             'data_base64':base64.b64encode(data).decode(),'reverse_replies':True},timeout=5)
         with tempfile.TemporaryDirectory(prefix='preview-workflow-') as directory:
             config=Settings(auth_mode='basic',basic_username='gm',basic_password='password',bridge_token='browser',
-                image_preview_origin='https://previews.example.com',image_preview_data_dir=directory)
+                image_preview_origin='https://previews.example.com',image_preview_data_dir=directory,image_preview_jpeg=False)
             clock=clock if clock is not None else [1000.0]
             source=SourceRuntime(factory=lambda:SourceSnapshots(principal=lambda:current_principal(config),clock=lambda:clock[0]))
             delivery=PreviewRuntime(store_factory=lambda path:PreviewStore(path,clock=lambda:clock[0]))
             async with AsyncExitStack() as stack:
-                for target,name,value in ((main,'settings',config),(registry,'_foundry_manager',manager),
+                for target,name,value in ((main,'settings',config),(image_previews,'settings',config),(registry,'_foundry_manager',manager),
                         (main,'source_runtime',source),(image_previews,'source_runtime',source),
                         (main,'preview_runtime',delivery),(image_previews,'preview_runtime',delivery)):
                     stack.enter_context(patch.object(target,name,value))
