@@ -22,32 +22,32 @@ Version 3.0.0 added GM-guided world-journal text authoring, organization,
 player sharing and
 [image selection and embedding](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
 
-Version 3.3.1 adds User Data folder creation and validated JPEG/PNG/WebP uploads
+Version 3.4.0 adds User Data folder creation and validated JPEG/PNG/WebP uploads
 through the authenticated GM bridge. Returned selectors work directly with journal
 embedding. Deploy matching server/module builds; no new variables or volumes are
 needed. Allow outbound HTTPS/DNS and private WebSocket frames up to about14MiB.
 ChatGPT-generated image handoff still needs host acceptance testing. See
 [image uploads and permanent overwrite behavior](https://github.com/sesopenko/foundry-mcp/blob/main/docs/image-uploads.md).
 
-Version 3.3.1 also permits publisher-style journal sections, sidebars, CSS class
+Version 3.4.0 also permits publisher-style journal sections, sidebars, CSS class
 lists, safe images and layout styles while rejecting executable HTML. Appearance
 depends on installed publisher styles.
 See [journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
 for guidance configuration, limits and retry/ownership behavior. Compendiums
 remain read-only.
 
-Source development also includes opt-in preview HTTP delivery using
+Version 3.4.0 includes opt-in preview HTTP delivery using
 `FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN` and `FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR`
 (default `/data/image-previews`, requiring durable private storage). Anonymous
 GET/HEAD can read an issued derivative for seven days; source image-info and
 URL tools are integrated, while public-host acceptance remains pending. Python access/evaluation logs redact
 capabilities; configure reverse-proxy logs to omit preview paths and queries. See
 [preview HTTP configuration and current scope](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/http-delivery.md).
-The source image-info tool reads original display dimensions and stages a private
+The image-info tool reads original display dimensions and stages a private
 30-minute snapshot without requiring a public origin; see
 [image information](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/image-info-tool.md).
 
-Source development includes read-only `browse_maps` navigation of core14 world
+Version 3.4.0 includes read-only `browse_maps` navigation of core14 world
 Scene folders and named maps, preserving duplicate identities and bounded
 continuations without activating a Scene. See the
 [map browsing contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-browsing.md)
@@ -74,9 +74,9 @@ Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 the connected GM browser and includes that world's instructions. See the
 [migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md#migration).
 
-The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. Actor/Item tools require **Pathfinder Second Edition (`pf2e`)**; source builds also expose core journal/map/image tools independently of the game system. The module declares Foundry13 minimum; map annotations are verified specifically on14.369. See the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDFs and preview links require persistent private volumes.
+The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. Actor/Item tools require **Pathfinder Second Edition (`pf2e`)**; core journal/map/image tools work independently of the game system. The module declares Foundry13 minimum; map annotations are verified specifically on14.369. See the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDFs and preview links require persistent private volumes.
 
-## Selective reads in v3.3.1
+## Selective reads in v3.4.0
 
 ### Auth0 support
 
@@ -116,7 +116,7 @@ volumes:
 Its private `.env` contains:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.3.1
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v3.4.0
 FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
 # Optional preview origin; independent of OAuth resource/audience configuration.
 FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN=
@@ -149,7 +149,7 @@ evaluate rolls. Embed generation checks compendium Item access. Update both
 components and refresh discovery when upgrading. See the
 [inline builder contract and limitations](https://github.com/sesopenko/foundry-mcp/blob/main/docs/pf2e-inline-builders.md).
 
-Version 3.3.1 includes compact defaults and typed `select` request and
+Version 3.4.0 includes compact defaults and typed `select` request and
 response contracts for nine heavy Actor/Item, journal and PDF-search tools.
 Object reads default to identity; lists default to ten entries; journal text
 defaults to 2,000 UTF-16 units; JSON defaults to 8,000 bytes. Actor/Item responses
@@ -157,7 +157,7 @@ use `entries[].values[]`; request raw evidence explicitly. Upgrade both componen
 and refresh client discovery when upgrading. See the
 [selective-read migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/selective-reads.md).
 
-## Actor and Item reading in v3.3.1
+## Actor and Item reading in v3.4.0
 
 Version 2.1.0 added `get_party_members` for official PF2e world-party membership
 and named character follow-ups. Version 2.2.0 added computed wealth/Bulk through
@@ -168,7 +168,7 @@ Deploy matching server/module builds and refresh
 LibreChat discovery when upgrading. See
 [metric contracts](https://github.com/sesopenko/foundry-mcp/blob/main/docs/character-inventory-metrics.md).
 
-Version 3.3.1 provides GM-only Actor/Item capability discovery, selected-source
+Version 3.4.0 provides GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item pack index search on the verified
 Foundry 14.369/PF2e 8.6.1 pairing. Canonical identities, bounded continuations and

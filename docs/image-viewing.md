@@ -1,10 +1,10 @@
 # Image information, map crops and seven-day previews
 
-The source build can read portraits and map files through the connected GM
+Version 3.4.0 can read portraits and map files through the connected GM
 browser, stage an original privately, and issue bounded PNG/WebP previews or
 exact crops. It also browses world Scene folders, reads grid/level file metadata
-and optionally draws compact map-note keys. This work is unreleased; public-host
-and target-ChatGPT visual acceptance remain separate verification gates.
+and optionally draws compact map-note keys. Public-host and target-ChatGPT
+visual acceptance remain separate verification gates.
 
 ## Configure delivery
 
