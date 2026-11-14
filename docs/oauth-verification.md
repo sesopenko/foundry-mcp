@@ -27,6 +27,12 @@ Basic container smoke also passed. See upstream
 [2→3](https://gofastmcp.com/getting-started/upgrading/from-fastmcp-2) and
 [3→4](https://gofastmcp.com/getting-started/upgrading/from-fastmcp-3) migration guides.
 
+The later [Codex discovery regression](mcp-discovery-regression.md) covers the
+complete catalog under Codex's negotiated `2025-06-18` protocol as well as the
+newer SDK default. Object-only response unions must explicitly declare their
+root `type: object`; newer-protocol discovery alone did not catch that contract
+error in journal mutation and upload results.
+
 ## Automated evidence
 
 Final `./scripts/test.sh`: **607 Python tests, one existing skip; 623 JavaScript

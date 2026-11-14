@@ -12,7 +12,7 @@ from urllib.parse import unquote
 
 from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
-from pydantic import Field, RootModel, field_validator
+from pydantic import ConfigDict, Field, RootModel, field_validator
 
 from .selective import SelectiveTool
 from .selective_models import Model
@@ -110,7 +110,12 @@ class UploadUnknown(Identity):
     message: str = Field(max_length=512)
 
 
-UploadResult = RootModel[Annotated[UploadSuccess | UploadUnknown, Field(discriminator='status')]]
+class UploadResult(RootModel[Annotated[UploadSuccess | UploadUnknown, Field(discriminator='status')]]):
+    # Both discriminated outcomes are objects; publish that root constraint
+    # explicitly for MCP clients negotiating a pre-2026 protocol version.
+    model_config = ConfigDict(json_schema_extra={'type': 'object'})
+
+
 _operation_lock = asyncio.Lock()
 
 

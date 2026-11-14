@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
-from pydantic import Field, RootModel, model_validator
+from pydantic import ConfigDict, Field, RootModel, model_validator
 
 from .selective import SelectiveTool, rpc
 from .selective_models import Model
@@ -388,7 +388,9 @@ class OwnershipWriteResult(Model):
 
 
 class MutationResult(RootModel[WriteResult | OwnershipWriteResult]):
-    pass
+    # Both alternatives are objects. Pydantic's union schema omits the root
+    # type, but MCP's pre-2026 outputSchema contract requires it explicitly.
+    model_config = ConfigDict(json_schema_extra={'type': 'object'})
 
 
 async def write_journal(request: WriteRequest):
