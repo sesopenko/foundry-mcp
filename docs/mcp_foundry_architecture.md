@@ -2,27 +2,6 @@
 
 ## Overview
 
-The typed `browse_maps` interface reads immediate world Scene-folder children
-through a separate core14 browser handler. Python binds cursors to verified
-caller identity and validates compact hierarchy/next-call results; the browser
-checks permissions and metadata revisions without activating a Scene. See
-[map browsing](plans/image-viewing/map-browsing.md).
-The separate `get_map_info` handler projects selected Scene geometry/grid and
-embedded level/Tile configuration. Private source witnesses participate in
-metadata revisions while public responses redact sensitive references. Typed
-Python validation rejects wrong owners, roles, continuations and source hints;
-see [map configuration](plans/image-viewing/map-info.md).
-
-The [map image tools](plans/image-viewing/map-image-tools.md) attach immutable
-map context atomically to private original snapshots. Separate context readers,
-native annotation workers and derivative storage own authorization/geometry,
-pixel composition and seven-day delivery respectively. Repeated crops reuse
-one transfer; bounded rendered-key metadata supplies exact legend follow-ups.
-The isolated worker and short-lived source cache remain separate from the
-SQLite derivative store. A private named volume preserves immutable previews
-across container recreation; anonymous delivery does not query the GM browser.
-See [image-viewing deployment](image-viewing.md).
-
 The separate typed [compendium interface](compendium-tools.md) discovers packs,
 scans explicitly selected journal indexes/pages with work bounds and reads exact
 source through shared journal processors. Canonical pack selectors remain

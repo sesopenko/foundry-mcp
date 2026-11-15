@@ -8,6 +8,12 @@ Connect AI assistants to Foundry Virtual Tabletop for Game Master assistance thr
 
 **[Source code and issues](https://github.com/sesopenko/foundry-mcp)** · **[Releases](https://github.com/sesopenko/foundry-mcp/releases)** · **[Operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/operations.md)** · **[License](https://github.com/sesopenko/foundry-mcp/blob/main/LICENSE.txt)**
 
+The current source removes image preview delivery while keeping journal image
+selection, embedding and uploads. Existing v4.0.0 release assets predate this
+rollback; use matching server/module builds from the reviewed source until a
+new release is published. See the
+[rollback deployment notes](https://github.com/sesopenko/foundry-mcp/blob/main/docs/operations.md#source-rollback-of-image-previews).
+
 This image runs the Python MCP server. A companion Foundry module connects the GM's browser to the server over WebSocket; MCP clients such as LibreChat and OpenAI Codex can then use its tools. Foundry remains the source of game data. Current tools provide server/module version diagnostics, active player names, journal navigation, search and reading, and the Actor/Item discovery and reading capabilities described below.
 
 Version 2.4.0 added bounded chat reading, explicit-audience HTML
@@ -22,68 +28,26 @@ Version 3.0.0 added GM-guided world-journal text authoring, organization,
 player sharing and
 [image selection and embedding](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-images.md).
 
-Version 4.0.0 adds User Data folder creation and validated JPEG/PNG/WebP uploads
+Tools support User Data folder creation and validated JPEG/PNG/WebP uploads
 through the authenticated GM bridge. Returned selectors work directly with journal
 embedding. Deploy matching server/module builds; no new variables or volumes are
 needed. Allow outbound HTTPS/DNS and private WebSocket frames up to about14MiB.
 ChatGPT-generated image handoff still needs host acceptance testing. See
 [image uploads and permanent overwrite behavior](https://github.com/sesopenko/foundry-mcp/blob/main/docs/image-uploads.md).
 
-Version 4.0.0 also permits publisher-style journal sections, sidebars, CSS class
+Journal authoring permits publisher-style journal sections, sidebars, CSS class
 lists, safe images and layout styles while rejecting executable HTML. Appearance
 depends on installed publisher styles.
 See [journal authoring](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md)
 for guidance configuration, limits and retry/ownership behavior. Compendiums
 remain read-only.
 
-Version 4.0.0 includes opt-in preview HTTP delivery using
-`FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN` and `FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR`
-(default `/data/image-previews`, requiring durable private storage). Anonymous
-GET/HEAD can read an issued derivative for seven days; source image-info and
-URL tools are integrated, while public-host acceptance remains pending. Python access/evaluation logs redact
-capabilities; configure reverse-proxy logs to omit preview paths and queries. See
-[preview HTTP configuration and current scope](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/http-delivery.md).
-The image-info tool reads original display dimensions and stages a private
-30-minute snapshot without requiring a public origin; see
-[image information](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/image-info-tool.md).
-
-Version 4.0.0 defaults `FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=true` (also when unset):
-all new previews/crops/annotated maps use JPEG quality80 on white, with `.jpg`
-URLs and `image/jpeg` responses. Set it to `false` to preserve PNG/WebP and
-transparency; empty or other values fail startup. Recreate the container after
-configuration changes. Existing issued bytes/expiry remain unchanged. The store
-migrates transactionally to schema2; older binaries require a consistent
-pre-upgrade store backup for rollback. See
-[preview configuration and migration](https://github.com/sesopenko/foundry-mcp/blob/main/docs/image-viewing.md#jpeg-output-and-store-migration).
-
-Version 4.0.0 includes read-only `browse_maps` navigation of core14 world
-Scene folders and named maps, preserving duplicate identities and bounded
-continuations without activating a Scene. See the
-[map browsing contract](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-browsing.md)
-for scope. `get_map_info` reads selected Scene dimensions, grid, explicit level
-background/foreground references and a separate Tile inventory; it never
-activates or exports a composed Scene. See
-[selected map configuration](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-info.md)
-for file-availability limits and sensitive-reference handling.
-Its selected-level notes section provides stable compact aliases and a bounded,
-revision-bound Note/journal/page legend; linked-target permissions precede label
-fallback. See [note identities](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-note-identities.md).
-Source image tools also accept exact Scene/level/role selectors. Opt-in
-`map_notes:true` renders compact keys on verified default backgrounds and returns
-a bounded legend follow-up; foreground/Tile composition is excluded. See
-[map image workflows and limits](https://github.com/sesopenko/foundry-mcp/blob/main/docs/plans/image-viewing/map-image-tools.md).
-Both Basic and OAuth deployment examples below mount a private named preview
-volume. Configure the independent preview HTTPS origin to enable links; preserve
-the volume when updating the container. Complete limits, proxy logging/routing,
-crop recovery and UID10001 package verification are in the
-[image-viewing operator guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/image-viewing.md).
-
 Upgrade the server and module together and refresh discovery: v3.0.0 replaced
 `get_pathfinder_writing_style_guide` with `get_writing_guidance`, which requires
 the connected GM browser and includes that world's instructions. See the
 [migration guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/journal-writing.md#migration).
 
-The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. Actor/Item tools require **Pathfinder Second Edition (`pf2e`)**; core journal/map/image tools work independently of the game system. The module declares Foundry13 minimum; map annotations are verified specifically on14.369. See the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDFs and preview links require persistent private volumes.
+The image does not include Foundry VTT or a chat interface. Use your existing licensed Foundry installation and world. The companion module requires the **Pathfinder Second Edition (`pf2e`) game system** and declares Foundry 13 as its minimum version; see the operator guide for tested compatibility and limitations. The image targets **Linux amd64** and needs no source mounts. Optional PDF references require persistent private volumes.
 
 ## Selective reads in v4.0.0
 
@@ -111,16 +75,8 @@ services:
       FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS: ${FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS:?set approved client}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
       FOUNDRY_MCP_DEV_EXECUTION: "false"
-      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
-      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
-      FOUNDRY_MCP_IMAGE_PREVIEW_JPEG: ${FOUNDRY_MCP_IMAGE_PREVIEW_JPEG-true}
-    volumes:
-      - image-previews:/data/image-previews
     ports:
       - "127.0.0.1:8000:8000"
-
-volumes:
-  image-previews:
 ```
 
 Its private `.env` contains:
@@ -128,9 +84,6 @@ Its private `.env` contains:
 ```dotenv
 FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v4.0.0
 FOUNDRY_MCP_PUBLIC_URL=https://mcp.example.com
-# Optional preview origin; independent of OAuth resource/audience configuration.
-FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN=
-FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=true
 FOUNDRY_MCP_OAUTH_ISSUER=https://YOUR_TENANT.REGION.auth0.com/
 FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS=auth0|REPLACE_WITH_USER_ID
 FOUNDRY_MCP_OAUTH_ALLOWED_CLIENT_IDS=REPLACE_WITH_CLIENT_ID
@@ -366,9 +319,6 @@ services:
       FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
       FOUNDRY_MCP_PDF_ENABLED: ${FOUNDRY_MCP_PDF_ENABLED:-false}
-      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
-      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
-      FOUNDRY_MCP_IMAGE_PREVIEW_JPEG: ${FOUNDRY_MCP_IMAGE_PREVIEW_JPEG-true}
       FOUNDRY_MCP_PDF_TRUSTED_GM_MCP: ${FOUNDRY_MCP_PDF_TRUSTED_GM_MCP:-false}
       FOUNDRY_MCP_PDF_LIBRARY_DIR: /data/pdf-library
       FOUNDRY_MCP_PDF_INDEX_DIR: /data/pdf-state
@@ -376,15 +326,11 @@ services:
       FOUNDRY_MCP_PDF_UPLOAD_TOKEN: ${FOUNDRY_MCP_PDF_UPLOAD_TOKEN:-}
       FOUNDRY_MCP_PDF_TRUST_TLS_PROXY: ${FOUNDRY_MCP_PDF_TRUST_TLS_PROXY:-false}
     volumes:
-      - image-previews:/data/image-previews
       - ./pdf-library:/data/pdf-library
       - ./pdf-state:/data/pdf-state
     ports:
       - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
     stop_grace_period: 15s
-
-volumes:
-  image-previews:
 ```
 
 ### `.env`
@@ -396,9 +342,6 @@ FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD='replace-with-your-mcp-password'
 FOUNDRY_MCP_BRIDGE_TOKEN='replace-with-your-browser-credential'
-# Set to your canonical externally reachable HTTPS origin to enable previews.
-FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN=
-FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=true
 # Optional PDF library; see the access and HTTPS/WSS requirements below.
 FOUNDRY_MCP_PDF_ENABLED=false
 FOUNDRY_MCP_PDF_TRUSTED_GM_MCP=false
@@ -414,8 +357,6 @@ alongside `compose.yaml`. They preserve uploaded PDFs, completed uploads awaitin
 indexing, and the SQLite index when the container is restarted or replaced.
 Keep and back up **both folders**. Do not delete them when refreshing the stack.
 Create them for the container's UID/GID 10001 before the first start.
-The separate image-previews named volume is initialized privately by the image;
-retain it for seven-day links across recreation and avoid `down --volumes`.
 
 Keep `.env` private and out of version control:
 
@@ -438,7 +379,6 @@ To use another host port, change only the published port in the mapping, for exa
 | `/mcp/mcp` | Streamable HTTP MCP endpoint; requires HTTP Basic Auth. |
 | `/ws/foundry` | GM browser bridge; requires the bridge credential in its first message. |
 | `/health` | Public liveness endpoint; does not require credentials. |
-| `/image-previews/{uuid4}.{png\|webp}` | Anonymous immutable derivative GET/HEAD for seven days when configured; never original files or an issuance endpoint. |
 
 Using your chosen host address and port:
 

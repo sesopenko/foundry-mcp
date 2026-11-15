@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
-import {browseJournalImages, resolveJournalImage} from '../../foundry-module/scripts/journalImages.js';
+import {browseJournalImages} from '../../foundry-module/scripts/journalImages.js';
 
 globalThis.crypto ??= webcrypto;
 const code = value => error => error.rpcError?.code === value;
@@ -81,24 +81,4 @@ test('native extension matching requires leading dots and must not produce a fal
   const result = await browseJournalImages({source: 'public', directory: 'icons/svg'});
   assert.equal(result.total, 1);
   assert.equal(result.entries[0].image.src, 'icons/svg/test.svg');
-});
-
-test('resolver requires exact fresh membership, preserving encoded directories and source identity', async () => {
-  const f = fixture();
-  f.result = {target: 'assets/%CE%B1%20folder', dirs: [], files: ['assets/%CE%B1%20folder/a%20image.png']};
-  const image = {source: 'data', directory: f.result.target, src: f.result.files[0]};
-  assert.deepEqual(await resolveJournalImage(image), image);
-  assert.equal(f.calls.length, 1);
-  await assert.rejects(resolveJournalImage({...image, src: 'assets/α folder/a image.png'}), code('ImageNotFound'));
-  f.result.files = [];
-  await assert.rejects(resolveJournalImage(image), code('ImageNotFound'));
-  assert.equal(f.calls.length, 3);
-});
-
-test('resolver rejects changed GM or world across the awaited native browse', async () => {
-  for (const change of [() => {game.user = {isGM: true};}, () => {game.world.id = 'another';}]) {
-    const f = fixture();
-    foundry.applications.apps.FilePicker.implementation.browse = async () => {change(); return f.result;};
-    await assert.rejects(resolveJournalImage({source: 'data', directory: 'assets', src: 'assets/other.webp'}), code('ContextChanged'));
-  }
 });

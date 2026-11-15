@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.title="Foundry MCP" \
       org.opencontainers.image.version=$VERSION \
       org.opencontainers.image.revision=$REVISION
 RUN groupadd --gid 10001 bridge && useradd --uid 10001 --gid bridge --no-create-home bridge
-RUN mkdir -p /data/pdf-library /data/pdf-state /data/image-previews && chown -R 10001:10001 /data && chmod 700 /data/pdf-library /data/pdf-state /data/image-previews
+RUN mkdir -p /data/pdf-library /data/pdf-state && chown -R 10001:10001 /data && chmod 700 /data/pdf-library /data/pdf-state
 WORKDIR /app
 COPY --from=dependencies /app/.venv /app/.venv
 COPY foundry_mcp_server/ ./foundry_mcp_server/
@@ -24,11 +24,6 @@ RUN .venv/bin/python -m foundry_mcp_server.build_info --version "$VERSION" --rel
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     FOUNDRY_MCP_HOST=0.0.0.0 FOUNDRY_MCP_PORT=8000 FOUNDRY_MCP_DEV_EXECUTION=false
 USER 10001:10001
-# Exact pyvips/pyvips-binary pins in the copied venv ship native codecs too.
-# Verify loading and a real header probe as the actual service user.
-RUN python -m foundry_mcp_server.image_preview_worker --smoke
-RUN python -m foundry_mcp_server.image_preview_process --smoke
-RUN python -m foundry_mcp_server.map_note_glyph_probe --smoke
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
     CMD ["python", "-m", "foundry_mcp_server.healthcheck"]

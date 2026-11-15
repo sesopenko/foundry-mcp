@@ -1,6 +1,6 @@
 # Browsing Foundry images
 
-Version 3.3.1 also supports [User Data folder creation and image uploads](image-uploads.md).
+Version 4.0.0 also supports [User Data folder creation and image uploads](image-uploads.md).
 Browser results include current-location and directory-node `capabilities`:
 `can_upload`, `can_create_directory`, and `reasons`. These are advisory public
 FilePicker checks with User Data-only mutation scope. Core Data/S3 remain
@@ -13,21 +13,6 @@ the GM select existing illustrations by navigating Foundry file directories.
 These directories are separate from journal folders. It does not upload,
 delete, generate, download or visually inspect images, and never scans recursively.
 WISH-012 adds image embedding through the journal writer described below.
-
-Version 3.4.0 also provides authenticated `get_foundry_image_info`: pass
-the returned `image` under `request.image`, or a complete stored img reference
-under `request.src`, to obtain original dimensions and a private snapshot handle.
-Pass that handle, an exact image or a stored src to `get_foundry_image_url` for
-an overview/crop link readable by anyone holding it for seven days. Issuance
-requires a configured public HTTPS origin. See [image information](plans/image-viewing/image-info-tool.md)
-and [preview coordinates, limits and privacy](plans/image-viewing/image-url-tool.md).
-Version 4.0.0 defaults newly issued previews to JPEG quality80 on white;
-`FOUNDRY_MCP_IMAGE_PREVIEW_JPEG=false` restores PNG/WebP with transparency.
-See [configuration and migration](image-viewing.md#jpeg-output-and-store-migration).
-For map-specific notes, start with `browse_maps` and follow `get_map_info`'s
-exact level/role `map` selector into image info. A bound handle plus
-`map_notes:true` renders compact keys and returns a revision-bound legend call;
-see [map image workflows and limits](plans/image-viewing/map-image-tools.md).
 
 ## Navigation and selectors
 

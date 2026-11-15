@@ -9,10 +9,9 @@ from contextlib import asynccontextmanager
 
 from foundry_mcp_server.config import settings
 from foundry_mcp_server.build_info import SERVER_BUILD
-from foundry_mcp_server.auth.principal import stamp_principal
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import JSONResponse,Response
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
+from fastapi.responses import JSONResponse
 import uvicorn
 
 from foundry_mcp_server.ws.connection import FoundryConnectionManager
@@ -22,8 +21,6 @@ from foundry_mcp_server.mcp_server.tools import register_foundry_manager
 
 logger = logging.getLogger("foundry_mcp")
 logging.basicConfig(level=logging.INFO)
-from foundry_mcp_server.image_preview_privacy import install_capability_filters
-install_capability_filters()
 
 # Instantiate global connection manager
 foundry_manager = FoundryConnectionManager()
@@ -32,33 +29,19 @@ register_foundry_manager(foundry_manager)
 from foundry_mcp_server.pdf.runtime import library as pdf_library
 from foundry_mcp_server.pdf.uploads import Uploads
 pdf_uploads = Uploads(pdf_library, foundry_manager.send) if pdf_library else None
-from foundry_mcp_server.image_preview_runtime import preview_runtime
-from foundry_mcp_server.image_preview_store import StoreFailure
-from foundry_mcp_server.image_preview_source_runtime import source_runtime
 
 @asynccontextmanager
 async def lifespan(app):
-    install_capability_filters()
-    try:
-        # Fail local persistence setup before entering the framework TaskGroup,
-        # preserving its fixed actionable startup failure category.
-        await preview_runtime.start(settings)
-        await source_runtime.start()
-        async with mcp_app.lifespan(app):
-            if pdf_library:
-                await pdf_library.start()
-                pdf_uploads.start()
-            try:
-                yield
-            finally:
-                if pdf_uploads:
-                    await pdf_uploads.close()
-                    await pdf_library.close()
-    finally:
+    async with mcp_app.lifespan(app):
+        if pdf_library:
+            await pdf_library.start()
+            pdf_uploads.start()
         try:
-            await source_runtime.close()
+            yield
         finally:
-            await preview_runtime.close()
+            if pdf_uploads:
+                await pdf_uploads.close()
+                await pdf_library.close()
 
 # Create FastAPI app
 app = FastAPI(
@@ -107,15 +90,12 @@ class MCPAccessControl:
                     headers={'WWW-Authenticate': f'Bearer resource_metadata="{metadata}"'})(scope, receive, send)
                 return
         if settings.development and mcp_request:
-            headers = [value for key,value in scope.get('headers',[]) if key.lower()==b'authorization']
+            headers = dict(scope.get("headers", []))
             expected = ("Bearer " + settings.mcp_token).encode()
             peer = (scope.get("client") or ("",))[0]
-            if (peer not in {"127.0.0.1", "::1"} or len(headers)!=1 or len(headers[0])>8192
-                    or not secrets.compare_digest(headers[0], expected)):
+            if peer not in {"127.0.0.1", "::1"} or not secrets.compare_digest(headers.get(b"authorization", b""), expected):
                 await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
                 return
-        if mcp_request:
-            scope = stamp_principal(scope, settings)
         await self.app(scope, receive, send)
 
 
@@ -229,26 +209,6 @@ async def health() -> JSONResponse:
 
 
 # --- Entry Point -------------------------------------------------------------
-
-
-@app.api_route('/image-previews',methods=['GET','HEAD'],include_in_schema=False)
-@app.api_route('/image-previews/{filename:path}',methods=['GET','HEAD'],include_in_schema=False)
-async def image_preview(request: Request) -> Response:
-    """Anonymous immutable derivative lookup; path alone selects bounded pixels."""
-    # Read only actual route parameters: a shared default argument on the root
-    # handler would otherwise become a selectable query field in FastAPI.
-    filename = request.path_params.get('filename','')
-    match = re.fullmatch(r'([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.(jpg|png|webp)',filename)
-    headers = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
-    if match is None:return Response(status_code=404,headers=headers)
-    try:stored = await preview_runtime.lookup(match[1],match[2])
-    except StoreFailure:
-        logger.error('PreviewStorageUnavailable: preview retrieval failed')
-        return Response(status_code=503,headers=headers)
-    if stored is None:return Response(status_code=404,headers=headers)
-    headers.update({'Cache-Control':'private, no-store','Content-Type':stored.mime_type,
-        'Content-Length':str(stored.size_bytes)})
-    return Response(content=b'' if request.method=='HEAD' else stored.data,status_code=200,headers=headers)
 
 # Mount last: explicit health/bridge routes remain outside OAuth transport auth.
 app.mount('/', mcp_app)

@@ -82,9 +82,12 @@ class DiscoveryProtocolTests(unittest.IsolatedAsyncioTestCase):
                     catalog = self.message(response)
                     self.assertNotIn('error', catalog, catalog.get('error'))
                     tools = {tool['name']: tool for tool in catalog['result']['tools']}
-                    self.assertTrue({'write_journal', 'upload_image', 'browse_maps',
-                                     'get_map_info', 'get_foundry_image_info',
-                                     'get_foundry_image_url'} <= tools.keys())
+                    self.assertTrue({'write_journal', 'upload_image',
+                                     'browse_journal_images',
+                                     'create_image_directory'} <= tools.keys())
+                    self.assertTrue({'browse_maps', 'get_map_info',
+                                     'get_foundry_image_info',
+                                     'get_foundry_image_url'}.isdisjoint(tools))
                     for name, tool in tools.items():
                         if 'outputSchema' in tool:
                             self.assertEqual(tool['outputSchema']['type'], 'object', name)

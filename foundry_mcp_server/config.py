@@ -3,7 +3,6 @@ import math
 import os
 import ipaddress
 import re
-from pathlib import Path
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 from pydantic import AnyHttpUrl
@@ -56,14 +55,6 @@ class Settings:
     oauth_issuer: str = ''
     oauth_allowed_subjects: tuple[str, ...] = ()
     oauth_allowed_client_ids: tuple[str, ...] = ()
-    image_preview_origin: str = ''
-    image_preview_data_dir: str = '/data/image-previews'
-    image_preview_jpeg: bool = True
-
-    @property
-    def image_preview_issuance_enabled(self):
-        """Server policy only; individual calls still require authenticated GM."""
-        return bool(self.image_preview_origin and (self.production_auth or self.development))
 
     @property
     def production_auth(self):
@@ -91,9 +82,6 @@ class Settings:
         enabled = os.getenv("FOUNDRY_MCP_DEV_EXECUTION", "false")
         if enabled not in {"true", "false"}:
             raise ValueError("FOUNDRY_MCP_DEV_EXECUTION must be true or false")
-        preview_jpeg = os.getenv('FOUNDRY_MCP_IMAGE_PREVIEW_JPEG', 'true')
-        if preview_jpeg not in {'true', 'false'}:
-            raise ValueError('FOUNDRY_MCP_IMAGE_PREVIEW_JPEG must be true or false')
         settings = cls(
             host=host,
             port=port,
@@ -107,9 +95,6 @@ class Settings:
             timeout=float(os.getenv("FOUNDRY_MCP_EXECUTION_TIMEOUT", "15")),
             trace_path=os.getenv("FOUNDRY_MCP_TRACE_PATH") or None,
             public_url=os.getenv('FOUNDRY_MCP_PUBLIC_URL', ''),
-            image_preview_origin=os.getenv('FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN', ''),
-            image_preview_data_dir=os.getenv('FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR', '/data/image-previews'),
-            image_preview_jpeg=preview_jpeg == 'true',
             oauth_provider=os.getenv('FOUNDRY_MCP_OAUTH_PROVIDER', ''),
             oauth_issuer=os.getenv('FOUNDRY_MCP_OAUTH_ISSUER', ''),
             oauth_allowed_subjects=allowlist(os.environ['FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS'], 'FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS') if os.getenv('FOUNDRY_MCP_OAUTH_ALLOWED_SUBJECTS') else (),
@@ -117,12 +102,6 @@ class Settings:
         )
         if not math.isfinite(settings.timeout) or not 0 < settings.timeout <= 120:
             raise ValueError("Execution timeout must be between 0 and 120 seconds")
-        if settings.image_preview_origin:
-            https_origin(settings.image_preview_origin,'FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN')
-        if (not settings.image_preview_data_dir or '\x00' in settings.image_preview_data_dir
-                or settings.image_preview_data_dir.strip()!=settings.image_preview_data_dir
-                or not Path(settings.image_preview_data_dir).is_absolute()):
-            raise ValueError('FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR must be an absolute private directory')
         if settings.development and (not settings.mcp_token or not settings.browser_token):
             raise ValueError("Development execution requires caller and browser credentials")
         if settings.auth_mode not in {"none", "basic", "oauth"}:

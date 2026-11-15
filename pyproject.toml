@@ -12,8 +12,6 @@ dependencies = [
     "pydantic==2.12.5",
     "pillow==13.0.0",
     "pypdf==6.21.1",
-    "pyvips[binary]==3.2.0",
-    "pyvips-binary==8.18.7",
     "uvicorn==0.40.0",
 ]
 

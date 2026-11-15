@@ -1,9 +1,5 @@
 # sesopenko/foundry-mcp
 
-Version 4.0.0 defaults new [image previews and map crops](docs/image-viewing.md)
-to JPEG quality80 on white, with an option to retain PNG/WebP transparency.
-Public HTTPS delivery and ChatGPT visual acceptance remain operator checks.
-
 Upgrade the server and module together and refresh client discovery. When upgrading from 2.x, the old
 style-guide tool is replaced by the GM-connected `get_writing_guidance` tool;
 see [migration guidance](docs/journal-writing.md#migration).
@@ -32,13 +28,9 @@ These builders are included in v2.3.0.
 Journal tools navigate and read [world journals](docs/journal-tools.md) and
 [compendium rules](docs/compendium-tools.md), alongside
 [GM-guided text authoring and sharing](docs/journal-writing.md) and
-[image selection and embedding](docs/journal-images.md). Compendium content
-remains read-only.
-
-Explore [image previews, map crops and map navigation](docs/image-viewing.md),
-with optional readable note keys and JPEG quality80 output by default.
-Seven-day links require HTTPS and persistent private storage;
-target-client visual acceptance is pending.
+[image selection and embedding](docs/journal-images.md). Create User Data
+folders and [upload images](docs/image-uploads.md) for journal use; generated-image
+handoff awaits host acceptance testing. Compendium content remains read-only.
 
 Chat tools provide bounded reading and HTML sending with explicit
 audiences and character speakers. See [chat tools and compatibility](docs/chat-tools.md).
@@ -71,8 +63,7 @@ credentials; development execution stays disabled. See the authentication and
 See [verification evidence and pending operator checks](docs/operationalization-verification.md).
 
 Save this as `compose.yaml` in a separate deployment directory to run only the
-MCP server. It requires no Foundry container or source mounts; the private
-preview volume preserves optional seven-day links:
+MCP server. It requires no Foundry container, source mounts, or data volumes:
 
 ```yaml
 services:
@@ -88,17 +79,9 @@ services:
       FOUNDRY_MCP_BASIC_USERNAME: ${FOUNDRY_MCP_BASIC_USERNAME:?set MCP username}
       FOUNDRY_MCP_BASIC_PASSWORD: ${FOUNDRY_MCP_BASIC_PASSWORD:?set MCP password}
       FOUNDRY_MCP_BRIDGE_TOKEN: ${FOUNDRY_MCP_BRIDGE_TOKEN:?set browser credential}
-      FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN: ${FOUNDRY_MCP_IMAGE_PREVIEW_ORIGIN:-}
-      FOUNDRY_MCP_IMAGE_PREVIEW_DATA_DIR: /data/image-previews
-      FOUNDRY_MCP_IMAGE_PREVIEW_JPEG: ${FOUNDRY_MCP_IMAGE_PREVIEW_JPEG-true}
-    volumes:
-      - image-previews:/data/image-previews
     ports:
       - "${FOUNDRY_MCP_LAN_ADDRESS:?set the host LAN IP}:8000:8000"
     stop_grace_period: 15s
-
-volumes:
-  image-previews:
 ```
 
 Create a private `.env` alongside it, setting your LAN address. Fill in nonempty credentials of your choosing; empty values deliberately
@@ -156,8 +139,6 @@ FastAPI 0.162.0 and FastMCP 4.1.4 with MCP SDK 2 and Starlette 1.x.
 the old Fakeredis constraint is removed. HTTP client helpers use httpx2.
 Commit all three files.
 `uv sync` creates and manages `.venv`; manual activation is unnecessary.
-The locked environment includes native binaries for
-[preview decoder development](docs/image-preview-decoder.md).
 
 ### Run the server
 

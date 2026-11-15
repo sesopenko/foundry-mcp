@@ -12,11 +12,7 @@ import {getWritingGuidance} from './writingGuidance.js';
 import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from './journalAuthoring.js';
 import {getJournalAuthoringOptions} from './journalAuthoringOptions.js';
 import {browseJournalImages} from './journalImages.js';
-import {browseMaps} from './mapBrowse.js';
-import {getMapInfo} from './mapInfo.js';
-import {getMapImageContext,getMapRegionCandidates} from './mapContext.js';
 import {prepareImageUpload, createImageDirectory, uploadImage} from './imageUploads.js';
-import {previewTransfers, getImagePreviewContext, validateImagePreviewSource, beginImagePreviewTransfer, readImagePreviewChunk, releaseImagePreviewTransfer} from './imagePreviewTransfer.js';
 import { verifyPF2eInlineRoll, verifyPF2eInlineCheck, verifyPF2eInlineEmbed } from "./inline.js";
 import { listSceneActors } from "./actorScenes.js";
 import { listActorCompendiums, searchCompendiumActors } from "./actorPacks.js";
@@ -35,9 +31,6 @@ const RECONNECT_MAX_DELAY_MS = 30000; // 30 seconds
 const RECONNECT_BACKOFF_FACTOR = 2;
 
 let currentSocket = null;
-const directPreviewOwner = Object.freeze({});
-const previewMethods = ['getImagePreviewContext','validateImagePreviewSource','beginImagePreviewTransfer','readImagePreviewChunk','releaseImagePreviewTransfer'];
-const mapContextMethods=['getMapImageContext','getMapRegionCandidates'];
 let clearCurrentAuthTimer = null;
 let reconnectAttempts = 0;
 let reconnectTimeoutId = null;
@@ -67,20 +60,11 @@ function reportStatus(state, message) {
  * or a Promise resolving to a value.
  */
 const rpcHandlers = {
-  getImagePreviewContext,
-  validateImagePreviewSource,
-  beginImagePreviewTransfer,
-  readImagePreviewChunk,
-  releaseImagePreviewTransfer,
   getJournalWriteContext,
   getJournalOwnershipContext,
   writeJournal,
   getJournalAuthoringOptions,
   browseJournalImages,
-  browseMaps,
-  getMapInfo,
-  getMapImageContext,
-  getMapRegionCandidates,
   prepareImageUpload,
   createImageDirectory,
   uploadImage,
@@ -161,7 +145,7 @@ const rpcHandlers = {
  * @param {function(): boolean} isCurrent - Exact socket still owns this RPC.
  * @returns {Promise<object>} - Response object to send back over WebSocket.
  */
-export async function handleRpcMessage(message, isCurrent = () => true, rpcOwner = directPreviewOwner) {
+export async function handleRpcMessage(message, isCurrent = () => true) {
   if (!message || typeof message !== "object") return null;
   const { id, method, params } = message;
 
@@ -192,20 +176,14 @@ export async function handleRpcMessage(message, isCurrent = () => true, rpcOwner
   }
 
   try {
-    const result = previewMethods.includes(method)
-      ? await handler(params ?? {}, isCurrent, {owner:rpcOwner,rpc_id:id})
-      : [...mapContextMethods,'prepareImageUpload', 'createImageDirectory', 'uploadImage','browseMaps','getMapInfo'].includes(method)
+    const result = ['prepareImageUpload', 'createImageDirectory', 'uploadImage'].includes(method)
       ? await handler(params ?? {}, isCurrent) : await handler(params ?? {});
     return { id, result };
   } catch (err) {
     console.debug("[foundryBridge] RPC failed", method, err?.rpcError?.type || "RpcError");
     return {
       id,
-      error: err?.rpcError || (previewMethods.includes(method)
-        ? {type:'ImageTransferFailed',code:'ImageTransferFailed',message:'Private transfer failed; begin a fresh transfer.'}
-        : mapContextMethods.includes(method)
-        ? {type:'MapContextReadFailed',code:'MapContextReadFailed',message:'Private map context failed; refresh map/image info.'}
-        : { type: "RpcError", message: err?.message || "RPC handler failed" }),
+      error: err?.rpcError || { type: "RpcError", message: err?.message || "RPC handler failed" },
     };
   }
 }
@@ -288,7 +266,6 @@ function openWebSocket() {
     return null;
   }
   setPdfSocket(null);
-  if (currentSocket) previewTransfers.disconnect(currentSocket);
   currentSocket = socket;
   clearCurrentAuthTimer = clearAuthTimer;
   reportStatus("Connecting", "Opening the browser bridge.");
@@ -347,7 +324,7 @@ function openWebSocket() {
     if (handlePdfMessage(message)) return;
     console.debug("[foundryBridge] RPC", message?.id, message?.method);
 
-    const response = await handleRpcMessage(message, () => currentSocket === socket && socket.readyState === WebSocket.OPEN, socket);
+    const response = await handleRpcMessage(message, () => currentSocket === socket && socket.readyState === WebSocket.OPEN);
     if (!response) {
       return;
     }
@@ -367,7 +344,6 @@ function openWebSocket() {
     );
 
     clearAuthTimer();
-    previewTransfers.disconnect(socket);
     if (currentSocket !== socket) return;
     setPdfSocket(null);
     currentSocket = null;
@@ -425,7 +401,6 @@ export function disconnectFoundryBridge() {
 
   if (currentSocket) {
     const socket = currentSocket;
-    previewTransfers.disconnect(socket);
     setPdfSocket(null);
     currentSocket = null;
     try {

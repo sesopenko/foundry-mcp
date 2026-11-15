@@ -31,29 +31,12 @@ class PackagingTests(unittest.TestCase):
         with zipfile.ZipFile(output / 'foundry-mcp.zip') as archive:
             self.assertIn('module.json', archive.namelist())
             self.assertIn('scripts/connectionConfig.js', archive.namelist())
-            self.assertIn('scripts/imagePreviewFetch.js', archive.namelist())
-            self.assertIn('scripts/imagePreviewTransfer.js', archive.namelist())
             self.assertEqual(archive.read('module.json'), (output / 'module.json').read_bytes())
             self.assertFalse(any('private' in n or '.env' in n or n.endswith('.map') for n in archive.namelist()))
             self.assertIn('LICENSE.txt', archive.namelist())
         first = (output / 'foundry-mcp.zip').read_bytes()
         packager.package(output, root=self.root, tag='v' + version)
         self.assertEqual(first, (output / 'foundry-mcp.zip').read_bytes())
-
-    def test_map_browser_dependency_is_in_the_installable_archive(self):
-        output=self.root/'output'
-        packager.package(output,root=self.root)
-        with zipfile.ZipFile(output/'foundry-mcp.zip') as archive:
-            self.assertIn('scripts/mapBrowse.js',archive.namelist())
-            self.assertIn(b'./mapBrowse.js',archive.read('scripts/foundryBridge.js'))
-
-    def test_core_map_tools_are_not_blocked_by_a_pf2e_only_module_manifest(self):
-        output=self.root/'output'
-        packager.package(output,root=self.root)
-        with zipfile.ZipFile(output/'foundry-mcp.zip') as archive:
-            manifest=json.loads(archive.read('module.json'))
-        self.assertFalse(manifest.get('relationships',{}).get('systems'),
-            'Core map/journal/image tools must load independently of PF2e; PF2e tools enforce their own system boundary.')
 
     def test_mismatched_versions_mutable_urls_missing_imports_and_symlinks_fail(self):
         with self.assertRaisesRegex(ValueError, 'versions must agree'):
@@ -81,3 +64,30 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(app.version, data['version'])
         self.assertIn('ARG VERSION=' + data['version'] + '\n', (ROOT / 'Dockerfile').read_text())
         self.assertIn('VERSION: ' + data['version'] + '\n', (ROOT / 'deploy/compose.local.yaml').read_text())
+
+    def test_preview_assets_are_excluded_but_journal_images_remain(self):
+        output = self.root / 'output'
+        packager.package(output, root=self.root)
+        with zipfile.ZipFile(output / 'foundry-mcp.zip') as archive:
+            names = set(archive.namelist())
+            self.assertTrue({'scripts/journalImages.js', 'scripts/journalImageEmbedding.js',
+                             'scripts/imageUploads.js'} <= names)
+            self.assertTrue({'scripts/imagePreviewFetch.js', 'scripts/imagePreviewTransfer.js',
+                             'scripts/mapBrowse.js', 'scripts/mapInfo.js', 'scripts/mapNotes.js',
+                             'scripts/mapContext.js', 'scripts/mapGeometry.js'}.isdisjoint(names))
+
+    def test_preview_dependencies_and_deployment_configuration_are_removed(self):
+        import tomllib
+        project = tomllib.loads((ROOT / 'pyproject.toml').read_text())['project']
+        lock = tomllib.loads((ROOT / 'uv.lock').read_text())
+        self.assertIn('pillow==13.0.0', project['dependencies'])  # Retained uploads.
+        self.assertFalse(any(dep.startswith('pyvips') for dep in project['dependencies']))
+        self.assertFalse(any(package['name'].startswith('pyvips') for package in lock['package']))
+        self.assertEqual(next(package['version'] for package in lock['package']
+                              if package['name'] == 'foundry-mcp'), project['version'])
+        for filename in ('Dockerfile', 'deploy/compose.yaml', 'deploy/compose.oauth.yaml',
+                         'deploy/.env.example', 'deploy/.env.oauth.example'):
+            with self.subTest(filename=filename):
+                text = (ROOT / filename).read_text()
+                self.assertNotIn('FOUNDRY_MCP_IMAGE_PREVIEW', text)
+                self.assertNotIn('/data/image-previews', text)

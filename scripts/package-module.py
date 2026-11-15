@@ -26,12 +26,6 @@ RUNTIME_SCRIPTS += ('journalAuthoringOptions.js',)
 RUNTIME_SCRIPTS += ('journalImages.js',)
 RUNTIME_SCRIPTS += ('journalImageEmbedding.js',)
 RUNTIME_SCRIPTS += ('imageUploads.js',)
-RUNTIME_SCRIPTS += ('imagePreviewFetch.js',)
-RUNTIME_SCRIPTS += ('imagePreviewTransfer.js',)
-RUNTIME_SCRIPTS += ('mapBrowse.js',)
-RUNTIME_SCRIPTS += ('mapInfo.js',)
-RUNTIME_SCRIPTS += ('mapNotes.js',)
-RUNTIME_SCRIPTS += ('mapContext.js','mapGeometry.js')
 
 
 def manifest(root=ROOT, tag=None):

@@ -109,6 +109,15 @@ test("bridge behavior", async t => {
     globalThis.game = { settings, users: { values() { throw new Error("users unavailable"); } } };
     assert.equal((await socket.request({ id: "failure", method: "getPlayerNameList" })).error.message, "users unavailable");
   });
+  await t.test("removed preview and map methods are unknown RPCs", async () => {
+    const socket = connectFoundryBridge();
+    for (const method of ['getImagePreviewContext', 'validateImagePreviewSource',
+      'beginImagePreviewTransfer', 'readImagePreviewChunk', 'releaseImagePreviewTransfer',
+      'browseMaps', 'getMapInfo', 'getMapImageContext', 'getMapRegionCandidates']) {
+      const response = await socket.request({ id: method, method, params: {} });
+      assert.deepEqual(response, { id: method, error: { message: `Unknown method '${method}'` } });
+    }
+  });
   await t.test("reconnect backs off and resets after success", async () => {
     await connectFoundryBridge().close();
     assert.equal([...timers.values()][0].delay, 1000);

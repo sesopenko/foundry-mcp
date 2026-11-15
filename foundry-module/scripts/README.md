@@ -1,29 +1,5 @@
 # foundry-module/scripts
 
-`mapBrowse.js` implements authenticated core14 world Scene-folder navigation
-using public document metadata and permissions, with named ancestry and bounded,
-revision-bound continuations. It needs no PF2e or active canvas and never
-activates a Scene. See the [map browsing contract](../../docs/plans/image-viewing/map-browsing.md).
-The module manifest does not restrict these core tools to PF2e; Actor/Item
-handlers retain their explicit PF2e admission checks.
-
-`mapInfo.js` reads exact Scene grid/dimensions and embedded level image roles or
-Tile file/placement inventory through public document APIs. Stored references
-remain separate from file availability and composed Scene rendering. See
-[selected map configuration](../../docs/plans/image-viewing/map-info.md).
-
-`mapNotes.js` projects authorized Note identities/labels and stable per-level
-aliases through public includedInLevel and linked-target permissions. The same
-selected-level revision governs assets, bounded legends and private candidates;
-no journal bodies or pixel overlays are produced. See
-[map note identities](../../docs/plans/image-viewing/map-note-identities.md).
-`mapContext.js` and pure `mapGeometry.js` provide private default-background
-context/crop candidates with verified rectangle conversion and immutable Python
-source binding. Image tools consume these readers for explicit map selectors,
-optional annotated crops and revision-bound legends; see
-[map image tools](../../docs/plans/image-viewing/map-image-tools.md) and
-[map context support](../../docs/plans/image-viewing/map-context.md).
-
 `imageUploads.js` implements User Data directory creation and image upload through
 public core14 FilePicker APIs. `journalImages.js` exposes directory capabilities.
 Python-validated bytes arrive over the authenticated bridge; socket/world/GM
