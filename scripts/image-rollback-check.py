@@ -6,12 +6,14 @@ Uses the existing local development credential without printing it or game data.
 """
 import asyncio
 import json
+import tomllib
 from pathlib import Path
 
 import httpx2 as httpx
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
+VERSION = tomllib.loads((Path(__file__).resolve().parent.parent / 'pyproject.toml').read_text())['project']['version']
 
 async def check(client, http):
     tools = await client.list_tools()
@@ -20,7 +22,7 @@ async def check(client, http):
     assert {'browse_journal_images', 'write_journal', 'upload_image', 'create_image_directory'} <= names
     bridge = (await client.call_tool('get_bridge_versions', {})).structured_content
     assert bridge['module_status'] == 'connected'
-    assert bridge['server']['version'] == bridge['module']['version'] == '4.0.0'
+    assert bridge['server']['version'] == bridge['module']['version'] == VERSION
     browse = (await client.call_tool('browse_journal_images', {'limit': 1})).structured_content
     assert len(browse['entries']) <= 1
     players = await client.call_tool('get_player_names', {})

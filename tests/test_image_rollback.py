@@ -25,7 +25,7 @@ class ImageRollbackTests(unittest.IsolatedAsyncioTestCase):
             ('browse_journal_images', 'write_journal', 'upload_image', 'create_image_directory')]
         client.call_tool.side_effect = [
             SimpleNamespace(structured_content=dict(module_status='connected',
-                server=dict(version='4.0.0'), module=dict(version='4.0.0'))),
+                server=dict(version=checker.VERSION), module=dict(version=checker.VERSION))),
             SimpleNamespace(structured_content=dict(entries=[], complete=True)),
             SimpleNamespace(is_error=False)]
         http.request.return_value = SimpleNamespace(status_code=404)

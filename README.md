@@ -88,7 +88,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v4.0.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v5.0.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -283,14 +283,14 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v4.0.0)
+## Actor and Item source reading (v5.0.0)
 
 Read official PF2e party membership and shared possessions separately, with
 named characters and Items for follow-up reads. Compare characters' wealth and
 encumbrance using the [metric tools](docs/character-inventory-metrics.md);
 see [party contracts](docs/party-tools.md) for stash access and limits.
 
-Version 4.0.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 5.0.0 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
 navigation, and scoped Actor/Item compendium index search on Foundry
 14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and
