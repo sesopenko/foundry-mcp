@@ -11,6 +11,7 @@ from fastmcp.exceptions import ToolError
 from pydantic import Field, model_validator
 
 from .selective_models import Model, PageRequest, Pagination, Runtime
+from .runtime_compatibility import supported_runtime
 
 WorldActorUuid = Annotated[str, Field(max_length=512, pattern=r'^Actor\.[^.\s#]+$')]
 
@@ -97,7 +98,7 @@ class PartyPage(Model):
 
     @model_validator(mode='after')
     def coherent_page(self):
-        if self.runtime != Runtime(core_version='14.369', system_id='pf2e', system_version='8.6.1'):
+        if not supported_runtime(self.runtime.model_dump()):
             raise ValueError('Unverified runtime')
         if len(set(self.reasons)) != len(self.reasons) or (self.scope_status == 'complete') != (not self.reasons):
             raise ValueError('Scope status must agree with reasons')
@@ -260,7 +261,7 @@ async def read_party(request: PartyRequest):
     return result
 
 
-PARTY_DOC = """PF2e-specific GM read of official party membership (core14.369/PF2e8.6.1).
+PARTY_DOC = """PF2e-specific GM read of official party membership (Foundry >=14.369,<15; PF2e >=8.6.1,<9).
 Use for 'the PCs' before individual read_actor calls: take resolved character
 members, not player ownership, logged-in users or every character in the world.
 Reads persisted party membership, not stash, Bulk or wealth. Other systems/
@@ -300,7 +301,7 @@ Example: get_party_members({}), then each returned read_actor next_call.
 For shared possessions, call get_party_stash with the selected party UUID.
 """
 
-STASH_DOC = """PF2e-specific GM read of official party stash (core14.369/PF2e8.6.1).
+STASH_DOC = """PF2e-specific GM read of official party stash (Foundry >=14.369,<15; PF2e >=8.6.1,<9).
 Use for shared possessions, not member inventories or inferred player ownership.
 Requires ready authenticated GM and OBSERVER access to party and each Item.
 Other systems/versions are unsupported. Read-only: no transfers, writes or rolls.

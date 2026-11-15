@@ -18,11 +18,15 @@ ID sequences support incremental reads; request flags reconcile loaded sends.
 Stored HTML may already contain PF2e's converted roll links. No deletion or
 clearing handler is registered; see [chat contracts](../../docs/chat-tools.md).
 
-`inline.js` verifies typed PF2e inline builder source on core14.369/PF2e8.6.1
+`inline.js` verifies typed PF2e inline builder source on supported core14/PF2e8 versions
 using public `Roll.validate`, canonical document identity and permissions. It
 never evaluates rolls, enriches content, sends messages or changes documents.
 Python constructs delimiters from bounded typed mechanics. See the
 [builder contract and verification](../../docs/pf2e-inline-builders.md).
+
+`runtimeCompatibility.js` centralizes browser range admission; Python validates
+the same ranges. See [compatibility and schema audit](../../docs/runtime-compatibility.md).
+Older version annotations below retain their original schema evidence.
 
 `actorParty.js` discovers PF2e8.6.1 world-party Actors and selects persisted
 `system.details.members[].uuid` through public source serialization. It resolves

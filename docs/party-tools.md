@@ -1,6 +1,7 @@
 # Official party membership and stash
 
-`get_party_members` is a GM-only, read-only tool on Foundry 14.369/PF2e 8.6.1.
+`get_party_members` is a GM-only, read-only tool on Foundry >=14.369,<15 and
+PF2e >=8.6.1,<9; see [compatibility and tested versions](runtime-compatibility.md).
 It discovers world parties and reads their persisted membership. The separate
 `get_party_stash` interface, added in v3.0.0, reads shared possessions. Neither
 party tool computes Bulk, currency value or wealth.
@@ -123,7 +124,7 @@ Public core `Actor.items`, Item `parent`/`uuid`/`testUserPermission` and
 The [party definition](https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/actor/party/document.ts)
 and existing installed party template confirm correspondence to the Stash tab;
 production code does not use sheet preparation, template structure or prepared
-party/inventory getters. Runtime admission stays Foundry14.369/PF2e8.6.1.
+party/inventory getters. Runtime admission follows the version ranges above.
 
 Roster and stash now share world-party selection and page invariants; source
 extraction remains separate. This refactoring preserves roster behavior and

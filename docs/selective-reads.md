@@ -68,7 +68,8 @@ casting, and `skill_names` narrows serialized skill keys. Scope diagnostics rema
 visible. `sections` is an explicit coarse shorthand for details; combining it
 with `select` is rejected. Unknown fields, enums, duplicate selections and invalid
 bounds fail before a bridge read. No feature support is added for other systems;
-existing Foundry14.369/PF2e8.6.1 runtime and permission guards remain in force.
+permission guards remain in force; runtime admission follows the
+[Foundry 14/PF2e 8 compatibility ranges](runtime-compatibility.md).
 
 ## Response and continuation
 

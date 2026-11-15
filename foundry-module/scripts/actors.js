@@ -1,6 +1,7 @@
 /** Read-only Actor/Item extraction foundation; contract: docs/actor-tools.md. */
 import { fail, validateParams, integer, selector, selectSections, digest, textFragments, paginate } from './actorReadUtils.js';
 import { selectivePage, compactNode } from './selectiveReads.js';
+import { supportedRuntime, COMPATIBILITY } from './runtimeCompatibility.js';
 import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
 import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { weaponFields } from './actorWeapon.js';
@@ -611,13 +612,13 @@ function bounds(params, allowed, sectionNames) {
  */
 export async function getActorTypes(params = {}) {
   validateParams(params,[]); const current = ready(false);
-  const supported = current.core_version==='14.369' && current.system_id==='pf2e' && current.system_version==='8.6.1';
+  const supported = supportedRuntime(current);
   const make = (name, allowed, inScope, sections=false) => ({...(sections?{name}:{type:name,name}),allowed,in_scope:inScope,
     source_supported:supported&&inScope&&(!sections||['identity','source','description'].includes(name)),mapped_supported:false,effective_supported:false,
     limitations:inScope?['Foundation selects core metadata, explicit descriptions and shared physical source fields where applicable; type-specific mappings and effective sections are pending.']:['Type is outside initial Actor/Item scope.'],verification:structuredClone(VERIFICATION)});
   const actorAllowed = globalThis.foundry?.documents?.Actor?.TYPES ?? globalThis.Actor?.TYPES ?? [];
   const itemAllowed = globalThis.foundry?.documents?.Item?.TYPES ?? globalThis.Item?.TYPES ?? [];
-  const result = {contract_version:1,runtime:current,availability:{supported,reason:supported?null:'Supported pairing: Foundry14.369/PF2e8.6.1.'},
+  const result = {contract_version:1,runtime:current,availability:{supported,reason:supported?null:`Supported range: ${COMPATIBILITY}.`},
     actor_types:[...new Set([...ACTOR_TYPES,...actorAllowed])].map(type=>make(type,actorAllowed.includes(type),ACTOR_TYPES.includes(type))),
     item_types:[...new Set([...ITEM_TYPES,...itemAllowed])].map(type=>make(type,itemAllowed.includes(type),ITEM_TYPES.includes(type)&&type!=='affliction')),
     actor_sections:ACTOR_SECTIONS.map(name=>make(name,true,true,true)),item_sections:ITEM_SECTIONS.map(name=>make(name,true,true,true)),limits:{...LIMITS},

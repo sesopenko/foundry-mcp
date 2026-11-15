@@ -25,6 +25,13 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
@@ -125,10 +132,10 @@ async def _run(world_id, check_statistics, summary):
     summary.update(passed=False, cleanup_confirmed=False, statistics_checked=False,
                    mcp_calls=0, current_present=0, current_missing=0)
     stage = 'discovery'
-    guard = """
-if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
+    guard = ("""
+if(!game.ready||!game.user.isGM||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Unsupported development runtime');
 if(location.origin!=='http://localhost:30000'||game.world.id!==WORLD)throw Error('Wrong development world');
-""".replace('WORLD', json.dumps(world_id))
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check()).replace('WORLD', json.dumps(world_id))
     async with Client(transport, timeout=REQUEST_TIMEOUT_SECONDS, init_timeout=INIT_TIMEOUT_SECONDS) as client:
         async def js(code):
             summary['mcp_calls'] += 1

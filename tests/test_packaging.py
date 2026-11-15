@@ -26,11 +26,12 @@ class PackagingTests(unittest.TestCase):
             p.parent.mkdir(exist_ok=True, parents=True)
             p.write_text('private fixture')
         output = self.root / 'output'
-        version = packager.package(output, root=self.root, tag='v5.0.0')
-        self.assertEqual(version, '5.0.0')
+        version = packager.package(output, root=self.root, tag='v5.0.1')
+        self.assertEqual(version, '5.0.1')
         with zipfile.ZipFile(output / 'foundry-mcp.zip') as archive:
             self.assertIn('module.json', archive.namelist())
             self.assertIn('scripts/connectionConfig.js', archive.namelist())
+            self.assertIn('scripts/runtimeCompatibility.js', archive.namelist())
             self.assertEqual(archive.read('module.json'), (output / 'module.json').read_bytes())
             self.assertFalse(any('private' in n or '.env' in n or n.endswith('.map') for n in archive.namelist()))
             self.assertIn('LICENSE.txt', archive.namelist())

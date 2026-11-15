@@ -77,7 +77,9 @@ export function currentStatisticFields(serialized) {
   for (const mode of ['land', 'burrow', 'climb', 'fly', 'swim', 'travel']) {
     const keys = ['movement', 'speeds', mode];
     const modeData = selected(serialized, ['system', ...keys]);
-    if (!['land', 'travel'].includes(mode) && modeData.present && modeData.value === null) {
+    // PF2e-specific 8.7.0 CreatureMovementData permits null land speed too:
+    // https://github.com/foundryvtt/pf2e/blob/pf2e-8.7.0/src/module/actor/creature/data.ts
+    if (mode !== 'travel' && modeData.present && modeData.value === null) {
       add(keys, 'object', true);
       continue;
     }

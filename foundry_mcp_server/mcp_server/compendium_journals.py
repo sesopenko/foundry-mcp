@@ -247,7 +247,7 @@ returned}. This lists immediate directory folder context; no internal pack tree.
 Journal packs: search_compendium_journals(pack_id=node.id,query='DCs by Level')
 finds embedded titles without knowing entries. Item/Actor packs: use
 search_compendium_actors(pack_ids=[node.id],document_type=node.document_type,
-query=...). These existing readers require PF2e8.6.1 and supported types; journal
+query=...). These existing readers require Foundry >=14.369,<15, PF2e >=8.6.1,<9 and supported types; journal
 tools do not require PF2e. Empty nodes exclude denied packs, not proof of absence.
 """ + COMMON
 
@@ -316,7 +316,7 @@ Returns foundry_version/page_uuid/source/target/anchor/status/identity/next_call
 resolved includes named canonical destination and next_call{tool,arguments} for
 world/pack journal entry/page or PF2e Actor/Item readers; copy arguments unchanged.
 Anchor is retained separately, never part of a reader selector. PF2e-specific
-Actor/Item admission requires supported types/core14.369/PF2e8.6.1; other systems
+Actor/Item admission requires supported types, Foundry >=14.369,<15 and PF2e >=8.6.1,<9; other systems
 return unsupported for those targets. Journal destinations are system-neutral.
 missing/denied/unsupported/outside_scope/unverified return null identity and
 next_call; none disproves the source claim. No recursive expansion or target

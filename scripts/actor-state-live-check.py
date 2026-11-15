@@ -23,6 +23,15 @@ from pathlib import Path
 import re
 from uuid import uuid4
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.mcp_server.runtime_compatibility import supported_runtime
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import McpError
@@ -55,10 +64,10 @@ def payload(result):
     return json.loads(next(block.text for block in result.content if block.type == 'text'))
 
 
-GUARD = """
-if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
+GUARD = ("""
+if(!game.ready||!game.user.isGM||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Unsupported development runtime');
 if(location.origin!=='http://localhost:30000'||game.world.id!=='test')throw Error('Wrong development world');
-"""
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())
 CHUNKS = """
 const report=JSON.stringify(result);
 return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
@@ -463,7 +472,7 @@ async def run_token_state(client, world_id):
                 instance = identity['instance']
                 assert instance['token_uuid'] == sample['selector']['token_uuid'] and instance['scene_uuid'] == sample['scene_uuid'] and instance['actor_link'] is False
                 assert (instance['base_actor']['uuid'] if instance['base_actor'] is not None else None) == sample['base_uuid']
-                assert page['runtime'] == dict(core_version='14.369', system_id='pf2e', system_version='8.6.1')
+                assert supported_runtime(page['runtime'])
                 assert len(json.dumps(page, ensure_ascii=False, separators=(',', ':')).encode()) <= 8000
                 section = page['sections'][0]
                 assert section['status'] == 'partial' and {'effective_application_not_evaluated', 'affliction_reading_unsupported'} <= set(section['reasons'])

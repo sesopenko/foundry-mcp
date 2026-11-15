@@ -8,6 +8,7 @@
  */
 import { fail, selector } from "./actorReadUtils.js";
 import { PHYSICAL_TYPES } from './actorPhysical.js';
+import { supportedRuntime, COMPATIBILITY } from './runtimeCompatibility.js';
 
 export const ACTOR_TYPES = ["character", "npc", "familiar"];
 // PF2e-specific known types include affliction for explicit unsupported
@@ -16,11 +17,13 @@ export const ITEM_TYPES = ["melee", "action", "feat", "spell", "spellcastingEntr
 
 /** Current runtime identity, without treating a manifest as a browser check. */
 export function runtime() {
-  return { core_version: String(game.version), system_id: String(game.system?.id ?? ""), system_version: String(game.system?.version ?? "") };
+  const text = value => typeof value === 'string' ? value : '';
+  return { core_version: text(game.version), system_id: text(game.system?.id), system_version: text(game.system?.version) };
 }
 
 /**
- * PF2e-specific admission: only core14.369/system8.6.1 has the audited schema.
+ * PF2e-specific admission: Foundry >=14.369,<15 and PF2e >=8.6.1,<9.
+ * Schema baseline 8.6.1; update audit: docs/runtime-compatibility.md.
  * Scope is 3 Actor/23 readable Item types; dedicated affliction Items are
  * upstream-incomplete, deferred and rejected before source extraction.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/system.pf2e.json
@@ -30,7 +33,7 @@ export function ready(interpret = true) {
   if (!game.user?.isGM) fail("PermissionDenied", "Actor and Item tools require the connected GM.", "Connect the authorized test-world GM browser.");
   const value = runtime();
   if (interpret && value.system_id !== "pf2e") fail("UnsupportedSystem", "Actor/Item mappings require PF2e.", "Inspect get_actor_types and select a supported PF2e world.");
-  if (interpret && (value.core_version !== "14.369" || value.system_version !== "8.6.1")) fail("UnsupportedVersion", "This Actor/Item contract is verified for core14.369/PF2e8.6.1.", "Inspect get_actor_types; verify the new version before enabling its schemas.");
+  if (interpret && !supportedRuntime(value)) fail("UnsupportedVersion", `Actor/Item tools require ${COMPATIBILITY}.`, "Inspect get_actor_types and use a runtime in the supported range.");
   return value;
 }
 

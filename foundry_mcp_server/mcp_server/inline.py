@@ -112,7 +112,7 @@ class InlineTool(Tool):
 
 def install(server):
     """Register three independent PF2e-specific typed tools, no selective reads."""
-    common = (' Requires a connected ready GM on Foundry14.369/PF2e8.6.1; other systems/versions error. '
+    common = (' Requires a connected ready GM on Foundry >=14.369,<15 and PF2e >=8.6.1,<9; other systems/versions error. '
               'Returns exactly one text block of insertable source and structured {text,runtime:{core_version,system_id,system_version}}. '
               'No chat, document writes, dice evaluation or effects. No select/pagination; 8000 UTF-8 bytes maximum, reject rather than truncate. '
               'InvalidRequest: correct schema/combination/delimiters; BridgeUnavailable/NotReady: reconnect ready GM; '

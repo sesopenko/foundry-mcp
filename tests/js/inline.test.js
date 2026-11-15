@@ -23,11 +23,11 @@ test('public validation only, no evaluation or document mutation APIs supplied',
   assert.equal((await embed({text:`@Embed[${uuid} inline]`,formulas:[],item_uuid:uuid})).text,`@Embed[${uuid} inline]`);
 });
 
-test('readiness, permission, system and exact version failures',()=>{
+test('readiness, permission, system and version range failures',()=>{
   for (const [change,code] of [
     [()=>game.ready=false,'NotReady'],[()=>game.user.isGM=false,'PermissionDenied'],
-    [()=>game.system.id='other','UnsupportedSystem'],[()=>game.version='14.370','UnsupportedVersion'],
-    [()=>game.system.version='8.6.2','UnsupportedVersion']]) {
+    [()=>game.system.id='other','UnsupportedSystem'],[()=>game.version='14.368','UnsupportedVersion'],
+    [()=>game.system.version='8.6.0','UnsupportedVersion']]) {
     const {validated}=setup();change();fails(()=>roll(packet()),code);assert.equal(validated.length,0);
   }
 });

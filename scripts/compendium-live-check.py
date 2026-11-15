@@ -14,6 +14,13 @@ import time
 import hashlib
 import subprocess
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
@@ -41,10 +48,10 @@ async def audit(client, candidate):
 
     catalog = await client.list_tools(); calls += 1
     catalog_bytes = size([t.model_dump(mode='json') for t in catalog])
-    before = await call('execute_javascript', {'code': """
-if(location.origin!=='http://localhost:30000'||!game.ready||!game.user.isGM||game.world.id!=='test'||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Wrong runtime');
+    before = await call('execute_javascript', {'code': ("""
+if(location.origin!=='http://localhost:30000'||!game.ready||!game.user.isGM||game.world.id!=='test'||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Wrong runtime');
 return JSON.stringify({core:game.version,system:game.system.version,messages:game.messages.size,journals:game.journal.size,items:game.items.size,actors:game.actors.size});
-"""}, 'setup')
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())}, 'setup')
     before = json.loads(before['value'])
     identities = {}
     source_checks = {}

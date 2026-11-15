@@ -11,7 +11,8 @@ character members. Party stash is excluded. For each character:
 {"actor_uuid":"Actor.<id>","select":{"details":["wealth","bulk"]}}
 ```
 
-These selections are supported for PF2e characters on Foundry 14.369/PF2e 8.6.1.
+These selections accept PF2e characters on Foundry >=14.369,<15 and PF2e
+>=8.6.1,<9. See [compatibility and tested versions](runtime-compatibility.md).
 NPC/familiar metric sections are explicitly unsupported. Other systems or
 versions fail the existing actionable admission checks. Default reads still
 return identity only. Coarse `sections: ["wealth", "bulk"]` means summaries.

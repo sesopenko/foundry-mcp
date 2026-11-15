@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { familiarCurrentFields } from '../../foundry-module/scripts/actorFamiliarCurrent.js';
 import { currentStatisticFields } from '../../foundry-module/scripts/actorCurrent.js';
 
 function fixture(type = 'npc') {
@@ -87,7 +88,7 @@ test('malformed admitted primitives, ranks, containers and mode literals fail', 
   }
   const input = fixture(); input.system.movement.speeds.fly.type = 'swim';
   assert.throws(() => currentStatisticFields(input), TypeError);
-  input.system.movement.speeds.fly.type = 'fly'; input.system.movement.speeds.land = null;
+  input.system.movement.speeds.fly.type = 'fly'; input.system.movement.speeds.travel = null;
   assert.throws(() => currentStatisticFields(input), TypeError);
 });
 
@@ -99,6 +100,18 @@ test('unknown data stays unread; admitted getters fail without invocation', () =
   assert.equal(JSON.stringify(currentStatisticFields(input)).includes('secret'), false);
   Object.defineProperty(input.system.perception, 'value', { get() { throw Error('must not invoke'); } });
   assert.throws(() => currentStatisticFields(input), TypeError);
+});
+
+test('PF2e 8.7 nullable land speed remains null rather than zero', () => {
+  const input = fixture(); input.system.movement.speeds.land = null;
+  const result = currentStatisticFields(input);
+  assert.equal(byPath(result, 'movement/speeds/land').value, null);
+  assert.equal(byPath(result, 'movement/speeds/land/value'), undefined);
+});
+
+test('PF2e 8.7 familiar land speed also preserves null', () => {
+  const result = familiarCurrentFields({type:'familiar',system:{movement:{speeds:{land:null}}}});
+  assert.equal(result.fields.find(f=>f.path==='/system/movement/speeds/land').value, null);
 });
 
 test('serialized HP own data leaves remain readable on a nonplain container without inherited access', () => {

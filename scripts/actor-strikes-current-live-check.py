@@ -15,15 +15,24 @@ from pathlib import Path
 import re
 from uuid import uuid4
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.mcp_server.runtime_compatibility import supported_runtime
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
 REQUEST_TIMEOUT_SECONDS = 30
 INIT_TIMEOUT_SECONDS = 10
 SESSION_TIMEOUT_SECONDS = 180
-GUARD = """
-if(location.origin!=='http://localhost:30000'||!game.ready||!game.user.isGM||game.world.id!=='test'||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Wrong development runtime');
-"""
+GUARD = ("""
+if(location.origin!=='http://localhost:30000'||!game.ready||!game.user.isGM||game.world.id!=='test'||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Wrong development runtime');
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())
 CHUNKS = """
 const encoded=JSON.stringify(result);if(encoded.length>10000)throw Error('Probe metadata bound');
 return Array.from({length:Math.ceil(encoded.length/800)},(_,i)=>encoded.slice(i*800,(i+1)*800));
@@ -135,7 +144,7 @@ const result=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new 
                 assert page['identity']['uuid'] == sample['uuid']
                 if selector.get('token_uuid'):
                     assert page['identity']['instance']['token_uuid'] == selector['token_uuid']
-                assert page['runtime'] == dict(core_version='14.369', system_id='pf2e', system_version='8.6.1')
+                assert supported_runtime(page['runtime'])
                 assert len(json.dumps(page, ensure_ascii=False, separators=(',', ':')).encode()) <= 8000
                 section = page['sections'][0]
                 assert section['status'] == 'partial'

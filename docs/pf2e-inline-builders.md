@@ -4,7 +4,9 @@ Released in v2.3.0 (WISH-008).
 `create_pf2e_inline_roll`, `create_pf2e_inline_check` and
 `create_pf2e_inline_embed` construct insertable notation from structured
 mechanics. Every invocation requires the existing authenticated, ready GM
-browser on **Foundry 14.369 / PF2e 8.6.1**. Other systems and versions fail
+browser on **Foundry >=14.369,<15 / PF2e >=8.6.1,<9**. See
+[compatibility policy and tested versions](runtime-compatibility.md).
+Other systems and versions outside these ranges fail
 explicitly. These tools never send chat, write documents, roll dice or apply
 effects. They do not interpret prose or choose mechanics for the caller.
 

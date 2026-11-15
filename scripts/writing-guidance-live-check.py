@@ -11,12 +11,19 @@ from pathlib import Path
 import re
 from uuid import uuid4
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
-GUARD = """
-if(location.origin!=='http://localhost:30000'||!game.ready||!game.user.isGM||game.world.id!=='test'||game.version!=='14.369')throw Error('Wrong development runtime');
-"""
+GUARD = ("""
+if(location.origin!=='http://localhost:30000'||!game.ready||!game.user.isGM||game.world.id!=='test'||!CORE_COMPATIBILITY_CHECK)throw Error('Wrong development runtime');
+""").replace('CORE_COMPATIBILITY_CHECK', development_runtime_check(core_only=True))
 STATE = """
 globalThis.__mcpGuidanceProbes??=new Map();
 let state=globalThis.__mcpGuidanceProbes.get(RUN);

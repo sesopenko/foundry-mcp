@@ -22,7 +22,8 @@ Further reading: [docs/mcp_foundry_architecture.md](docs/mcp_foundry_architectur
 
 The source tree also provides three [typed PF2e inline builders](docs/pf2e-inline-builders.md)
 for roll, check and compendium Item embed notation. They require a ready GM on
-Foundry14.369/PF2e8.6.1 and never send chat, write documents or evaluate rolls.
+[supported Foundry 14/PF2e 8 versions](docs/runtime-compatibility.md) and never
+send chat, write documents or evaluate rolls.
 These builders are included in v2.3.0.
 
 Journal tools navigate and read [world journals](docs/journal-tools.md) and
@@ -88,7 +89,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v5.0.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v5.0.1
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -120,6 +121,10 @@ for LibreChat headers, module installation, and credential handling.
 
 Foundry data is persisted in `./foundry-data`; module source is bind-mounted
 from `./foundry-module`.
+
+The local testing baseline is Foundry **14.370** with PF2e **8.7.0**.
+See [compatibility and upgrades](docs/runtime-compatibility.md) for accepted
+version ranges and verification limits.
 
 ## Python and dependencies with uv
 
@@ -283,17 +288,17 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v5.0.0)
+## Actor and Item source reading (v5.0.1)
 
 Read official PF2e party membership and shared possessions separately, with
 named characters and Items for follow-up reads. Compare characters' wealth and
 encumbrance using the [metric tools](docs/character-inventory-metrics.md);
 see [party contracts](docs/party-tools.md) for stash access and limits.
 
-Version 5.0.0 includes GM-only Actor/Item capability discovery, selected-source
+Version 5.0.1 includes GM-only Actor/Item capability discovery, selected-source
 reading, owned Item navigation, world Actor folders/name search, Scene/Token
-navigation, and scoped Actor/Item compendium index search on Foundry
-14.369/PF2e 8.6.1. Canonical world/pack/token identities, bounded pages and
+navigation, and scoped Actor/Item compendium index search on supported Foundry
+14/PF2e 8 versions. Canonical world/pack/token identities, bounded pages and
 explicit scope failures keep duplicate names and partial results distinguishable.
 
 Explore supported PF2e characters, NPCs, familiars and their Items through read-only tools; see the

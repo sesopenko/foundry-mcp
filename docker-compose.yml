@@ -1,7 +1,7 @@
 ---
 services:
   foundry:
-    image: felddy/foundryvtt:release
+    image: felddy/foundryvtt:14.370.0
     hostname: ${FOUNDRY_HOSTNAME:-my_foundry_host}
     restart: "no"
     user: 1000:1000
@@ -17,7 +17,7 @@ services:
       - FOUNDRY_PROXY_SSL=${FOUNDRY_PROXY_SSL:-true}
       - FOUNDRY_MINIFY_STATIC_FILES=${FOUNDRY_MINIFY_STATIC_FILES:-true}
       - FOUNDRY_PRESERVE_CONFIG=${FOUNDRY_PRESERVE_CONFIG:-true}
-      - FOUNDRY_VERSION=${FOUNDRY_VERSION:-14.369}
+      - FOUNDRY_VERSION=${FOUNDRY_VERSION:-14.370}
     ports:
       - target: 30000
         published: 30000

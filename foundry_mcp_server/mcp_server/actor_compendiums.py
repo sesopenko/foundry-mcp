@@ -10,6 +10,7 @@ import json
 from typing import Annotated, Any, Literal
 
 from pydantic import Field
+from .runtime_compatibility import supported_runtime
 
 from foundry_mcp_server.ws.connection import RpcError
 from .actors import (Identifier, Cursor, Limit, ByteLimit, ReadableItemType, READABLE_ITEM_TYPES,
@@ -59,7 +60,7 @@ def _validate(result, *, search, params):
         valid=(type(result) is dict and set(result)=={'contract_version','runtime','revision','nodes','scopes','pagination','limitations'} and
                _primitive(result) and len(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode('utf-8')) <= params['max_bytes'] and
                type(result['contract_version']) is int and result['contract_version']==1 and _runtime(result['runtime']) and
-               result['runtime']==dict(core_version='14.369',system_id='pf2e',system_version='8.6.1') and type(result['revision']) is str and bool(result['revision']) and
+               supported_runtime(result['runtime']) and type(result['revision']) is str and bool(result['revision']) and
                type(result['nodes']) is list and type(result['scopes']) is list and _strings(result['limitations']) and
                _pagination(result['pagination'],len(result['nodes']),params['limit']))
         if valid:

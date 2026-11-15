@@ -13,11 +13,18 @@ from pathlib import Path
 import time
 from uuid import uuid4
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
 ROOT = Path(__file__).resolve().parents[1]
-GUARD = """if(location.origin!=='http://localhost:30000'||game.world.id!=='test'||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1'||!game.ready||!game.user.isGM)throw Error('Wrong test runtime');"""
+GUARD = ("""if(location.origin!=='http://localhost:30000'||game.world.id!=='test'||!RUNTIME_COMPATIBILITY_CHECK||!game.ready||!game.user.isGM)throw Error('Wrong test runtime');""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())
 
 
 def size(value):

@@ -52,7 +52,9 @@ export function familiarCurrentFields(serialized){
  for(const [leaf,concept,type]of [['value','current_perception_modifier','number'],['totalModifier','current_perception_total_modifier','number'],['breakdown','current_perception_breakdown','string'],['vision','current_standard_vision','boolean']])add(['perception',leaf],concept,type);
  for(const mode of ['land','burrow','climb','fly','swim','travel']){
   const keys=['movement','speeds',mode],root=selected(serialized,['system',...keys]);
-  if(!['land','travel'].includes(mode)&&root.present&&root.value===null){add(keys,`current_${mode}_movement`,'object',true);continue;}
+  // PF2e-specific 8.7.0 CreatureMovementData permits null land speed:
+  // https://github.com/foundryvtt/pf2e/blob/pf2e-8.7.0/src/module/actor/creature/data.ts
+  if(mode!=='travel'&&root.present&&root.value===null){add(keys,`current_${mode}_movement`,'object',true);continue;}
   for(const [leaf,suffix,type]of [['value','speed','number'],['base','base_speed','number'],['type','movement_type','string'],['source','movement_source_label','string']])add([...keys,leaf],`current_${mode}_${suffix}`,type,leaf==='source',leaf==='type'?mode:undefined);
  }
  const skills=selected(serialized,['system','skills']);

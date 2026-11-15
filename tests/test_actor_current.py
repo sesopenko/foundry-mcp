@@ -42,7 +42,7 @@ class CurrentBoundaryTests(unittest.IsolatedAsyncioTestCase):
         await self.read(current('/system/saves/will/rank',0))
 
     async def test_closed_allowlist_and_strict_values(self):
-        for path,value in [('/system/attributes/ac/value',True),('/system/perception/vision',0),('/system/perception/rank',1.0),('/system/perception/rank',5),('/system/movement/speeds/land',None),('/system/movement/speeds/fly/type','land'),('/system/movement/speeds/fly/value',None),('/system/skills/arcana/value',12),('/system/attributes/ac/private',1),('/system/attributes/hp/max',float('inf'))]:
+        for path,value in [('/system/attributes/ac/value',True),('/system/perception/vision',0),('/system/perception/rank',1.0),('/system/perception/rank',5),('/system/movement/speeds/travel',None),('/system/movement/speeds/fly/type','land'),('/system/movement/speeds/fly/value',None),('/system/skills/arcana/value',12),('/system/attributes/ac/private',1),('/system/attributes/hp/max',float('inf'))]:
             with self.subTest(path=path,value=value),self.assertRaises(ToolError):await self.read(current(path,value))
         for actor_type in ('npc','familiar'):
             with self.assertRaises(ToolError):await self.read(current('/system/abilities/str/base',2,actor_type=actor_type))
@@ -91,7 +91,7 @@ const pages=[];let cursor=null;do{const page=await readActor({actor_uuid:'Actor.
             with self.subTest(reasons=reasons),self.assertRaises(ToolError):await self.read(page)
 
     async def test_movement_missing_or_null_parent_rejects_present_descendant(self):
-        for mode in ('burrow','climb','fly','swim'):
+        for mode in ('land','burrow','climb','fly','swim'):
             for present in (False,True):
                 path='/system/movement/speeds/'+mode
                 page=current(path,None,present=present)

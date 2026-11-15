@@ -9,6 +9,13 @@ import argparse
 import json
 from pathlib import Path
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import McpError
@@ -231,8 +238,8 @@ async def _main(verify_mode=False, diagnose_mode=False):
         'http://127.0.0.1:8000/mcp/mcp',
         headers={'Authorization': 'Bearer ' + token},
     )
-    code = """
-if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
+    code = ("""
+if(!game.ready||!game.user.isGM||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Unsupported development runtime');
 if(location.origin!=='http://localhost:30000'||game.world.id!=='test')throw Error('Wrong development world');
 const pathsFor=(type)=>[
  ...['str','dex','con','int','wis','cha'].flatMap(a=>[`abilities.${a}.mod`,...(type==='character'?[`abilities.${a}.base`]:[])]),
@@ -281,7 +288,7 @@ const samples=selected.map(({actor,context,adjustment})=>{
 });
 const report=JSON.stringify({version:game.version,system:game.system.version,inspectedWorldNpcs:Math.min(inspectedWorldNpcs,200),adjustedFound,samples});
 return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
-"""
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())
     # Bound requests and the initialization handshake independently. The outer
     # budget also covers transport startup and repeated pages. FastMCP's context
     # exit has its own five-second cleanup grace; do not replace it with close().

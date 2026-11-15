@@ -112,9 +112,16 @@ class EmbedRequest(Model):
 
 
 class Runtime(Model):
-    core_version: Literal['14.369'] = Field(description='Foundry version verified on this invocation.')
+    core_version: str = Field(max_length=64, description='Actual Foundry version; supported range >=14.369,<15.')
     system_id: Literal['pf2e'] = Field(description='Verified PF2e system ID.')
-    system_version: Literal['8.6.1'] = Field(description='PF2e version verified on this invocation.')
+    system_version: str = Field(max_length=64, description='Actual PF2e version; supported range >=8.6.1,<9.')
+
+    @model_validator(mode='after')
+    def supported(self):
+        from .runtime_compatibility import supported_runtime
+        if not supported_runtime(self.model_dump()):
+            raise ValueError('Unsupported Foundry/PF2e version range')
+        return self
 
 
 class InlineResponse(Model):

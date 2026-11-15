@@ -16,6 +16,13 @@ import hashlib
 import json
 from pathlib import Path
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import ToolError
@@ -121,8 +128,8 @@ def javascript_payload(result):
     return json.loads(value)
 
 
-SNAPSHOT = """
-if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
+SNAPSHOT = ("""
+if(!game.ready||!game.user.isGM||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Unsupported development runtime');
 if(location.origin!=='http://localhost:30000'||game.world.id!=='test')throw Error('Wrong development world');
 function field(document,path){let value=document.toObject(false);for(const key of path.slice(1).split('/')){if(value===null||typeof value!=='object')return {path,present:false};const d=Object.getOwnPropertyDescriptor(value,key);if(!d||!Object.hasOwn(d,'value')||d.value===undefined)return {path,present:false};value=d.value;}return {path,present:true,value};}
 const candidates=[];
@@ -147,10 +154,10 @@ const samples=[];
 for(const {actor,fields,modes}of selected){const bytes=new TextEncoder().encode(JSON.stringify(actor.toObject(true)));const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');samples.push({uuid:actor.uuid,fields,modes,hash});}
 const report=JSON.stringify({samples,coverage:[...covered].sort()});
 return Array.from({length:Math.ceil(report.length/800)},(_,i)=>report.slice(i*800,(i+1)*800));
-"""
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())
 
-OPTION_SETUP = """
-if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1'||location.origin!=='http://localhost:30000'||game.world.id!=='test')throw Error('Wrong development runtime');
+OPTION_SETUP = ("""
+if(!game.ready||!game.user.isGM||!RUNTIME_COMPATIBILITY_CHECK||location.origin!=='http://localhost:30000'||game.world.id!=='test')throw Error('Wrong development runtime');
 const actor=[...game.actors.values()].find(a=>a.uuid===ACTOR_UUID);
 if(!actor||!actor.testUserPermission(game.user,'OBSERVER')||actor.items.size>12000)throw Error('Unavailable option Actor');
 const sources=new Map();
@@ -163,7 +170,7 @@ const readableEntry=spell=>{const item=assigned(spell);return item?.testUserPerm
 const ordinary=['prepared','spontaneous','innate','focus'];
 function positions(spell,entry){if(!entry)return [];const s=source(entry),p=source(spell);if(at(s,'/system/prepared/value')!=='prepared'||at(s,'/system/prepared/flexible')===true||at(p,'/system/ritual')!=null)return [];const result=[];for(let rank=0;rank<=10;rank++){const uses=at(s,'/system/slots/slot'+rank+'/prepared');if(!Array.isArray(uses))continue;if(uses.length>6000)throw Error('Preparation bound');for(let index=0;index<uses.length;index++)if(at(uses,'/'+index+'/id')===spell.id)result.push({rank,index,expended:typeof at(uses,'/'+index+'/expended')==='boolean'?at(uses,'/'+index+'/expended'):null});}return result;}
 function identity(value,doc){const name=[...at(source(doc),'/name')];return value.status==='resolved'&&value.target_uuid===doc.uuid&&value.type===doc.type&&value.name===name.slice(0,256).join('')&&value.name_truncated===(name.length>256)&&!Object.hasOwn(value,'token_uuid');}
-"""
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check())
 OPTION_CENSUS = """
 let expected_options=0;const modes=new Set(),observed=new Set(),keys=[];
 for(const spell of items.filter(i=>i.type==='spell'&&i.testUserPermission(game.user,'OBSERVER'))){const p=source(spell),entry=readableEntry(spell),uses=positions(spell,entry);expected_options+=uses.length||1;if(uses.length>1)observed.add('repeated_preparations');if(uses.some(u=>u.expended===true))observed.add('expended_preparation');if(uses.some(u=>u.expended===false))observed.add('unexpended_preparation');

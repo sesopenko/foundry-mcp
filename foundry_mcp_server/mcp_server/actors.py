@@ -18,6 +18,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field, ValidationError
 
 from .server import mcp
+from .runtime_compatibility import supported_runtime
 from foundry_mcp_server.ws.connection import RpcError
 
 Identifier = Annotated[str, Field(min_length=1, max_length=512, strict=True)]
@@ -3272,7 +3273,8 @@ def _actor_current_spec(path, actor_type):
     match=re.fullmatch(r'/system/movement/speeds/(land|burrow|climb|fly|swim|travel)(?:/(value|base|type|source))?',path)
     if match:
         mode,leaf=match.groups()
-        if leaf is None:return 'null' if mode in ('burrow','climb','fly','swim') else None
+        # PF2e-specific 8.7.0 CreatureMovementData also permits null land.
+        if leaf is None:return 'null' if mode in ('land','burrow','climb','fly','swim') else None
         return {'value':'number','base':'number','type':mode,'source':'nullable_string'}[leaf]
     return None
 
@@ -3479,7 +3481,7 @@ def _familiar_current_section(records, section):
     if 'other_statistics_pending' not in reasons or not reasons<={'other_statistics_pending','current_fields_unavailable','familiar_item_linked_skills_unsupported','pagination'}:return False
     fields=[r['raw'][0] for r in current]
     if any(not r['present'] for r in fields) and 'current_fields_unavailable' not in reasons:return False
-    for mode in ('burrow','climb','fly','swim'):
+    for mode in ('land','burrow','climb','fly','swim'):
         path='/system/movement/speeds/'+mode
         if any(r['path']==path and (not r['present'] or r['value'] is None) for r in fields):
             if any(r['path'].startswith(path+'/') and r['present'] for r in fields):return False
@@ -3527,7 +3529,7 @@ def _current_section(records, section, identity):
     if identity['type'] not in ('character','npc'):
         return not rows and section['status']=='unsupported' and section['reasons']==['master_current_contract_pending']
     raw=[row['raw'][0] for row in rows]
-    for mode in ('burrow','climb','fly','swim'):
+    for mode in ('land','burrow','climb','fly','swim'):
         path='/system/movement/speeds/'+mode
         if any(field['path']==path and (not field['present'] or field['value'] is None) for field in raw):
             if any(field['path'].startswith(path+'/') and field['present'] for field in raw):return False
@@ -3962,7 +3964,7 @@ async def _call(method: str, params: dict[str, Any], mode: str) -> dict[str, Any
     except (ConnectionError, RuntimeError) as exc:
         raise _error('BridgeUnavailable', 'No responsive authenticated GM bridge.', 'Reconnect the existing ready GM browser and retry.') from exc
     _validate(result, mode, limit=params.get('limit', 50), max_bytes=params.get('max_bytes', 48000), sections=params.get('sections'))
-    if mode != 'types' and result['runtime'] != dict(core_version='14.369', system_id='pf2e', system_version='8.6.1'):
+    if mode != 'types' and not supported_runtime(result['runtime']):
         raise _error('InvalidFoundryResponse', 'Reader returned unsupported runtime semantics.', 'Inspect get_actor_types; use the supported Foundry/PF2e pairing.')
     if mode == 'read' and result['identity']['document_name'] != ('Actor' if method == 'readActor' else 'Item'):
         raise _error('InvalidFoundryResponse', 'Reader returned the wrong document kind.', 'Rediscover the canonical selector and check browser/server compatibility.')
@@ -3989,6 +3991,7 @@ class _ActorTool(FunctionTool):
 
 def _tool(fn):
     tool = _ActorTool.from_function(fn, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+    tool.description += ' PF2e interpretation requires Foundry >=14.369,<15 and PF2e >=8.6.1,<9; responses report actual runtime versions. get_actor_types can explain an unsupported runtime.'
     tool.parameters['additionalProperties'] = False
     return mcp.add_tool(tool)
 
@@ -4014,7 +4017,8 @@ async def get_actor_types() -> dict[str, Any]:
     flag can describe a partial delivered section: character/NPC statistics
     selects transformed primitives while other current views remain unfinished.
     Inspect entry limitations and returned section reasons. PF2e 8.6.1/core
-    14.369 is the verified baseline; other systems/versions report unavailable.
+    14.369 is the schema baseline; accepted versions are Foundry >=14.369,<15
+    and PF2e >=8.6.1,<9. Other systems/versions report unavailable.
     Next use read_actor with a canonical Actor UUID, read_item with an Item UUID,
     or list_actor_items with an actor/token selector. No writes, rolls or imports.
     BridgeUnavailable: reconnect the ready GM browser. Unknown inputs are invalid.

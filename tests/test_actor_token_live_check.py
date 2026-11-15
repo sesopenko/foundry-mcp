@@ -41,7 +41,7 @@ if(scenario!=='noLinked')scene.tokens.push(token('linked',base,true));
 if(scenario==='activeOnly')scene.active=true;
 if(scenario==='separateInactive'){scene.active=true;scenes.push({uuid:'Scene.other',active:false,tokens:[],testUserPermission:()=>true});}
 globalThis.location={origin:'http://localhost:30000'};
-globalThis.game={ready:true,user:{isGM:true},world:{id:scenario==='wrongWorld'?'campaign':'test'},version:scenario==='wrongVersion'?'14.999':'14.369',system:{id:'pf2e',version:'8.6.1'},scenes};
+globalThis.game={ready:true,user:{isGM:true},world:{id:scenario==='wrongWorld'?'campaign':'test'},version:scenario==='wrongVersion'?'15.0':'14.369',system:{id:'pf2e',version:'8.6.1'},scenes};
 globalThis.foundry={utils:{fromUuid:async uuid=>[base,a,b].flatMap(owner=>[...owner.items.values()]).find(item=>item.uuid===uuid)}};
 let result=null,error=null;try{result=await new Function('return (async()=>{'+code+'})()')();}catch(e){error=e.message;}
 console.log(JSON.stringify({result,error,reads,writes,canvasReads}));

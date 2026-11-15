@@ -17,6 +17,7 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ValidationError
 
 from . import actors, pdfs
+from .runtime_compatibility import supported_runtime
 from . import selective_models as M
 from foundry_mcp_server.ws.connection import RpcError
 
@@ -182,7 +183,7 @@ async def read(request):
                 if {row['mapped']['concept'] for row in rows}!=expected: raise ValueError()
             keys.add(key)
         identity=proof['identity']
-        if proof['runtime']!={'core_version':'14.369','system_id':'pf2e','system_version':'8.6.1'}: raise ValueError()
+        if not supported_runtime(proof['runtime']): raise ValueError()
         if identity['document_name']!=('Item' if item else 'Actor'): raise ValueError()
         uuid=request.item_uuid if item else request.actor_uuid
         if uuid is not None and identity['uuid']!=uuid: raise ValueError()
@@ -221,7 +222,7 @@ async def metadata(request):
     methods={M.ItemsRequest:'listActorItems',M.PacksRequest:'listActorCompendiums',M.ContentsRequest:'getJournalContents',M.JournalSearchRequest:'searchJournals',M.JournalPageRequest:'readJournalPage'}
     result=await rpc(methods[type(request)],request.model_dump(exclude_none=True))
     if isinstance(request,(M.ItemsRequest,M.PacksRequest)):
-        if result.get('runtime')!={'core_version':'14.369','system_id':'pf2e','system_version':'8.6.1'}: raise ToolError('InvalidFoundryResponse: unsupported runtime.')
+        if not supported_runtime(result.get('runtime')): raise ToolError('InvalidFoundryResponse: unsupported runtime.')
         pagination=result.get('pagination',{})
         if not actors._pagination(pagination,len(result.get('nodes',[])),request.limit): raise ToolError('InvalidFoundryResponse: invalid pagination.')
         try:
@@ -266,7 +267,7 @@ async def pdf_search(request):
     return dict(result,contract_version=2)
 
 
-READ_DOC = """PF2e-specific GM read of selected source/current details (core14.369/PF2e8.6.1).
+READ_DOC = """PF2e-specific GM read of selected source/current details (Foundry >=14.369,<15; PF2e >=8.6.1,<9).
 Default is identity only. Use the documented select.details enum to request values;
 For compendium action/spell rules, call read_item with select.details=["source",
 "description"] and follow pagination.next_cursor until complete. This includes
@@ -321,6 +322,7 @@ Inventory book definitions (including marked formula/spell books) use
 read_item source/relationships. Afflictions are deferred outside current delivery scope.
 """
 REGISTRY_DOC = """PF2e-specific GM capability discovery. Default returns runtime/availability only.
+Interpretation requires Foundry >=14.369,<15 and PF2e >=8.6.1,<9; unsupported runtimes return availability=false.
 Select exact actor_types/item_types/sections, limits or verification evidence using
 the typed select schema. select.all explicitly expands the registry; raise
 max_bytes to 48000 or narrow filters if ResponseTooLarge. Allowed, in_scope and
@@ -328,7 +330,7 @@ source/mapped/effective support are distinct; partial support is not completenes
 Dedicated affliction Items are deferred (in_scope false). Other systems/versions return
 unavailable. Next read_actor/read_item with canonical discovery UUIDs. No writes.
 """
-LIST_DOC = """PF2e-specific GM navigation on core14.369/PF2e8.6.1. Compact named identities
+LIST_DOC = """PF2e-specific GM navigation on Foundry >=14.369,<15 and PF2e >=8.6.1,<9. Compact named identities
 are returned by default; select adds context, relationships or follow-up metadata.
 Returns nodes, runtime/revision, scope status, limitations and pagination. Empty
 results establish absence only in complete searched scopes, not denied scopes.

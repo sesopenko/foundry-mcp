@@ -45,13 +45,13 @@ The registry is maintained per delivered milestone; known section names remain
 valid requests even when that section is explicitly unsupported for a type.
 `effective_supported` may be false while source and deterministic mappings work.
 The tool works on any ready core runtime to explain incompatibility, but performs
-no PF2e interpretation outside the pairing below. Next: `get_actor_tree`,
+no PF2e interpretation outside the version range below. Next: `get_actor_tree`,
 `search_actors`, `list_actor_compendiums`, or `list_scene_actors`.
 
 | Runtime/type | Version-1 policy |
 | --- | --- |
 | Foundry 14.369 + PF2e 8.6.1 | Verified delivered pairing; each section retains its scoped support, verification and limitations |
-| Other core 14 builds / PF2e releases | Unsupported until explicitly verified and added to this matrix; no inferred future compatibility |
+| Foundry >=14.369,<15 + PF2e >=8.6.1,<9 | Accepted range, including minor/patch updates and mixed combinations; local packages now 14.370/8.7.0. See [policy and verification limits](runtime-compatibility.md) |
 | Core 13 | New Actor/Item tools unavailable; no verified compatible PF2e pairing. Existing tools and manifest policy are separate |
 | Non-PF2e systems | Discovery reports unsupported system; reader/discovery tools below return `UnsupportedSystem` |
 | Actors | character, npc, familiar; no narrative role/control inference from subtype |

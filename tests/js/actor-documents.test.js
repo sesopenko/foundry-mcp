@@ -18,6 +18,29 @@ function fixture() {
   return {document, a,b,item,scene,token};
 }
 
+test('supported core and PF2e updates retain actual runtime identity', () => {
+  fixture();
+  for (const core of ['14.369', '14.370', '14.999']) {
+    for (const system of ['8.6.1', '8.7.0', '8.99.12']) {
+      game.version = core; game.system.version = system;
+      assert.deepEqual(ready(), {core_version: core, system_id: 'pf2e', system_version: system});
+    }
+  }
+});
+
+test('version floors, major boundaries and malformed versions fail before document reads', () => {
+  fixture();
+  for (const [core, system] of [
+    ['14.368', '8.7.0'], ['13.999', '8.7.0'], ['15.0', '8.7.0'],
+    ['14.370', '8.6.0'], ['14.370', '8.5.99'], ['14.370', '9.0.0'],
+    ...['', '14', '14.370-beta', '014.370', '14.370.0.1', '14.99999999999999999999', null, 14.370].map(v => [v, '8.7.0']),
+    ...['', '8', '8.7.0-dev', '8.07.0', '8.7.0\n', null, 8.7].map(v => ['14.370', v]),
+  ]) {
+    game.version = core; game.system.version = system;
+    assert.throws(() => ready(), /require Foundry/, `${core}/${system}`);
+  }
+});
+
 test('world, compendium and token identities preserve canonical context and membership', async () => {
   const {document,a,b,item,token} = fixture(); ready();
   assert.equal((await actorTarget({actor_uuid:a.uuid})).identity.uuid,a.uuid);
@@ -42,7 +65,7 @@ test('readiness, system/version, type and permission failures stay explicit',asy
   game.ready=false; assert.throws(()=>ready(),/not ready/);game.ready=true;
   game.user.isGM=false;assert.throws(()=>ready(),/connected GM/);game.user.isGM=true;
   game.system.id='other';assert.throws(()=>ready(),/require PF2e/);game.system.id='pf2e';
-  game.version='13.0';assert.throws(()=>ready(),/verified for/);game.version='14.369';
+  game.version='13.0';assert.throws(()=>ready(),/require Foundry/);game.version='14.369';
   await assert.rejects(actorTarget({actor_uuid:a.uuid,token_uuid:token.uuid}),/exactly one/);
   await assert.rejects(actorTarget({actor_uuid:'Duplicate'}),/world\/pack/);
   a.testUserPermission=()=>false;await assert.rejects(itemTarget({item_uuid:item.uuid}),/not readable/);a.testUserPermission=()=>true;

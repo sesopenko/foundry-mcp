@@ -9,6 +9,7 @@ import json
 from typing import Annotated, Any, Literal
 
 from pydantic import Field
+from .runtime_compatibility import supported_runtime
 
 from foundry_mcp_server.ws.connection import RpcError
 from .actors import (Identifier, Cursor, Limit, ByteLimit, _error, _identifier,
@@ -75,7 +76,7 @@ def _validate(result, *, tree, limit, max_bytes, scenes=False):
         valid=(type(result) is dict and set(result) == keys and _primitive(result) and
                len(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode('utf-8')) <= max_bytes and
                type(result['contract_version']) is int and result['contract_version'] == 1 and
-               _runtime(result['runtime']) and result['runtime'] == dict(core_version='14.369',system_id='pf2e',system_version='8.6.1') and
+               _runtime(result['runtime']) and supported_runtime(result['runtime']) and
                type(result['revision']) is str and bool(result['revision']) and _strings(result['limitations']) and
                type(result['nodes']) is list and all(_scene_node(node) if scenes else _node(node,tree) for node in result['nodes']) and
                type(result['scopes']) is list and (scenes or bool(result['scopes'])) and all(_scope(scope) for scope in result['scopes']) and

@@ -22,6 +22,13 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import sys
+
+# Standalone invocation uses scripts/ as sys.path[0]; imports need the checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from foundry_mcp_server.development_runtime import development_runtime_check
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
@@ -94,10 +101,10 @@ async def main(world_id, discovery_only=False, check_statistics=False):
             return probe(payload(await client.call_tool('execute_javascript', {'code': wrapped})))
 
         # Every mutating request repeats the same fixed runtime/world guard.
-        guard = """
-if(!game.ready||!game.user.isGM||game.version!=='14.369'||game.system.id!=='pf2e'||game.system.version!=='8.6.1')throw Error('Unsupported development runtime');
+        guard = ("""
+if(!game.ready||!game.user.isGM||!RUNTIME_COMPATIBILITY_CHECK)throw Error('Unsupported development runtime');
 if(location.origin!=='http://localhost:30000'||game.world.id!==WORLD)throw Error('Wrong development world');
-""".replace('WORLD', json.dumps(world_id))
+""").replace('RUNTIME_COMPATIBILITY_CHECK', development_runtime_check()).replace('WORLD', json.dumps(world_id))
         marker = json.dumps(run_id)
         try:
             await verify_discovery(client)
