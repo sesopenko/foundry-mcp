@@ -9,7 +9,7 @@ function fixture(type='character',synthetic=false){
  globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},actors:new Map(),items:new Map()};globalThis.foundry={utils:{fromUuid:async uuid=>docs.get(uuid)}};return {source,item,actor,token};
 }
 test('supported Actor valuables keep quantity denominations and price-per independent without a sale calculation',async()=>{
- for(const type of ['character','npc','familiar'])for(const synthetic of [false,true]){
+ for(const type of ['character','npc','familiar','loot'])for(const synthetic of [false,true]){
   const f=fixture(type,synthetic),before=JSON.stringify(f.source);let cursor,rows=[],last;
   do{last=await readItem({item_uuid:f.item.uuid,token_uuid:f.token.uuid,sections:['source','effective','rules'],limit:7,max_bytes:8000,...(cursor?{cursor}:{})});assert.ok(last.sections.slice(1).every(s=>s.status==='unsupported'));rows.push(...last.records);cursor=last.pagination.next_cursor;}while(cursor);
   assert.equal(last.sections[0].status,'complete');assert.equal(last.identity.instance.token_uuid,f.token.uuid);assert.equal(last.identity.actor.type,type);
@@ -23,8 +23,8 @@ test('treasure nullable categories descriptions and source errors remain explici
  const first=await readItem({item_uuid:f.item.uuid,sections:['source'],limit:1});f.source.system.price.per=5;await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source'],limit:1,cursor:first.pagination.next_cursor}),e=>e.rpcError.code==='ContentChanged');f.source.system.category={secret:true};await assert.rejects(readItem({item_uuid:f.item.uuid,sections:['source']}),e=>e.rpcError.code==='ReadFailed');
  game.system.id='other';await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='UnsupportedSystem');game.system.id='pf2e';f.item.testUserPermission=()=>false;await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='PermissionDenied');
 });
-test('loot-Actor exclusion does not grant a bypass for otherwise supported treasure Items',async()=>{
- const f=fixture('loot');await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='UnsupportedType');
+test('unsupported owner exclusion does not grant a bypass for otherwise supported treasure Items',async()=>{
+ const f=fixture('hazard');await assert.rejects(readItem({item_uuid:f.item.uuid}),e=>e.rpcError.code==='UnsupportedType');
 });
 test('treasure discovery distinguishes stored valuation basis from inferred sales',async()=>{
  fixture();const entry=(await getActorTypes()).item_types.find(r=>r.type==='treasure');assert.equal(entry.mapped_supported,true);assert.equal(entry.effective_supported,false);assert.match(entry.limitations.join(' '),/sale proceeds/);

@@ -25,7 +25,8 @@ function raw(item,selected){return {document_uuid:item.uuid,...selected,basis:'s
  * Display labels use cached persisted source names, never prepared magic names. */
 function identity(item,target,source){const value=embeddedIdentity(item,{document:target.document,token:target.token}),name=[...source.name];return {status:'resolved',target_uuid:value.uuid,document_name:'Item',type:value.type,name:name.slice(0,256).join(''),name_truncated:name.length>256,...(target.token?{token_uuid:target.token.uuid}:{})};}
 /**
- * PF2e-specific owner-wide physical inventory source snapshot.
+ * PF2e-specific character/NPC/familiar and world/token loot physical inventory
+ * source snapshot; loot/merchant configuration has no inventory-read semantics.
  * Every actual physical Item occurs once, including disconnected/orphan/cyclic
  * components. Each parent edge is a stored local-ID claim. cycle=true means
  * following readable physical parent claims reaches a cycle, including a tail
@@ -37,10 +38,11 @@ function identity(item,target,source){const value=embeddedIdentity(item,{documen
  */
 export function actorInventoryRecords(target){
  const actor=target.document,records=[],reasons=new Set();
- if(actor.documentName!=='Actor'||!['character','npc','familiar'].includes(actor.type))throw new TypeError('Inventory source requires a supported Actor.');
+ if(actor.documentName!=='Actor'||!['character','npc','familiar','loot'].includes(actor.type)||actor.type==='loot'&&actor.compendium)throw new TypeError('Inventory source requires a supported world/token loot or creature Actor.');
  const items=[...actor.items.values()];if(items.length>12000)throw new TypeError('Inventory source exceeds 12000 owned Items.');
  const all=new Map(items.map(item=>[item.id,item])),nodes=new Map(),kits=[];let denied=false;
  for(const item of items){
+  if(item.parent!==actor||actor.items.get(item.id)!==item||item.uuid!==actor.uuid+'.Item.'+item.id)throw new TypeError('Inventory Item owner membership is inconsistent.');
   if(!PHYSICAL_TYPES.includes(item.type)&&item.type!=='kit')continue;
   if(!permitted(item)){denied=true;continue;}
   const source=item.toObject(true);

@@ -6,7 +6,7 @@
  * No sidebar trees, prepared sheet data or document writes are used.
  */
 import { fail, validateParams, integer, selector, digest, paginate } from './actorReadUtils.js';
-import { ACTOR_TYPES, ready, runtime, named, permitted, requirePermission, documentIdentity } from './actorDocuments.js';
+import { WORLD_ACTOR_TYPES as ACTOR_TYPES, ready, runtime, named, permitted, requirePermission, documentIdentity } from './actorDocuments.js';
 
 const compare = (a,b) => a<b?-1:a>b?1:0;
 const ordered = (a,b) => compare((a.order_name??a.name).toLowerCase(),(b.order_name??b.name).toLowerCase())||compare(a.uuid,b.uuid);
@@ -69,7 +69,7 @@ async function page(build,params,scope,tree=false) {
 }
 
 /**
- * PF2e-specific discovery admits character/npc/familiar on core14.369/PF2e8.6.1.
+ * PF2e-specific discovery admits character/npc/familiar/loot on core14.369/PF2e8.6.1.
  * Subtype is a filter, never a narrative role or derived statistic. Folder and
  * Actor identity are core source relationships; no PF2e calculations occur.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/static/template.json
@@ -108,14 +108,14 @@ export async function getActorTree(params={}) {
 }
 
 /**
- * PF2e-specific character/npc/familiar name search; no biography, role inference
+ * PF2e-specific character/npc/familiar/loot name search; no biography, role inference
  * or effective statistics. Schema/version boundary matches getActorTree above.
  */
 export async function searchActors(params={}) {
   request(params,['query','types','folder_uuid','recursive','limit','max_bytes','cursor']);
   if (typeof params.query!=='string'||!params.query.trim()||[...params.query.trim()].length>200) fail('InvalidRequest','query must contain 1–200 characters after trim.');
   const query=params.query.trim().toLowerCase();const types=params.types??ACTOR_TYPES;
-  if (!Array.isArray(types)||!types.length||types.length>3||new Set(types).size!==types.length||types.some(type=>!ACTOR_TYPES.includes(type))) fail('InvalidRequest','types must be a unique nonempty list of in-scope Actor types.');
+  if (!Array.isArray(types)||!types.length||types.length>ACTOR_TYPES.length||new Set(types).size!==types.length||types.some(type=>!ACTOR_TYPES.includes(type))) fail('InvalidRequest','types must be a unique nonempty list of in-scope Actor types.');
   const recursive=params.recursive===undefined?true:params.recursive;
   if (typeof recursive!=='boolean') fail('InvalidRequest','recursive must be a boolean.');
   const build=()=>{

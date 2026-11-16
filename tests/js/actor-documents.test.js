@@ -69,7 +69,7 @@ test('readiness, system/version, type and permission failures stay explicit',asy
   await assert.rejects(actorTarget({actor_uuid:a.uuid,token_uuid:token.uuid}),/exactly one/);
   await assert.rejects(actorTarget({actor_uuid:'Duplicate'}),/world\/pack/);
   a.testUserPermission=()=>false;await assert.rejects(itemTarget({item_uuid:item.uuid}),/not readable/);a.testUserPermission=()=>true;
-  a.type='loot';await assert.rejects(actorTarget({actor_uuid:a.uuid}),/no supported/);a.type='npc';
+  a.type='hazard';await assert.rejects(actorTarget({actor_uuid:a.uuid}),/no supported/);a.type='npc';
   scene.testUserPermission=()=>false;await assert.rejects(actorTarget({token_uuid:token.uuid}),/not readable/);scene.testUserPermission=()=>true;
   token.actor=null;await assert.rejects(actorTarget({token_uuid:token.uuid}),/unavailable/);
   await assert.rejects(actorTarget({actor_uuid:'Actor.missing'}),/no longer exists/);

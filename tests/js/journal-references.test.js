@@ -117,3 +117,13 @@ test('permissions and origin source remain checked after the selected reader res
   f.scene.testUserPermission=()=>false;
   assert.equal((await f.resolve(f.token.uuid)).status,'denied');
 });
+
+test('loot journal references retain world/token selectors and reject pack templates',async()=>{
+  const f=fixture();f.actor.type='loot';f.synthetic.type='loot';f.packed.type='loot';
+  for(const target of [f.actor.uuid,f.token.uuid,f.synthetic.uuid]){
+    const result=await f.resolve(target);
+    assert.equal(result.status,'resolved');assert.equal(result.identity.type,'loot');
+    assert.deepEqual(result.next_call,{tool:'read_actor',arguments:target===f.actor.uuid?{actor_uuid:target}:{token_uuid:f.token.uuid}});
+  }
+  assert.equal((await f.resolve(f.packed.uuid)).status,'unsupported');
+});

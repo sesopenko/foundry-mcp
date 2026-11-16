@@ -11,6 +11,12 @@ import { PHYSICAL_TYPES } from './actorPhysical.js';
 import { supportedRuntime, COMPATIBILITY } from './runtimeCompatibility.js';
 
 export const ACTOR_TYPES = ["character", "npc", "familiar"];
+// PF2e-specific loot is a world/token inventory owner, never a creature or pack
+// template reader. Loot8.7.0 schema (no Actor system fields are selected):
+// https://github.com/foundryvtt/pf2e/blob/52dfeee703b887237f5e454747bcae45b136f9af/src/module/actor/loot/data.ts
+// Accepted versions follow ready(); live loot verification remains pending.
+export const WORLD_ACTOR_TYPES = [...ACTOR_TYPES, 'loot'];
+export const LOOT_ITEM_TYPES = [...PHYSICAL_TYPES, 'kit'];
 // PF2e-specific known types include affliction for explicit unsupported
 // diagnostics only; readable navigation filters exclude this deferred type.
 export const ITEM_TYPES = ["melee", "action", "feat", "spell", "spellcastingEntry", "lore", "condition", "effect", "affliction", "ancestry", "heritage", "background", "class", "deity", "weapon", "armor", "shield", "equipment", "consumable", "ammo", "backpack", "book", "kit", "treasure"];
@@ -24,7 +30,8 @@ export function runtime() {
 /**
  * PF2e-specific admission: Foundry >=14.369,<15 and PF2e >=8.6.1,<9.
  * Schema baseline 8.6.1; update audit: docs/runtime-compatibility.md.
- * Scope is 3 Actor/23 readable Item types; dedicated affliction Items are
+ * Scope is 3 creature Actor types plus world/token loot inventory and 23
+ * readable Item types; dedicated affliction Items are
  * upstream-incomplete, deferred and rejected before source extraction.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/system.pf2e.json
  */
@@ -67,6 +74,11 @@ async function resolve(uuid, kind) {
 
 /** PF2e-specific 8.6.1 type boundary; ACTOR_TYPES/ITEM_TYPES do not infer role. */
 function supported(document) {
+  // PF2e-specific loot has only world/token identity and inventory semantics.
+  if (document.documentName === 'Actor' && document.type === 'loot') {
+    if (document.compendium || document.uuid.startsWith('Compendium.')) fail('UnsupportedType', 'Compendium loot Actors are unsupported.', 'Use world Actor or placed token discovery.');
+    return;
+  }
   // PF2e-specific8.6.1 production affliction constructor is explicitly disabled:
   // https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/affliction/document.ts
   // Offline source fixtures do not establish externally supported runtime reads.
@@ -97,7 +109,8 @@ export function documentIdentity(document, actor, token) {
     actor: actor ? { uuid: actor.uuid, ...named(actor), type: actor.type } : null, instance };
 }
 
-/** Resolve a world/pack Actor or token; PF2e-specific supported type filter. */
+/** Resolve a world/pack creature Actor or token; PF2e-specific loot8.6.1 is
+ * admitted only as world/token inventory identity, never a pack template. */
 export async function actorTarget(params) {
   if ((params.actor_uuid == null) === (params.token_uuid == null)) fail("InvalidRequest", "Provide exactly one of actor_uuid or token_uuid.");
   let actor; let token = null;
@@ -120,6 +133,9 @@ export async function actorTarget(params) {
 /** Resolve an Item with its owner/instance; PF2e-specific 8.6.1 type filter.
  * World party-owned physical Items from get_party_stash are supported source
  * definitions; party Actors/token parties and campaign Items stay unsupported.
+ * PF2e-specific loot8.6.1 world/token owners admit physical Items and separate
+ * kit definitions through exact public parent/items membership; pack loot stays
+ * unsupported. Selected Item source does not establish shop or effective state.
  * Physical schema: https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/physical/data.ts
  */
 export async function itemTarget(params) {
@@ -128,7 +144,7 @@ export async function itemTarget(params) {
     const target = await actorTarget({ token_uuid: params.token_uuid });
     const item = [...target.document.items.values()].find(candidate => candidate.uuid === params.item_uuid);
     if (!item) fail("DocumentNotFound", "Item does not belong to the selected token Actor.", "Call list_actor_items for that token and reuse its Item UUID and token_uuid.");
-    requirePermission(item); supported(item);
+    requirePermission(item); supported(item); lootItem(item, target.document);
     return { document: item, actor: target.document, token: target.token, identity: documentIdentity(item, target.document, target.token) };
   }
   if (params.item_uuid.startsWith("Scene.")) fail("InvalidRequest", "Synthetic-owned Item reads also require token_uuid.", "Reuse the Item UUID and token_uuid from list_actor_items.");
@@ -141,6 +157,7 @@ export async function itemTarget(params) {
         && /^Actor\.[^.\s#]+$/.test(actor.uuid) && game.actors.get(actor.id) === actor
         && actor.items.get(item.id) === item && item.uuid === actor.uuid + '.Item.' + item.id;
     if (!stash) supported(actor);
+    lootItem(item, actor);
   }
   supported(item);
   return { document: item, actor, token: null, identity: documentIdentity(item, actor, null) };
@@ -148,6 +165,18 @@ export async function itemTarget(params) {
 
 /** Build owned Item identity; PF2e-specific 8.6.1 type filter, no derived data. */
 export function embeddedIdentity(item, owner) {
-  requirePermission(item); supported(item);
+  requirePermission(item); supported(item); lootItem(item, owner.document);
   return documentIdentity(item, owner.document, owner.token);
+}
+
+/** PF2e-specific loot8.6.1 admits actual owned physical Items and separate kit
+ * definitions only. Public Actor.items/Item.parent/uuid verify membership;
+ * no loot/shop configuration, prepared inventory or effective values are read.
+ * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/physical/data.ts
+ */
+function lootItem(item, actor) {
+  if (actor.type !== 'loot') return;
+  supported(actor);
+  if (!LOOT_ITEM_TYPES.includes(item.type)) fail('UnsupportedType', 'Loot owners support physical Items and kit definitions only.', 'Use inventory.summary or list_actor_items to discover supported contents.');
+  if (item.parent !== actor || actor.items.get(item.id) !== item || item.uuid !== actor.uuid + '.Item.' + item.id) fail('ReadFailed', 'Loot Item owner membership is inconsistent.', 'Rediscover Items on the selected Actor or token.');
 }

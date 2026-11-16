@@ -40,7 +40,7 @@ class UniqueSelections(Model):
 
 
 class ActorSelect(UniqueSelections):
-    details: list[ActorDetail] = Field(default_factory=list, max_length=33, description='Empty means identity only. wealth/bulk select guarded character summaries. wealth.items/bulk.items select separately paginated physical Item details. Missing runtime values report potentially_missing. Other dots narrow sections; inventory.summary selects identities, quantities and containers.')
+    details: list[ActorDetail] = Field(default_factory=list, max_length=33, description='Empty means identity only. World/token loot supports inventory.summary or inventory; other sections return unsupported. wealth/bulk select guarded character summaries. wealth.items/bulk.items select separately paginated physical Item details. Missing runtime values report potentially_missing. Other dots narrow sections; inventory.summary selects identities, quantities and containers.')
     item_uuids: list[Identifier] = Field(default_factory=list, max_length=100, description='Optional actual owned Item UUIDs from list_actor_items narrowing inventory, abilities, build and wealth.items/bulk.items, never wealth/Bulk summary totals; diagnostics remain visible.')
     entry_uuids: list[Identifier] = Field(default_factory=list, max_length=100, description='Optional owned spellcasting-entry UUIDs narrowing spellcasting, including preparation witnesses.')
     skill_names: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(default_factory=list, max_length=100, description='Exact serialized skill keys, such as stealth; narrows current Skills. Lore identity diagnostics remain visible.')

@@ -1,7 +1,7 @@
 """Read-only Actor/Item adapters; source state and permissions remain in Foundry.
 
 PF2e-specific: the browser registry describes delivered source readers for
-character/npc/familiar and PF2e Item types. The pinned schema/API evidence and
+character/npc/familiar, world/token loot inventory and PF2e Item types. The pinned schema/API evidence and
 source-versus-effective gates live in docs/actor-tools.md (core 14.369/PF2e 8.6.1).
 No Python calculation substitutes for a supported PF2e effective interface.
 PF2e source boundary: https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
@@ -2623,6 +2623,13 @@ def _runtime(value: Any) -> bool:
 
 
 def _identity(value: Any) -> bool:
+    """Validate document context with PF2e-specific owner admission.
+
+    Loot world/token owners admit physical Items and kit definitions, not pack
+    loot; public TokenDocument.actor linked/synthetic semantics bind identities
+    to their Scene/token. No Item stock or effective value is calculated.
+    Schema/range boundary: docs/loot-actor-reading.md, PF2e8.6.1/8.7.0.
+    """
     if type(value) is not dict:
         return False
     required = {'document_name', 'id', 'uuid', 'name', 'type', 'source_kind', 'folder', 'pack', 'actor', 'instance'}
@@ -2633,6 +2640,9 @@ def _identity(value: Any) -> bool:
     if value['document_name'] not in ('Actor', 'Item') or value['source_kind'] not in ('world', 'compendium', 'token') or not value['uuid'] or len(value['uuid']) > 512:
         return False
     if 'name_truncated' in value and type(value['name_truncated']) is not bool:
+        return False
+    # PF2e-specific loot8.6.1 world/token identity; pack templates stay excluded.
+    if value['document_name']=='Actor' and value['type']=='loot' and (value['source_kind']=='compendium' or value['pack'] is not None or value['uuid'].startswith('Compendium.')):
         return False
     for key, keys in [('folder', {'id', 'uuid', 'name'}), ('pack', {'id', 'title'}), ('actor', {'uuid', 'name'})]:
         row = value[key]
@@ -2650,6 +2660,13 @@ def _identity(value: Any) -> bool:
                     or not re.fullmatch(r'[^.\s#]+', value['id'])
                     or value['uuid'] != owner['uuid'] + '.Item.' + value['id']):
                 return False
+        elif owner['type']=='loot':
+            if (value['document_name']!='Item' or value['type'] not in PHYSICAL_TYPES | {'kit'}
+                    or value['source_kind']=='compendium' or value['pack'] is not None
+                    or not re.fullmatch(r'(?:Actor\.[^.\s#]+|Scene\.[^.\s#]+\.Token\.[^.\s#]+\.Actor\.[^.\s#]+)',owner['uuid'])
+                    or not re.fullmatch(r'[^.\s#]+',value['id'])
+                    or value['uuid']!=owner['uuid']+'.Item.'+value['id']):
+                return False
         elif owner['type'] not in ('character','npc','familiar'):
             return False
     instance = value['instance']
@@ -2663,6 +2680,27 @@ def _identity(value: Any) -> bool:
             return False
     elif instance is not None:
         return False
+    # PF2e-specific loot inventory ownership must agree with linked/synthetic
+    # context, independently of the requested selector. Public core TokenDocument
+    # actor semantics: https://foundryvtt.com/api/v14/classes/foundry.documents.TokenDocument.html#actor
+    loot_actor = value['document_name']=='Actor' and value['type']=='loot'
+    loot_owner = value['actor'] is not None and value['actor'].get('type')=='loot'
+    if loot_actor or loot_owner:
+        owner_uuid = value['uuid'] if loot_actor else value['actor']['uuid']
+        world_owner = bool(re.fullmatch(r'Actor\.[^.\s#]+', owner_uuid))
+        if instance is None:
+            if not world_owner:
+                return False
+        else:
+            token_uuid = instance['token_uuid']
+            if (not re.fullmatch(re.escape(instance['scene_uuid'])+r'\.Token\.[^.\s#]+', token_uuid)
+                    or not re.fullmatch(r'Scene\.[^.\s#]+',instance['scene_uuid'])):
+                return False
+            if instance['actor_link']:
+                if not world_owner:
+                    return False
+            elif not re.fullmatch(re.escape(token_uuid)+r'\.Actor\.[^.\s#]+',owner_uuid):
+                return False
     return True
 
 
@@ -3684,6 +3722,9 @@ def _record(row: Any, sections: list[str], identity: dict[str, Any]) -> bool:
     if row['section'] in ('wealth','bulk'):
         from .actor_metrics import metric_record
         return metric_record(row,identity)
+    # PF2e-specific loot source-only inventory; no creature/source sections.
+    if identity['document_name']=='Actor' and identity['type']=='loot' and row['section'] not in ('identity','inventory'):
+        return False
     if identity['document_name']=='Actor' and identity['type']=='familiar' and row['section'] in ('identity','abilities') and row['key']!='identity':
         return _familiar_relationship(row,identity)
     # PF2e-specific transformed statistics are admitted only at this narrow gate.
@@ -3830,6 +3871,12 @@ def _pagination(value: Any, count: int, limit: int) -> bool:
 
 
 def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=None) -> None:
+    """Validate PF2e-specific source/current witnesses and section completeness.
+
+    Loot admits identity/inventory only; other sections must be unsupported
+    with no records. Physical source and core token identity dependencies follow
+    _identity/_record and docs/loot-actor-reading.md; no effective values inferred.
+    """
     valid = type(result) is dict
     try:
         valid = valid and _primitive(result)
@@ -3848,8 +3895,10 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                     if result['identity']['document_name']=='Item' and result['identity']['type']=='feat':
                         valid = valid and all(row['name']=='source' and row['status']=='partial' for row in rows if 'unsupported_selection_values' in row['reasons'])
                     # PF2e-specific casting configuration excludes current availability.
-                    if result['identity']['document_name']=='Actor':
+                    if result['identity']['document_name']=='Actor' and result['identity']['type']!='loot':
                         valid = valid and all(row['status']=='partial' and 'availability_not_evaluated' in row['reasons'] for row in rows if row['name']=='spellcasting')
+                    if result['identity']['document_name']=='Actor' and result['identity']['type']=='loot':
+                        valid = valid and all(row['status']=='unsupported' and row['reasons']==['loot_section_unsupported'] for row in rows if row['name'] not in ('identity','inventory'))
                     # PF2e-specific NPC8.6.1 Item references never claim full sections.
                     if result['identity']['document_name']=='Actor' and result['identity']['type']=='npc':
                         pending={'strikes':'other_attacks_pending','abilities':'other_abilities_pending'}
@@ -3873,15 +3922,15 @@ def _validate(result: Any, mode: str, *, limit=50, max_bytes=48000, sections=Non
                         valid = _effect_source_page(result['records'])
                     if valid and result['identity']['document_name']=='Actor':
                         from .actor_metrics import metric_section
-                        valid = valid and all(metric_section(result['records'], row, result['identity']) for row in rows if row['name'] in ('wealth','bulk'))
-                        valid = valid and all(_skills_section(result['records'], row, result['identity']) for row in rows if row['name']=='skills')
-                        valid = valid and all(_state_section(result['records'], row, result['identity']) for row in rows if row['name']=='state')
-                        valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting')
+                        valid = valid and all(metric_section(result['records'], row, result['identity']) for row in rows if row['name'] in ('wealth','bulk') and result['identity']['type']!='loot')
+                        valid = valid and all(_skills_section(result['records'], row, result['identity']) for row in rows if row['name']=='skills' and result['identity']['type']!='loot')
+                        valid = valid and all(_state_section(result['records'], row, result['identity']) for row in rows if row['name']=='state' and result['identity']['type']!='loot')
+                        valid = valid and all(_casting_section(result['records'], row) for row in rows if row['name']=='spellcasting' and result['identity']['type']!='loot')
                         valid = valid and all(_inventory_section(result['records'], row) for row in rows if row['name']=='inventory')
-                        valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build')
-                        valid = valid and all(_current_section(result['records'], row, result['identity']) for row in rows if row['name']=='statistics')
-                        valid = valid and all(_strike_section(result['records'], row, result['identity']) for row in rows if row['name']=='strikes')
-                        valid = valid and all(_character_ability_section(result['records'], row, result['identity']) for row in rows if row['name']=='abilities')
+                        valid = valid and all(_build_section(result['records'], row, result['identity']) for row in rows if row['name']=='build' and result['identity']['type']!='loot')
+                        valid = valid and all(_current_section(result['records'], row, result['identity']) for row in rows if row['name']=='statistics' and result['identity']['type']!='loot')
+                        valid = valid and all(_strike_section(result['records'], row, result['identity']) for row in rows if row['name']=='strikes' and result['identity']['type']!='loot')
+                        valid = valid and all(_character_ability_section(result['records'], row, result['identity']) for row in rows if row['name']=='abilities' and result['identity']['type']!='loot')
             else:
                 valid = valid and _item_list(result, limit)
     except (KeyError, TypeError, ValueError, UnicodeError, RecursionError):
@@ -4041,7 +4090,8 @@ async def read_actor(actor_uuid: Identifier | None = None, token_uuid: Identifie
     source expose common metadata and selected type-specific persisted fields.
     Known sections description/build/statistics/skills/strikes/abilities/spellcasting/inventory/
     effective can be unsupported; get_actor_types reports delivered support.
-    Sections must be unique/nonempty (at most 12). PF2e character/npc/familiar only;
+    Sections must be unique/nonempty (at most 12). PF2e character/npc/familiar;
+    world/token loot supports identity/inventory only. Compendium loot remains unsupported;
     other systems/versions/types give UnsupportedSystem/Version/Type errors.
 
     Returns contract_version/runtime/identity/revision/sections/records/pagination/
@@ -4782,7 +4832,8 @@ async def read_item(item_uuid: Identifier, token_uuid: Identifier | None = None,
     and publication. NPC owners identify authored modifiers; character owners
     identify proficiency ranks. Detached/unknown owners retain stored semantics;
     no effective skill total or roll-option execution is implied. identity.actor
-    may include actual owner type character/npc/familiar.
+    may include actual owner type character/npc/familiar/loot. Loot world/token
+    owners admit physical Items and separate kit definitions only, never pack loot.
     Affliction Items are explicitly unsupported in the tested PF2e8.6.1 runtime:
     upstream construction is disabled. read_item rejects affliction selectors with
     UnsupportedType before reading their source; inspect get_actor_types for this

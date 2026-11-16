@@ -45,7 +45,7 @@ class ActorDiscoveryTests(unittest.IsolatedAsyncioTestCase):
     async def test_bad_direct_inputs_never_call_browser(self):
         for args in [dict(depth=True),dict(depth=0),dict(depth=6),dict(folder_uuid=''),dict(folder_uuid='x'*513),dict(limit=True),dict(limit=101),dict(max_bytes=7999),dict(cursor='é')]:
             with self.subTest(args=args),self.assertRaises(ToolError):await get_actor_tree.fn(**args)
-        for args in [dict(query=' '),dict(query='x'*201),dict(query='x',types=[]),dict(query='x',types=['npc','npc']),dict(query='x',types=['loot']),dict(query='x',recursive=1)]:
+        for args in [dict(query=' '),dict(query='x'*201),dict(query='x',types=[]),dict(query='x',types=['npc','npc']),dict(query='x',types=['hazard']),dict(query='x',recursive=1)]:
             with self.subTest(args=args),self.assertRaises(ToolError):await search_actors.fn(**args)
         self.manager.call.assert_not_awaited()
 
@@ -70,7 +70,7 @@ class ActorDiscoveryTests(unittest.IsolatedAsyncioTestCase):
         for change in [('kind','item'),('depth',True),('parent_uuid',8),('next_call',dict(tool='read_actor',arguments=dict(actor_uuid='Actor.wrong'))),('folder_path',[{'name':'unidentified'}])]:
             result=response(False);result['nodes'][0][change[0]]=change[1];self.manager.call.return_value=result
             with self.subTest(change=change),self.assertRaises(ToolError):await search_actors.fn(query='Duplicate')
-        result=response(False);result['nodes'][0]['identity']['type']='loot';self.manager.call.return_value=result
+        result=response(False);result['nodes'][0]['identity']['type']='hazard';self.manager.call.return_value=result
         with self.assertRaises(ToolError):await search_actors.fn(query='Duplicate')
         result=response();result['nodes'][0].update(children_complete=False,expand=dict(folder_uuid='Folder.f'));self.manager.call.return_value=result
         with self.assertRaises(ToolError):await get_actor_tree.fn()
@@ -129,6 +129,6 @@ console.log(JSON.stringify([await getActorTree(),await searchActors({query:'Dupl
             tools={tool.name:tool for tool in await client.list_tools()};tool=tools['list_scene_actors']
             self.assertTrue(tool.annotations.readOnlyHint);self.assertFalse(tool.inputSchema['additionalProperties'])
             for value in ('token_uuid','base_actor','next_cursor','Scene.<id>','GM'):self.assertIn(value,tool.description)
-            for args in [dict(extra=True),dict(limit=True),dict(scene_uuid='Scene.s',types=['loot'])]:
+            for args in [dict(extra=True),dict(limit=True),dict(scene_uuid='Scene.s',types=['hazard'])]:
                 result=await client.call_tool('list_scene_actors',args,raise_on_error=False);self.assertTrue(result.is_error)
             self.manager.call.assert_not_awaited()

@@ -38,7 +38,7 @@ test('missing actor stays explicit; filters, permissions and stale revisions are
   assert.match(result.nodes[0].limitations[0],/ActorUnavailable/);
   await assert.rejects(listSceneActors({query:'x'}),/require scene_uuid/);
   await assert.rejects(listSceneActors({scene_uuid:'Scene.missing'}),/no longer exists/);
-  await assert.rejects(listSceneActors({scene_uuid:scene.uuid,types:['loot']}),/known|supported section/);
+  await assert.rejects(listSceneActors({scene_uuid:scene.uuid,types:['hazard']}),/known|supported section/);
   result=await listSceneActors({scene_uuid:scene.uuid,limit:1});
   scene.tokens.get('b').name='Renamed';
   await assert.rejects(listSceneActors({scene_uuid:scene.uuid,limit:1,cursor:result.pagination.next_cursor}),/changed/);
@@ -52,7 +52,7 @@ test('missing actor stays explicit; filters, permissions and stale revisions are
 
 test('unsupported actor types are counted separately from caller filters',async()=>{
  const {scene}=fixture();
- scene.tokens.get('a').actor.type='loot';
+ scene.tokens.get('a').actor.type='hazard';
  let result=await listSceneActors();assert.equal(result.unsupported_count,0);
  result=await listSceneActors({scene_uuid:scene.uuid,types:['character']});
  assert.equal(result.unsupported_count,1);assert.equal(result.nodes.length,0);

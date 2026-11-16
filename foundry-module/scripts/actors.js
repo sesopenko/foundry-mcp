@@ -2,7 +2,7 @@
 import { fail, validateParams, integer, selector, selectSections, digest, textFragments, paginate } from './actorReadUtils.js';
 import { selectivePage, compactNode } from './selectiveReads.js';
 import { supportedRuntime, COMPATIBILITY } from './runtimeCompatibility.js';
-import { ACTOR_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
+import { ACTOR_TYPES, WORLD_ACTOR_TYPES, LOOT_ITEM_TYPES, ITEM_TYPES, runtime, ready, named, permitted, actorTarget, itemTarget, embeddedIdentity } from './actorDocuments.js';
 import { physicalFields, PHYSICAL_TYPES } from './actorPhysical.js';
 import { weaponFields } from './actorWeapon.js';
 import { ammoFields } from './actorAmmo.js';
@@ -72,7 +72,10 @@ const VERIFICATION = {deterministic:{status:'passed',evidence:['tests/js/actor-r
  * Never expose flags, migrations or the whole source object.
  */
 function selection(target, sections) {
-  const source = target.document.toObject(true);
+  // PF2e-specific loot8.6.1 needs only public identity and actual owned Items.
+  // No Actor system source, shop configuration or creature data is extracted.
+  const source = target.document.documentName==='Actor'&&target.document.type==='loot'
+    ? {name:target.document.name,type:'loot'} : target.document.toObject(true);
   if (!source || typeof source!=='object' || Array.isArray(source)) fail('ReadFailed','Document source is not a serialized object.','Inspect the selected document in Foundry.');
   // PF2e-specific condition/effect/familiar8.6.1 selectors require own data;
   // validate their type before dispatch can read it. No accessor is executed.
@@ -619,7 +622,7 @@ export async function getActorTypes(params = {}) {
   const actorAllowed = globalThis.foundry?.documents?.Actor?.TYPES ?? globalThis.Actor?.TYPES ?? [];
   const itemAllowed = globalThis.foundry?.documents?.Item?.TYPES ?? globalThis.Item?.TYPES ?? [];
   const result = {contract_version:1,runtime:current,availability:{supported,reason:supported?null:`Supported range: ${COMPATIBILITY}.`},
-    actor_types:[...new Set([...ACTOR_TYPES,...actorAllowed])].map(type=>make(type,actorAllowed.includes(type),ACTOR_TYPES.includes(type))),
+    actor_types:[...new Set([...WORLD_ACTOR_TYPES,...actorAllowed])].map(type=>make(type,actorAllowed.includes(type),WORLD_ACTOR_TYPES.includes(type))),
     item_types:[...new Set([...ITEM_TYPES,...itemAllowed])].map(type=>make(type,itemAllowed.includes(type),ITEM_TYPES.includes(type)&&type!=='affliction')),
     actor_sections:ACTOR_SECTIONS.map(name=>make(name,true,true,true)),item_sections:ITEM_SECTIONS.map(name=>make(name,true,true,true)),limits:{...LIMITS},
     limitations:['No complete effective statistics or exhaustive ability list is claimed.']};
@@ -806,6 +809,12 @@ export async function getActorTypes(params = {}) {
       section.limitations=['Action, NPC attack and Lore Items have delivered source mappings; relationships currently cover action self-effects and named attack effects. Inspect individual type entries.'];
     }
   }
+  // PF2e-specific loot8.6.1 source-only inventory admission, independent of
+  // creature section support and compendium eligibility.
+  const loot=result.actor_types.find(entry=>entry.type==='loot');
+  loot.source_supported=supported;loot.mapped_supported=supported;loot.effective_supported=false;
+  loot.limitations=['World and placed token loot/merchant identity and inventory only: select inventory.summary or inventory, then read_item for owned physical Items or separate kit definitions. Other Actor sections and compendium loot are unsupported. GM source names reveal unidentified Items; no shopping, transfers, wealth or Bulk totals.'];
+  loot.verification={deterministic:{status:'passed',evidence:['tests/js/actor-loot.test.js','tests/test_actor_loot.py']},live:{status:'not_run',evidence:[]}};
   if (new TextEncoder().encode(JSON.stringify(result)).length>48000) fail('ResponseTooLarge','Runtime type declarations exceed the registry response budget.','Inspect custom type declarations with the GM; this registry cannot be returned safely.');
   return result;
 }
@@ -817,7 +826,11 @@ export async function getActorTypes(params = {}) {
  * effective meaning through relabelling; each raw contributor keeps its basis.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/src/module/item/base/data/model.ts
  */
-async function read(target,params,sections,tool,selection=null) {
+async function read(target,params,requestedSections,tool,selection=null) {
+  // PF2e-specific loot supports inventory only, without entering creature
+  // extractors even when callers explicitly request unsupported sections.
+  const loot=target.document.documentName==='Actor'&&target.document.type==='loot';
+  const sections=loot?requestedSections.filter(name=>['identity','inventory'].includes(name)):requestedSections;
   const selected = await snapshot(target,sections,selection); const revision = await digest(selected);
   const records = [];
   records.push(...selected.inventoryMetrics.records);
@@ -994,7 +1007,7 @@ async function read(target,params,sections,tool,selection=null) {
   const complete=name=>(isFeat&&(name==='relationships'||name==='source'&&!selected.featSelectionIssues.length))||(isDeity&&['source','relationships'].includes(name))||(isClass&&['source','relationships'].includes(name))||(isHeritage&&['source','relationships'].includes(name))||(isBackground&&['source','relationships'].includes(name))||(isAncestry&&['source','relationships'].includes(name))||(isKit&&['source','relationships'].includes(name))||(isBook&&['source','relationships'].includes(name))||(inventorySection&&name==='inventory'&&!selected.inventoryView.reasons.length)||(isContainer&&(name==='source'||(name==='relationships'&&!selected.containment.reasons.length)))||(isCastingEntry&&name==='source'&&!selected.castingIssues.length)||name==='identity'||(name==='description'&&(target.document.documentName==='Item'||target.document.type==='npc'))||((isLore||isAmmo||isArmor||isShield||isEquipment||isConsumable||isTreasure)&&name==='source')||((isEffect||isCondition||isWeapon||isSpell)&&['source','relationships'].includes(name))||((isAction||isMelee)&&['source','relationships'].includes(name));
   const base={contract_version:1,runtime:selected.runtime,identity:target.identity,revision,
     sections:sections.map(name=>({name,status:complete(name)?'complete':(isContainer&&name==='relationships')||name==='source'||(castingSection&&name==='spellcasting')||(inventorySection&&name==='inventory')||Object.hasOwn(selected.npcItemSections,name)||(loreSkills&&name==='skills')?'partial':'unsupported',
-      reasons:complete(name)?[]:isFeat&&name==='source'&&selected.featSelectionIssues.length?['unsupported_selection_values']:inventorySection&&name==='inventory'?selected.inventoryView.reasons:isContainer&&name==='relationships'?selected.containment.reasons:castingSection&&name==='spellcasting'?selected.castingView.reasons:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?(isCastingEntry?[...new Set(selected.castingIssues.map(issue=>issue.reason))]:[PENDING]):['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':(isFeat||isDeity||isClass||isHeritage||isBackground||isAncestry||isKit||isBook)?'Selected source and explicit immediate definition links only; effective Actor statistics, acquired contributions and gameplay execution remain unsupported.':isTreasure?'Stored treasure category, quantity and denomination price/per basis only. Valuables on supported Actors remain readable despite loot-Actor exclusion. No coin conversion, doubled stack value, sale proceeds, usage or investment state is inferred.':isContainer?'Stored container Bulk and containment claims only; capacity is not current contents Bulk, ignored Bulk is conditional and no Actor total is calculated. Explicit relationships use actual owner scope, retain each descendant once and report cycles or unresolved parents.':isCastingEntry?'Stored casting mode, proficiency, attack/DC and per-slot/preparation source only. Prepared slot value zero does not establish exhaustion; repeated preparations stay separate. Focus pools and innate uses are not inferred from slot counters. No final PC statistics, usable casts or resource expenditure is calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable stock, uses and damage/healing plus contained spell definitions only. Nested spells retain source-path identity on this Item; no independent spell UUID, consumption, frequency expenditure, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
+      reasons:complete(name)?[]:isFeat&&name==='source'&&selected.featSelectionIssues.length?['unsupported_selection_values']:inventorySection&&name==='inventory'?selected.inventoryView.reasons:isContainer&&name==='relationships'?selected.containment.reasons:castingSection&&name==='spellcasting'?selected.castingView.reasons:Object.hasOwn(selected.npcItemSections,name)?[name==='strikes'?'other_attacks_pending':'other_abilities_pending',...(selected.npcItemSections[name].denied.length?['related_items_denied']:[])]:loreSkills&&name==='skills'?['other_skills_pending',...(selected.deniedLore.length?['related_items_denied']:[])]:name==='source'?(isCastingEntry?[...new Set(selected.castingIssues.map(issue=>issue.reason))]:[PENDING]):['section_not_implemented']})),limitations:[target.document.documentName==='Actor'&&target.document.type==='npc'?'Authored NPC source fields only; biography requires explicit description; integrated sections remain pending. Elite/weak and effective/current statistics are not calculated.':(isFeat||isDeity||isClass||isHeritage||isBackground||isAncestry||isKit||isBook)?'Selected source and explicit immediate definition links only; effective Actor statistics, acquired contributions and gameplay execution remain unsupported.':isTreasure?'Stored treasure category, quantity and denomination price/per basis only. World/token loot valuables retain actual owner identity; compendium loot remains unsupported. No coin conversion, doubled stack value, sale proceeds, usage or investment state is inferred.':isContainer?'Stored container Bulk and containment claims only; capacity is not current contents Bulk, ignored Bulk is conditional and no Actor total is calculated. Explicit relationships use actual owner scope, retain each descendant once and report cycles or unresolved parents.':isCastingEntry?'Stored casting mode, proficiency, attack/DC and per-slot/preparation source only. Prepared slot value zero does not establish exhaustion; repeated preparations stay separate. Focus pools and innate uses are not inferred from slot counters. No final PC statistics, usable casts or resource expenditure is calculated.':isSpell?'Stored spell definition and base rank only; authored heightening, overlays and location resource configuration are not evaluated cast options or proof of castability. Explicit relationships follow only the immediate assigned entry.':isConsumable?'Stored consumable stock, uses and damage/healing plus contained spell definitions only. Nested spells retain source-path identity on this Item; no independent spell UUID, consumption, frequency expenditure, castability or effective benefits are inferred.':isEquipment?'Stored equipment usage, investment and metadata only; read description for prose activation, frequency and constant benefits. Uninvested does not erase mundane uses; magical benefits are not assumed active.':isShield?'Stored shield properties and durability only; held is not raised, possession does not grant Shield Block, and source reinforcing runes are not class-granted effective reinforcement.':isArmor?'Stored armor properties and carrying/investment configuration only; armor bonus is not total AC and no worn rune benefits, actor saves or Speed are calculated.':isAmmo?'Stored ammunition stock/use configuration only; counts and categories do not prove compatibility or a usable attack, and carried effects are not automatically applied.':isWeapon?'Persisted weapon definition and configuration only; carry state is not proof of wielding/usability. No final Strike, NPC authored attack or alternate-use result is calculated.':isCondition?'Stored condition source only; presence and override references do not establish active or suppressed state. Persistent damage formulas are not rolled and dominance is not calculated.':isEffect?'Persisted effect source only; formulas are not evaluated, origins are not acquired spells/abilities. Immediate context relationships require explicit selection; expiry/current application remains unsupported.':isLore?'Selected Lore source uses actual owner type; no effective check total or proficiency bonus is calculated.':isMelee?'Authored NPC attack source and named effect labels only; no effective elite/weak/MAP/target calculation or weapon substitution.':isAction?'Selected action source and immediate self-effect reference only; no current usability or effective benefits are claimed.':loreSkills?'Skills currently includes only actual Lore Item references; other Skills and all effective totals remain pending.':'Type-specific system fields and effective mappings are pending their stories.']};
   if(target.document.documentName==='Actor'&&target.document.type==='npc')base.limitations[0]='Selected NPC source retains authored values and exceptional notes; biography requires explicit description. Select statistics, skills, strikes, abilities, spellcasting, inventory and state for their separately scoped joined views. Current values come from verified system data, never local elite/weak calculations; full target-context statistics remain unsupported.';
   if(isFeat&&selected.featSelectionIssues.length)base.limitations.push('Unsupported recorded selection values are withheld; source is partial. Only stored strings and finite numbers are selected; no acquisition, eligibility or UUID meaning is inferred.');
   if(stateSection){
@@ -1059,7 +1072,11 @@ async function read(target,params,sections,tool,selection=null) {
   if(isCastingEntry)base.limitations.push(...selected.castingIssues.map(issue=>`Uninterpreted casting source at ${issue.path}: ${issue.reason}.`));
   for(const status of selected.inventoryMetrics.sections)Object.assign(base.sections.find(row=>row.name===status.name),status);
   if(selected.inventoryMetrics.sections.length)base.limitations.push('Wealth/Bulk are guarded PF2e character runtime calculations. potentially_missing means unknown, never zero. Currency and full owned wealth use cp (100 cp = 1 gp), not resale. light_bulk means tenths of Bulk. until_encumbered is additional light units to cross the system threshold. Item Bulk is not additive: containers, stacking and size affect totals.');
-  const scope={tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections};
+  if(loot){
+    base.sections=requestedSections.map(name=>base.sections.find(row=>row.name===name)??{name,status:'unsupported',reasons:['loot_section_unsupported']});
+    base.limitations=['PF2e loot world/token identity and stored inventory only. Read physical Items and separate kit definitions with read_item, preserving token_uuid. GM source identity may reveal unidentified Items. No shop configuration, purchases, transfers, wealth or Bulk totals.'];
+  }
+  const scope={tool,actor_uuid:params.actor_uuid??null,item_uuid:params.item_uuid??null,token_uuid:params.token_uuid??null,sections:requestedSections};
   const result=selection?await selectivePage(records,base,{...params,select:selection},scope):await paginate(records,base,params,scope);
   // Recheck permission, resolution, identity and selected snapshot after await points.
   const fresh=tool==='read_actor'?await actorTarget(params):await itemTarget(params);
@@ -1067,7 +1084,8 @@ async function read(target,params,sections,tool,selection=null) {
   return result;
 }
 
-/** PF2e-specific character/npc/familiar admission; only source metadata here. */
+/** PF2e-specific character/npc/familiar and world/token loot admission;
+ * loot supports identity/inventory only, never creature or shop fields. */
 export async function readActor(params={}) {
   const sections=bounds(params,['actor_uuid','token_uuid','sections','limit','max_bytes','cursor'],ACTOR_SECTIONS);ready();
   return read(await actorTarget(params),params,sections,'read_actor');
@@ -1102,7 +1120,9 @@ export const readItemSelected=params=>selectedRead(params,true);
 
 /**
  * PF2e-specific embedded Item boundary for the 24 in-scope source types on
- * character/npc/familiar Actors. Source relationships beyond canonical parent
+ * character/npc/familiar Actors; PF2e-specific loot8.6.1 admits only actual
+ * physical Items and separate kit definitions on world/token owners, not packs.
+ * Source relationships beyond canonical parent
  * identity remain pending; do not infer complete actions or acquired benefits.
  * https://github.com/foundryvtt/pf2e/blob/28d9d156f252d084371d994dc359509b49eadf18/static/template.json
  */
@@ -1121,7 +1141,7 @@ export async function listActorItems(params={}) {
   const build=async()=>{
     const owner=await actorTarget(params); const nodes=[];let unsupported_count=0;
     for (const item of owner.document.items.values()) {
-      if (!ITEM_TYPES.includes(item.type)||item.type==='affliction') {unsupported_count++;continue;}
+      if (!ITEM_TYPES.includes(item.type)||item.type==='affliction'||owner.document.type==='loot'&&!LOOT_ITEM_TYPES.includes(item.type)) {unsupported_count++;continue;}
       if (!types.includes(item.type)||!String(item.name).toLowerCase().includes(query)) continue;
       const identity=embeddedIdentity(item,owner);
       nodes.push({kind:'item',identity,parent_uuid:owner.document.uuid,relationships:[],next_call:{tool:'read_item',arguments:{item_uuid:identity.uuid,...(owner.token?{token_uuid:owner.token.uuid}:{})}}});

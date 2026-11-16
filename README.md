@@ -301,8 +301,10 @@ navigation, and scoped Actor/Item compendium index search on supported Foundry
 14/PF2e 8 versions. Canonical world/pack/token identities, bounded pages and
 explicit scope failures keep duplicate names and partial results distinguishable.
 
-Explore supported PF2e characters, NPCs, familiars and their Items through read-only tools; see the
-[Actor and Item guide](docs/actor-tools.md) for supported features and limitations.
+Explore PF2e characters, NPCs, familiars and their Items through the
+[read-only Actor tools](docs/actor-tools.md). Working-tree loot support adds world
+and placed-token contents with quantities, containers and Item details;
+[live verification is pending](docs/loot-actor-reading.md).
 
 ## Private PDF references
 

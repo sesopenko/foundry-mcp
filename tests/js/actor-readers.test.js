@@ -58,7 +58,8 @@ test('exact description text, byte limits and cursor continuation survive escape
 
 test('discovery registry distinguishes planned mappings and unsupported runtime without coercion',async()=>{
   fixture();const result=await getActorTypes();
-  assert.equal(result.actor_types.find(t=>t.type==='loot').in_scope,false);
+  assert.equal(result.actor_types.find(t=>t.type==='loot').in_scope,true);
+  assert.equal(result.actor_types.find(t=>t.type==='loot').effective_supported,false);
   assert.equal(result.item_types.find(t=>t.type==='campaignFeature').source_supported,false);
   assert.equal(result.actor_types.find(t=>t.type==='npc').mapped_supported,true);
   assert.match(result.actor_types.find(t=>t.type==='npc').limitations[0],/Lore references/);

@@ -6,6 +6,10 @@ list_actor_items, list_actor_compendiums and get_actor_types. The v1 record
 definitions below remain the internal validated evidence contract; other tools
 retain v1. Request evidence explicitly when raw witnesses are needed.
 
+**Working-tree loot extension:** world/token loot Actors now support identity
+and inventory, with physical Item/kit follow-up reads. Compendium loot and other
+loot Actor sections remain unsupported. See [loot contracts and verification](loot-actor-reading.md).
+
 **Version 2.1.0 addition:** [get_party_members](party-tools.md) has its own typed
 version-two membership contract. It admits world party identities only through
 that narrow interface; the registry's party exclusion still applies to generic
@@ -54,10 +58,10 @@ no PF2e interpretation outside the version range below. Next: `get_actor_tree`,
 | Foundry >=14.369,<15 + PF2e >=8.6.1,<9 | Accepted range, including minor/patch updates and mixed combinations; local packages now 14.370/8.7.0. See [policy and verification limits](runtime-compatibility.md) |
 | Core 13 | New Actor/Item tools unavailable; no verified compatible PF2e pairing. Existing tools and manifest policy are separate |
 | Non-PF2e systems | Discovery reports unsupported system; reader/discovery tools below return `UnsupportedSystem` |
-| Actors | character, npc, familiar; no narrative role/control inference from subtype |
+| Actors | character, npc, familiar; world/token loot identity and inventory only; no narrative role/control inference from subtype |
 | Items | melee, action, feat, spell, spellcastingEntry, lore, condition, effect, ancestry, heritage, background, class, deity, weapon, armor, shield, equipment, consumable, ammo, backpack, book, kit, treasure |
 | Deferred upstream | affliction: outside delivery and readable filters until PF2e maintainers complete the type; registry support flags and in_scope are false |
-| Excluded | hazard, vehicle, loot, party, army, base/unknown Actors; campaignFeature, base/unknown Items |
+| Excluded | hazard, vehicle, party, army, base/unknown Actors and compendium loot; campaignFeature, base/unknown Items |
 
 The historical development baseline was separately checked through Foundry MCP on
 October 20: ready GM browser, Foundry 14.369/PF2e 8.6.1, bridge/server source
@@ -775,8 +779,8 @@ individual pp/gp/sp/cp amounts remain separate stored inputs. Reading performs
 no conversion, stack valuation, sale arithmetic or market assumption. In particular,
 it never multiplies a derived asset value by quantity again. Treasure usage and
 investment are not persisted and are not synthesized; derived stackGroup stays
-excluded. Character/NPC/familiar valuables are supported independently of loot-
-Actor exclusion. Source completes after paging; relationships, rules and effective
+excluded. Character/NPC/familiar valuables and world/token loot valuables are
+supported; loot compendium templates remain excluded. Source completes after paging; relationships, rules and effective
 remain unsupported. See [field contract](actor-item-story-map/treasure-fields.md)
 and [evidence](actor-item-story-map/treasure-verification.md).
 

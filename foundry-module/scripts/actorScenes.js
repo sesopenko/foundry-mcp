@@ -1,11 +1,11 @@
 /** Scene navigation using public core14.369 Scene/TokenDocument APIs.
  * https://foundryvtt.com/api/v14/classes/foundry.documents.TokenDocument.html
  * https://foundryvtt.com/api/v14/classes/foundry.documents.collections.Scenes.html
- * PF2e-specific: filters character/npc/familiar on system8.6.1; identities only,
+ * PF2e-specific: filters character/npc/familiar/loot on system8.6.1; identities only,
  * no persisted or derived statistic is interpreted. No canvas or active scene.
  */
 import { fail, validateParams, integer, selector, selectSections, digest, paginate } from './actorReadUtils.js';
-import { ACTOR_TYPES, ready, permitted, requirePermission, named, documentIdentity } from './actorDocuments.js';
+import { WORLD_ACTOR_TYPES as ACTOR_TYPES, ready, permitted, requirePermission, named, documentIdentity } from './actorDocuments.js';
 
 const compare=(a,b)=>a<b?-1:a>b?1:0;
 

@@ -97,6 +97,12 @@ remain unsupported. No prepared party inventory getter is used.
 
 Actor discovery modules `actorWorld.js`, `actorScenes.js` and `actorPacks.js` use public document relationships and selected pack indexes. Python discovery adapters validate their bounded DTOs and expose self-contained tool contracts. Scene navigation retains current token Actor identity; effective token state remains a separate acceptance gate.
 
+World/Scene discovery also admits PF2e loot Actors. `actorDocuments.js` separates
+world/token loot inventory admission from creature/pack eligibility; `actors.js`
+reads owned physical Items and separate kit definitions while leaving other
+loot sections unsupported without extracting Actor source or shop configuration.
+See [loot contracts and pending live verification](../../docs/loot-actor-reading.md).
+
 `actorAction.js` selects persisted PF2e action fields. `actors.js` maps their activation discriminator and resolves immediate self-effect references only for explicit relationship requests, preserving synthetic target context and rechecking authorization. It never applies an effect or evaluates an action.
 
 `actorMelee.js` selects authored NPC attack source and additional-effect labels. Null source range does not rule out thrown traits; source damage and bonuses never come from carried gear or preparation. `actors.js` emits named unresolved relationships without guessing selectors.

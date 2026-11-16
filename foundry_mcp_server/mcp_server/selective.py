@@ -268,6 +268,12 @@ async def pdf_search(request):
 
 
 READ_DOC = """PF2e-specific GM read of selected source/current details (Foundry >=14.369,<15; PF2e >=8.6.1,<9).
+World/Scene loot Actors support identity and inventory.summary/inventory only;
+other Actor sections return unsupported. Use search_actors(types=["loot"]) or
+list_scene_actors to find them. read_item admits their actual physical Items and
+separate kit definitions. Preserve token_uuid for placed instances; GM source
+names/prose can reveal unidentified Items. Compendium loot, shopping, transfers
+and loot wealth/Bulk totals are unsupported.
 Default is identity only. Use the documented select.details enum to request values;
 For compendium action/spell rules, call read_item with select.details=["source",
 "description"] and follow pagination.next_cursor until complete. This includes
@@ -322,6 +328,8 @@ Inventory book definitions (including marked formula/spell books) use
 read_item source/relationships. Afflictions are deferred outside current delivery scope.
 """
 REGISTRY_DOC = """PF2e-specific GM capability discovery. Default returns runtime/availability only.
+Loot support is world/token identity and inventory only; select actor_types=["loot"]
+with evidence=true for restrictions. It does not admit loot compendium templates.
 Interpretation requires Foundry >=14.369,<15 and PF2e >=8.6.1,<9; unsupported runtimes return availability=false.
 Select exact actor_types/item_types/sections, limits or verification evidence using
 the typed select schema. select.all explicitly expands the registry; raise
@@ -331,6 +339,9 @@ Dedicated affliction Items are deferred (in_scope false). Other systems/versions
 unavailable. Next read_actor/read_item with canonical discovery UUIDs. No writes.
 """
 LIST_DOC = """PF2e-specific GM navigation on Foundry >=14.369,<15 and PF2e >=8.6.1,<9. Compact named identities
+list_actor_items admits loot-owned physical Items and separate kit definitions
+on world/Scene owners; other loot Items count as unsupported. Compendium loot
+Actors and their owned Items remain unsupported.
 are returned by default; select adds context, relationships or follow-up metadata.
 Returns nodes, runtime/revision, scope status, limitations and pagination. Empty
 results establish absence only in complete searched scopes, not denied scopes.

@@ -32,6 +32,12 @@ provide reader follow-ups; Python validates scope and response at the FastMCP
 boundary. They do not use prepared party getters or member inventories. See
 [party contracts and calculation gates](party-tools.md).
 
+World/token PF2e loot reading reuses the Actor inventory source graph, semantic
+pagination and typed validation witnesses. Loot admission is separate from
+creature/compendium eligibility; unsupported sections do not enter creature
+extractors or read loot Actor source. Public token resolution preserves synthetic
+Item ownership. See [loot contracts and pending live verification](loot-actor-reading.md).
+
 This document describes the architecture and design of a system that allows a Large Language Model (LLM) to interact synchronously with a Foundry VTT game via the Model Context Protocol (MCP).
 
 The system consists of:

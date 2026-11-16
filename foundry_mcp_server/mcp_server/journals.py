@@ -276,7 +276,9 @@ async def resolve_journal_reference(
 
     PF2e-specific target admission uses existing Actor/Item reader contracts,
     tested on Foundry14.369/PF2e8.6.1: character/npc/familiar Actors and supported
-    Item types only. Other systems return unsupported; ordinary journal reading
+    Item types. World/token loot references use the restricted identity/inventory
+    reader with deterministic coverage and pending live verification; compendium
+    loot remains unsupported. Other systems return unsupported; ordinary journal reading
     remains available. Identity has no source/effective-value interpretation.
     Schema boundary: https://github.com/foundryvtt/pf2e/tree/28d9d156f252d084371d994dc359509b49eadf18/src/module
     """
@@ -311,7 +313,7 @@ async def resolve_journal_reference(
         identity = result["identity"]
         valid = _identity(identity) and identity["document_name"] in ("Actor", "Item")
         if valid:
-            valid = (identity["type"] in ("character", "npc", "familiar")
+            valid = (identity["type"] in ("character", "npc", "familiar", "loot")
                      if identity["document_name"] == "Actor"
                      else identity["type"] in ITEM_TYPES - {"affliction"})
         if valid:

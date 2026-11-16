@@ -6,7 +6,7 @@ function fixture() {
   const folder=(id,name,parent=null)=>({id,uuid:`Folder.${id}`,name,type:'Actor',parentId:parent,testUserPermission(){return this.denied!==true;},toObject(source){assert.equal(source,true);return {folder:this.parentId};}});
   const a=folder('a','Alpha'); const b=folder('b','Nested','a');const empty=folder('empty','Empty');
   const actor=(id,name,type='npc',directory=null)=>({id,uuid:`Actor.${id}`,documentName:'Actor',name,type,folder:directory,compendium:null,testUserPermission(){return this.denied!==true;}});
-  const first=actor('first','Guard','npc',a);const second=actor('second','GUARD','npc',b);const root=actor('root','Guard');const excluded=actor('loot','Guard','loot');
+  const first=actor('first','Guard','npc',a);const second=actor('second','GUARD','npc',b);const root=actor('root','Guard');const excluded=actor('hazard','Guard','hazard');
   globalThis.game={ready:true,version:'14.369',system:{id:'pf2e',version:'8.6.1'},user:{isGM:true},items:new Map(),folders:new Map([a,b,empty].map(f=>[f.id,f])),actors:new Map([first,second,root,excluded].map(a=>[a.id,a]))};
   return {a,b,empty,first,second,root,actor};
 }
@@ -60,7 +60,7 @@ test('invalid requests, missing folders and containment cycles are explicit',asy
   const {a,b}=fixture();
   for(const params of [{depth:0},{depth:true},{folder_uuid:'Alpha'},{unknown:1}])await assert.rejects(getActorTree(params),errorCode('InvalidRequest'));
   await assert.rejects(getActorTree({folder_uuid:'Folder.missing'}),errorCode('DocumentNotFound'));
-  for(const params of [{query:''},{query:'x',types:[]},{query:'x',types:['npc','npc']},{query:'x',types:['loot']},{query:'x',recursive:'true'}])await assert.rejects(searchActors(params),errorCode('InvalidRequest'));
+  for(const params of [{query:''},{query:'x',types:[]},{query:'x',types:['npc','npc']},{query:'x',types:['hazard']},{query:'x',recursive:'true'}])await assert.rejects(searchActors(params),errorCode('InvalidRequest'));
   a.parentId=b.id;await assert.rejects(getActorTree(),errorCode('ReadFailed'));
 });
 

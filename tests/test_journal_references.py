@@ -62,6 +62,18 @@ class JournalReferenceTests(unittest.IsolatedAsyncioTestCase):
             result.update(status=status, identity=None, next_call=None)
             self.assertEqual(await self.invoke(result), result)
 
+    async def test_loot_reference_uses_restricted_world_and_token_reader(self):
+        for token in (False, True):
+            result=self.response(token=token)
+            result['identity']['type']='loot'
+            if token:
+                result['identity']['uuid']='Scene.s.Token.t.Actor.a'
+            self.assertEqual(await self.invoke(result),result)
+        result=self.response()
+        result['identity'].update(type='loot',source_kind='compendium',uuid='Compendium.test.loot.Actor.a',pack={'id':'test.loot','title':'Loot'})
+        result['next_call']['arguments']={'actor_uuid':result['identity']['uuid']}
+        with self.assertRaises(ToolError):await self.invoke(result)
+
     async def test_rejects_malformed_forged_and_unsupported_results(self):
         changes = [dict(extra=1), dict(page_uuid="other"), dict(source="markdown"),
                    dict(target="Actor.other"), dict(anchor="heading"), dict(status="unknown"),

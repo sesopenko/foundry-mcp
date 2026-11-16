@@ -1,4 +1,4 @@
-"""PF2e-specific world discovery for character/npc/familiar Actor identities.
+"""PF2e-specific world discovery for character/npc/familiar/loot Actor identities.
 
 Uses core document/folder relationships only; no derived PF2e statistics or role
 inference. Contract/version boundary: docs/actor-tools.md, core14.369/PF2e8.6.1.
@@ -16,7 +16,10 @@ from .actors import (Identifier, Cursor, Limit, ByteLimit, _error, _identifier,
                      _identity, _pagination, _primitive, _runtime, _strings, _tool)
 
 ActorType = Literal['character', 'npc', 'familiar']
-ActorTypes = Annotated[list[ActorType], Field(min_length=1, max_length=3)]
+# PF2e-specific world/token loot identity, not compendium/creature admission.
+WorldActorType = Literal['character', 'npc', 'familiar', 'loot']
+WORLD_ACTOR_TYPES = ('character', 'npc', 'familiar', 'loot')
+ActorTypes = Annotated[list[WorldActorType], Field(min_length=1, max_length=4)]
 Depth = Annotated[int, Field(ge=1, le=5, strict=True)]
 StrictBool = Annotated[bool, Field(strict=True)]
 SearchQuery = Annotated[str, Field(min_length=1, max_length=200, strict=True)]
@@ -59,7 +62,7 @@ def _node(node, tree):
         if set(node) != keys or not _identity(node['identity']):
             return False
         identity=node['identity']
-        if identity['document_name'] != 'Actor' or identity['source_kind'] != 'world' or identity['type'] not in ('character','npc','familiar') or identity['pack'] is not None or identity['instance'] is not None:
+        if identity['document_name'] != 'Actor' or identity['source_kind'] != 'world' or identity['type'] not in WORLD_ACTOR_TYPES or identity['pack'] is not None or identity['instance'] is not None:
             return False
         if type(node['folder_path']) is not list or not all(_named_folder(folder) for folder in node['folder_path']):
             return False
@@ -119,7 +122,7 @@ async def _call(method,params,tree,scenes=False):
 async def get_actor_tree(folder_uuid: Identifier | None = None, depth: Depth = 2,
                          limit: Limit = 50, max_bytes: ByteLimit = 48000,
                          cursor: Cursor | None = None) -> dict[str,Any]:
-    """PF2e-specific: navigate world character/npc/familiar folders and Actor identities.
+    """PF2e-specific: navigate world character/npc/familiar/loot folders and Actor identities.
 
     Requires ready authenticated GM browser on core14.369/PF2e8.6.1 and document
     OBSERVER rights; excludes compendium/token Actors and unsupported Actor types.
@@ -159,12 +162,13 @@ async def search_actors(query: SearchQuery, types: ActorTypes | None = None,
                         folder_uuid: Identifier | None = None, recursive: StrictBool = True,
                         limit: Limit = 50, max_bytes: ByteLimit = 48000,
                         cursor: Cursor | None = None) -> dict[str,Any]:
-    """PF2e-specific: find world character/npc/familiar Actors by literal name substring.
+    """PF2e-specific: find world character/npc/familiar/loot Actors by literal name substring.
 
     Requires ready authenticated GM browser on core14.369/PF2e8.6.1 and explicit
     document rights. query is nonblank 1–200 code points after trim, compared using
     locale-independent lowercase literal substring; no fuzzy/regex/biography search.
-    Optional types is 1–3 unique character/npc/familiar values; omit for all three.
+    Optional types is 1–4 unique character/npc/familiar/loot values; omit for all four.
+    Loot supports read_actor identity/inventory only, then read_item for contents.
     Excluded/unknown Actor types are invalid filters. Optional folder_uuid is a
     canonical Folder.<id> UUID (1–512 characters) from get_actor_tree, never name,
     path or local ID. recursive defaults true and includes descendant folders;
@@ -191,8 +195,8 @@ async def search_actors(query: SearchQuery, types: ActorTypes | None = None,
         raise _error('InvalidRequest','query must contain 1–200 characters after trim.','Try a literal nonblank Actor-name substring.')
     if type(recursive) is not bool:
         raise _error('InvalidRequest','recursive must be a boolean.','Use true or false, not a string or integer.')
-    if types is not None and (type(types) is not list or not 1 <= len(types) <= 3 or any(type(value) is not str or value not in ('character','npc','familiar') for value in types) or len(set(types)) != len(types)):
-        raise _error('InvalidRequest','types must be 1–3 unique in-scope Actor types.','Inspect get_actor_types or omit types for all supported types.')
+    if types is not None and (type(types) is not list or not 1 <= len(types) <= 4 or any(type(value) is not str or value not in WORLD_ACTOR_TYPES for value in types) or len(set(types)) != len(types)):
+        raise _error('InvalidRequest','types must be 1–4 unique in-scope Actor types.','Inspect get_actor_types or omit types for all supported types.')
     return await _call('searchActors',dict(query=query,types=types,folder_uuid=folder_uuid,recursive=recursive,limit=limit,max_bytes=max_bytes,cursor=cursor),False)
 
 
@@ -213,7 +217,7 @@ def _scene_node(node):
     identity=node['identity']
     if identity is None:
         return node['next_call'] is None and bool(node['limitations'])
-    return (_identity(identity) and identity['document_name']=='Actor' and identity['type'] in ('character','npc','familiar') and
+    return (_identity(identity) and identity['document_name']=='Actor' and identity['type'] in WORLD_ACTOR_TYPES and
             identity['source_kind']=='token' and identity['instance']['token_uuid']==node['uuid'] and
             identity['instance']['scene_uuid']==node['parent_uuid'] and identity['instance']['actor_link']==node['actor_link'] and
             identity['instance']['base_actor']==base and node['next_call']==dict(tool='read_actor',arguments=dict(token_uuid=node['uuid'])))
@@ -223,7 +227,7 @@ def _scene_node(node):
 async def list_scene_actors(scene_uuid: Identifier | None = None, query: SearchQuery | None = None,
                             types: ActorTypes | None = None, limit: Limit = 50,
                             max_bytes: ByteLimit = 48000, cursor: Cursor | None = None) -> dict[str,Any]:
-    """PF2e-specific: discover readable scenes, then placed character/npc/familiar tokens.
+    """PF2e-specific: discover readable scenes, then placed character/npc/familiar/loot tokens.
 
     Requires ready authenticated GM browser on core14.369/PF2e8.6.1 with Scene,
     Token and Actor OBSERVER permissions; independent of active canvas/scene.
@@ -231,7 +235,9 @@ async def list_scene_actors(scene_uuid: Identifier | None = None, query: SearchQ
     tokens using scene_uuid Scene.<id> (canonical UUID, 1–512 characters, never
     name/path/local ID). query/types require scene_uuid. query is a nonblank
     1–200 character case-insensitive literal substring of token OR Actor name.
-    types is 1–3 unique character/npc/familiar values; omit for all in-scope types.
+    types is 1–4 unique character/npc/familiar/loot values; omit for all in-scope types.
+    Loot read_actor supports identity/inventory only. Keep token_uuid when reading
+    its Items; synthetic contents can differ from the world base Actor.
     Excludes other Actor types/prototype tokens; hidden placed tokens are GM data.
 
     Returns contract_version/runtime/revision/nodes/scopes/pagination/limitations
@@ -262,6 +268,6 @@ async def list_scene_actors(scene_uuid: Identifier | None = None, query: SearchQ
         raise _error('InvalidRequest','query/types require scene_uuid.','List scenes first, then use a returned scene_uuid.')
     if query is not None and (type(query) is not str or not query.strip() or len(query.strip()) > 200):
         raise _error('InvalidRequest','query must contain 1–200 characters after trim.','Use a literal nonblank token or Actor-name substring.')
-    if types is not None and (type(types) is not list or not 1 <= len(types) <= 3 or any(type(value) is not str or value not in ('character','npc','familiar') for value in types) or len(set(types)) != len(types)):
-        raise _error('InvalidRequest','types must be 1–3 unique in-scope Actor types.','Inspect get_actor_types or omit types.')
+    if types is not None and (type(types) is not list or not 1 <= len(types) <= 4 or any(type(value) is not str or value not in WORLD_ACTOR_TYPES for value in types) or len(set(types)) != len(types)):
+        raise _error('InvalidRequest','types must be 1–4 unique in-scope Actor types.','Inspect get_actor_types or omit types.')
     return await _call('listSceneActors',dict(scene_uuid=scene_uuid,query=query,types=types,limit=limit,max_bytes=max_bytes,cursor=cursor),False,scenes=True)
