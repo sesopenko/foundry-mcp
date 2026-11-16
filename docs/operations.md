@@ -37,7 +37,7 @@ and a GM browser. The operator decides host addressing and LAN access policy.
 
 ## Production authentication and migration from 1.1
 
-Deploy server and module 5.0.1 together. Source execution defaults to
+Deploy server and module 5.1.0 together. Source execution defaults to
 `FOUNDRY_MCP_AUTH_MODE=none` for backward compatibility; production Compose
 explicitly selects `basic`. Supplying production credentials with mode `none`
 fails startup rather than silently exposing the service. Production Basic Auth
@@ -196,7 +196,7 @@ CI runs tests, packages module assets, builds the image, exercises an isolated
 container, and checks graceful shutdown. Trusted main/tag pushes may then publish:
 
 - `sesopenko/foundry-mcp:sha-<full-commit>`.
-- `sesopenko/foundry-mcp:v5.0.1` for matching release tags.
+- `sesopenko/foundry-mcp:v5.1.0` for matching release tags.
 - `sesopenko/foundry-mcp:latest` updated alongside each published version tag; main-branch pushes publish only commit tags.
 
 Pull requests do not publish. Docker Hub login must succeed before publication.
@@ -215,6 +215,15 @@ publication workflow by pushing the reviewed commit/tag.
 
 ## Module versioning and releases
 
+### Loot Actor reading in v5.1.0
+
+Version 5.1.0 adds world/Scene loot discovery and source inventory reading through
+the existing Actor/Item tools. Update the server and module together, reload the
+GM browser and refresh MCP discovery. Loot compendium templates, shopping and
+computed loot totals remain unsupported. Live loot verification awaits the
+development world's previously deferred migration; see
+[loot contracts and verification](loot-actor-reading.md).
+
 ### Image preview removal in v5.0.0
 
 Version 5.0.0 removes preview viewing/downloading, map browsing,
@@ -225,7 +234,7 @@ files and Docker volumes are preserved but no longer mounted by the supplied
 deployment templates; do not delete volumes as part of this rollback.
 
 Published v3.4.0 and v4.0.0 images and module ZIPs remain unchanged and still
-contain previews. Deploy the matching v5.0.1 server and module, reload the GM
+contain previews. Deploy the matching v5.1.0 server and module, reload the GM
 browser, and refresh client discovery. Clients using removed tools must switch
 to the retained journal image tools for path selection and embedding; these
 tools do not provide visual inspection or download links.
@@ -233,12 +242,12 @@ tools do not provide visual inspection or download links.
 ### Release procedure
 
 The Python package, runtime application metadata, and module share version
-`5.0.1`. Release tags are `vX.Y.Z`. For each release, update those versions,
+`5.1.0`. Release tags are `vX.Y.Z`. For each release, update those versions,
 `uv.lock`, both source build identities, module `download`, and the local Compose build-version argument
 consistently. Run tests and package:
 
 ```bash
-.venv/bin/python scripts/package-module.py --tag v5.0.1
+.venv/bin/python scripts/package-module.py --tag v5.1.0
 ```
 
 Outputs under ignored `dist/module/` are `module.json` and `foundry-mcp.zip`.
@@ -256,7 +265,7 @@ https://github.com/sesopenko/foundry-mcp/releases/latest/download/module.json
 The manifest's `download` points to the matching version-specific ZIP:
 
 ```text
-https://github.com/sesopenko/foundry-mcp/releases/download/v5.0.1/foundry-mcp.zip
+https://github.com/sesopenko/foundry-mcp/releases/download/v5.1.0/foundry-mcp.zip
 ```
 
 The operator must make the repository/releases publicly accessible before

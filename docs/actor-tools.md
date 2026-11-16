@@ -6,7 +6,7 @@ list_actor_items, list_actor_compendiums and get_actor_types. The v1 record
 definitions below remain the internal validated evidence contract; other tools
 retain v1. Request evidence explicitly when raw witnesses are needed.
 
-**Working-tree loot extension:** world/token loot Actors now support identity
+**Version 5.1.0 loot extension:** world/token loot Actors now support identity
 and inventory, with physical Item/kit follow-up reads. Compendium loot and other
 loot Actor sections remain unsupported. See [loot contracts and verification](loot-actor-reading.md).
 

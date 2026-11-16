@@ -28,7 +28,7 @@ JSON responses default to 8,000 UTF-8 bytes, explicitly adjustable to 48,000.
 These are byte limits, not token guarantees. Optional fields are omitted when
 unrequested; their absence does not mean an empty source value.
 
-Working-tree [loot reading](loot-actor-reading.md) extends world/token Actor
+Version 5.1.0 [loot reading](loot-actor-reading.md) extends world/token Actor
 discovery and identity/inventory selections without changing these defaults or
 version-two envelopes. Loot supports `inventory.summary`/`inventory` and owned
 physical Item/kit reads; other Actor sections and loot compendiums are unsupported.

@@ -1,6 +1,6 @@
 # PF2e loot Actor contents
 
-The working tree extends existing GM-only readers to world and placed-token
+Version 5.1.0 extends existing GM-only readers to world and placed-token
 `loot` Actors, including merchant inventories. This is source reading, with
 deterministic verification and **live verification pending**. The accepted
 runtime range remains Foundry >=14.369,<15 and PF2e >=8.6.1,<9. No new tool or
@@ -116,9 +116,9 @@ families and kit definitions, world/linked/synthetic ownership, unsupported
 sections without Actor source extraction, permissions, stale continuations,
 empty/cyclic/orphan inventories, compendium rejection and journal follow-ups.
 Existing creature/party tests retain their boundaries.
-The full offline runner passed 713 Python tests (one existing skip) and 727
-JavaScript tests. Subsequent focused loot and journal checks also passed after
-binding loot identities to the actual linked/synthetic Scene/token context.
+The feature commit's full offline runner passed 714 Python tests (one existing
+skip) and 727 JavaScript tests, including loot identity binding to the actual
+linked/synthetic Scene/token context.
 
 `scripts/loot-read-audit.py` measures inert fixtures through FastMCP with a
 100-call/180-second cap; `--catalog-only` measures the existing localhost tool
