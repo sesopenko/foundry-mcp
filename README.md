@@ -89,7 +89,7 @@ Create a private `.env` alongside it, setting your LAN address. Fill in nonempty
 prevent startup:
 
 ```dotenv
-FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v5.1.0
+FOUNDRY_MCP_IMAGE=sesopenko/foundry-mcp:v5.2.0
 FOUNDRY_MCP_LAN_ADDRESS=192.0.2.10
 FOUNDRY_MCP_BASIC_USERNAME=librechat
 FOUNDRY_MCP_BASIC_PASSWORD=
@@ -295,7 +295,7 @@ compendiums. Follow their inventories, inspect the party stash, and compare
 character wealth and encumbrance. [Actor and Item readers](docs/actor-tools.md) ·
 [Party tools](docs/party-tools.md) · [Inventory metrics](docs/character-inventory-metrics.md)
 
-With matching development builds, a GM can look up a weapon's runes, preview
+With server and module v5.2.0, a GM can look up a weapon's runes, preview
 and apply sheet edits, or write the clues players see on unidentified treasure.
 Item editing is verified on Foundry 14.370 and PF2e 8.7.0.
 [Item editing and examples](docs/item-editing.md)

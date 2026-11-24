@@ -22,7 +22,7 @@ report `available` or `potentially_missing`; see [metric contracts](character-in
 
 ## Request only the needed details
 
-On Foundry 14.370 with PF2e 8.7.0, development builds also accept an explicit
+On Foundry 14.370 with PF2e 8.7.0, version 5.2.0 also accepts an explicit
 `read_item.sheet` selector for the GM's physical Item form. Existing callers
 continue to receive version 2. Clients that request `sheet` receive version 3
 with control records and contextual option lookups. [Item editing contract](item-editing.md)
