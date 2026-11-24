@@ -27,6 +27,7 @@ RUNTIME_SCRIPTS += ('journalImages.js',)
 RUNTIME_SCRIPTS += ('journalImageEmbedding.js',)
 RUNTIME_SCRIPTS += ('imageUploads.js',)
 RUNTIME_SCRIPTS += ('runtimeCompatibility.js',)
+RUNTIME_SCRIPTS += ('itemSheet.js', 'itemSheetFields.js', 'itemSheetProposal.js', 'itemSheetTarget.js')
 
 
 def manifest(root=ROOT, tag=None):

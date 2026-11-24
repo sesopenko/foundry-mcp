@@ -392,7 +392,11 @@ def install(server):
     """Install typed readers; legacy functions remain validators for nine tools."""
     from .parties import PartyRequest, PartyResult, read_party, PARTY_DOC
     from .parties import StashRequest, StashResult, read_stash, STASH_DOC
-    specs=[('read_actor',M.ActorRequest,M.ReadResult,read,READ_DOC),('read_item',M.ItemRequest,M.ReadResult,read,READ_DOC),
+    from . import item_sheet as sheet
+    specs=[('read_actor',M.ActorRequest,M.ReadResult,read,READ_DOC),
+           ('read_item',sheet.ReadItem,sheet.ItemResult,sheet.invoke,sheet.READ_DOC),
+           ('get_item_field_options',sheet.Options,sheet.OptionResult,sheet.invoke,sheet.OPTIONS_DOC),
+           ('edit_item',sheet.Edit,sheet.Receipt,sheet.invoke,sheet.EDIT_DOC),
            ('get_actor_types',M.CapabilityRequest,M.CapabilityResult,capabilities,REGISTRY_DOC),
            ('list_actor_items',M.ItemsRequest,M.ListResult,metadata,LIST_DOC),('list_actor_compendiums',M.PacksRequest,M.ListResult,metadata,LIST_DOC),
            ('get_journal_contents',M.ContentsRequest,M.JournalContentsResult,metadata,JOURNAL_DOC),('search_journals',M.JournalSearchRequest,M.JournalSearchResult,metadata,JOURNAL_DOC),
@@ -402,4 +406,4 @@ def install(server):
     for name,request,response,handler,description in specs:
         server.add_tool(SelectiveTool(name=name,description=description,parameters=request.model_json_schema(),output_schema=response.model_json_schema(),
             request_model=request,response_model=response,handler=handler,
-            annotations=ToolAnnotations(readOnlyHint=True,destructiveHint=False,idempotentHint=True,openWorldHint=False)))
+            annotations=ToolAnnotations(readOnlyHint=name != 'edit_item',destructiveHint=name == 'edit_item',idempotentHint=name != 'edit_item',openWorldHint=False)))

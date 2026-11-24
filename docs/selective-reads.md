@@ -22,6 +22,11 @@ report `available` or `potentially_missing`; see [metric contracts](character-in
 
 ## Request only the needed details
 
+On Foundry 14.370 with PF2e 8.7.0, development builds also accept an explicit
+`read_item.sheet` selector for the GM's physical Item form. Existing callers
+continue to receive version 2. Clients that request `sheet` receive version 3
+with control records and contextual option lookups. [Item editing contract](item-editing.md)
+
 Object reads default to identity, runtime and limitations. Collection reads
 default to ten entries; journal text defaults to 2,000 UTF-16 code units.
 JSON responses default to 8,000 UTF-8 bytes, explicitly adjustable to 48,000.

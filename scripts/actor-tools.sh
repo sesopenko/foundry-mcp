@@ -25,5 +25,9 @@ case "${1:-status}" in
   token-live) exec .venv/bin/python scripts/actor-token-live-check.py --world-id test ;;
   journal-live) exec .venv/bin/python scripts/actor-journal-live-check.py ;;
   token-fixture-live) exec .venv/bin/python scripts/actor-token-fixture-live-check.py --world-id test ;;
-  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface|token-live|journal-live|token-fixture-live]' >&2; exit 2 ;;
+  item-edit-baseline) exec .venv/bin/python scripts/item-editing-live.py baseline ;;
+  item-edit-gm) exec .venv/bin/python scripts/item-editing-live.py gm ;;
+  item-edit-player) exec .venv/bin/python scripts/item-editing-live.py player ;;
+  item-edit-chapter) exec .venv/bin/python scripts/item-editing-live.py chapter ;;
+  *) echo 'Usage: ./scripts/actor-tools.sh [status|check|focused|full|live|browser|refresh|skills-live|character-current-live|affliction-interface|token-live|journal-live|token-fixture-live|item-edit-baseline|item-edit-gm|item-edit-player|item-edit-chapter]' >&2; exit 2 ;;
 esac

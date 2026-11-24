@@ -32,7 +32,7 @@ TOOLS = {
     'read_journal_page', 'resolve_journal_reference',
     'get_actor_types', 'get_actor_tree', 'get_party_members', 'get_party_stash', 'search_actors', 'list_scene_actors',
     'list_actor_compendiums', 'search_compendium_actors',
-    'read_actor', 'read_item', 'list_actor_items',
+    'read_actor', 'read_item', 'list_actor_items', 'get_item_field_options', 'edit_item',
     'list_pdf_documents', 'locate_pdf_entry', 'search_pdf_documents',
     'read_pdf_pages', 'refresh_pdf_index',
 }

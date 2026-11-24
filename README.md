@@ -288,23 +288,17 @@ browser tooling with `npm ci` and launch `./scripts/codex-dev.sh`. Chrome MCP
 supports automatic refreshes, console and network inspection, and UI checks.
 It is disabled in normal sessions. See [shared browser setup](docs/browser-development.md).
 
-## Actor and Item source reading (v5.1.0)
+## PF2e Actors and Items
 
-Read official PF2e party membership and shared possessions separately, with
-named characters and Items for follow-up reads. Compare characters' wealth and
-encumbrance using the [metric tools](docs/character-inventory-metrics.md);
-see [party contracts](docs/party-tools.md) for stash access and limits.
+Find characters, NPCs, familiars and loot in a world, on a scene or in supported
+compendiums. Follow their inventories, inspect the party stash, and compare
+character wealth and encumbrance. [Actor and Item readers](docs/actor-tools.md) ·
+[Party tools](docs/party-tools.md) · [Inventory metrics](docs/character-inventory-metrics.md)
 
-Version 5.1.0 includes GM-only Actor/Item capability discovery, selected-source
-reading, owned Item navigation, world Actor folders/name search, Scene/Token
-navigation, and scoped Actor/Item compendium index search on supported Foundry
-14/PF2e 8 versions. Canonical world/pack/token identities, bounded pages and
-explicit scope failures keep duplicate names and partial results distinguishable.
-
-Explore PF2e characters, NPCs, familiars and their Items through the
-[read-only Actor tools](docs/actor-tools.md). Version 5.1.0 adds world and
-placed-token loot contents with quantities, containers and Item details;
-[live verification is pending](docs/loot-actor-reading.md).
+With matching development builds, a GM can look up a weapon's runes, preview
+and apply sheet edits, or write the clues players see on unidentified treasure.
+Item editing is verified on Foundry 14.370 and PF2e 8.7.0.
+[Item editing and examples](docs/item-editing.md)
 
 ## Private PDF references
 

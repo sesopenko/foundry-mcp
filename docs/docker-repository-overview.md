@@ -140,10 +140,14 @@ PF2e >=8.6.1,<9; the local package baseline is 14.370/8.7.0. See
 Canonical identities, bounded continuations and
 explicit failed/incomplete scopes preserve readable context without imports.
 
-Version 5.1.0 loot support extends the existing readers to world and placed-token
-inventories, with quantities, containers and selected Item properties/descriptions.
-Loot compendium templates, shopping and computed loot totals remain unsupported;
-[live verification awaits the development world's deferred migration](https://github.com/sesopenko/foundry-mcp/blob/main/docs/loot-actor-reading.md).
+Version 5.1.0 loot support includes world and placed-token inventories with
+quantities, containers and selected Item details.
+[Loot reader scope](https://github.com/sesopenko/foundry-mcp/blob/main/docs/loot-actor-reading.md)
+
+Matching development builds add GM-only weapon sheet editing and unidentified
+treasure clues on Foundry 14.370 with PF2e 8.7.0. Reload the GM browser and
+refresh MCP client discovery after updating both components.
+[Item editing guide](https://github.com/sesopenko/foundry-mcp/blob/main/docs/item-editing.md)
 
 Shared physical source fields include quantity, Bulk, stack price-per quantity,
 carrying/identification state and serialized attachment metadata. Action Items

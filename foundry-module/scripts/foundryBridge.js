@@ -7,6 +7,7 @@ import { getJournalTree, getJournalContents, searchJournals, readJournalPage, re
 import {listCompendiums, searchCompendiumJournals, getCompendiumJournalContents, readCompendiumJournalPage, resolveCompendiumJournalReference} from './compendiumJournals.js';
 import { getActorTypes, readActor, readItem, listActorItems, readActorSelected, readItemSelected } from "./actors.js";
 import { getActorTree, searchActors } from "./actorWorld.js";
+import {readItemSheet,getItemFieldOptions,editItem} from './itemSheet.js';
 import { getPartyMembers, getPartyStash } from "./actorParty.js";
 import {getWritingGuidance} from './writingGuidance.js';
 import {getJournalWriteContext, getJournalOwnershipContext, writeJournal} from './journalAuthoring.js';
@@ -77,6 +78,9 @@ const rpcHandlers = {
   verifyPF2eInlineEmbed,
   readActorSelected,
   readItemSelected,
+  readItemSheet,
+  getItemFieldOptions,
+  editItem,
   getModuleBuildInfo,
   executeJavaScript,
   getJournalTree,
@@ -176,7 +180,7 @@ export async function handleRpcMessage(message, isCurrent = () => true) {
   }
 
   try {
-    const result = ['prepareImageUpload', 'createImageDirectory', 'uploadImage'].includes(method)
+    const result = ['prepareImageUpload', 'createImageDirectory', 'uploadImage', 'editItem'].includes(method)
       ? await handler(params ?? {}, isCurrent) : await handler(params ?? {});
     return { id, result };
   } catch (err) {
